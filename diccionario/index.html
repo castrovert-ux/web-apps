@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT·Feed — Tu agregador RSS de YouTube</title>
+  <style>
+    /* =============================================
+       VARIABLES Y RESET
+       ============================================= */
+    :root {
+      --bg:        #0d0d0d;
+      --surface:   #181818;
+      --border:    #2a2a2a;
+      --accent:    #ff2d2d;
+      --accent2:   #ff6b35;
+      --text:      #f0f0f0;
+      --muted:     #aaa;
+      --card-bg:   #141414;
+      --radius:    6px;
+      --font-head: Georgia, 'Times New Roman', serif;
+      --font-body: 'Courier New', Courier, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* =============================================
+       CABECERA
+       ============================================= */
+    header {
+      border-bottom: 2px solid var(--accent);
+      padding: 18px 24px 14px;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: baseline;
+          -ms-flex-align: baseline;
+              align-items: baseline;
+      gap: 14px;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-family: var(--font-head);
+      font-size: 26px;
+      font-weight: bold;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    header .tagline {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* =============================================
+       LAYOUT PRINCIPAL
+       ============================================= */
+    .layout {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* =============================================
+       PANEL LATERAL (canales)
+       ============================================= */
+    .sidebar {
+      width: 280px;
+      min-width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+    }
+
+    .sidebar h2 {
+      font-family: var(--font-head);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    /* Campo de entrada de URL */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input-group input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      border-radius: var(--radius);
+      outline: none;
+      -webkit-transition: border-color 0.2s;
+              transition: border-color 0.2s;
+    }
+
+    .input-group input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    /* Botones */
+    .btn {
+      display: inline-block;
+      padding: 8px 14px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      -webkit-transition: opacity 0.2s, background 0.2s;
+              transition: opacity 0.2s, background 0.2s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn:active { opacity: 0.7; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      width: 100%;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .btn-small:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      opacity: 1;
+    }
+
+    .btn-refresh {
+      background: var(--border);
+      color: var(--text);
+      width: 100%;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Lista de canales guardados */
+    .channel-list {
+      margin-top: 16px;
+    }
+
+    .channel-item {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      justify-content: space-between;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      -webkit-transition: background 0.15s;
+              transition: background 0.15s;
+    }
+
+    .channel-item:hover {
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* Canal activo/seleccionado */
+    .channel-item.active {
+      background: rgba(255, 45, 45, 0.12);
+      border-bottom-color: var(--accent);
+    }
+
+    .channel-item.active .channel-item-name {
+      color: var(--accent);
+    }
+
+    /* Enlace al canal en YouTube */
+    .channel-link {
+      display: inline-block;
+      color: var(--muted);
+      font-size: 13px;
+      text-decoration: none;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+      padding: 2px 4px;
+      border-radius: 3px;
+      -webkit-transition: color 0.15s;
+              transition: color 0.15s;
+    }
+
+    .channel-link:hover {
+      color: var(--accent2);
+    }
+
+    /* Botón "Todos los canales" */
+    .btn-all-channels {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 10px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      margin-bottom: 6px;
+      -webkit-transition: all 0.15s;
+              transition: all 0.15s;
+    }
+
+    .btn-all-channels:hover,
+    .btn-all-channels.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(255,45,45,0.08);
+    }
+
+    .channel-item-name {
+      font-size: 12px;
+      color: var(--text);
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      -webkit-transition: color 0.15s;
+              transition: color 0.15s;
+    }
+
+    .channel-item-status {
+      font-size: 10px;
+      color: var(--muted);
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Indicador de estado de carga por canal */
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+      background: var(--muted);
+    }
+    .dot.ok     { background: #4caf50; }
+    .dot.error  { background: var(--accent); }
+    .dot.loading {
+      background: var(--accent2);
+      -webkit-animation: pulse 1s infinite;
+              animation: pulse 1s infinite;
+    }
+
+    @-webkit-keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .no-channels {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 20px;
+      line-height: 1.8;
+    }
+
+    /* Mensaje de error global */
+    #error-msg {
+      display: none;
+      background: #2a0a0a;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      margin-top: 10px;
+    }
+
+    /* =============================================
+       ZONA DE CONTENIDO (vídeos)
+       ============================================= */
+    .content {
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+    }
+
+    /* Barra de controles */
+    .controls {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      -ms-flex-wrap: wrap;
+          flex-wrap: wrap;
+    }
+
+    .controls-left {
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .btn-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      font-family: var(--font-body);
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      -webkit-transition: all 0.2s;
+              transition: all 0.2s;
+    }
+
+    .btn-toggle.active,
+    .btn-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* =============================================
+       VISTA CUADRÍCULA
+       ============================================= */
+    #feed.grid {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-wrap: wrap;
+          flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    #feed.grid .video-card {
+      width: calc(33.333% - 11px);
+      min-width: 200px;
+    }
+
+    /* =============================================
+       VISTA LISTA
+       ============================================= */
+    #feed.list {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      gap: 12px;
+    }
+
+    #feed.list .video-card {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: horizontal;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: row;
+              flex-direction: row;
+      gap: 14px;
+    }
+
+    #feed.list .video-thumb {
+      width: 180px;
+      min-width: 180px;
+      height: 101px;
+    }
+
+    #feed.list .video-body {
+      -webkit-box-flex: 1;
+          -ms-flex: 1;
+              flex: 1;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+    }
+
+    /* =============================================
+       TARJETA DE VÍDEO (compartido)
+       ============================================= */
+    .video-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      -webkit-transition: border-color 0.2s, -webkit-transform 0.2s;
+              transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .video-card:hover {
+      border-color: var(--accent);
+      -webkit-transform: translateY(-2px);
+              transform: translateY(-2px);
+    }
+
+    .video-thumb {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 */
+      background: #111;
+      overflow: hidden;
+    }
+
+    .video-thumb img {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      -o-object-fit: cover;
+         object-fit: cover;
+      display: block;
+    }
+
+    /* Fallback cuando no hay miniatura */
+    .video-thumb .no-thumb {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      font-size: 28px;
+      color: var(--muted);
+      background: #111;
+    }
+
+    .video-body {
+      padding: 10px 12px;
+    }
+
+    .video-title {
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--text);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .video-title:hover { color: var(--accent); }
+
+    .video-meta {
+      font-size: 11px;
+      color: var(--muted);
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      gap: 10px;
+      -ms-flex-wrap: wrap;
+          flex-wrap: wrap;
+    }
+
+    .video-channel {
+      color: var(--accent2);
+      font-weight: bold;
+    }
+
+    /* Etiqueta de Short */
+    .badge-short {
+      font-size: 9px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: var(--bg);
+      background: var(--accent2);
+      padding: 1px 5px;
+      border-radius: 3px;
+      vertical-align: middle;
+    }
+
+    /* =============================================
+       ESTADOS DE LA PÁGINA
+       ============================================= */
+    #empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    #empty-state .big-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    #empty-state h3 {
+      font-family: var(--font-head);
+      font-size: 20px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    #loading-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      display: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      -webkit-animation: spin 0.8s linear infinite;
+              animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    @-webkit-keyframes spin {
+      to { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* =============================================
+       RESPONSIVE: tablets pequeñas
+       ============================================= */
+    @media (max-width: 700px) {
+      .layout {
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+            -ms-flex-direction: column;
+                flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #feed.grid .video-card {
+        width: calc(50% - 8px);
+      }
+
+      #feed.list .video-thumb {
+        width: 120px;
+        min-width: 120px;
+        height: 68px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #feed.grid .video-card {
+        width: 100%;
+      }
+
+      #feed.list .video-card {
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+            -ms-flex-direction: column;
+                flex-direction: column;
+      }
+
+      #feed.list .video-thumb {
+        width: 100%;
+        height: auto;
+        padding-top: 56.25%;
+        min-width: unset;
+      }
+    }
+
+    /* =============================================
+       SCROLLBAR PERSONALIZADO (solo webkit)
+       ============================================= */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* Separador decorativo en el sidebar */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- =============================================
+     CABECERA
+     ============================================= -->
+<header>
+  <h1><span>YT</span>·Feed</h1>
+  <span class="tagline">Agregador RSS sin API</span>
+</header>
+
+<!-- =============================================
+     LAYOUT: sidebar + contenido
+     ============================================= -->
+<div class="layout">
+
+  <!-- PANEL LATERAL -->
+  <aside class="sidebar">
+    <h2>Canales</h2>
+
+    <!-- Formulario para añadir canal -->
+    <div class="input-group">
+      <label for="url-input">URL o ID del canal</label>
+      <input
+        type="text"
+        id="url-input"
+        placeholder="@NombreCanal o UCxxxx..."
+      >
+      <span style="font-size:10px;color:var(--muted);display:block;margin-top:4px;">
+        Acepta: @handle · /channel/UCxx · channel_id directo
+      </span>
+    </div>
+    <button class="btn btn-primary" id="btn-add">+ Añadir canal</button>
+
+    <!-- Mensaje de error local -->
+    <div id="error-msg"></div>
+
+    <hr class="divider">
+
+    <!-- Botón para refrescar todos los canales -->
+    <button class="btn btn-refresh" id="btn-refresh">↻ Actualizar feed</button>
+
+    <!-- Botón de diagnóstico de proxies -->
+    <button class="btn btn-small" id="btn-test-proxy" style="width:100%;margin-top:8px;text-align:center;">
+      🔧 Comprobar conexión
+    </button>
+    <div id="proxy-status" style="font-size:10px;color:var(--muted);margin-top:6px;display:none;"></div>
+
+    <!-- Lista dinámica de canales guardados -->
+    <div class="channel-list" id="channel-list">
+      <button class="btn-all-channels active" id="btn-all-channels">▤ Todos los canales</button>
+      <div id="channel-items">
+        <p class="no-channels">
+          Aún no hay canales.<br>
+          Añade uno arriba para empezar.
+        </p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ZONA DE CONTENIDO -->
+  <main class="content">
+
+    <!-- Barra de controles (cuenta + toggle vista + toggle shorts) -->
+    <div class="controls" id="controls" style="display:none;">
+      <span class="controls-left" id="feed-count">0 vídeos</span>
+      <button class="btn-toggle active" id="btn-shorts" title="Mostrar u ocultar Shorts">▦ Shorts</button>
+      <button class="btn-toggle active" id="btn-grid"   title="Vista cuadrícula">⊞ Cuadrícula</button>
+      <button class="btn-toggle"        id="btn-list"   title="Vista lista"     >☰ Lista</button>
+    </div>
+
+    <!-- Estado vacío inicial -->
+    <div id="empty-state">
+      <div class="big-icon">📺</div>
+      <h3>Tu feed está vacío</h3>
+      <p>Añade canales de YouTube en el panel de la izquierda<br>para ver sus vídeos recientes aquí.</p>
+    </div>
+
+    <!-- Indicador de carga -->
+    <div id="loading-state">
+      <div class="spinner"></div>
+      <p id="loading-msg">Cargando vídeos…</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;">
+        Conectando con proxy CORS. Puede tardar unos segundos.
+      </p>
+    </div>
+
+    <!-- Contenedor principal de tarjetas de vídeo -->
+    <div id="feed" class="grid"></div>
+
+  </main>
+</div>
+
+<!-- =============================================
+     JAVASCRIPT
+     ============================================= -->
+<script>
+/*
+ * ================================================
+ * YT·Feed — Agregador RSS de YouTube sin API
+ * ================================================
+ *
+ * Arquitectura:
+ *  1. El usuario introduce una URL de canal (o channel_id directo).
+ *  2. Si la URL ya contiene /channel/UCxxxx, se extrae el ID sin red.
+ *  3. Si es un @handle o /c/nombre, se usa un proxy CORS para
+ *     descargar la página y extraer el channel_id del HTML.
+ *     Se prueban varios proxies en orden hasta que uno funcione.
+ *  4. Con el channel_id se construye el RSS oficial:
+ *     https://www.youtube.com/feeds/videos.xml?channel_id=ID
+ *     El RSS también se descarga vía proxy.
+ *  5. Los vídeos de todos los canales se mezclan y ordenan
+ *     por fecha descendente.
+ *  6. Se renderizan tarjetas en vista lista o cuadrícula.
+ *
+ * Compatibilidad: IE11+, Chrome 30+, Firefox 28+, Safari 7+
+ * Sin async/await, sin arrow functions avanzadas.
+ * Usa XMLHttpRequest para máxima compatibilidad.
+ */
+
+// ------------------------------------------------
+// CONSTANTES
+// ------------------------------------------------
+
+/**
+ * Lista de proxies CORS disponibles.
+ * Se intentan en orden; si uno falla se pasa al siguiente.
+ *
+ * Formato de cada entrada:
+ *   build(url)  → devuelve la URL del proxy con la URL destino incrustada
+ *   parse(text) → extrae el contenido de la respuesta del proxy
+ */
+var PROXIES = [
+  {
+    // allorigins — responde con JSON { contents: "..." }
+    build: function(url) {
+      return 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    },
+    parse: function(text) {
+      var json = JSON.parse(text);
+      if (json && json.contents) return json.contents;
+      throw new Error('allorigins: respuesta vacía');
+    }
+  },
+  {
+    // corsproxy.io — responde directamente con el contenido
+    build: function(url) {
+      return 'https://corsproxy.io/?' + encodeURIComponent(url);
+    },
+    parse: function(text) {
+      if (!text) throw new Error('corsproxy.io: respuesta vacía');
+      return text;
+    }
+  },
+  {
+    // thingproxy — responde directamente con el contenido
+    build: function(url) {
+      return 'https://thingproxy.freeboard.io/fetch/' + url;
+    },
+    parse: function(text) {
+      if (!text) throw new Error('thingproxy: respuesta vacía');
+      return text;
+    }
+  }
+];
+
+/** Clave de localStorage para guardar los canales */
+var STORAGE_KEY = 'ytfeed_channels';
+
+// ------------------------------------------------
+// ESTADO GLOBAL
+// ------------------------------------------------
+
+/**
+ * Array de objetos de canal:
+ * { url: string, channelId: string|null, name: string, status: 'loading'|'ok'|'error' }
+ */
+var channels = [];
+
+/** Todos los vídeos cargados (de todos los canales mezclados) */
+var allVideos = [];
+
+/** Modo de vista actual: 'grid' o 'list' */
+var viewMode = 'grid';
+
+/**
+ * Canal actualmente seleccionado para filtrar el feed.
+ * null = mostrar todos los canales.
+ * string = channelId del canal seleccionado.
+ */
+var activeChannelId = null;
+
+/**
+ * Si es true, se muestran los Shorts en el feed.
+ * Si es false, los Shorts se ocultan.
+ */
+var showShorts = true;
+
+/** Cuántos canales están aún cargando (para saber cuándo acabar) */
+var pendingLoads = 0;
+
+// ------------------------------------------------
+// REFERENCIAS AL DOM
+// ------------------------------------------------
+var urlInput        = document.getElementById('url-input');
+var btnAdd          = document.getElementById('btn-add');
+var btnRefresh      = document.getElementById('btn-refresh');
+var btnTestProxy    = document.getElementById('btn-test-proxy');
+var proxyStatus     = document.getElementById('proxy-status');
+var btnAllChannels  = document.getElementById('btn-all-channels');
+var channelItems    = document.getElementById('channel-items');
+var btnGrid         = document.getElementById('btn-grid');
+var btnList         = document.getElementById('btn-list');
+var btnShorts       = document.getElementById('btn-shorts');
+var channelList     = document.getElementById('channel-list');
+var feed            = document.getElementById('feed');
+var emptyState      = document.getElementById('empty-state');
+var loadingState    = document.getElementById('loading-state');
+var loadingMsg      = document.getElementById('loading-msg');
+var feedCount       = document.getElementById('feed-count');
+var controls        = document.getElementById('controls');
+var errorMsg        = document.getElementById('error-msg');
+
+// ------------------------------------------------
+// PERSISTENCIA (localStorage)
+// ------------------------------------------------
+
+/** Carga los canales guardados en localStorage */
+function loadFromStorage() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      channels = JSON.parse(raw);
+      // Resetear estados de carga por si la página se refresca
+      for (var i = 0; i < channels.length; i++) {
+        channels[i].status = 'loading';
+      }
+    }
+  } catch (e) {
+    channels = [];
+  }
+}
+
+/** Guarda el array de canales en localStorage (solo url, channelId y name) */
+function saveToStorage() {
+  var toSave = [];
+  for (var i = 0; i < channels.length; i++) {
+    toSave.push({
+      url:       channels[i].url,
+      channelId: channels[i].channelId,
+      name:      channels[i].name
+    });
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    // localStorage puede estar deshabilitado en algunos navegadores privados
+  }
+}
+
+// ------------------------------------------------
+// UTILIDADES
+// ------------------------------------------------
+
+/** Muestra u oculta el mensaje de error del sidebar */
+function showError(msg) {
+  errorMsg.style.display = 'block';
+  errorMsg.textContent = msg;
+}
+
+function hideError() {
+  errorMsg.style.display = 'none';
+}
+
+/**
+ * Limpia y normaliza una URL de canal de YouTube.
+ * Acepta formatos:
+ *   - https://www.youtube.com/@handle
+ *   - https://www.youtube.com/channel/UCxxxx
+ *   - https://www.youtube.com/c/nombre
+ *   - https://www.youtube.com/user/nombre
+ *   - @handle  (sin dominio)
+ *   - UCxxxx   (channel_id directo)
+ */
+function normalizeYouTubeUrl(raw) {
+  var url = raw.trim();
+
+  // Si parece un channel_id directo (UCxxxx...), construir URL directa
+  if (/^UC[\w-]{10,}$/.test(url)) {
+    return 'https://www.youtube.com/channel/' + url;
+  }
+
+  // Si empieza por @, es un handle sin dominio
+  if (url.indexOf('@') === 0) {
+    return 'https://www.youtube.com/' + url;
+  }
+
+  // Si no empieza por http, añadimos el dominio
+  if (url.indexOf('http') !== 0) {
+    url = 'https://www.youtube.com/' + url;
+  }
+
+  // Asegurar https
+  url = url.replace(/^http:\/\//, 'https://');
+
+  // Eliminar trailing slash
+  url = url.replace(/\/+$/, '');
+
+  return url;
+}
+
+/**
+ * Valida que la URL parezca ser un canal de YouTube.
+ */
+function isValidYouTubeChannelUrl(url) {
+  return /youtube\.com\/((@[\w.-]+)|channel\/UC[\w-]+|(c|user)\/[\w.-]+)/.test(url);
+}
+
+/**
+ * Intenta extraer directamente el channel_id de la URL
+ * (solo funciona para URLs tipo /channel/UCxxxxx).
+ */
+function extractChannelIdFromUrl(url) {
+  var match = url.match(/\/channel\/(UC[\w-]+)/);
+  if (match) return match[1];
+  return null;
+}
+
+/**
+ * Formatea una fecha ISO a texto legible en español.
+ * Compatible con navegadores sin soporte a Intl completo.
+ */
+function formatDate(isoString) {
+  var d = new Date(isoString);
+  if (isNaN(d.getTime())) return 'Fecha desconocida';
+  var months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var day   = d.getDate();
+  var month = months[d.getMonth()];
+  var year  = d.getFullYear();
+  return day + ' ' + month + ' ' + year;
+}
+
+/**
+ * Tiempo relativo sencillo (hace X días/horas).
+ */
+function relativeTime(isoString) {
+  var d = new Date(isoString);
+  if (isNaN(d.getTime())) return '';
+  var diff = Date.now() - d.getTime();
+  var mins  = Math.floor(diff / 60000);
+  var hours = Math.floor(diff / 3600000);
+  var days  = Math.floor(diff / 86400000);
+  if (days > 0)  return 'hace ' + days  + (days  === 1 ? ' día'  : ' días');
+  if (hours > 0) return 'hace ' + hours + (hours === 1 ? ' hora' : ' horas');
+  return 'hace ' + mins + ' min';
+}
+
+/**
+ * Genera una URL de miniatura de YouTube a partir del ID del vídeo.
+ * YouTube sirve miniaturas en varias calidades; usamos hqdefault.
+ */
+function getThumbnailUrl(videoId) {
+  return 'https://i.ytimg.com/vi/' + videoId + '/hqdefault.jpg';
+}
+
+/**
+ * Extrae el ID del vídeo de una URL de YouTube.
+ */
+function extractVideoId(videoUrl) {
+  var match = videoUrl.match(/[?&]v=([\w-]+)/);
+  if (match) return match[1];
+  // Formato youtu.be/ID
+  match = videoUrl.match(/youtu\.be\/([\w-]+)/);
+  if (match) return match[1];
+  return null;
+}
+
+// ------------------------------------------------
+// PETICIONES HTTP (XMLHttpRequest)
+// ------------------------------------------------
+
+/**
+ * Hace una petición GET y llama a callback(error, responseText).
+ * Usa XMLHttpRequest para compatibilidad máxima.
+ *
+ * @param {string}   url       URL a descargar
+ * @param {number}   timeout   Milisegundos antes de abortar
+ * @param {Function} callback  callback(error, responseText)
+ */
+function httpGet(url, timeout, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.timeout = timeout || 12000;
+
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status >= 200 && xhr.status < 300) {
+      callback(null, xhr.responseText);
+    } else {
+      callback(new Error('HTTP ' + xhr.status), null);
+    }
+  };
+
+  xhr.ontimeout = function() {
+    callback(new Error('Timeout'), null);
+  };
+
+  xhr.onerror = function() {
+    callback(new Error('Error de red'), null);
+  };
+
+  try {
+    xhr.send();
+  } catch (e) {
+    callback(e, null);
+  }
+}
+
+/**
+ * Descarga una URL probando cada proxy de la lista PROXIES en orden.
+ * Si un proxy falla (error de red, timeout, respuesta vacía),
+ * se intenta automáticamente el siguiente.
+ *
+ * @param {string}   targetUrl  URL destino a obtener
+ * @param {Function} callback   callback(error, contenido)
+ * @param {number}   [startIdx] Índice de proxy por el que empezar (interno)
+ */
+function fetchViaProxy(targetUrl, callback, startIdx) {
+  var idx = startIdx || 0;
+
+  if (idx >= PROXIES.length) {
+    callback(new Error('Todos los proxies fallaron para: ' + targetUrl), null);
+    return;
+  }
+
+  var proxy   = PROXIES[idx];
+  var fullUrl = proxy.build(targetUrl);
+
+  // Timeout algo más generoso para el primer proxy, más corto para los siguientes
+  var timeout = idx === 0 ? 12000 : 9000;
+
+  httpGet(fullUrl, timeout, function(err, text) {
+    if (err) {
+      // Este proxy falló → intentar el siguiente
+      console.warn('Proxy ' + idx + ' falló (' + err.message + '), probando siguiente…');
+      fetchViaProxy(targetUrl, callback, idx + 1);
+      return;
+    }
+
+    try {
+      var content = proxy.parse(text);
+      callback(null, content);
+    } catch (parseErr) {
+      // El proxy respondió pero el contenido no es válido → siguiente
+      console.warn('Proxy ' + idx + ' parse error (' + parseErr.message + '), probando siguiente…');
+      fetchViaProxy(targetUrl, callback, idx + 1);
+    }
+  });
+}
+
+// ------------------------------------------------
+// EXTRACCIÓN DEL CHANNEL_ID
+// ------------------------------------------------
+
+/**
+ * Descarga la página del canal y extrae el channel_id del HTML.
+ *
+ * YouTube incluye el channel_id en el HTML de la página del canal
+ * en varios lugares:
+ *   - <meta itemprop="channelId" content="UCxxxx">
+ *   - "browseId":"UCxxxx"
+ *   - /channel/UCxxxx (en canonicals y enlaces internos)
+ *
+ * @param {string}   channelUrl  URL normalizada del canal
+ * @param {Function} callback    callback(error, channelId)
+ */
+function resolveChannelId(channelUrl, callback) {
+  // Si ya es una URL /channel/UC..., extraemos directamente
+  var directId = extractChannelIdFromUrl(channelUrl);
+  if (directId) {
+    callback(null, directId);
+    return;
+  }
+
+  // Necesitamos descargar la página del canal para extraer el ID
+  fetchViaProxy(channelUrl, function(err, html) {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+
+    var channelId = null;
+
+    // Método 1: <meta itemprop="channelId" content="UCxxxx">
+    var metaMatch = html.match(/<meta[^>]+itemprop="channelId"[^>]+content="(UC[\w-]+)"/);
+    if (metaMatch) {
+      channelId = metaMatch[1];
+    }
+
+    // Método 2: "browseId":"UCxxxx" (aparece en el JSON embebido de YouTube)
+    if (!channelId) {
+      var browseMatch = html.match(/"browseId"\s*:\s*"(UC[\w-]+)"/);
+      if (browseMatch) channelId = browseMatch[1];
+    }
+
+    // Método 3: /channel/UCxxxx en cualquier parte del HTML
+    if (!channelId) {
+      var channelMatch = html.match(/\/channel\/(UC[\w-]+)/);
+      if (channelMatch) channelId = channelMatch[1];
+    }
+
+    // Método 4: externalId (YouTube Shorts y páginas nuevas)
+    if (!channelId) {
+      var extMatch = html.match(/"externalId"\s*:\s*"(UC[\w-]+)"/);
+      if (extMatch) channelId = extMatch[1];
+    }
+
+    if (channelId) {
+      callback(null, channelId);
+    } else {
+      callback(new Error('No se encontró el channel_id en la página del canal'), null);
+    }
+  });
+}
+
+// ------------------------------------------------
+// LECTURA DEL RSS
+// ------------------------------------------------
+
+/**
+ * Construye la URL del RSS oficial de YouTube para un channel_id.
+ */
+function buildRssUrl(channelId) {
+  return 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channelId;
+}
+
+/**
+ * Descarga y parsea el RSS de YouTube para un canal.
+ * Devuelve un array de objetos de vídeo.
+ *
+ * El RSS de YouTube es Atom (XML), con entradas como:
+ *   <entry>
+ *     <id>yt:video:VIDEOID</id>
+ *     <title>Título</title>
+ *     <link href="https://www.youtube.com/watch?v=VIDEOID"/>
+ *     <published>2024-01-01T00:00:00Z</published>
+ *     <author><name>NombreCanal</name></author>
+ *     <media:group>
+ *       <media:thumbnail url="https://..."/>
+ *     </media:group>
+ *   </entry>
+ *
+ * @param {string}   channelId    ID del canal
+ * @param {string}   channelName  Nombre para etiquetar los vídeos
+ * @param {Function} callback     callback(error, videosArray)
+ */
+function fetchRss(channelId, channelName, callback) {
+  var rssUrl = buildRssUrl(channelId);
+
+  fetchViaProxy(rssUrl, function(err, xmlText) {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+
+    var videos = [];
+
+    try {
+      // Parsear XML con el DOMParser nativo del navegador
+      var parser = new DOMParser();
+      var xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+      // Detectar error de parseo
+      var parseError = xmlDoc.getElementsByTagName('parsererror');
+      if (parseError.length > 0) {
+        callback(new Error('XML inválido en el RSS'), null);
+        return;
+      }
+
+      var entries = xmlDoc.getElementsByTagName('entry');
+
+      // Extraer nombre del canal del feed si no lo tenemos
+      var feedTitle = xmlDoc.getElementsByTagName('title')[0];
+      var resolvedName = channelName;
+      if (!resolvedName && feedTitle) {
+        resolvedName = feedTitle.textContent;
+      }
+
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+
+        // Título del vídeo
+        var titleEl = entry.getElementsByTagName('title')[0];
+        var title = titleEl ? titleEl.textContent : 'Sin título';
+
+        // URL del vídeo (atributo href del elemento link)
+        var linkEl = entry.getElementsByTagName('link')[0];
+        var videoUrl = linkEl ? (linkEl.getAttribute('href') || '') : '';
+
+        // Fecha de publicación
+        var pubEl = entry.getElementsByTagName('published')[0];
+        var published = pubEl ? pubEl.textContent : '';
+
+        // Miniatura (namespace media)
+        var thumbEl = entry.getElementsByTagName('media:thumbnail')[0];
+        var thumbnail = thumbEl ? thumbEl.getAttribute('url') : null;
+
+        // Si no hay miniatura en el RSS, la construimos desde el ID del vídeo
+        if (!thumbnail) {
+          var videoId = extractVideoId(videoUrl);
+          if (videoId) thumbnail = getThumbnailUrl(videoId);
+        }
+
+        // Nombre del canal (author/name)
+        var authorEl = entry.getElementsByTagName('name')[0];
+        var author = authorEl ? authorEl.textContent : (resolvedName || 'Canal desconocido');
+
+        /*
+         * Detección de YouTube Shorts.
+         * El RSS no tiene un campo explícito para Shorts, pero hay
+         * dos indicadores fiables:
+         *   1. La miniatura tiene formato vertical (height > width),
+         *      típicamente 168×298 px en Shorts vs 480×360 en vídeos normales.
+         *   2. La URL contiene "/shorts/" (YouTube a veces lo incluye).
+         * Usamos ambos para mayor cobertura.
+         */
+        var isShort = false;
+
+        // Indicador 1: URL contiene /shorts/
+        if (videoUrl.indexOf('/shorts/') !== -1) {
+          isShort = true;
+        }
+
+        // Indicador 2: miniatura vertical (height > width)
+        if (!isShort && thumbEl) {
+          var tw = parseInt(thumbEl.getAttribute('width'),  10) || 0;
+          var th = parseInt(thumbEl.getAttribute('height'), 10) || 0;
+          if (th > 0 && tw > 0 && th > tw) {
+            isShort = true;
+          }
+        }
+
+        videos.push({
+          title:      title,
+          url:        videoUrl,
+          published:  published,
+          thumbnail:  thumbnail,
+          channel:    author,
+          channelId:  channelId,
+          isShort:    isShort
+        });
+      }
+
+      callback(null, videos);
+    } catch (e) {
+      callback(new Error('Error al procesar el RSS: ' + e.message), null);
+    }
+  });
+}
+
+// ------------------------------------------------
+// GESTIÓN DE CANALES
+// ------------------------------------------------
+
+/**
+ * Añade un nuevo canal: normaliza la URL, valida el formato,
+ * extrae el channel_id y carga su RSS.
+ */
+function addChannel(rawUrl) {
+  hideError();
+
+  var url = normalizeYouTubeUrl(rawUrl);
+
+  if (!isValidYouTubeChannelUrl(url)) {
+    showError('URL no reconocida. Prueba con:\n• https://www.youtube.com/@NombreCanal\n• https://www.youtube.com/channel/UCxxxxxx\n• O pega el channel_id directamente (UCxxxxxx)');
+    return;
+  }
+
+  // Comprobar si ya existe
+  for (var i = 0; i < channels.length; i++) {
+    if (channels[i].url === url) {
+      showError('Este canal ya está en la lista.');
+      return;
+    }
+  }
+
+  // Crear entrada de canal con estado "cargando"
+  var channel = {
+    url:       url,
+    channelId: null,
+    name:      url.split('/').pop(), // nombre provisional
+    status:    'loading'
+  };
+
+  channels.push(channel);
+  renderChannelList();
+  showLoadingState('Resolviendo canal…');
+  pendingLoads++;
+
+  // Resolver el channel_id
+  resolveChannelId(url, function(err, channelId) {
+    if (err) {
+      channel.status = 'error';
+      channel.name   = '(Error al resolver)';
+      pendingLoads--;
+      renderChannelList();
+      if (pendingLoads === 0) hideLoadingState();
+      console.warn('Error resolviendo ' + url + ':', err.message);
+      return;
+    }
+
+    channel.channelId = channelId;
+    channel.status    = 'loading';
+    renderChannelList();
+    saveToStorage();
+
+    // Ahora cargar el RSS con el channel_id resuelto
+    fetchRss(channelId, null, function(rssErr, videos) {
+      pendingLoads--;
+
+      if (rssErr) {
+        channel.status = 'error';
+        channel.errorMsg = rssErr.message;
+        console.warn('Error en RSS de ' + channelId + ':', rssErr.message);
+      } else {
+        channel.status = 'ok';
+        // Actualizar nombre del canal con el del RSS
+        if (videos.length > 0) {
+          channel.name = videos[0].channel;
+        }
+        // Añadir vídeos al array global
+        addVideos(videos);
+      }
+
+      saveToStorage();
+      renderChannelList();
+
+      if (pendingLoads === 0) {
+        hideLoadingState();
+        renderFeed();
+      }
+    });
+  });
+
+  urlInput.value = '';
+}
+
+/**
+ * Elimina un canal por índice y re-renderiza todo.
+ */
+function removeChannel(index) {
+  var removedId = channels[index].channelId;
+  channels.splice(index, 1);
+
+  // Eliminar los vídeos de ese canal del array global
+  if (removedId) {
+    var filtered = [];
+    for (var i = 0; i < allVideos.length; i++) {
+      if (allVideos[i].channelId !== removedId) {
+        filtered.push(allVideos[i]);
+      }
+    }
+    allVideos = filtered;
+  }
+
+  saveToStorage();
+  renderChannelList();
+  renderFeed();
+}
+
+/**
+ * Añade vídeos al array global evitando duplicados (por URL).
+ */
+function addVideos(videos) {
+  var existingUrls = {};
+  for (var i = 0; i < allVideos.length; i++) {
+    existingUrls[allVideos[i].url] = true;
+  }
+  for (var j = 0; j < videos.length; j++) {
+    if (!existingUrls[videos[j].url]) {
+      allVideos.push(videos[j]);
+      existingUrls[videos[j].url] = true;
+    }
+  }
+  // Ordenar por fecha descendente (más reciente primero)
+  allVideos.sort(function(a, b) {
+    return new Date(b.published) - new Date(a.published);
+  });
+}
+
+/**
+ * Recarga todos los canales guardados desde cero.
+ */
+function refreshAll() {
+  allVideos = [];
+  pendingLoads = 0;
+
+  if (channels.length === 0) {
+    renderFeed();
+    return;
+  }
+
+  showLoadingState('Actualizando ' + channels.length + ' canal' + (channels.length !== 1 ? 'es' : '') + '…');
+
+  for (var i = 0; i < channels.length; i++) {
+    (function(channel) {
+      channel.status = 'loading';
+
+      // Si no tenemos channel_id, hay que resolverlo primero
+      if (!channel.channelId) {
+        pendingLoads++;
+        resolveChannelId(channel.url, function(err, channelId) {
+          if (err) {
+            channel.status = 'error';
+            pendingLoads--;
+            renderChannelList();
+            if (pendingLoads === 0) { hideLoadingState(); renderFeed(); }
+            return;
+          }
+          channel.channelId = channelId;
+          loadChannelRss(channel);
+        });
+      } else {
+        pendingLoads++;
+        loadChannelRss(channel);
+      }
+    })(channels[i]);
+  }
+
+  renderChannelList();
+}
+
+/**
+ * Carga el RSS de un canal ya resuelto (con channelId).
+ */
+function loadChannelRss(channel) {
+  fetchRss(channel.channelId, channel.name, function(err, videos) {
+    pendingLoads--;
+
+    if (err) {
+      channel.status = 'error';
+      console.warn('RSS error para ' + channel.channelId, err.message);
+    } else {
+      channel.status = 'ok';
+      if (videos.length > 0 && !channel.name) {
+        channel.name = videos[0].channel;
+      }
+      addVideos(videos);
+    }
+
+    renderChannelList();
+
+    if (pendingLoads === 0) {
+      hideLoadingState();
+      renderFeed();
+      saveToStorage();
+    }
+  });
+}
+
+// ------------------------------------------------
+// RENDERIZADO DEL DOM
+// ------------------------------------------------
+
+/** Renderiza la lista de canales en el sidebar */
+function renderChannelList() {
+  // Actualizar estado visual del botón "Todos"
+  if (btnAllChannels) {
+    btnAllChannels.className = 'btn-all-channels' + (activeChannelId === null ? ' active' : '');
+  }
+
+  if (channels.length === 0) {
+    channelItems.innerHTML = '<p class="no-channels">Aún no hay canales.<br>Añade uno arriba para empezar.</p>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < channels.length; i++) {
+    var ch = channels[i];
+    var isActive = (activeChannelId === ch.channelId && ch.channelId !== null);
+
+    /*
+     * Cada fila tiene:
+     *  - Punto de estado (verde/rojo/naranja)
+     *  - Nombre del canal (clic → filtrar feed)
+     *  - Icono de enlace externo (abre el canal en YouTube)
+     *  - Botón eliminar
+     *
+     * IMPORTANTE: el clic en la fila filtra el feed, EXCEPTO
+     * en los botones de enlace y eliminar que tienen su propia acción.
+     * Usamos onclick en el div y stopPropagation en los botones internos.
+     */
+    html += '<div class="channel-item' + (isActive ? ' active' : '') + '" onclick="selectChannel(\'' + escapeHtml(ch.channelId || '') + '\')" title="Filtrar por este canal">'
+      + '<span class="dot ' + ch.status + '"></span>'
+      + '<span class="channel-item-name">'
+      +   escapeHtml(ch.name)
+      +   '<span class="channel-item-status">' + statusText(ch.status, ch.errorMsg) + '</span>'
+      + '</span>'
+      // Enlace externo al canal — abre YouTube en nueva pestaña
+      + (ch.url
+          ? '<a class="channel-link" href="' + escapeHtml(ch.url) + '" target="_blank" rel="noopener noreferrer" title="Abrir canal en YouTube" onclick="event.stopPropagation()">↗</a>'
+          : '')
+      // Botón eliminar
+      + '<button class="btn btn-small" onclick="event.stopPropagation();removeChannel(' + i + ')" title="Eliminar canal">✕</button>'
+      + '</div>';
+  }
+  channelItems.innerHTML = html;
+}
+
+/**
+ * Selecciona un canal para filtrar el feed.
+ * Si ya estaba seleccionado, lo deselecciona (vuelve a "todos").
+ *
+ * @param {string} channelId  ID del canal a filtrar (vacío = todos)
+ */
+function selectChannel(channelId) {
+  if (!channelId) return; // canal sin ID resuelto aún
+
+  // Toggle: si ya estaba activo, volver a "todos"
+  if (activeChannelId === channelId) {
+    activeChannelId = null;
+  } else {
+    activeChannelId = channelId;
+  }
+
+  renderChannelList();
+  renderFeed();
+}
+
+/** Texto de estado para mostrar bajo el nombre del canal */
+function statusText(status, errMsg) {
+  if (status === 'loading') return 'Cargando…';
+  if (status === 'ok')      return 'Al día';
+  if (status === 'error')   return errMsg ? ('Error: ' + errMsg.substring(0, 40)) : 'Error al cargar';
+  return '';
+}
+
+/** Escapa caracteres HTML para evitar XSS */
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Renderiza las tarjetas de vídeo en el feed, aplicando el filtro de canal activo */
+function renderFeed() {
+  feed.innerHTML = '';
+
+  // Determinar qué vídeos mostrar según el filtro activo
+  var videosToShow = [];
+  if (activeChannelId === null) {
+    // Sin filtro de canal: todos los vídeos
+    videosToShow = allVideos;
+  } else {
+    // Filtrar por canal seleccionado
+    for (var j = 0; j < allVideos.length; j++) {
+      if (allVideos[j].channelId === activeChannelId) {
+        videosToShow.push(allVideos[j]);
+      }
+    }
+  }
+
+  // Aplicar filtro de Shorts si está desactivado
+  if (!showShorts) {
+    var filtered = [];
+    for (var s = 0; s < videosToShow.length; s++) {
+      if (!videosToShow[s].isShort) filtered.push(videosToShow[s]);
+    }
+    videosToShow = filtered;
+  }
+
+  if (videosToShow.length === 0) {
+    emptyState.style.display = 'block';
+    controls.style.display   = 'none';
+    feedCount.textContent    = '0 vídeos';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  controls.style.display   = 'flex';
+
+  // Texto del contador con indicación del canal activo
+  if (activeChannelId !== null) {
+    var chName = '';
+    for (var k = 0; k < channels.length; k++) {
+      if (channels[k].channelId === activeChannelId) {
+        chName = channels[k].name;
+        break;
+      }
+    }
+    feedCount.textContent = videosToShow.length + ' vídeo' + (videosToShow.length !== 1 ? 's' : '') + ' · ' + chName;
+  } else {
+    feedCount.textContent = videosToShow.length + ' vídeo' + (videosToShow.length !== 1 ? 's' : '') + ' · todos los canales';
+  }
+
+  for (var i = 0; i < videosToShow.length; i++) {
+    var card = buildVideoCard(videosToShow[i]);
+    feed.appendChild(card);
+  }
+}
+
+/**
+ * Construye un elemento DOM de tarjeta de vídeo.
+ * Evitamos innerHTML con datos externos para reducir riesgos XSS.
+ */
+function buildVideoCard(video) {
+  var card = document.createElement('div');
+  card.className = 'video-card';
+
+  // Miniatura
+  var thumbDiv = document.createElement('div');
+  thumbDiv.className = 'video-thumb';
+
+  if (video.thumbnail) {
+    var img = document.createElement('img');
+    img.src   = video.thumbnail;
+    img.alt   = video.title;
+    img.title = video.title;
+    // Fallback si la imagen no carga
+    img.onerror = function() {
+      thumbDiv.innerHTML = '<div class="no-thumb">▶</div>';
+    };
+    thumbDiv.appendChild(img);
+  } else {
+    var noThumb = document.createElement('div');
+    noThumb.className = 'no-thumb';
+    noThumb.textContent = '▶';
+    thumbDiv.appendChild(noThumb);
+  }
+
+  // Cuerpo
+  var body = document.createElement('div');
+  body.className = 'video-body';
+
+  // Título (enlace)
+  var titleLink = document.createElement('a');
+  titleLink.className  = 'video-title';
+  titleLink.href       = video.url;
+  titleLink.target     = '_blank';
+  titleLink.rel        = 'noopener noreferrer';
+  titleLink.textContent = video.title;
+
+  // Meta (canal + fecha + etiqueta SHORT si aplica)
+  var meta = document.createElement('div');
+  meta.className = 'video-meta';
+
+  var channelSpan = document.createElement('span');
+  channelSpan.className   = 'video-channel';
+  channelSpan.textContent = video.channel;
+
+  var dateSpan = document.createElement('span');
+  var rel = relativeTime(video.published);
+  dateSpan.textContent = rel ? rel : formatDate(video.published);
+  dateSpan.title       = formatDate(video.published);
+
+  meta.appendChild(channelSpan);
+  meta.appendChild(dateSpan);
+
+  // Etiqueta visual "SHORT"
+  if (video.isShort) {
+    var shortBadge = document.createElement('span');
+    shortBadge.className   = 'badge-short';
+    shortBadge.textContent = '▦ SHORT';
+    meta.appendChild(shortBadge);
+  }
+
+  body.appendChild(titleLink);
+  body.appendChild(meta);
+
+  card.appendChild(thumbDiv);
+  card.appendChild(body);
+
+  return card;
+}
+
+/** Muestra el indicador de carga y oculta estados vacíos */
+function showLoadingState(msg) {
+  emptyState.style.display    = 'none';
+  loadingState.style.display  = 'block';
+  if (loadingMsg) loadingMsg.textContent = msg || 'Cargando vídeos…';
+}
+
+/** Oculta el indicador de carga */
+function hideLoadingState() {
+  loadingState.style.display = 'none';
+}
+
+/**
+ * Prueba todos los proxies disponibles con una URL de RSS conocida
+ * y muestra el resultado en el sidebar.
+ */
+function testProxies() {
+  var testUrl = 'https://www.youtube.com/feeds/videos.xml?channel_id=UCVHFbw7woebKtffS9KbaHrg';
+  proxyStatus.style.display = 'block';
+  proxyStatus.textContent = 'Probando proxies…';
+  proxyStatus.style.color = 'var(--muted)';
+
+  var results = [];
+  var total   = PROXIES.length;
+  var done    = 0;
+  var names   = ['allorigins', 'corsproxy.io', 'thingproxy'];
+
+  for (var i = 0; i < PROXIES.length; i++) {
+    (function(idx) {
+      var start = Date.now();
+      var proxyUrl = PROXIES[idx].build(testUrl);
+
+      httpGet(proxyUrl, 8000, function(err, text) {
+        var ms = Date.now() - start;
+        var ok = false;
+        if (!err && text) {
+          try {
+            var content = PROXIES[idx].parse(text);
+            ok = content && content.indexOf('<feed') !== -1;
+          } catch(e) { ok = false; }
+        }
+        results[idx] = (ok ? '✓ ' : '✗ ') + names[idx] + (ok ? ' (' + ms + 'ms)' : ' (fallo)');
+        done++;
+        if (done === total) {
+          proxyStatus.innerHTML = results.join('<br>');
+          proxyStatus.style.color = 'var(--text)';
+        }
+      });
+    })(i);
+  }
+}
+
+/** Cambia entre vista cuadrícula y lista */
+function setViewMode(mode) {
+  viewMode = mode;
+  if (mode === 'grid') {
+    feed.className = 'grid';
+    btnGrid.className = 'btn-toggle active';
+    btnList.className = 'btn-toggle';
+  } else {
+    feed.className = 'list';
+    btnGrid.className = 'btn-toggle';
+    btnList.className = 'btn-toggle active';
+  }
+}
+
+// ------------------------------------------------
+// EVENTOS
+// ------------------------------------------------
+
+/** Botón "Todos los canales" — quita el filtro activo */
+btnAllChannels.onclick = function() {
+  activeChannelId = null;
+  renderChannelList();
+  renderFeed();
+};
+
+/** Botón de diagnóstico de proxies */
+btnTestProxy.onclick = function() {
+  testProxies();
+};
+
+/** Botón "Añadir canal" */
+btnAdd.onclick = function() {
+  var val = urlInput.value.trim();
+  if (!val) {
+    showError('Por favor, introduce una URL de canal de YouTube.');
+    return;
+  }
+  addChannel(val);
+};
+
+/** Tecla Enter en el campo de texto */
+urlInput.onkeydown = function(e) {
+  var key = e.key || e.keyCode;
+  if (key === 'Enter' || key === 13) {
+    btnAdd.onclick();
+  }
+};
+
+/** Botón de actualizar feed */
+btnRefresh.onclick = function() {
+  refreshAll();
+};
+
+/** Toggle Shorts: muestra u oculta los vídeos cortos */
+btnShorts.onclick = function() {
+  showShorts = !showShorts;
+  btnShorts.className = 'btn-toggle' + (showShorts ? ' active' : '');
+  renderFeed();
+};
+
+/** Toggle vista cuadrícula */
+btnGrid.onclick = function() {
+  setViewMode('grid');
+};
+
+/** Toggle vista lista */
+btnList.onclick = function() {
+  setViewMode('list');
+};
+
+// ------------------------------------------------
+// INICIO
+// ------------------------------------------------
+
+/** Inicialización de la aplicación al cargar la página */
+function init() {
+  loadFromStorage();
+  renderChannelList();
+
+  if (channels.length > 0) {
+    refreshAll();
+  }
+}
+
+// Esperar a que el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+
+</body>
+</html>
