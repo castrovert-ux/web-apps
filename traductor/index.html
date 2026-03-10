@@ -231,6 +231,12 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center}
     <div class="vocab-filters" id="vocabFilters"></div>
   </div>
   <div id="vocabBody" style="width:100%"></div>
+  <!-- Import: always visible so user can load even when vocab is empty -->
+  <div style="width:100%;display:flex;justify-content:flex-end;margin-bottom:6px">
+    <button class="btn-s" id="importBtn">⬆ Cargar Excel</button>
+    <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none">
+  </div>
+  <div id="importMsg" style="display:none;width:100%;font-size:.82rem;padding:8px 14px;border-radius:10px;margin-bottom:6px"></div>
   <div class="tbl-actions" id="tblActions" style="display:none">
     <button class="btn-s" id="exportBtn">⬇ Descargar Excel</button>
     <button class="btn-s red" id="clearBtn">🗑 Borrar todo</button>
@@ -1207,6 +1213,127 @@ document.getElementById('exportBtn').addEventListener('click',()=>{
 
   XLSX.writeFile(wb,'Our_Translator_Vocabulario.xlsx');
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXCEL IMPORT
+// Reads the "Vocabulario" sheet (same format as export):
+// Col 0:#  1:Idioma(🇪🇸🇬🇧 ES-EN)  2:PalabraA  3:PalabraB  4:Traducciones(/ sep)
+//      5:Collocations(, sep)  6:Ej1  7:Ej2  8:Ej3  9:Fecha
+// ═══════════════════════════════════════════════════════════════════════════════
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').value = '';
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb   = XLSX.read(data, {type:'array'});
+
+      // Find the Vocabulario sheet (first sheet, or named "Vocabulario")
+      const sheetName = wb.SheetNames.includes('Vocabulario')
+        ? 'Vocabulario'
+        : wb.SheetNames[0];
+      const ws   = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      if (rows.length < 2) {
+        showImportMsg('El archivo no contiene datos.', 'err');
+        return;
+      }
+
+      // Detect header row (skip it)
+      const dataRows = rows[0][0]==='#' ? rows.slice(1) : rows;
+
+      // Map pair label back to pair key: "ES-EN", "🇪🇸🇬🇧 ES-EN", etc.
+      function parsePair(raw) {
+        const s = String(raw).toLowerCase().replace(/[^a-z-]/g,'');
+        // s will be like "es-en", "esen", "es-it" etc.
+        const match = s.match(/(es)[- ]?(en|fr|it|de|pt)/);
+        if (match) return `es-${match[2]}`;
+        return 'es-en'; // fallback
+      }
+
+      let imported = 0, skipped = 0, updated = 0;
+
+      dataRows.forEach(row => {
+        // Skip empty rows
+        const wordA = String(row[2]||'').trim();
+        const wordB = String(row[3]||'').trim();
+        if (!wordA || !wordB) return;
+
+        const pair        = parsePair(row[1]);
+        const transRaw    = String(row[4]||'').trim();
+        const translations= transRaw ? transRaw.split('/').map(s=>s.trim()).filter(Boolean) : [wordB];
+        const collRaw     = String(row[5]||'').trim();
+        const collocations= collRaw ? collRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        const examples    = [row[6],row[7],row[8]].map(s=>String(s||'').trim()).filter(Boolean);
+        const date        = String(row[9]||'').trim() || new Date().toLocaleDateString('es-ES');
+
+        // Check for duplicate (same pair + same wordA, case-insensitive)
+        const existing = vocab.find(v =>
+          (v.pair||'es-en') === pair && norm(v.wordA) === norm(wordA)
+        );
+
+        if (existing) {
+          // Merge: update wordB and translations if they differ (user may have edited)
+          // but don't overwrite edits made on this device — only add new info
+          let changed = false;
+          if (norm(existing.wordB) !== norm(wordB)) {
+            existing.wordB = wordB; changed = true;
+          }
+          // Merge translations (add any not already present)
+          translations.forEach(t => {
+            if (!(existing.translations||[]).some(et => norm(et)===norm(t))) {
+              existing.translations = existing.translations || [];
+              existing.translations.push(t);
+              changed = true;
+            }
+          });
+          if (changed) updated++;
+          else skipped++;
+        } else {
+          // New word — assign a new unique id
+          vocab.push({
+            id: Date.now() + imported + Math.floor(Math.random()*1000),
+            pair, wordA, wordB, translations, collocations, examples,
+            figurative: [], date
+          });
+          imported++;
+        }
+      });
+
+      saveVocab();
+      updateVocabCount();
+      renderVocab();
+
+      const parts = [];
+      if (imported)  parts.push(`${imported} palabra${imported!==1?'s':''} importada${imported!==1?'s':''}`);
+      if (updated)   parts.push(`${updated} actualizada${updated!==1?'s':''}`);
+      if (skipped)   parts.push(`${skipped} ya existía${skipped!==1?'n':''}`);
+      showImportMsg('✓ ' + (parts.join(' · ') || 'Sin cambios.'), 'ok');
+
+    } catch(err) {
+      showImportMsg('Error al leer el archivo: ' + err.message, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function showImportMsg(msg, type) {
+  const el = document.getElementById('importMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = type==='ok' ? 'var(--am)' : '#fdecea';
+  el.style.color       = type==='ok' ? 'var(--accent)' : 'var(--red)';
+  el.style.border      = `1px solid ${type==='ok' ? 'var(--al)' : '#f5c6c6'}`;
+  // Auto-hide after 5 seconds
+  setTimeout(() => { el.style.display='none'; }, 5000);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // QUIZ — respects current language filter & active pair
