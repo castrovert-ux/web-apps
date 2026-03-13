@@ -1,1 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tiempo · Valladolid</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0b1220;
+      --surface:  #111927;
+      --card:     #161f2e;
+      --border:   #1e2d42;
+      --text:     #e8eef5;
+      --muted:    #6b8099;
+      --accent:   #4a9eff;
+      --warm:     #ff9f4a;
+      --cold:     #74c8ff;
+      --rain:     #5b9bd5;
+      --sun:      #ffd166;
+      --green:    #06d6a0;
+      --red:      #ef476f;
+      --font-h:   'Crimson Pro', Georgia, serif;
+      --font-m:   'DM Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-m);
+      font-size: 13px;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── FONDO ANIMADO ── */
+    .sky {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .sky-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 20% 0%, rgba(74,158,255,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 100%, rgba(255,159,74,0.05) 0%, transparent 50%);
+    }
+    .star {
+      position: absolute;
+      width: 1px; height: 1px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      animation: twinkle var(--dur, 3s) ease-in-out infinite;
+    }
+    @keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+    /* ── LAYOUT ── */
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    /* ── CABECERA ── */
+    .header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-left h1 {
+      font-family: var(--font-h);
+      font-size: 42px;
+      font-weight: 300;
+      letter-spacing: -1px;
+      line-height: 1;
+      color: var(--text);
+    }
+    .header-left h1 span { color: var(--accent); font-style: italic; }
+    .header-sub {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-top: 4px;
+    }
+    .btn-refresh {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 16px;
+      font-family: var(--font-m);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── TARJETA ACTUAL ── */
+    .card-current {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-current::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+    .temp-main {
+      font-family: var(--font-h);
+      font-size: 88px;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--text);
+      letter-spacing: -4px;
+    }
+    .temp-main sup {
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: 0;
+      vertical-align: super;
+      color: var(--muted);
+    }
+    .weather-desc {
+      font-family: var(--font-h);
+      font-size: 20px;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: capitalize;
+    }
+    .temp-feels {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .temp-feels strong { color: var(--text); }
+
+    .current-icon {
+      font-size: 72px;
+      line-height: 1;
+      text-align: center;
+      filter: drop-shadow(0 0 20px rgba(74,158,255,0.3));
+    }
+
+    /* ── DETALLES ACTUALES ── */
+    .details-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .detail-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px 18px;
+      text-align: center;
+    }
+    .detail-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .detail-value {
+      font-family: var(--font-h);
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1;
+    }
+    .detail-unit {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ── PREVISIÓN 5 DÍAS ── */
+    .section-title {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .forecast-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .forecast-day {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px 12px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .forecast-day:hover { border-color: var(--accent); }
+    .fc-day-name {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .fc-icon { font-size: 28px; margin-bottom: 10px; }
+    .fc-max {
+      font-family: var(--font-h);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--warm);
+    }
+    .fc-min {
+      font-family: var(--font-h);
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--cold);
+    }
+    .fc-desc {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 6px;
+      text-transform: capitalize;
+    }
+
+    /* ── GRÁFICA HISTÓRICA ── */
+    .history-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 24px 24px 16px;
+      margin-bottom: 20px;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .history-stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .hstat {
+      text-align: center;
+    }
+    .hstat-label {
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .hstat-value {
+      font-family: var(--font-h);
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .hstat-value.max { color: var(--warm); }
+    .hstat-value.min { color: var(--cold); }
+    .hstat-value.avg { color: var(--accent); }
+
+    /* Canvas de la gráfica */
+    #history-chart {
+      width: 100%;
+      height: 180px;
+      display: block;
+    }
+    .chart-empty {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+      line-height: 2;
+      border: 1px dashed var(--border);
+      border-radius: 3px;
+    }
+
+    /* ── TABLA HISTÓRICO ── */
+    .history-table-wrap {
+      max-height: 220px;
+      overflow-y: auto;
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .history-table th {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-align: left;
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(30,45,66,0.5);
+      color: var(--muted);
+    }
+    .history-table td:nth-child(2) { color: var(--text); font-family: var(--font-h); font-size: 16px; }
+    .history-table tr:hover td { background: rgba(74,158,255,0.04); }
+
+    /* Botón limpiar histórico */
+    .btn-clear {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      font-family: var(--font-m);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── TIMESTAMP ── */
+    .last-update {
+      text-align: center;
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* ── LOADING / ERROR ── */
+    #loading-state {
+      display: none;
+      text-align: center;
+      padding: 80px 20px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-state p { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 3px; }
+
+    #error-state {
+      display: none;
+      background: rgba(239,71,111,0.08);
+      border: 1px solid rgba(239,71,111,0.3);
+      border-left: 3px solid var(--red);
+      padding: 16px 20px;
+      border-radius: 3px;
+      color: var(--red);
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+
+    #main-content { display: none; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .details-row { grid-template-columns: repeat(2, 1fr); }
+      .forecast-row { grid-template-columns: repeat(3, 1fr); }
+      .card-current { grid-template-columns: 1fr; }
+      .current-icon { font-size: 48px; }
+      .temp-main { font-size: 64px; }
+    }
+    @media (max-width: 400px) {
+      .forecast-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Fondo estrellado -->
+<div class="sky">
+  <div class="sky-gradient"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- CABECERA -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Valladolid <span>·</span> Tiempo</h1>
+      <div class="header-sub">Registro meteorológico personal</div>
+    </div>
+    <button class="btn-refresh" id="btn-refresh">↻ Actualizar</button>
+  </div>
+
+  <!-- ESTADOS -->
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <p>Consultando OpenWeatherMap…</p>
+  </div>
+  <div id="error-state"></div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div id="main-content">
+
+    <!-- TARJETA ACTUAL -->
+    <div class="card-current">
+      <div>
+        <div class="temp-main" id="temp-now">--<sup>°C</sup></div>
+        <div class="weather-desc" id="desc-now">—</div>
+        <div class="temp-feels" id="feels-now"></div>
+      </div>
+      <div class="current-icon" id="icon-now">🌡️</div>
+    </div>
+
+    <!-- DETALLES -->
+    <div class="details-row">
+      <div class="detail-card">
+        <div class="detail-label">Humedad</div>
+        <div class="detail-value" id="val-humidity">--</div>
+        <div class="detail-unit">%</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Viento</div>
+        <div class="detail-value" id="val-wind">--</div>
+        <div class="detail-unit">km/h</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Presión</div>
+        <div class="detail-value" id="val-pressure">--</div>
+        <div class="detail-unit">hPa</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Visibilidad</div>
+        <div class="detail-value" id="val-visibility">--</div>
+        <div class="detail-unit">km</div>
+      </div>
+    </div>
+
+    <!-- PREVISIÓN 5 DÍAS -->
+    <div class="section-title">Previsión 5 días</div>
+    <div class="forecast-row" id="forecast-row"></div>
+
+    <!-- REGISTRO HISTÓRICO -->
+    <div class="section-title">Registro histórico · Valladolid</div>
+    <div class="history-card">
+      <div class="history-header">
+        <div class="history-stats">
+          <div class="hstat">
+            <span class="hstat-label">Máx registrada</span>
+            <span class="hstat-value max" id="hist-max">--°</span>
+          </div>
+          <div class="hstat">
+            <span class="hstat-label">Mín registrada</span>
+            <span class="hstat-value min" id="hist-min">--°</span>
+          </div>
+          <div class="hstat">
+            <span class="hstat-label">Media</span>
+            <span class="hstat-value avg" id="hist-avg">--°</span>
+          </div>
+          <div class="hstat">
+            <span class="hstat-label">Lecturas</span>
+            <span class="hstat-value" style="color:var(--muted)" id="hist-count">0</span>
+          </div>
+        </div>
+        <button class="btn-clear" id="btn-clear">Borrar registro</button>
+      </div>
+
+      <!-- Gráfica SVG -->
+      <canvas id="history-chart"></canvas>
+      <div id="chart-empty" class="chart-empty" style="display:none">
+        Sin datos aún.<br>
+        <span style="font-size:10px">Cada consulta guarda una lectura automáticamente.</span>
+      </div>
+
+      <!-- Tabla de registros -->
+      <div class="history-table-wrap" id="table-wrap" style="display:none">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Fecha y hora</th>
+              <th>Temp.</th>
+              <th>Sensación</th>
+              <th>Descripción</th>
+              <th>Humedad</th>
+              <th>Viento</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="last-update" id="last-update"></div>
+  </div><!-- /main-content -->
+</div><!-- /wrap -->
+
+<script>
+/* ================================================
+   Tiempo · Valladolid
+   OpenWeatherMap API — registro histórico local
+   ================================================ */
+
+var API_KEY   = 'e5f1e3505918c6a15d56fa031f806281';
+var CITY      = 'Valladolid';
+var COUNTRY   = 'ES';
+var UNITS     = 'metric';
+var API_BASE  = 'https://api.openweathermap.org/data/2.5';
+var STORAGE_KEY = 'vll_weather_history';
+
+// Máximo de registros a guardar
+var MAX_RECORDS = 500;
+
+// ── Estado ───────────────────────────────────────
+var weatherLog = [];  // array de { ts, temp, feels, desc, humidity, wind }
+
+// ── DOM ──────────────────────────────────────────
+var loadingState = document.getElementById('loading-state');
+var errorState   = document.getElementById('error-state');
+var mainContent  = document.getElementById('main-content');
+var btnRefresh   = document.getElementById('btn-refresh');
+var btnClear     = document.getElementById('btn-clear');
+
+// ── Estrellas de fondo ───────────────────────────
+(function createStars() {
+  var sky = document.querySelector('.sky');
+  for (var i = 0; i < 80; i++) {
+    var s = document.createElement('div');
+    s.className = 'star';
+    s.style.left    = Math.random() * 100 + '%';
+    s.style.top     = Math.random() * 100 + '%';
+    s.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+    s.style.animationDelay = (Math.random() * 4) + 's';
+    var size = Math.random() * 2 + 0.5;
+    s.style.width = size + 'px'; s.style.height = size + 'px';
+    s.style.opacity = Math.random() * 0.7 + 0.1;
+    sky.appendChild(s);
+  }
+})();
+
+// ── Persistencia ─────────────────────────────────
+
+function loadHistory() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) weatherLog = JSON.parse(raw);
+  } catch(e) { weatherLog = []; }
+}
+
+function saveHistory() {
+  // Limitar al máximo de registros (los más recientes)
+  if (weatherLog.length > MAX_RECORDS) weatherLog = weatherLog.slice(-MAX_RECORDS);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(weatherLog)); } catch(e) {}
+}
+
+function addRecord(data) {
+  weatherLog.push({
+    ts:       Date.now(),
+    temp:     data.temp,
+    feels:    data.feels,
+    desc:     data.desc,
+    humidity: data.humidity,
+    wind:     data.wind
+  });
+  saveHistory();
+}
+
+// ── Petición a la API ────────────────────────────
+
+function apiGet(endpoint, params, callback) {
+  params.appid = API_KEY;
+  params.units = UNITS;
+  params.lang  = 'es';
+  var qs = [];
+  for (var k in params) {
+    if (params.hasOwnProperty(k)) qs.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]));
+  }
+  var url = API_BASE + endpoint + '?' + qs.join('&');
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.timeout = 12000;
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (xhr.status >= 200 && xhr.status < 300) { callback(null, data); }
+      else { callback(new Error(data.message || 'HTTP '+xhr.status), null); }
+    } catch(e) { callback(new Error('Respuesta inválida'), null); }
+  };
+  xhr.ontimeout = function(){ callback(new Error('Timeout'), null); };
+  xhr.onerror   = function(){ callback(new Error('Error de red'), null); };
+  xhr.send();
+}
+
+// ── Carga de datos ───────────────────────────────
+
+function loadWeather() {
+  showLoading();
+  var params = { q: CITY + ',' + COUNTRY };
+  apiGet('/weather', params, function(err, current) {
+    if (err) { showError(err.message); return; }
+    // Cargar previsión en paralelo
+    apiGet('/forecast', { q: CITY+','+COUNTRY, cnt: 40 }, function(err2, forecast) {
+      hideLoading();
+      if (err2) { showError(err2.message); return; }
+      renderCurrent(current);
+      renderForecast(forecast);
+      // Guardar registro
+      var record = {
+        temp:     Math.round(current.main.temp),
+        feels:    Math.round(current.main.feels_like),
+        desc:     current.weather[0].description,
+        humidity: current.main.humidity,
+        wind:     Math.round(current.wind.speed * 3.6)
+      };
+      addRecord(record);
+      renderHistory();
+      showMain();
+      document.getElementById('last-update').textContent =
+        'Última actualización: ' + formatDateFull(new Date());
+    });
+  });
+}
+
+// ── Renderizado tiempo actual ────────────────────
+
+function renderCurrent(d) {
+  var temp  = Math.round(d.main.temp);
+  var feels = Math.round(d.main.feels_like);
+  var desc  = d.weather[0].description;
+  var code  = d.weather[0].id;
+
+  document.getElementById('temp-now').innerHTML  = temp + '<sup>°C</sup>';
+  document.getElementById('desc-now').textContent = desc.charAt(0).toUpperCase() + desc.slice(1);
+  document.getElementById('feels-now').innerHTML  =
+    'Sensación térmica <strong>' + feels + '°C</strong> · ' +
+    'Máx <strong style="color:var(--warm)">' + Math.round(d.main.temp_max) + '°</strong> · ' +
+    'Mín <strong style="color:var(--cold)">' + Math.round(d.main.temp_min) + '°</strong>';
+
+  document.getElementById('val-humidity').textContent   = d.main.humidity;
+  document.getElementById('val-wind').textContent       = Math.round(d.wind.speed * 3.6);
+  document.getElementById('val-pressure').textContent   = d.main.pressure;
+  document.getElementById('val-visibility').textContent = d.visibility ? Math.round(d.visibility/1000) : '--';
+
+  document.getElementById('icon-now').textContent = weatherIcon(code, isDaytime());
+}
+
+// ── Renderizado previsión 5 días ─────────────────
+
+function renderForecast(data) {
+  // Agrupar por día (tomar el intervalo de 12:00 o el más cercano)
+  var days = {};
+  var items = data.list || [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var d    = new Date(item.dt * 1000);
+    var key  = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    if (!days[key]) {
+      days[key] = { date: d, temps: [], items: [] };
+    }
+    days[key].temps.push(item.main.temp);
+    days[key].items.push(item);
+  }
+
+  var keys = Object.keys(days).sort();
+  // Quitar hoy si ya tenemos datos actuales; tomar los próximos 5
+  var today = new Date();
+  var todayKey = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+  var forecastKeys = [];
+  for (var k = 0; k < keys.length; k++) {
+    if (keys[k] !== todayKey) forecastKeys.push(keys[k]);
+    if (forecastKeys.length === 5) break;
+  }
+
+  var row = document.getElementById('forecast-row');
+  row.innerHTML = '';
+
+  for (var f = 0; f < forecastKeys.length; f++) {
+    var day = days[forecastKeys[f]];
+    var max = Math.round(Math.max.apply(null, day.temps));
+    var min = Math.round(Math.min.apply(null, day.temps));
+    // Descripción del mediodía (o primer item disponible)
+    var midItem = day.items[Math.floor(day.items.length / 2)];
+    var icon    = weatherIcon(midItem.weather[0].id, true);
+    var dayName = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][day.date.getDay()];
+
+    var card = document.createElement('div');
+    card.className = 'forecast-day';
+    card.innerHTML =
+      '<div class="fc-day-name">'+dayName+' '+day.date.getDate()+'</div>'+
+      '<div class="fc-icon">'+icon+'</div>'+
+      '<div class="fc-max">'+max+'°</div>'+
+      '<div class="fc-min">'+min+'°</div>'+
+      '<div class="fc-desc">'+midItem.weather[0].description+'</div>';
+    row.appendChild(card);
+  }
+}
+
+// ── Registro histórico ───────────────────────────
+
+function renderHistory() {
+  var max = null, min = null, sum = 0, count = weatherLog.length;
+
+  for (var i = 0; i < count; i++) {
+    var t = weatherLog[i].temp;
+    if (max === null || t > max) max = t;
+    if (min === null || t < min) min = t;
+    sum += t;
+  }
+
+  document.getElementById('hist-count').textContent = count;
+  document.getElementById('hist-max').textContent   = count ? max + '°' : '--°';
+  document.getElementById('hist-min').textContent   = count ? min + '°' : '--°';
+  document.getElementById('hist-avg').textContent   = count ? Math.round(sum/count) + '°' : '--°';
+
+  if (count < 2) {
+    document.getElementById('history-chart').style.display = 'none';
+    document.getElementById('chart-empty').style.display   = 'flex';
+    document.getElementById('table-wrap').style.display    = 'none';
+    return;
+  }
+
+  document.getElementById('history-chart').style.display = 'block';
+  document.getElementById('chart-empty').style.display   = 'none';
+  document.getElementById('table-wrap').style.display    = 'block';
+
+  drawChart();
+  renderTable();
+}
+
+function drawChart() {
+  var canvas = document.getElementById('history-chart');
+  var ctx    = canvas.getContext('2d');
+  var W      = canvas.offsetWidth;
+  var H      = 180;
+  canvas.width  = W;
+  canvas.height = H;
+
+  // Tomar los últimos 60 registros para la gráfica
+  var data = weatherLog.slice(-60);
+  var temps = data.map(function(r){ return r.temp; });
+  var maxT  = Math.max.apply(null, temps);
+  var minT  = Math.min.apply(null, temps);
+  var range = (maxT - minT) || 1;
+
+  var padL = 36, padR = 12, padT = 16, padB = 28;
+  var gW   = W - padL - padR;
+  var gH   = H - padT - padB;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Fondo
+  ctx.fillStyle = 'rgba(22,31,46,0.0)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Líneas guía horizontales
+  ctx.strokeStyle = 'rgba(30,45,66,0.8)';
+  ctx.lineWidth   = 1;
+  for (var g = 0; g <= 4; g++) {
+    var y = padT + (g / 4) * gH;
+    ctx.beginPath();
+    ctx.moveTo(padL, y); ctx.lineTo(W - padR, y);
+    ctx.stroke();
+    // Etiqueta temperatura
+    var tVal = maxT - (g / 4) * range;
+    ctx.fillStyle = 'rgba(107,128,153,0.8)';
+    ctx.font      = '9px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(tVal) + '°', padL - 4, y + 3);
+  }
+
+  // Área bajo la curva
+  if (data.length > 1) {
+    var grad = ctx.createLinearGradient(0, padT, 0, padT + gH);
+    grad.addColorStop(0,   'rgba(74,158,255,0.25)');
+    grad.addColorStop(0.5, 'rgba(74,158,255,0.08)');
+    grad.addColorStop(1,   'rgba(74,158,255,0.0)');
+
+    ctx.beginPath();
+    for (var i = 0; i < data.length; i++) {
+      var x = padL + (i / (data.length - 1)) * gW;
+      var yp = padT + gH - ((data[i].temp - minT) / range) * gH;
+      if (i === 0) ctx.moveTo(x, yp); else ctx.lineTo(x, yp);
+    }
+    // Cerrar el área
+    ctx.lineTo(padL + gW, padT + gH);
+    ctx.lineTo(padL, padT + gH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Línea de temperatura
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(74,158,255,0.9)';
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    for (var j = 0; j < data.length; j++) {
+      var xj = padL + (j / (data.length - 1)) * gW;
+      var yj = padT + gH - ((data[j].temp - minT) / range) * gH;
+      if (j === 0) ctx.moveTo(xj, yj); else ctx.lineTo(xj, yj);
+    }
+    ctx.stroke();
+
+    // Punto final (último registro)
+    var xlast = padL + gW;
+    var ylast = padT + gH - ((data[data.length-1].temp - minT) / range) * gH;
+    ctx.beginPath();
+    ctx.arc(xlast, ylast, 4, 0, Math.PI * 2);
+    ctx.fillStyle   = '#4a9eff';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+  }
+
+  // Etiquetas eje X (fechas) — cada ~10 puntos
+  ctx.fillStyle = 'rgba(107,128,153,0.7)';
+  ctx.font      = '8px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  var step = Math.max(1, Math.floor(data.length / 6));
+  for (var k = 0; k < data.length; k += step) {
+    var xk = padL + (k / (data.length - 1)) * gW;
+    var d  = new Date(data[k].ts);
+    var lbl = (d.getDate()+'/'+(d.getMonth()+1)+' '+pad2(d.getHours())+':'+pad2(d.getMinutes()));
+    ctx.fillText(lbl, xk, H - 6);
+  }
+}
+
+function renderTable() {
+  var tbody  = document.getElementById('history-tbody');
+  var sorted = weatherLog.slice().reverse(); // más reciente primero
+  var html   = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var r = sorted[i];
+    var d = new Date(r.ts);
+    html +=
+      '<tr>'+
+      '<td>'+formatDateFull(d)+'</td>'+
+      '<td>'+r.temp+'°C</td>'+
+      '<td style="color:var(--muted)">'+r.feels+'°C</td>'+
+      '<td style="text-transform:capitalize">'+r.desc+'</td>'+
+      '<td>'+r.humidity+'%</td>'+
+      '<td>'+r.wind+' km/h</td>'+
+      '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+// ── Iconos del tiempo ────────────────────────────
+
+function weatherIcon(code, day) {
+  if (code >= 200 && code < 300) return '⛈️';
+  if (code >= 300 && code < 400) return '🌦️';
+  if (code >= 500 && code < 510) return code <= 501 ? '🌧️' : '🌧️';
+  if (code >= 510 && code < 600) return '🌨️';
+  if (code >= 600 && code < 700) return code === 600 ? '🌨️' : '❄️';
+  if (code >= 700 && code < 800) return code === 741 ? '🌫️' : '🌪️';
+  if (code === 800) return day ? '☀️' : '🌙';
+  if (code === 801) return day ? '🌤️' : '🌙';
+  if (code === 802) return '⛅';
+  if (code >= 803) return '☁️';
+  return '🌡️';
+}
+
+function isDaytime() {
+  var h = new Date().getHours();
+  return h >= 7 && h < 21;
+}
+
+// ── Utilidades ───────────────────────────────────
+
+function pad2(n) { return n < 10 ? '0'+n : ''+n; }
+
+function formatDateFull(d) {
+  var days   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return days[d.getDay()]+' '+d.getDate()+' '+months[d.getMonth()]+' '+
+         pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+
+function showLoading() {
+  loadingState.style.display = 'block';
+  mainContent.style.display  = 'none';
+  errorState.style.display   = 'none';
+}
+function hideLoading()  { loadingState.style.display = 'none'; }
+function showMain()     { mainContent.style.display  = 'block'; }
+function showError(msg) {
+  hideLoading();
+  errorState.style.display   = 'block';
+  errorState.textContent     = '⚠ ' + msg;
+  mainContent.style.display  = 'none';
+}
+
+// ── Eventos ──────────────────────────────────────
+
+btnRefresh.onclick = function() { loadWeather(); };
+
+btnClear.onclick = function() {
+  if (confirm('¿Borrar todo el registro histórico de Valladolid?')) {
+    weatherLog = [];
+    saveHistory();
+    renderHistory();
+  }
+};
+
+// Redibujar gráfica al cambiar el tamaño de ventana
+window.addEventListener('resize', function() {
+  if (weatherLog.length >= 2) drawChart();
+});
+
+// ── Inicio ───────────────────────────────────────
+
+loadHistory();
+loadWeather();
+</script>
+</body>
+</html>
 
