@@ -3,38 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MIS CANALES YOUTUBE</title>
-
-<link rel="icon" href="icon1.png" type="image/png">
-<meta name="theme-color" content="#ffffff">
-<link rel="icon" href="icon1.png" type="image/png">
-<link rel="manifest" href="manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<meta name="description" content="Aplicación web sencilla">
-<meta name="theme-color" content="#2c3e50">
-<meta name="color-scheme" content="light dark">
-<meta name="Mis Canales Youtube" content="yes">
-<meta name="MIS CANALES YOUTUBE" content="MIS CANALES YOUTUBE">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="apple-touch-icon" href="icon192.png">
-
-<meta name="format-detection" content="telephone=no">  
-  
-  
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <title>Mis Canales de Youtube</title>
   <style>
     :root {
-      --bg:        #0d0d0d;
-      --surface:   #181818;
-      --border:    #2a2a2a;
-      --accent:    #ff2d2d;
-      --accent2:   #ff6b35;
-      --text:      #f0f0f0;
-      --muted:     #aaa;
-      --card-bg:   #141414;
+      --bg:        #f0f4f8;
+      --surface:   #e2eaf2;
+      --border:    #c0d0e0;
+      --accent:    #c0392b;
+      --accent2:   #e07030;
+      --text:      #1a2a3a;
+      --muted:     #6080a0;
+      --card-bg:   #e8f0f8;
       --radius:    6px;
       --font-head: Georgia, 'Times New Roman', serif;
       --font-body: 'Courier New', Courier, monospace;
@@ -87,7 +66,7 @@
     .btn-refresh { background: var(--border); color: var(--text); width: 100%; text-align: center; margin-top: 8px; }
 
     #error-msg {
-      display: none; background: #2a0a0a; border: 1px solid var(--accent);
+      display: none; background: #fce8e8; border: 1px solid var(--accent);
       color: var(--accent); font-size: 11px; padding: 8px 10px;
       border-radius: var(--radius); margin-top: 10px; white-space: pre-line;
     }
@@ -147,10 +126,23 @@
     #feed.grid .video-card { width: calc(33.333% - 11px); min-width: 200px; }
 
     /* ── LIST ── */
-    #feed.list { display: flex; flex-direction: column; gap: 12px; }
-    #feed.list .video-card { display: flex; flex-direction: row; gap: 14px; }
-    #feed.list .video-thumb { width: 180px; min-width: 180px; height: 101px; }
-    #feed.list .video-body  { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    #feed.list { display: flex; flex-direction: column; gap: 2px; }
+    #feed.list .video-card {
+      display: flex; flex-direction: row; align-items: center;
+      gap: 14px; padding: 10px 14px; border-radius: var(--radius);
+      border-left: 3px solid transparent; transform: none !important;
+    }
+    #feed.list .video-card:hover { border-left-color: var(--accent); transform: none !important; }
+    #feed.list .video-thumb { display: none; }
+    #feed.list .video-body  {
+      flex: 1; display: flex; flex-direction: row;
+      align-items: baseline; gap: 14px; padding: 0;
+    }
+    #feed.list .video-title {
+      flex: 1; margin-bottom: 0; font-size: 13px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    #feed.list .video-meta  { flex-shrink: 0; flex-wrap: nowrap; }
 
     /* ── TARJETA ── */
     .video-card {
@@ -164,7 +156,7 @@
     .video-thumb .no-thumb {
       position:absolute; top:0; left:0; width:100%; height:100%;
       display:flex; align-items:center; justify-content:center;
-      font-size:28px; color:var(--muted); background:#111;
+      font-size:28px; color:var(--muted); background:var(--border);
     }
     .video-body   { padding: 10px 12px; }
     .video-title  { font-family: var(--font-head); font-size: 14px; font-weight: bold; color: var(--text); text-decoration: none; display: block; margin-bottom: 6px; line-height: 1.4; }
@@ -206,7 +198,7 @@
 <body>
 
 <header>
-  <h1><span>YT</span>·Feed</h1>
+  <h1><span>Mis Canales</span> de Youtube</h1>
   <span class="tagline">YouTube Data API v3</span>
 </header>
 
@@ -236,7 +228,7 @@
   <main class="content">
     <div class="controls" id="controls" style="display:none;">
       <span class="controls-left" id="feed-count">0 vídeos</span>
-      <button class="btn-toggle active" id="btn-shorts">▦ Shorts</button>
+      <button class="btn-toggle active" id="btn-shorts">▦ Shorts: ON</button>
       <button class="btn-toggle active" id="btn-grid">⊞ Cuadrícula</button>
       <button class="btn-toggle"       id="btn-list">☰ Lista</button>
     </div>
@@ -456,6 +448,8 @@ function buildChannelInfo(item) {
 
 /**
  * Obtiene los últimos 20 vídeos de la playlist de subidas.
+ * Luego hace una segunda llamada a videos.list para obtener
+ * la duración real y detectar Shorts (duración ≤ 60 segundos).
  * callback(error, videosArray)
  */
 function fetchVideos(channel, callback) {
@@ -465,8 +459,11 @@ function fetchVideos(channel, callback) {
     maxResults: 20
   }, function(err, data) {
     if (err) { callback(err, null); return; }
+
     var videos = [];
     var items  = data.items || [];
+    var idMap  = {}; // videoId → índice en videos[]
+
     for (var i = 0; i < items.length; i++) {
       var sn      = items[i].snippet;
       var videoId = sn.resourceId && sn.resourceId.videoId;
@@ -476,11 +473,7 @@ function fetchVideos(channel, callback) {
       var th       = thumbs.high || thumbs.medium || thumbs.default || {};
       var thumbUrl = th.url || ('https://i.ytimg.com/vi/'+videoId+'/hqdefault.jpg');
 
-      // Detectar Shorts: miniatura vertical (height > width)
-      var isShort = (th.width && th.height && th.height > th.width);
-      // Segunda señal: título menciona #Shorts o #Short
-      if (!isShort && sn.title && /\bshorts?\b/i.test(sn.title)) isShort = true;
-
+      idMap[videoId] = videos.length;
       videos.push({
         title:     sn.title || 'Sin título',
         url:       'https://www.youtube.com/watch?v=' + videoId,
@@ -488,11 +481,47 @@ function fetchVideos(channel, callback) {
         thumbnail: thumbUrl,
         channel:   channel.name,
         channelId: channel.channelId,
-        isShort:   !!isShort
+        isShort:   false  // se actualizará con la duración real
       });
     }
-    callback(null, videos);
+
+    if (!videos.length) { callback(null, videos); return; }
+
+    // Segunda llamada: obtener duración real de cada vídeo
+    var ids = Object.keys(idMap).join(',');
+    apiGet('/videos', {
+      part: 'contentDetails',
+      id:   ids
+    }, function(err2, data2) {
+      // Si falla la segunda llamada, devolvemos los vídeos sin filtro de Shorts
+      if (!err2 && data2 && data2.items) {
+        for (var j = 0; j < data2.items.length; j++) {
+          var item     = data2.items[j];
+          var duration = item.contentDetails && item.contentDetails.duration;
+          // Parsear duración ISO 8601: PT1M30S, PT45S, PT0S…
+          var seconds  = parseDuration(duration);
+          var idx      = idMap[item.id];
+          if (idx !== undefined) {
+            videos[idx].isShort = (seconds > 0 && seconds <= 60);
+          }
+        }
+      }
+      callback(null, videos);
+    });
   });
+}
+
+/**
+ * Convierte duración ISO 8601 (PT1M30S) a segundos.
+ */
+function parseDuration(iso) {
+  if (!iso) return 0;
+  var m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  var h  = parseInt(m[1] || 0, 10);
+  var mn = parseInt(m[2] || 0, 10);
+  var s  = parseInt(m[3] || 0, 10);
+  return h * 3600 + mn * 60 + s;
 }
 
 // ── Gestión de canales ───────────────────────────
@@ -699,7 +728,12 @@ btnAdd.onclick = function() { var v=urlInput.value.trim(); if(!v){showError('Int
 urlInput.onkeydown = function(e){ if((e.key||e.keyCode)==='Enter'||(e.key||e.keyCode)===13) btnAdd.onclick(); };
 btnRefresh.onclick     = function(){ refreshAll(); };
 btnAllChannels.onclick = function(){ activeChannelId=null; renderChannelList(); renderFeed(); };
-btnShorts.onclick = function(){ showShorts=!showShorts; btnShorts.className='btn-toggle'+(showShorts?' active':''); renderFeed(); };
+btnShorts.onclick = function(){
+  showShorts = !showShorts;
+  btnShorts.className = 'btn-toggle' + (showShorts ? ' active' : '');
+  btnShorts.textContent = showShorts ? '▦ Shorts: ON' : '▦ Shorts: OFF';
+  renderFeed();
+};
 btnGrid.onclick = function(){ setViewMode('grid'); };
 btnList.onclick = function(){ setViewMode('list'); };
 
@@ -714,6 +748,5 @@ function init() {
 if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded', init); }
 else { init(); }
 </script>
-  <script src="../volver.js"></script>
 </body>
 </html>
