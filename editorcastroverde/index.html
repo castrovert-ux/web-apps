@@ -1,1 +1,1228 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor · Castroverde</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #1a1612;
+      --surface:   #221e19;
+      --card:      #2a2520;
+      --border:    #3d3530;
+      --text:      #e8e0d5;
+      --muted:     #8a7d6b;
+      --accent:    #c4922a;   /* dorado pergamino */
+      --accent2:   #7a9e6e;   /* verde oliva */
+      --red:       #c45a3a;
+      --blue:      #5a8ab0;
+      --ins:       rgba(122,158,110,0.18);
+      --del:       rgba(196,90,58,0.18);
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    3px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── CABECERA ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap;
+    }
+    .logo {
+      font-family: var(--font-h);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 8px;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-style: normal;
+    }
+    .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    /* ── BOTONES ── */
+    .btn {
+      padding: 7px 16px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #1a1612; }
+    .btn-primary:hover { background: #d4a23a; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-success {
+      background: var(--accent2);
+      color: #1a1612;
+    }
+    .btn-success:hover { background: #8ab87e; }
+
+    /* ── LAYOUT PRINCIPAL ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── PANEL IZQUIERDO: ENTRADA ── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    .panel-title {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+    }
+    .panel-title span { color: var(--accent); }
+
+    /* Selector de tipo de análisis */
+    .analysis-select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      outline: none;
+    }
+    .analysis-select:focus { border-color: var(--accent); }
+
+    /* Área de texto */
+    .text-area-wrap { flex: 1; position: relative; }
+    textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.8;
+      padding: 24px 28px;
+      resize: none;
+      outline: none;
+    }
+    textarea::placeholder { color: var(--muted); font-style: italic; }
+    .char-count {
+      position: absolute;
+      bottom: 10px;
+      right: 16px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .char-count.warn { color: var(--red); }
+
+    /* Barra de acciones del panel */
+    .panel-actions {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    .fragment-name-input {
+      flex: 1;
+      min-width: 120px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      border-radius: var(--radius);
+      outline: none;
+    }
+    .fragment-name-input:focus { border-color: var(--accent); }
+    .fragment-name-input::placeholder { color: var(--muted); }
+
+    /* ── PANEL DERECHO: RESULTADO ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Pestañas de resultado */
+    .result-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .result-tab {
+      padding: 12px 18px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+      top: 1px;
+    }
+    .result-tab:hover { color: var(--text); }
+    .result-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .result-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    /* Estado vacío */
+    .empty-result {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 280px;
+      text-align: center;
+      color: var(--muted);
+      gap: 12px;
+    }
+    .empty-result .big-char {
+      font-family: var(--font-h);
+      font-size: 64px;
+      color: var(--border);
+      line-height: 1;
+    }
+    .empty-result p { font-size: 12px; font-family: var(--font-ui); letter-spacing: 1px; }
+
+    /* Texto mejorado */
+    .improved-text {
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.85;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+    .improved-text ins {
+      background: var(--ins);
+      color: var(--accent2);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent2);
+    }
+    .improved-text del {
+      background: var(--del);
+      color: var(--red);
+      text-decoration: line-through;
+    }
+
+    /* Informe */
+    .report-section {
+      margin-bottom: 24px;
+    }
+    .report-section-title {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--accent);
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .report-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .report-item-icon { flex-shrink: 0; font-size: 14px; }
+    .report-item-text { color: var(--text); }
+    .report-item-text strong { color: var(--accent); font-style: italic; }
+
+    .score-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .score-badge {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      text-align: center;
+      min-width: 80px;
+    }
+    .score-badge-label {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .score-badge-value {
+      font-family: var(--font-h);
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .score-a { color: var(--accent2); }
+    .score-b { color: var(--accent); }
+    .score-c { color: var(--red); }
+
+    /* Comparación de versiones */
+    .version-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .version-item:hover { border-color: var(--accent); }
+    .version-item.active { border-color: var(--accent); background: rgba(196,146,42,0.06); }
+    .version-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .version-name {
+      font-family: var(--font-h);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .version-date {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .version-preview {
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .version-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+    /* Veredicto global */
+    .verdict-box {
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .verdict-title {
+      font-family: var(--font-h);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .verdict-body {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    /* Loading */
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(26,22,18,0.85);
+      z-index: 50;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+    }
+
+    /* Error */
+    .error-box {
+      background: rgba(196,90,58,0.1);
+      border: 1px solid var(--red);
+      border-left: 3px solid var(--red);
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      color: var(--red);
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* Botón copiar */
+    .copy-bar {
+      display: none;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .copy-bar.visible { display: flex; }
+    .copy-feedback {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: none;
+    }
+
+    /* ── HISTORIAL (sidebar colapsable) ── */
+    .history-sidebar {
+      position: fixed;
+      top: 0; right: 0;
+      width: 340px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+    .history-sidebar.open { transform: translateX(0); }
+    .history-sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .history-sidebar-title {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+    }
+    .btn-close-sidebar {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+    .btn-close-sidebar:hover { color: var(--text); }
+    .history-list { flex: 1; overflow-y: auto; padding: 16px; }
+    .history-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      line-height: 2;
+    }
+
+    /* Overlay del sidebar */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 199;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .history-sidebar { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- CABECERA -->
+<header>
+  <div class="logo">
+    Editor <span>Castroverde</span>
+    <small>Asistente literario · Historia de un municipio</small>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="btn-verdict" title="Veredicto global del fragmento">⚖ Veredicto</button>
+    <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
+    <button class="btn btn-ghost" id="btn-clear-all" title="Limpiar todo">✕ Limpiar</button>
+  </div>
+</header>
+
+<!-- LAYOUT PRINCIPAL -->
+<div class="layout" style="position:relative;">
+
+  <!-- LOADING OVERLAY -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Analizando texto…</div>
+  </div>
+
+  <!-- PANEL IZQUIERDO -->
+  <div class="panel-left">
+    <div class="panel-header">
+      <span class="panel-title">✍ Tu texto · <span id="fragment-label">nuevo fragmento</span></span>
+      <select class="analysis-select" id="analysis-type">
+        <option value="completo">Revisión completa</option>
+        <option value="estilo">Solo estilo y voz</option>
+        <option value="ortografia">Solo ortografía y gramática</option>
+        <option value="historico">Coherencia histórica</option>
+        <option value="claridad">Claridad y estructura</option>
+      </select>
+    </div>
+
+    <div class="text-area-wrap">
+      <textarea
+        id="input-text"
+        placeholder="Pega aquí tu fragmento del libro de Castroverde…&#10;&#10;Pueden ser párrafos de cualquier capítulo: prehistoria, época medieval, geografía, documentos paleográficos…&#10;&#10;La IA conoce tu estilo y el contexto histórico del libro."
+        maxlength="4000"
+      ></textarea>
+      <div class="char-count" id="char-count">0 / 4000</div>
+    </div>
+
+    <div class="panel-actions">
+      <input
+        type="text"
+        class="fragment-name-input"
+        id="fragment-name"
+        placeholder="Nombre del fragmento (ej: Cap.2 · Prehistoria)"
+        maxlength="60"
+      >
+      <label class="btn btn-ghost" style="cursor:pointer;" title="Cargar archivo .txt">
+        📄 Cargar
+        <input type="file" id="file-input" accept=".txt" style="display:none;">
+      </label>
+      <button class="btn btn-primary" id="btn-analyze">Analizar →</button>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO -->
+  <div class="panel-right">
+    <div class="result-tabs">
+      <button class="result-tab active" id="tab-improved" onclick="switchTab('improved')">Texto mejorado</button>
+      <button class="result-tab" id="tab-report" onclick="switchTab('report')">Informe</button>
+      <button class="result-tab" id="tab-compare" onclick="switchTab('compare')">Comparar versiones</button>
+    </div>
+
+    <div class="result-content" id="result-content">
+      <div class="empty-result" id="empty-result">
+        <div class="big-char">❧</div>
+        <p>Introduce tu texto y pulsa Analizar</p>
+      </div>
+      <div class="error-box" id="error-box"></div>
+      <div id="tab-content-improved" style="display:none;"></div>
+      <div id="tab-content-report"   style="display:none;"></div>
+      <div id="tab-content-compare"  style="display:none;"></div>
+    </div>
+
+    <div class="copy-bar" id="copy-bar">
+      <button class="btn btn-success" id="btn-copy">⎘ Copiar texto mejorado</button>
+      <button class="btn btn-ghost"   id="btn-save-version">💾 Guardar versión</button>
+      <span class="copy-feedback" id="copy-feedback">¡Copiado!</span>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR HISTORIAL -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeHistory()"></div>
+<div class="history-sidebar" id="history-sidebar">
+  <div class="history-sidebar-header">
+    <span class="history-sidebar-title">Historial · Versiones guardadas</span>
+    <button class="btn-close-sidebar" onclick="closeHistory()">×</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty" id="history-empty">Sin versiones guardadas.<br>Analiza y guarda<br>fragmentos para verlos aquí.</div>
+  </div>
+  <div style="padding:12px 16px;border-top:1px solid var(--border);">
+    <button class="btn btn-danger" style="width:100%;" id="btn-clear-history">Borrar todo el historial</button>
+  </div>
+</div>
+
+<script>
+/* ================================================
+   Editor Castroverde · Asistente literario con IA
+   ================================================
+   Usa la API de Anthropic (Claude) para revisar y
+   mejorar textos del libro de historia de Castroverde
+   de Cerrato. Mantiene el estilo narrativo del autor,
+   el rigor histórico y ofrece control de versiones.
+   ================================================ */
+
+// ── CONFIGURACIÓN ────────────────────────────────
+var API_KEY    = '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';
+var MODEL      = 'claude-sonnet-4-6'; // cambiar a claude-haiku-4-5-20251001 para más economía
+var MAX_TOKENS = 2048;
+var STORAGE_KEY = 'castroverde_versions';
+
+// ── PROMPT DEL SISTEMA ───────────────────────────
+// Contexto detallado sobre el libro y el estilo del autor
+var SYSTEM_PROMPT = `Eres un asistente literario especializado en historia local castellana. Ayudas al autor de un libro de historia sobre Castroverde de Cerrato, un municipio de la provincia de Valladolid (España).
+
+SOBRE EL LIBRO:
+- Es una historia cronológica completa del municipio, desde la prehistoria hasta nuestros días.
+- La primera parte es cronológica (yacimientos prehistóricos, época romana, medieval, moderna, contemporánea).
+- La segunda parte trata temas transversales: cofradías, documentos paleográficos, instituciones históricas, etc.
+- El ámbito geográfico incluye el Cerrato vallisoletano, el valle del río Esgueva y las tierras de frontera con Palencia.
+
+ESTILO DEL AUTOR (MUY IMPORTANTE — no alterar):
+- Narrativo pero riguroso: combina prosa literaria con datos históricos precisos.
+- Cercano y evocador: usa imágenes concretas y sensoriales ("el aroma del lechazo", "las campanas llamaban a misa").
+- Voz propia muy marcada: ni académico frío ni divulgación superficial — punto intermedio culto y accesible.
+- Párrafos bien construidos con transiciones naturales entre lo descriptivo y lo histórico.
+- Usa referencias geográficas locales con naturalidad (El Cerrato, el Esgueva, la loma, los páramos).
+- Mezcla nostalgia y rigor: "Con esa historia brillante, los vecinos de Castroverde no pueden renunciar a su pasado."
+- Frases con ritmo: alterna oraciones cortas y largas con intención estilística.
+- Primera mención documental siempre con fecha precisa y fuente cuando existe.
+
+CONTEXTO HISTÓRICO QUE DEBES CONOCER:
+- Primer documento: 17 de abril de 916, rey Ordoño II, nombre latino "Castro Viride".
+- Alfoz del reino leonés, diócesis leonesa, función defensiva en el Duero.
+- Encomienda de la Orden de Santiago, que incorporó villas como Baltanás y Villalar.
+- Centro administrativo de la merindad del Cerrato (siglo XV).
+- Población máxima: 676 habitantes en 1950; hoy: 189 vecinos.
+- Mecanización del campo → éxodo rural → despoblación.
+
+TU TAREA:
+Cuando recibas un fragmento del libro, debes responder SIEMPRE en formato JSON válido con esta estructura exacta:
+{
+  "texto_mejorado": "El texto revisado manteniendo el estilo del autor",
+  "puntuacion": {
+    "estilo": 8,
+    "claridad": 7,
+    "rigor": 9
+  },
+  "observaciones": [
+    {"tipo": "positivo", "texto": "Descripción de lo que funciona bien"},
+    {"tipo": "mejora", "texto": "Sugerencia de mejora"},
+    {"tipo": "historico", "texto": "Observación sobre precisión histórica"}
+  ],
+  "cambios_resumen": "Breve descripción de los cambios principales realizados"
+}
+
+Los tipos de observación son: "positivo", "mejora", "historico", "estilo", "gramatica".
+Las puntuaciones son de 1 a 10.
+NUNCA reescribas radicalmente el texto. Preserva la voz del autor. Corrige con discreción.
+Si el tipo de análisis es específico (solo estilo, solo gramática, etc.), enfoca las observaciones en ese aspecto pero siempre devuelve el JSON completo.`;
+
+// ── ESTADO ───────────────────────────────────────
+var versions     = [];   // historial de versiones guardadas
+var currentResult = null; // { improved, report, original, name }
+var activeTab    = 'improved';
+
+// ── DOM ──────────────────────────────────────────
+var inputText      = document.getElementById('input-text');
+var charCount      = document.getElementById('char-count');
+var fragmentName   = document.getElementById('fragment-name');
+var analysisType   = document.getElementById('analysis-type');
+var btnAnalyze     = document.getElementById('btn-analyze');
+var btnCopy        = document.getElementById('btn-copy');
+var btnSaveVersion = document.getElementById('btn-save-version');
+var btnVerdict     = document.getElementById('btn-verdict');
+var btnHistory     = document.getElementById('btn-history');
+var btnClearAll    = document.getElementById('btn-clear-all');
+var btnClearHistory= document.getElementById('btn-clear-history');
+var fileInput      = document.getElementById('file-input');
+var loadingOverlay = document.getElementById('loading-overlay');
+var loadingText    = document.getElementById('loading-text');
+var emptyResult    = document.getElementById('empty-result');
+var errorBox       = document.getElementById('error-box');
+var copyBar        = document.getElementById('copy-bar');
+var copyFeedback   = document.getElementById('copy-feedback');
+var historySidebar = document.getElementById('history-sidebar');
+var sidebarOverlay = document.getElementById('sidebar-overlay');
+var historyList    = document.getElementById('history-list');
+var historyEmpty   = document.getElementById('history-empty');
+
+// ── PERSISTENCIA ─────────────────────────────────
+
+function loadVersions() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) versions = JSON.parse(raw);
+  } catch(e) { versions = []; }
+}
+
+function saveVersions() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(versions)); } catch(e) {}
+}
+
+// ── LLAMADA A LA API ─────────────────────────────
+
+function callClaude(userMessage, onSuccess, onError) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://api.anthropic.com/v1/messages', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('x-api-key', API_KEY);
+  xhr.setRequestHeader('anthropic-version', '2023-06-01');
+  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+  xhr.timeout = 60000;
+
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        var text = '';
+        if (data.content && data.content.length > 0) {
+          for (var i = 0; i < data.content.length; i++) {
+            if (data.content[i].type === 'text') text += data.content[i].text;
+          }
+        }
+        onSuccess(text);
+      } else {
+        var msg = (data.error && data.error.message) ? data.error.message : 'Error HTTP ' + xhr.status;
+        onError(msg);
+      }
+    } catch(e) { onError('Error al procesar la respuesta de la API.'); }
+  };
+  xhr.ontimeout = function() { onError('Timeout — la API tardó demasiado. Inténtalo de nuevo.'); };
+  xhr.onerror   = function() { onError('Error de red. Comprueba tu conexión.'); };
+
+  xhr.send(JSON.stringify({
+    model:      MODEL,
+    max_tokens: MAX_TOKENS,
+    system:     SYSTEM_PROMPT,
+    messages:   [{ role: 'user', content: userMessage }]
+  }));
+}
+
+// ── ANÁLISIS ─────────────────────────────────────
+
+function analyzeText() {
+  var text = inputText.value.trim();
+  if (!text) { showError('Introduce un texto para analizar.'); return; }
+  if (text.length < 50) { showError('El fragmento es demasiado corto. Introduce al menos un párrafo.'); return; }
+
+  var type = analysisType.value;
+  var typeLabels = {
+    'completo':    'Revisión completa',
+    'estilo':      'Análisis de estilo y voz narrativa',
+    'ortografia':  'Revisión ortográfica y gramatical',
+    'historico':   'Verificación de coherencia histórica',
+    'claridad':    'Análisis de claridad y estructura'
+  };
+
+  var userMessage = 'TIPO DE ANÁLISIS: ' + typeLabels[type] + '\n\n' +
+    'FRAGMENTO DEL LIBRO:\n"""\n' + text + '\n"""';
+
+  showLoading('Analizando con Claude…');
+  hideError();
+
+  callClaude(userMessage, function(response) {
+    hideLoading();
+    try {
+      // Limpiar posibles backticks de markdown
+      var clean = response.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      var result = JSON.parse(clean);
+      currentResult = {
+        improved: result.texto_mejorado || text,
+        report:   result,
+        original: text,
+        name:     fragmentName.value.trim() || ('Fragmento · ' + formatDateShort(new Date()))
+      };
+      renderResult(currentResult);
+    } catch(e) {
+      // Si la respuesta no es JSON válido, mostrarla como texto mejorado directamente
+      currentResult = {
+        improved: response,
+        report:   null,
+        original: text,
+        name:     fragmentName.value.trim() || ('Fragmento · ' + formatDateShort(new Date()))
+      };
+      renderResultPlain(response);
+    }
+  }, function(err) {
+    hideLoading();
+    showError(err);
+  });
+}
+
+// ── VEREDICTO GLOBAL ─────────────────────────────
+
+function requestVerdict() {
+  var text = inputText.value.trim();
+  if (!text) { showError('Introduce el fragmento o capítulo completo para el veredicto.'); return; }
+
+  var verdictPrompt = 'SOLICITUD DE VEREDICTO GLOBAL\n\n' +
+    'Evalúa este fragmento/capítulo completo como si fuera una revisión editorial final. ' +
+    'Valora: estructura narrativa, cohesión interna, ritmo, precisión histórica, adecuación del estilo al público objetivo (vecinos e investigadores), ' +
+    'y si el texto está listo para publicación o necesita más trabajo.\n\n' +
+    'Responde en JSON con este formato:\n' +
+    '{"texto_mejorado": "...", "puntuacion": {"estilo": 0, "claridad": 0, "rigor": 0}, ' +
+    '"observaciones": [], "cambios_resumen": "...", ' +
+    '"veredicto": "LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR", ' +
+    '"veredicto_detalle": "Párrafo explicando el veredicto con recomendaciones específicas"}\n\n' +
+    'TEXTO:\n"""\n' + text + '\n"""';
+
+  showLoading('Elaborando veredicto editorial…');
+  hideError();
+
+  callClaude(verdictPrompt, function(response) {
+    hideLoading();
+    try {
+      var clean = response.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      var result = JSON.parse(clean);
+      currentResult = {
+        improved: result.texto_mejorado || text,
+        report:   result,
+        original: text,
+        name:     fragmentName.value.trim() || ('Veredicto · ' + formatDateShort(new Date())),
+        isVerdict: true
+      };
+      renderResult(currentResult);
+    } catch(e) {
+      currentResult = { improved: response, report: null, original: text, name: 'Veredicto', isVerdict: true };
+      renderResultPlain(response);
+    }
+  }, function(err) {
+    hideLoading();
+    showError(err);
+  });
+}
+
+// ── RENDERIZADO ──────────────────────────────────
+
+function renderResult(result) {
+  emptyResult.style.display = 'none';
+  copyBar.classList.add('visible');
+
+  // Pestaña: Texto mejorado
+  var improvedDiv = document.getElementById('tab-content-improved');
+  improvedDiv.innerHTML =
+    '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">' +
+      '<span style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">Texto revisado · ' + escHtml(result.name) + '</span>' +
+    '</div>' +
+    '<div class="improved-text">' + escHtml(result.improved) + '</div>';
+
+  // Pestaña: Informe
+  var reportDiv = document.getElementById('tab-content-report');
+  if (result.report) {
+    var r = result.report;
+    var html = '';
+
+    // Veredicto si existe
+    if (result.isVerdict && r.veredicto) {
+      var verdictColor = r.veredicto.indexOf('LISTO') !== -1 ? 'var(--accent2)' :
+                         r.veredicto.indexOf('MENOR') !== -1 ? 'var(--accent)' : 'var(--red)';
+      html += '<div class="verdict-box">' +
+        '<div class="verdict-title" style="color:' + verdictColor + '">⚖ ' + escHtml(r.veredicto) + '</div>' +
+        '<div class="verdict-body">' + escHtml(r.veredicto_detalle || '') + '</div>' +
+        '</div>';
+    }
+
+    // Puntuaciones
+    if (r.puntuacion) {
+      html += '<div class="score-row">';
+      var scores = [
+        { k: 'estilo',   l: 'Estilo'   },
+        { k: 'claridad', l: 'Claridad' },
+        { k: 'rigor',    l: 'Rigor'    }
+      ];
+      for (var i = 0; i < scores.length; i++) {
+        var val = r.puntuacion[scores[i].k] || 0;
+        var cls = val >= 8 ? 'score-a' : val >= 6 ? 'score-b' : 'score-c';
+        html += '<div class="score-badge">' +
+          '<span class="score-badge-label">' + scores[i].l + '</span>' +
+          '<span class="score-badge-value ' + cls + '">' + val + '</span>' +
+          '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Resumen de cambios
+    if (r.cambios_resumen) {
+      html += '<div class="report-section">' +
+        '<div class="report-section-title">Resumen de cambios</div>' +
+        '<div style="font-size:13px;line-height:1.7;color:var(--text);font-style:italic;">' + escHtml(r.cambios_resumen) + '</div>' +
+        '</div>';
+    }
+
+    // Observaciones
+    if (r.observaciones && r.observaciones.length) {
+      html += '<div class="report-section"><div class="report-section-title">Observaciones detalladas</div>';
+      var icons = { positivo: '✓', mejora: '→', historico: '⊕', estilo: '❧', gramatica: '✎' };
+      var colors = { positivo: 'var(--accent2)', mejora: 'var(--accent)', historico: 'var(--blue)', estilo: 'var(--muted)', gramatica: 'var(--muted)' };
+      for (var j = 0; j < r.observaciones.length; j++) {
+        var obs = r.observaciones[j];
+        html += '<div class="report-item">' +
+          '<span class="report-item-icon" style="color:' + (colors[obs.tipo] || 'var(--muted)') + '">' + (icons[obs.tipo] || '·') + '</span>' +
+          '<span class="report-item-text">' + escHtml(obs.texto) + '</span>' +
+          '</div>';
+      }
+      html += '</div>';
+    }
+
+    reportDiv.innerHTML = html;
+  } else {
+    reportDiv.innerHTML = '<div style="color:var(--muted);font-style:italic;font-size:13px;">No hay informe disponible para este análisis.</div>';
+  }
+
+  // Pestaña: Comparar versiones
+  renderCompareTab(result);
+
+  switchTab(activeTab);
+}
+
+function renderResultPlain(text) {
+  emptyResult.style.display = 'none';
+  copyBar.classList.add('visible');
+  document.getElementById('tab-content-improved').innerHTML =
+    '<div class="improved-text">' + escHtml(text) + '</div>';
+  document.getElementById('tab-content-report').innerHTML =
+    '<div style="color:var(--muted);font-style:italic;font-size:13px;">Respuesta en texto libre — no hay informe estructurado.</div>';
+  switchTab('improved');
+}
+
+function renderCompareTab(result) {
+  var div = document.getElementById('tab-content-compare');
+  if (!result) { div.innerHTML = ''; return; }
+
+  // Comparación simple: texto original vs mejorado
+  var html = '<div class="report-section">' +
+    '<div class="report-section-title">Original → Revisado</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' +
+      '<div>' +
+        '<div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:8px;">Original</div>' +
+        '<div style="font-size:13px;line-height:1.7;color:var(--muted);white-space:pre-wrap;">' + escHtml(result.original) + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--accent2);margin-bottom:8px;">Revisado</div>' +
+        '<div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;">' + escHtml(result.improved) + '</div>' +
+      '</div>' +
+    '</div>' +
+    '</div>';
+
+  // Versiones guardadas de este fragmento (mismo nombre)
+  var related = versions.filter(function(v) {
+    return result.name && v.name.indexOf(result.name.split('·')[0].trim()) !== -1;
+  });
+
+  if (related.length > 0) {
+    html += '<div class="report-section">' +
+      '<div class="report-section-title">Versiones anteriores de este fragmento</div>';
+    for (var i = 0; i < related.length; i++) {
+      var v = related[i];
+      html += '<div class="version-item" onclick="loadVersion(' + i + ')">' +
+        '<div class="version-meta">' +
+          '<span class="version-name">' + escHtml(v.name) + '</span>' +
+          '<span class="version-date">' + v.date + '</span>' +
+        '</div>' +
+        '<div class="version-preview">' + escHtml(v.improved.substring(0, 100)) + '…</div>' +
+        '</div>';
+    }
+    html += '</div>';
+  }
+
+  div.innerHTML = html;
+}
+
+// ── HISTORIAL ────────────────────────────────────
+
+function renderHistoryList() {
+  if (versions.length === 0) {
+    historyEmpty.style.display = 'block';
+    return;
+  }
+  historyEmpty.style.display = 'none';
+  var html = '';
+  for (var i = versions.length - 1; i >= 0; i--) {
+    var v = versions[i];
+    var idx = i;
+    html += '<div class="version-item">' +
+      '<div class="version-meta">' +
+        '<span class="version-name">' + escHtml(v.name) + '</span>' +
+        '<span class="version-date">' + v.date + '</span>' +
+      '</div>' +
+      '<div class="version-preview">' + escHtml(v.original.substring(0, 80)) + '…</div>' +
+      '<div class="version-actions">' +
+        '<button class="btn btn-ghost" style="font-size:9px;padding:4px 10px;" onclick="loadVersion(' + idx + ')">Cargar</button>' +
+        '<button class="btn btn-danger" style="font-size:9px;padding:4px 10px;" onclick="deleteVersion(' + idx + ')">Borrar</button>' +
+      '</div>' +
+      '</div>';
+  }
+  historyList.innerHTML = html;
+}
+
+function saveCurrentVersion() {
+  if (!currentResult) { return; }
+  var version = {
+    name:     currentResult.name,
+    original: currentResult.original,
+    improved: currentResult.improved,
+    report:   currentResult.report,
+    date:     formatDateShort(new Date()),
+    ts:       Date.now()
+  };
+  versions.push(version);
+  saveVersions();
+  renderHistoryList();
+  // Feedback
+  var btn = document.getElementById('btn-save-version');
+  var orig = btn.textContent;
+  btn.textContent = '✓ Guardado';
+  btn.style.color = 'var(--accent2)';
+  setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 2000);
+}
+
+function loadVersion(index) {
+  var v = versions[index];
+  if (!v) return;
+  inputText.value    = v.original;
+  fragmentName.value = v.name;
+  updateCharCount();
+  currentResult = { improved: v.improved, report: v.report, original: v.original, name: v.name };
+  renderResult(currentResult);
+  closeHistory();
+}
+
+function deleteVersion(index) {
+  versions.splice(index, 1);
+  saveVersions();
+  renderHistoryList();
+}
+
+// ── UI ───────────────────────────────────────────
+
+function switchTab(tab) {
+  activeTab = tab;
+  ['improved','report','compare'].forEach(function(t) {
+    document.getElementById('tab-' + t).className = 'result-tab' + (t === tab ? ' active' : '');
+    document.getElementById('tab-content-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+function showLoading(msg) {
+  loadingText.textContent = msg || 'Procesando…';
+  loadingOverlay.classList.add('visible');
+  btnAnalyze.disabled = true;
+}
+function hideLoading() {
+  loadingOverlay.classList.remove('visible');
+  btnAnalyze.disabled = false;
+}
+function showError(msg) {
+  errorBox.textContent = '⚠ ' + msg;
+  errorBox.style.display = 'block';
+}
+function hideError() { errorBox.style.display = 'none'; }
+
+function openHistory()  {
+  renderHistoryList();
+  historySidebar.classList.add('open');
+  sidebarOverlay.classList.add('visible');
+}
+function closeHistory() {
+  historySidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('visible');
+}
+
+function updateCharCount() {
+  var len = inputText.value.length;
+  charCount.textContent = len + ' / 4000';
+  charCount.className   = 'char-count' + (len > 3500 ? ' warn' : '');
+}
+
+// ── UTILIDADES ───────────────────────────────────
+
+function escHtml(t) {
+  return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDateShort(d) {
+  var pad = function(n){ return n < 10 ? '0'+n : ''+n; };
+  return pad(d.getDate())+'/'+(pad(d.getMonth()+1))+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+// ── EVENTOS ──────────────────────────────────────
+
+btnAnalyze.onclick  = analyzeText;
+btnVerdict.onclick  = requestVerdict;
+btnHistory.onclick  = openHistory;
+btnSaveVersion.onclick = saveCurrentVersion;
+
+btnClearAll.onclick = function() {
+  inputText.value = '';
+  fragmentName.value = '';
+  updateCharCount();
+  currentResult = null;
+  emptyResult.style.display = 'flex';
+  copyBar.classList.remove('visible');
+  hideError();
+  ['improved','report','compare'].forEach(function(t) {
+    document.getElementById('tab-content-' + t).style.display = 'none';
+    document.getElementById('tab-content-' + t).innerHTML = '';
+  });
+  switchTab('improved');
+};
+
+btnClearHistory.onclick = function() {
+  if (confirm('¿Borrar todo el historial de versiones?')) {
+    versions = [];
+    saveVersions();
+    renderHistoryList();
+  }
+};
+
+btnCopy.onclick = function() {
+  if (!currentResult) return;
+  var text = currentResult.improved || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      copyFeedback.style.display = 'inline';
+      setTimeout(function() { copyFeedback.style.display = 'none'; }, 2000);
+    });
+  } else {
+    // Fallback para navegadores sin clipboard API
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    copyFeedback.style.display = 'inline';
+    setTimeout(function() { copyFeedback.style.display = 'none'; }, 2000);
+  }
+};
+
+inputText.oninput = function() {
+  updateCharCount();
+  hideError();
+};
+
+inputText.onkeydown = function(e) {
+  // Ctrl+Enter para analizar
+  if (e.ctrlKey && (e.key === 'Enter' || e.keyCode === 13)) {
+    analyzeText();
+  }
+};
+
+fileInput.onchange = function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    inputText.value = ev.target.result.substring(0, 4000);
+    updateCharCount();
+    if (!fragmentName.value) {
+      fragmentName.value = file.name.replace('.txt', '');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+};
+
+// ── INICIO ───────────────────────────────────────
+
+loadVersions();
+updateCharCount();
+</script>
+</body>
+</html>
