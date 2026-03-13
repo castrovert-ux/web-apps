@@ -7,19 +7,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:       #0b1220;
-      --surface:  #111927;
-      --card:     #161f2e;
-      --border:   #1e2d42;
-      --text:     #e8eef5;
-      --muted:    #6b8099;
-      --accent:   #4a9eff;
-      --warm:     #ff9f4a;
-      --cold:     #74c8ff;
-      --rain:     #5b9bd5;
-      --sun:      #ffd166;
-      --green:    #06d6a0;
-      --red:      #ef476f;
+      --bg:       #eef4f7;
+      --surface:  #e2edf2;
+      --card:     #d4e6ee;
+      --border:   #b0cede;
+      --text:     #1a3040;
+      --muted:    #5a7e92;
+      --accent:   #2a7ab0;
+      --warm:     #d4702a;
+      --cold:     #2a7ab0;
+      --rain:     #4a8ab0;
+      --sun:      #c4920a;
+      --green:    #2a9a70;
+      --red:      #c43a3a;
       --font-h:   'Crimson Pro', Georgia, serif;
       --font-m:   'DM Mono', monospace;
     }
@@ -46,13 +46,13 @@
     .sky-gradient {
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse at 20% 0%, rgba(74,158,255,0.08) 0%, transparent 60%),
-                  radial-gradient(ellipse at 80% 100%, rgba(255,159,74,0.05) 0%, transparent 50%);
+      background: radial-gradient(ellipse at 20% 0%, rgba(42,122,176,0.07) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 100%, rgba(212,112,42,0.05) 0%, transparent 50%);
     }
     .star {
       position: absolute;
       width: 1px; height: 1px;
-      background: rgba(255,255,255,0.6);
+      background: rgba(42,122,176,0.25);
       border-radius: 50%;
       animation: twinkle var(--dur, 3s) ease-in-out infinite;
     }
@@ -322,11 +322,11 @@
 
     /* ── TABLA HISTÓRICO ── */
     .history-table-wrap {
-      max-height: 220px;
+      max-height: 320px;
       overflow-y: auto;
-      margin-top: 16px;
+      margin-top: 8px;
       border-top: 1px solid var(--border);
-      padding-top: 12px;
+      padding-top: 6px;
     }
     .history-table {
       width: 100%;
@@ -344,11 +344,11 @@
     }
     .history-table td {
       padding: 6px 8px;
-      border-bottom: 1px solid rgba(30,45,66,0.5);
+      border-bottom: 1px solid rgba(176,206,222,0.6);
       color: var(--muted);
     }
     .history-table td:nth-child(2) { color: var(--text); font-family: var(--font-h); font-size: 16px; }
-    .history-table tr:hover td { background: rgba(74,158,255,0.04); }
+    .history-table tr:hover td { background: rgba(42,122,176,0.06); }
 
     /* Botón limpiar histórico */
     .btn-clear {
@@ -395,8 +395,8 @@
 
     #error-state {
       display: none;
-      background: rgba(239,71,111,0.08);
-      border: 1px solid rgba(239,71,111,0.3);
+      background: rgba(196,58,58,0.07);
+      border: 1px solid rgba(196,58,58,0.3);
       border-left: 3px solid var(--red);
       padding: 16px 20px;
       border-radius: 3px;
@@ -513,7 +513,10 @@
             <span class="hstat-value" style="color:var(--muted)" id="hist-count">0</span>
           </div>
         </div>
-        <button class="btn-clear" id="btn-clear">Borrar registro</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-clear" id="btn-export">⬇ Descargar Excel</button>
+          <button class="btn-clear" id="btn-clear">Borrar registro</button>
+        </div>
       </div>
 
       <!-- Gráfica SVG -->
@@ -945,6 +948,41 @@ function showError(msg) {
 // ── Eventos ──────────────────────────────────────
 
 btnRefresh.onclick = function() { loadWeather(); };
+
+document.getElementById('btn-export').onclick = function() {
+  if (!weatherLog.length) { alert('No hay registros para exportar.'); return; }
+
+  // Construir CSV con separador de punto y coma (compatible con Excel español)
+  var lines = [
+    'Fecha y hora;Temperatura (°C);Sensación térmica (°C);Descripción;Humedad (%);Viento (km/h)'
+  ];
+  var sorted = weatherLog.slice().reverse(); // más reciente primero
+  for (var i = 0; i < sorted.length; i++) {
+    var r = sorted[i];
+    var d = new Date(r.ts);
+    var fecha = d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+    lines.push([
+      fecha,
+      r.temp,
+      r.feels,
+      '"'+r.desc+'"',
+      r.humidity,
+      r.wind
+    ].join(';'));
+  }
+
+  var csv  = '\uFEFF' + lines.join('\r\n'); // BOM para que Excel abra con UTF-8
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  var now  = new Date();
+  a.href     = url;
+  a.download = 'valladolid-tiempo-'+now.getFullYear()+pad2(now.getMonth()+1)+pad2(now.getDate())+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 
 btnClear.onclick = function() {
   if (confirm('¿Borrar todo el registro histórico de Valladolid?')) {
