@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ilustrador · Castroverde</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2a7a6e">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #eef4f3;
+      --surface:   #e2edeb;
+      --card:      #d6e8e5;
+      --border:    #b4d0cc;
+      --text:      #1e3532;
+      --muted:     #5a8a84;
+      --accent:    #2a7a6e;
+      --accent2:   #3a9e6e;
+      --red:       #c45a3a;
+      --blue:      #3a7ab0;
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    3px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+      display: flex; flex-direction: column;
+    }
+
+    /* CABECERA */
+    header {
+      flex-shrink: 0; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 22px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+    }
+    .logo { font-family: var(--font-h); font-size: 19px; font-weight: 700; }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small { display: block; font-family: var(--font-ui); font-size: 8px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 1px; }
+    .header-actions { display: flex; gap: 7px; align-items: center; }
+
+    /* LAYOUT */
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; min-height: 0; }
+
+    /* PANEL IZQUIERDO */
+    .panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header {
+      flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border);
+      background: var(--surface); display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+    .panel-title span { color: var(--accent); }
+
+    .form-scroll { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    .field-label { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; display: block; }
+    .field-hint  { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+
+    textarea.field-input, input.field-input, select.field-input {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); padding: 8px 11px; font-family: var(--font-body); font-size: 13px;
+      border-radius: var(--radius); outline: none; resize: none;
+    }
+    textarea.field-input:focus, input.field-input:focus, select.field-input:focus { border-color: var(--accent); }
+    textarea.field-input::placeholder, input.field-input::placeholder { color: var(--muted); font-style: italic; }
+    select.field-input { font-family: var(--font-ui); font-size: 11px; cursor: pointer; }
+
+    .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .style-btn {
+      background: var(--card); border: 1px solid var(--border); color: var(--muted);
+      padding: 7px 6px; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+      text-align: center; transition: all 0.15s; line-height: 1.4;
+    }
+    .style-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .style-btn.active { background: var(--accent); border-color: var(--accent); color: #eef4f3; }
+    .style-btn small { display: block; font-size: 7px; opacity: 0.7; margin-top: 1px; letter-spacing: 0.5px; text-transform: none; font-style: italic; }
+
+    .format-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .format-btn {
+      background: var(--card); border: 1px solid var(--border); color: var(--muted);
+      padding: 8px 4px; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+      text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .format-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .format-btn.active { background: var(--accent); border-color: var(--accent); color: #eef4f3; }
+    .format-icon { border: 1.5px solid currentColor; border-radius: 1px; background: transparent; }
+
+    /* ACCIONES */
+    .panel-actions {
+      flex-shrink: 0; padding: 10px 15px; border-top: 1px solid var(--border);
+      background: var(--surface); display: flex; gap: 7px; align-items: center;
+    }
+
+    /* PANEL DERECHO */
+    .panel-right { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); position: relative; }
+    .result-header {
+      flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border);
+      background: var(--surface); display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .image-area { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 20px; position: relative; }
+
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); text-align: center; }
+    .empty-state .big-char { font-family: var(--font-h); font-size: 64px; color: var(--border); line-height: 1; }
+    .empty-state p { font-family: var(--font-ui); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+
+    .result-img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+      border-radius: var(--radius); box-shadow: 0 4px 24px rgba(30,53,50,0.15);
+      display: none;
+    }
+    .result-img.visible { display: block; }
+
+    /* LOADING */
+    .loading-overlay {
+      display: none; position: absolute; inset: 0;
+      background: rgba(238,244,243,0.9); z-index: 50;
+      flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner { width: 26px; height: 26px; border: 1px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+    .loading-sub  { font-family: var(--font-ui); font-size: 9px; color: var(--border); letter-spacing: 1px; }
+
+    /* BARRA INFERIOR RESULTADO */
+    .result-bar {
+      display: none; flex-shrink: 0; padding: 9px 15px; border-top: 1px solid var(--border);
+      background: var(--surface); gap: 7px; align-items: center;
+    }
+    .result-bar.visible { display: flex; }
+    .result-prompt { font-family: var(--font-ui); font-size: 9px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ERROR */
+    .error-box { display: none; background: rgba(196,90,58,0.1); border: 1px solid var(--red); border-left: 3px solid var(--red); padding: 10px 14px; border-radius: var(--radius); color: var(--red); font-size: 12px; margin: 10px 15px 0; }
+
+    /* BOTONES */
+    .btn {
+      padding: 7px 13px; border: none; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-ui); font-size: 10px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #eef4f3; }
+    .btn-primary:hover:not(:disabled) { background: #1f5c54; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-success { background: var(--accent2); color: #eef4f3; }
+    .btn-success:hover { background: #2e7d54; }
+
+    /* KEY STATUS */
+    .key-status { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; padding: 3px 8px; border-radius: var(--radius); }
+    .key-status.ok      { color: var(--accent2); border: 1px solid var(--accent2); }
+    .key-status.missing { color: var(--red);     border: 1px solid var(--red); }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.55); z-index: 500; align-items: center; justify-content: center; }
+    .modal-overlay.visible { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 28px 22px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(30,53,50,0.18); }
+    .modal-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal-desc  { font-family: var(--font-body); font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+    .modal-desc a { color: var(--accent); }
+    .modal-label { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; display: block; }
+    .modal-input { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; font-family: var(--font-ui); font-size: 12px; border-radius: var(--radius); outline: none; }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .modal-hint { font-family: var(--font-ui); font-size: 9px; color: var(--border); margin-top: 7px; line-height: 1.6; }
+    .btn-danger { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Ilustrador <span>Castroverde</span><small>Generador de imágenes históricas</small></div>
+  <div class="header-actions">
+    <span class="key-status" id="key-status">⚿ clave</span>
+    <button class="btn btn-ghost" id="btn-api-key">⚙ API Key</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- PANEL IZQUIERDO -->
+  <div class="panel-left">
+    <div class="panel-header">
+      <span class="panel-title">✍ Describe tu <span>ilustración</span></span>
+    </div>
+
+    <div class="form-scroll">
+
+      <div>
+        <label class="field-label" for="desc-es">Descripción en español</label>
+        <textarea class="field-input" id="desc-es" rows="4"
+          placeholder="Ej: Vista del castillo de Castroverde de Cerrato en el siglo XV, con el valle del Esgueva al fondo, campos de cereal, aldeanos trabajando…"></textarea>
+        <div class="field-hint">Describe con detalle: época, lugar, personajes, luz, atmósfera.</div>
+      </div>
+
+      <div>
+        <label class="field-label">Estilo artístico</label>
+        <div class="style-grid" id="style-grid">
+          <button class="style-btn active" data-style="old engraving, woodcut print, black and white, detailed hatching, 15th century illustration">🖨 Grabado medieval<small>xilografía, talla en madera</small></button>
+          <button class="style-btn" data-style="oil painting, realistic, detailed, warm light, museum quality, old masters style">🖼 Óleo histórico<small>estilo maestros antiguos</small></button>
+          <button class="style-btn" data-style="antique map, cartography, hand-drawn, sepia, decorative, parchment texture, medieval cartography">🗺 Mapa antiguo<small>cartografía medieval</small></button>
+          <button class="style-btn" data-style="watercolor painting, soft colors, artistic, historical illustration, book illustration style">🎨 Acuarela<small>ilustración de libro</small></button>
+          <button class="style-btn" data-style="vintage sepia photograph, aged, historical documentary photo, early photography style">📷 Fotografía sepia<small>fotografía antigua</small></button>
+          <button class="style-btn" data-style="pencil sketch, detailed drawing, architectural illustration, cross-hatching, fine lines">✏ Dibujo a lápiz<small>boceto arquitectónico</small></button>
+        </div>
+      </div>
+
+      <div>
+        <label class="field-label">Formato</label>
+        <div class="format-grid" id="format-grid">
+          <button class="format-btn active" data-w="1024" data-h="1024">
+            <div class="format-icon" style="width:22px;height:22px;"></div>
+            Cuadrado
+          </button>
+          <button class="format-btn" data-w="1152" data-h="896">
+            <div class="format-icon" style="width:28px;height:18px;"></div>
+            Apaisado
+          </button>
+          <button class="format-btn" data-w="896" data-h="1152">
+            <div class="format-icon" style="width:18px;height:28px;"></div>
+            Vertical
+          </button>
+        </div>
+        <div class="field-hint">Apaisado para portada o doble página · Vertical para interior</div>
+      </div>
+
+      <div>
+        <label class="field-label" for="negative">Excluir de la imagen <span style="font-style:italic;text-transform:none;letter-spacing:0;">(opcional)</span></label>
+        <input class="field-input" id="negative" type="text"
+          placeholder="Ej: coches, cables eléctricos, personas modernas…">
+        <div class="field-hint">Elementos que no deben aparecer.</div>
+      </div>
+
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <div class="panel-actions">
+      <button class="btn btn-ghost" id="btn-clear" style="flex-shrink:0;">✕ Limpiar</button>
+      <button class="btn btn-primary" id="btn-generate" style="flex:1;">Generar ilustración →</button>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO -->
+  <div class="panel-right">
+    <div class="result-header">
+      <span class="panel-title" style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">✦ Resultado</span>
+    </div>
+
+    <div class="image-area" id="image-area">
+      <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">Generando…</div>
+        <div class="loading-sub" id="loading-sub">Stable Diffusion XL · puede tardar hasta 60 segundos</div>
+      </div>
+
+      <div class="empty-state" id="empty-state">
+        <div class="big-char">❧</div>
+        <p>Describe tu ilustración y pulsa Generar</p>
+      </div>
+
+      <img class="result-img" id="result-img" alt="Ilustración generada">
+    </div>
+
+    <div class="result-bar" id="result-bar">
+      <span class="result-prompt" id="result-prompt"></span>
+      <button class="btn btn-success" id="btn-download">⬇ Descargar</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL API KEY -->
+<div class="modal-overlay" id="modal-apikey">
+  <div class="modal-box">
+    <div class="modal-title">Clave API de Hugging Face</div>
+    <div class="modal-desc">
+      Tu clave se guarda <strong>solo en este navegador</strong>. Nunca sale de tu ordenador.<br><br>
+      Consigue una en <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a> → tipo <strong>Read</strong>.
+    </div>
+    <label class="modal-label" for="modal-key-input">API Key</label>
+    <input class="modal-input" id="modal-key-input" type="password" placeholder="hf_…" autocomplete="off" spellcheck="false">
+    <div class="modal-hint">La clave empieza por <code>hf_</code>. Solo tú la ves.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger"  id="modal-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost"   id="modal-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="modal-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var HF_KEY      = localStorage.getItem('castroverde_hf_key') || '';
+var MODEL_URL   = 'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0';
+var selectedStyle  = document.querySelector('.style-btn.active').dataset.style;
+var selectedW      = 1024;
+var selectedH      = 1024;
+
+function get(id){ return document.getElementById(id); }
+
+// ── KEY STATUS ───────────────────────────────────────────────────────
+function updateKeyStatus(){
+  var ok = HF_KEY && HF_KEY.startsWith('hf_');
+  var el = get('key-status');
+  if(ok){ el.textContent='⚿ clave OK'; el.className='key-status ok'; }
+  else  { el.textContent='⚿ sin clave'; el.className='key-status missing'; }
+}
+
+// ── STYLE BUTTONS ────────────────────────────────────────────────────
+document.querySelectorAll('.style-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.style-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedStyle = btn.dataset.style;
+  });
+});
+
+// ── FORMAT BUTTONS ───────────────────────────────────────────────────
+document.querySelectorAll('.format-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.format-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedW = parseInt(btn.dataset.w);
+    selectedH = parseInt(btn.dataset.h);
+  });
+});
+
+// ── TRANSLATE & GENERATE ─────────────────────────────────────────────
+function buildPrompt(descEs){
+  // Prefijo de calidad + descripción en español + estilo
+  // Usamos la descripción en español directamente — SDXL entiende bien español
+  // pero añadimos términos técnicos en inglés para el estilo
+  var base = 'masterpiece, high quality, highly detailed, ' + descEs + ', ' + selectedStyle;
+  return base;
+}
+
+function showError(msg){ var e=get('error-box'); e.textContent='⚠ '+msg; e.style.display='block'; }
+function hideError(){ get('error-box').style.display='none'; }
+
+function generateImage(){
+  if(!HF_KEY || !HF_KEY.startsWith('hf_')){
+    showError('No hay clave API configurada. Pulsa "⚙ API Key" para introducirla.');
+    return;
+  }
+  var desc = get('desc-es').value.trim();
+  if(!desc){ showError('Escribe una descripción antes de generar.'); return; }
+
+  var prompt   = buildPrompt(desc);
+  var negative = get('negative').value.trim() || 'modern elements, cars, electricity poles, anachronistic, blurry, low quality, deformed';
+
+  hideError();
+  get('empty-state').style.display  = 'none';
+  get('result-img').classList.remove('visible');
+  get('result-bar').classList.remove('visible');
+  get('loading-overlay').classList.add('visible');
+  get('btn-generate').disabled = true;
+
+  // Contador de espera
+  var secs = 0;
+  var timer = setInterval(function(){
+    secs++;
+    get('loading-sub').textContent = 'Esperando respuesta… ' + secs + 's';
+  }, 1000);
+
+  var body = JSON.stringify({
+    inputs: prompt,
+    parameters: {
+      negative_prompt: negative,
+      width:  selectedW,
+      height: selectedH,
+      num_inference_steps: 30,
+      guidance_scale: 7.5
+    }
+  });
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', MODEL_URL, true);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + HF_KEY);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.responseType = 'blob';
+  xhr.timeout = 120000;
+
+  xhr.onreadystatechange = function(){
+    if(xhr.readyState !== 4) return;
+    clearInterval(timer);
+    get('loading-overlay').classList.remove('visible');
+    get('btn-generate').disabled = false;
+
+    if(xhr.status >= 200 && xhr.status < 300){
+      var url = URL.createObjectURL(xhr.response);
+      var img = get('result-img');
+      img.src = url;
+      img.classList.add('visible');
+      img._blobUrl = url;
+      img._filename = 'castroverde-' + Date.now() + '.png';
+
+      get('result-prompt').textContent = desc;
+      get('result-bar').classList.add('visible');
+    } else if(xhr.status === 503){
+      // Modelo cargando — reintentar
+      get('loading-overlay').classList.add('visible');
+      get('btn-generate').disabled = true;
+      get('loading-text').textContent = 'Modelo cargando…';
+      get('loading-sub').textContent  = 'Hugging Face está iniciando el modelo, reintentando en 20s…';
+      setTimeout(function(){ generateImage(); }, 20000);
+      return;
+    } else {
+      showError('Error ' + xhr.status + '. Comprueba tu clave o inténtalo de nuevo.');
+      get('empty-state').style.display = 'flex';
+    }
+  };
+
+  xhr.ontimeout = function(){
+    clearInterval(timer);
+    get('loading-overlay').classList.remove('visible');
+    get('btn-generate').disabled = false;
+    showError('Tiempo de espera agotado. Inténtalo de nuevo.');
+    get('empty-state').style.display = 'flex';
+  };
+
+  xhr.onerror = function(){
+    clearInterval(timer);
+    get('loading-overlay').classList.remove('visible');
+    get('btn-generate').disabled = false;
+    showError('Error de red. Comprueba tu conexión.');
+    get('empty-state').style.display = 'flex';
+  };
+
+  xhr.send(body);
+}
+
+// ── DESCARGAR ────────────────────────────────────────────────────────
+get('btn-download').addEventListener('click', function(){
+  var img = get('result-img');
+  if(!img._blobUrl) return;
+  var a = document.createElement('a');
+  a.href = img._blobUrl;
+  a.download = img._filename || 'ilustracion.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+// ── LIMPIAR ──────────────────────────────────────────────────────────
+get('btn-clear').addEventListener('click', function(){
+  get('desc-es').value = '';
+  get('negative').value = '';
+  hideError();
+  get('result-img').classList.remove('visible');
+  get('result-bar').classList.remove('visible');
+  get('empty-state').style.display = 'flex';
+});
+
+get('btn-generate').addEventListener('click', generateImage);
+
+get('desc-es').addEventListener('keydown', function(e){
+  if(e.ctrlKey && (e.key === 'Enter' || e.keyCode === 13)) generateImage();
+});
+
+// ── MODAL API KEY ────────────────────────────────────────────────────
+function openModal(){ get('modal-key-input').value = HF_KEY || ''; get('modal-apikey').classList.add('visible'); setTimeout(function(){ get('modal-key-input').focus(); }, 80); }
+function closeModal(){ get('modal-apikey').classList.remove('visible'); }
+
+get('btn-api-key').addEventListener('click', openModal);
+
+get('modal-btn-save').addEventListener('click', function(){
+  var val = get('modal-key-input').value.trim();
+  if(!val){ alert('Introduce la clave antes de guardar.'); return; }
+  if(!val.startsWith('hf_')){ alert('La clave debe empezar por hf_'); return; }
+  HF_KEY = val;
+  localStorage.setItem('castroverde_hf_key', val);
+  updateKeyStatus();
+  closeModal();
+});
+
+get('modal-btn-forget').addEventListener('click', function(){
+  if(!confirm('¿Borrar la clave guardada?')) return;
+  HF_KEY = '';
+  localStorage.removeItem('castroverde_hf_key');
+  get('modal-key-input').value = '';
+  updateKeyStatus();
+  closeModal();
+});
+
+get('modal-btn-cancel').addEventListener('click', closeModal);
+get('modal-apikey').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+get('modal-key-input').addEventListener('keydown', function(e){ if(e.key==='Enter') get('modal-btn-save').click(); if(e.key==='Escape') closeModal(); });
+
+// ── INIT ─────────────────────────────────────────────────────────────
+updateKeyStatus();
+if(!HF_KEY) setTimeout(openModal, 300);
+</script>
+</body>
+</html>
