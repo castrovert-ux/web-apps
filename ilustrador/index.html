@@ -7,6 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2a7a6e">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+  <script src="https://js.puter.com/v2/"></script>
   <style>
     :root {
       --bg:        #eef4f3;
@@ -119,7 +120,7 @@
 <body>
 
 <header>
-  <div class="logo">Ilustrador <span>Castroverde</span><small>Generador de imágenes históricas · Pollinations AI</small></div>
+  <div class="logo">Ilustrador <span>Castroverde</span><small>Generador de imágenes históricas · Puter AI</small></div>
 </header>
 
 <div class="layout">
@@ -239,25 +240,12 @@ document.querySelectorAll('.format-btn').forEach(function(btn){
   });
 });
 
-function buildUrl(prompt, negative, w, h, seed) {
-  // Limitar longitud del prompt para evitar URLs rechazadas
-  var shortPrompt = prompt.length > 400 ? prompt.substring(0, 400) : prompt;
-  return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(shortPrompt)
-    + '?negative=' + encodeURIComponent(negative)
-    + '&width='    + w
-    + '&height='   + h
-    + '&seed='     + seed
-    + '&nologo=true'
-    + '&model=flux';
-}
-
 function generateImage(){
   var desc = get('desc-es').value.trim();
   if(!desc){ showError('Escribe una descripción antes de generar.'); return; }
 
   var negative = get('negative').value.trim() || 'modern, cars, electricity poles, anachronistic, blurry, low quality, deformed, ugly';
-  // Prompt más conciso: quitamos el prefijo largo que inflaba la URL
-  var prompt = desc + ', ' + selectedStyle;
+  var prompt = desc + ', ' + selectedStyle + ', negative: ' + negative;
 
   hideError();
   get('empty-state').style.display = 'none';
@@ -266,72 +254,36 @@ function generateImage(){
   get('loading-overlay').classList.add('visible');
   get('btn-generate').disabled = true;
 
-  var seed = Math.floor(Math.random() * 999999);
-  var attempt = 0;
-  var MAX_ATTEMPTS = 3;
-  var TIMEOUT_MS   = 70000; // 70 s por intento
-
   // Contador visual
   var secs = 0;
   var timer = setInterval(function(){
     secs++;
-    var label = attempt > 1 ? 'Reintentando… ' + secs + 's (intento ' + attempt + '/' + MAX_ATTEMPTS + ')' : 'Generando… ' + secs + 's';
-    get('loading-sub').textContent = label;
+    get('loading-sub').textContent = 'Generando… ' + secs + 's';
   }, 1000);
 
-  function tryLoad() {
-    attempt++;
-    var currentSeed = seed + attempt; // seed diferente en cada intento
-    var url = buildUrl(prompt, negative, selectedW, selectedH, currentSeed);
+  // Puter.js — sin API key, sin CORS, gratuito
+  puter.ai.txt2img(prompt, { model: 'flux-schnell' })
+    .then(function(imgElement) {
+      clearInterval(timer);
+      get('loading-overlay').classList.remove('visible');
+      get('btn-generate').disabled = false;
 
-    var timeoutId = setTimeout(function() {
-      img.src = ''; // cancelar carga
-      if (attempt < MAX_ATTEMPTS) {
-        get('loading-sub').textContent = 'Tiempo agotado, reintentando…';
-        tryLoad();
-      } else {
-        finish(null, url);
-      }
-    }, TIMEOUT_MS);
-
-    var img = get('result-img');
-
-    img.onload = function() {
-      clearTimeout(timeoutId);
-      finish(url, null);
-    };
-
-    img.onerror = function() {
-      clearTimeout(timeoutId);
-      if (attempt < MAX_ATTEMPTS) {
-        get('loading-sub').textContent = 'Error, reintentando…';
-        setTimeout(tryLoad, 1500);
-      } else {
-        finish(null, url);
-      }
-    };
-
-    img.src = url;
-  }
-
-  function finish(okUrl, failUrl) {
-    clearInterval(timer);
-    get('loading-overlay').classList.remove('visible');
-    get('btn-generate').disabled = false;
-    if (okUrl) {
-      var img = get('result-img');
-      img.classList.add('visible');
-      img._url      = okUrl;
-      img._filename = 'castroverde-' + seed + '.jpg';
+      // imgElement es un <img> ya cargado — copiamos su src
+      var resultImg = get('result-img');
+      resultImg.src = imgElement.src;
+      resultImg._filename = 'castroverde-' + Date.now() + '.png';
+      resultImg.classList.add('visible');
       get('result-prompt').textContent = desc;
       get('result-bar').classList.add('visible');
-    } else {
+    })
+    .catch(function(err) {
+      clearInterval(timer);
+      get('loading-overlay').classList.remove('visible');
+      get('btn-generate').disabled = false;
       get('empty-state').style.display = 'flex';
-      showError('No se pudo generar la imagen tras ' + MAX_ATTEMPTS + ' intentos. El servicio puede estar saturado, inténtalo en unos minutos.');
-    }
-  }
-
-  tryLoad();
+      console.error('Puter error:', err);
+      showError('No se pudo generar la imagen. ' + (err && err.message ? err.message : 'Inténtalo de nuevo.'));
+    });
 }
 
 // Descargar
