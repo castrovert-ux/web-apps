@@ -407,14 +407,8 @@ function requestVerdict(){
   if(!text){ showError('Introduce el fragmento para el veredicto.'); return; }
   var msg='SOLICITUD DE VEREDICTO GLOBAL\n\n'+
     (notes?'NOTAS AL PIE:\n"""\n'+notes+'\n"""\n\n':'')+
-    'Evalúa como revisión editorial final. Devuelve el JSON habitual MÁS estos campos adicionales:\n\n'+
-    '"veredicto": uno de exactamente estos tres valores: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n'+
-    '"veredicto_detalle": párrafo editorial breve (2-3 frases) con el diagnóstico general.\n'+
-    '"veredicto_siguiente_paso": una sola acción concreta y prioritaria que el autor debería hacer antes de publicar (o "Ninguna: el texto está listo." si procede).\n'+
-    '"veredicto_dimensiones": array de exactamente 5 objetos, uno por dimensión, con esta forma:\n'+
-    '  {"dimension":"Estructura","puntuacion":8,"nota":"frase corta explicativa"}\n'+
-    'Las 5 dimensiones son, en este orden: Estructura, Ritmo, Rigor histórico, Cohesión, Voz del autor.\n'+
-    'Las puntuaciones van de 1 a 10.\n\n'+
+    'Evalúa como revisión editorial final. Valora estructura, cohesión, ritmo, precisión histórica y si está listo para publicación.\n'+
+    'Añade al JSON habitual: "veredicto":"LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR","veredicto_detalle":"..."\n\n'+
     'TEXTO:\n"""\n'+text+'\n"""';
   showLoading('Elaborando veredicto editorial…'); hideError();
   callClaude(msg, function(response){
@@ -442,37 +436,7 @@ function renderResult(res){
     var r=res.report;
     if(res.isVerdict&&r.veredicto){
       var vc=r.veredicto.indexOf('LISTO')!==-1?'var(--accent2)':r.veredicto.indexOf('MENOR')!==-1?'var(--accent)':'var(--red)';
-      var vcBg=r.veredicto.indexOf('LISTO')!==-1?'rgba(58,158,110,0.08)':r.veredicto.indexOf('MENOR')!==-1?'rgba(42,122,110,0.08)':'rgba(196,90,58,0.08)';
-      html+='<div class="verdict-box" style="background:'+vcBg+'">';
-      html+='<div class="verdict-title" style="color:'+vc+'">⚖ '+esc(r.veredicto)+'</div>';
-      if(r.veredicto_detalle) html+='<div class="verdict-body">'+esc(r.veredicto_detalle)+'</div>';
-      // Dimensiones con barra de progreso
-      if(r.veredicto_dimensiones&&r.veredicto_dimensiones.length){
-        html+='<div style="margin-top:16px;display:flex;flex-direction:column;gap:9px;">';
-        r.veredicto_dimensiones.forEach(function(d){
-          var pct=(d.puntuacion/10)*100;
-          var dc=d.puntuacion>=8?'var(--accent2)':d.puntuacion>=6?'var(--accent)':'var(--red)';
-          html+='<div>';
-          html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">';
-          html+='<span style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">'+esc(d.dimension)+'</span>';
-          html+='<span style="font-family:var(--font-h);font-size:15px;font-weight:700;color:'+dc+';">'+d.puntuacion+'<span style="font-size:9px;color:var(--muted);font-family:var(--font-ui);font-weight:400;">/10</span></span>';
-          html+='</div>';
-          html+='<div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;">';
-          html+='<div style="height:100%;width:'+pct+'%;background:'+dc+';border-radius:2px;transition:width 0.4s;"></div>';
-          html+='</div>';
-          if(d.nota) html+='<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">'+esc(d.nota)+'</div>';
-          html+='</div>';
-        });
-        html+='</div>';
-      }
-      // Siguiente paso
-      if(r.veredicto_siguiente_paso){
-        html+='<div style="margin-top:14px;padding:9px 12px;background:var(--surface);border-left:2px solid '+vc+';border-radius:var(--radius);">';
-        html+='<div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:'+vc+';margin-bottom:4px;">Siguiente paso</div>';
-        html+='<div style="font-size:13px;line-height:1.6;">'+esc(r.veredicto_siguiente_paso)+'</div>';
-        html+='</div>';
-      }
-      html+='</div>';
+      html+='<div class="verdict-box"><div class="verdict-title" style="color:'+vc+'">⚖ '+esc(r.veredicto)+'</div><div class="verdict-body">'+esc(r.veredicto_detalle||'')+'</div></div>';
     }
     if(r.puntuacion){
       html+='<div class="score-row">';
@@ -683,4 +647,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-  
