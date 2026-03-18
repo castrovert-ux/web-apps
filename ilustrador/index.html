@@ -239,12 +239,25 @@ document.querySelectorAll('.format-btn').forEach(function(btn){
   });
 });
 
+function buildUrl(prompt, negative, w, h, seed) {
+  // Limitar longitud del prompt para evitar URLs rechazadas
+  var shortPrompt = prompt.length > 400 ? prompt.substring(0, 400) : prompt;
+  return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(shortPrompt)
+    + '?negative=' + encodeURIComponent(negative)
+    + '&width='    + w
+    + '&height='   + h
+    + '&seed='     + seed
+    + '&nologo=true'
+    + '&model=flux';
+}
+
 function generateImage(){
   var desc = get('desc-es').value.trim();
   if(!desc){ showError('Escribe una descripción antes de generar.'); return; }
 
   var negative = get('negative').value.trim() || 'modern, cars, electricity poles, anachronistic, blurry, low quality, deformed, ugly';
-  var prompt = 'masterpiece, highly detailed, ' + desc + ', ' + selectedStyle;
+  // Prompt más conciso: quitamos el prefijo largo que inflaba la URL
+  var prompt = desc + ', ' + selectedStyle;
 
   hideError();
   get('empty-state').style.display = 'none';
@@ -253,44 +266,72 @@ function generateImage(){
   get('loading-overlay').classList.add('visible');
   get('btn-generate').disabled = true;
 
-  // Pollinations API — sin clave, sin CORS
-  var encodedPrompt   = encodeURIComponent(prompt);
-  var encodedNegative = encodeURIComponent(negative);
   var seed = Math.floor(Math.random() * 999999);
-  var url = 'https://image.pollinations.ai/prompt/' + encodedPrompt
-          + '?negative=' + encodedNegative
-          + '&width=' + selectedW
-          + '&height=' + selectedH
-          + '&seed=' + seed
-          + '&nologo=true'
-          + '&model=flux';
+  var attempt = 0;
+  var MAX_ATTEMPTS = 3;
+  var TIMEOUT_MS   = 70000; // 70 s por intento
 
-  // Contador
+  // Contador visual
   var secs = 0;
   var timer = setInterval(function(){
     secs++;
-    get('loading-sub').textContent = 'Generando… ' + secs + 's';
+    var label = attempt > 1 ? 'Reintentando… ' + secs + 's (intento ' + attempt + '/' + MAX_ATTEMPTS + ')' : 'Generando… ' + secs + 's';
+    get('loading-sub').textContent = label;
   }, 1000);
 
-  var img = get('result-img');
-  img.onload = function(){
+  function tryLoad() {
+    attempt++;
+    var currentSeed = seed + attempt; // seed diferente en cada intento
+    var url = buildUrl(prompt, negative, selectedW, selectedH, currentSeed);
+
+    var timeoutId = setTimeout(function() {
+      img.src = ''; // cancelar carga
+      if (attempt < MAX_ATTEMPTS) {
+        get('loading-sub').textContent = 'Tiempo agotado, reintentando…';
+        tryLoad();
+      } else {
+        finish(null, url);
+      }
+    }, TIMEOUT_MS);
+
+    var img = get('result-img');
+
+    img.onload = function() {
+      clearTimeout(timeoutId);
+      finish(url, null);
+    };
+
+    img.onerror = function() {
+      clearTimeout(timeoutId);
+      if (attempt < MAX_ATTEMPTS) {
+        get('loading-sub').textContent = 'Error, reintentando…';
+        setTimeout(tryLoad, 1500);
+      } else {
+        finish(null, url);
+      }
+    };
+
+    img.src = url;
+  }
+
+  function finish(okUrl, failUrl) {
     clearInterval(timer);
     get('loading-overlay').classList.remove('visible');
     get('btn-generate').disabled = false;
-    img.classList.add('visible');
-    img._url = url;
-    img._filename = 'castroverde-' + seed + '.jpg';
-    get('result-prompt').textContent = desc;
-    get('result-bar').classList.add('visible');
-  };
-  img.onerror = function(){
-    clearInterval(timer);
-    get('loading-overlay').classList.remove('visible');
-    get('btn-generate').disabled = false;
-    get('empty-state').style.display = 'flex';
-    showError('No se pudo generar la imagen. Comprueba tu conexión e inténtalo de nuevo.');
-  };
-  img.src = url;
+    if (okUrl) {
+      var img = get('result-img');
+      img.classList.add('visible');
+      img._url      = okUrl;
+      img._filename = 'castroverde-' + seed + '.jpg';
+      get('result-prompt').textContent = desc;
+      get('result-bar').classList.add('visible');
+    } else {
+      get('empty-state').style.display = 'flex';
+      showError('No se pudo generar la imagen tras ' + MAX_ATTEMPTS + ' intentos. El servicio puede estar saturado, inténtalo en unos minutos.');
+    }
+  }
+
+  tryLoad();
 }
 
 // Descargar
