@@ -7,7 +7,6 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2a7a6e">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
-  <script src="https://js.puter.com/v2/"></script>
   <style>
     :root {
       --bg:        #eef4f3;
@@ -120,7 +119,7 @@
 <body>
 
 <header>
-  <div class="logo">Ilustrador <span>Castroverde</span><small>Generador de imágenes históricas · Puter AI</small></div>
+  <div class="logo">Ilustrador <span>Castroverde</span><small>Generador de imágenes históricas · Stable Diffusion XL</small></div>
 </header>
 
 <div class="layout">
@@ -240,12 +239,15 @@ document.querySelectorAll('.format-btn').forEach(function(btn){
   });
 });
 
+// ⚠ CAMBIA ESTA URL por la de tu Cloudflare Worker tras desplegarlo
+var WORKER_URL = 'https://TU-WORKER.TU-USUARIO.workers.dev';
+
 function generateImage(){
   var desc = get('desc-es').value.trim();
   if(!desc){ showError('Escribe una descripción antes de generar.'); return; }
 
   var negative = get('negative').value.trim() || 'modern, cars, electricity poles, anachronistic, blurry, low quality, deformed, ugly';
-  var prompt = desc + ', ' + selectedStyle + ', negative: ' + negative;
+  var prompt = desc + ', ' + selectedStyle;
 
   hideError();
   get('empty-state').style.display = 'none';
@@ -254,57 +256,64 @@ function generateImage(){
   get('loading-overlay').classList.add('visible');
   get('btn-generate').disabled = true;
 
-  // Contador visual
   var secs = 0;
   var timer = setInterval(function(){
     secs++;
     get('loading-sub').textContent = 'Generando… ' + secs + 's';
   }, 1000);
 
-  // Puter.js — sin API key, sin CORS, gratuito
-  puter.ai.txt2img(prompt, { model: 'flux-schnell' })
-    .then(function(imgElement) {
-      clearInterval(timer);
+  fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt:          prompt,
+      negative_prompt: negative,
+      width:           selectedW,
+      height:          selectedH,
+    }),
+  })
+  .then(function(res) {
+    if (!res.ok) {
+      return res.json().then(function(err) {
+        throw new Error(err.error || 'Error ' + res.status);
+      });
+    }
+    return res.blob();
+  })
+  .then(function(blob) {
+    clearInterval(timer);
+    var objectUrl = URL.createObjectURL(blob);
+    var img = get('result-img');
+    img.onload = function(){
       get('loading-overlay').classList.remove('visible');
       get('btn-generate').disabled = false;
-
-      // imgElement es un <img> ya cargado — copiamos su src
-      var resultImg = get('result-img');
-      resultImg.src = imgElement.src;
-      resultImg._filename = 'castroverde-' + Date.now() + '.png';
-      resultImg.classList.add('visible');
+      img.classList.add('visible');
+      img._objectUrl  = objectUrl;
+      img._filename   = 'castroverde-' + Date.now() + '.jpg';
       get('result-prompt').textContent = desc;
       get('result-bar').classList.add('visible');
-    })
-    .catch(function(err) {
-      clearInterval(timer);
-      get('loading-overlay').classList.remove('visible');
-      get('btn-generate').disabled = false;
-      get('empty-state').style.display = 'flex';
-      console.error('Puter error:', err);
-      showError('No se pudo generar la imagen. ' + (err && err.message ? err.message : 'Inténtalo de nuevo.'));
-    });
+    };
+    img.src = objectUrl;
+  })
+  .catch(function(err) {
+    clearInterval(timer);
+    get('loading-overlay').classList.remove('visible');
+    get('btn-generate').disabled = false;
+    get('empty-state').style.display = 'flex';
+    console.error('Error generando imagen:', err);
+    showError('No se pudo generar la imagen: ' + (err.message || 'error desconocido'));
+  });
 }
 
-// Descargar
 get('btn-download').addEventListener('click', function(){
   var img = get('result-img');
-  if(!img.src) return;
-  // Forzar descarga via fetch + blob
-  fetch(img.src)
-    .then(function(r){ return r.blob(); })
-    .then(function(blob){
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = img._filename || 'ilustracion.jpg';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    })
-    .catch(function(){
-      // Fallback: abrir en nueva pestaña
-      window.open(img.src, '_blank');
-    });
+  if(!img._objectUrl) return;
+  var a = document.createElement('a');
+  a.href = img._objectUrl;
+  a.download = img._filename || 'ilustracion.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 });
 
 // Limpiar
