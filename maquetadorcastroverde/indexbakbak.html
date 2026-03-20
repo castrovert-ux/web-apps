@@ -170,20 +170,6 @@
     .ptab:hover:not(.active){border-color:var(--accent);color:var(--accent);}
     .ppanel{display:none;}
     .ppanel.visible{display:block;}
-    .btn-plan{background:var(--accent2);color:var(--bg);border:none;}
-    .btn-plan:hover:not(:disabled){background:var(--accent);}
-    .btn-plan:disabled{opacity:0.4;cursor:not-allowed;}
-    .plan-box{background:var(--bg);border:1px solid var(--accent2);border-left:3px solid var(--accent2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;}
-    .plan-box-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent2);margin-bottom:12px;}
-    .plan-item{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start;}
-    .plan-item:last-child{border-bottom:none;padding-bottom:0;}
-    .plan-item-loc{font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
-    .plan-item-action{font-size:13px;line-height:1.6;color:var(--text);}
-    .plan-prio{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:1px;padding:2px 6px;border-radius:var(--radius);white-space:nowrap;align-self:start;margin-top:2px;}
-    .prio-alta{background:rgba(196,90,58,0.12);color:var(--red);border:1px solid var(--red);}
-    .prio-media{background:rgba(138,42,42,0.1);color:var(--accent);border:1px solid var(--accent);}
-    .prio-baja{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
-    .prio-ok{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
     .key-status{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;padding:3px 8px;border-radius:var(--radius);}
     .key-status.ok{color:var(--green);border:1px solid var(--green);}
     .key-status.missing{color:var(--red);border:1px solid var(--red);}
@@ -260,7 +246,6 @@
     <div class="chat-actions" id="chat-actions" style="display:none;">
       <span class="next-prompt-label" id="next-prompt-label">—</span>
       <button class="btn btn-ghost btn-sm" id="btn-export">⎘ Exportar .txt</button>
-      <button class="btn btn-plan btn-sm" id="btn-plan" style="display:none;" disabled>✦ Plan de intervención</button>
       <button class="btn btn-primary" id="btn-next-prompt">Enviar →</button>
     </div>
   </div>
@@ -540,16 +525,6 @@ function updateChatActions(){
   if(!currentSession){get('chat-actions').style.display='none';return;}
   get('chat-actions').style.display='flex';
   var idx=currentSession.currentPromptIndex;
-  var planBtn=get('btn-plan');
-  // Mostrar plan si hay al menos 2 respuestas de Claude
-  var claudeResponses=currentSession.messages.filter(function(m){return m.role==='assistant';}).length;
-  if(claudeResponses>=2){
-    planBtn.style.display='';
-    planBtn.disabled=currentSession.waitingForPlan||false;
-    planBtn.textContent=currentSession.waitingForPlan?'Generando…':'✦ Plan de intervención';
-  } else {
-    planBtn.style.display='none';
-  }
   if(idx>=settings.prompts.length){
     get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado</span>';
     get('btn-next-prompt').style.display='none';
@@ -560,91 +535,6 @@ function updateChatActions(){
     get('btn-next-prompt').disabled=false;
     get('btn-next-prompt').textContent=(idx===0?'Enviar P1 →':'Siguiente prompt →');
   }
-}
-
-var PLAN_PROMPT='Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.
-
-El plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.
-
-Para cada punto indica:
-- La ubicación exacta (número de párrafo o título del bloque)
-- La acción concreta a realizar
-- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR
-
-Usa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):
-[ubicación] | [acción concreta] | [PRIORIDAD]
-
-Ejemplo:
-Párrafo 1 | No intervenir. Apertura sólida. | NO TOCAR
-Párrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA
-Bloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA
-
-Solo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.';
-
-function requestPlan(){
-  if(!currentSession||currentSession.waitingForPlan)return;
-  var claudeResponses=currentSession.messages.filter(function(m){return m.role==='assistant';});
-  if(!claudeResponses.length)return;
-  currentSession.waitingForPlan=true;
-  updateChatActions();
-  showLoading('Generando plan de intervención…');hideError();
-  var apiMsgs=currentSession.messages.map(function(m){return{role:m.role,content:m.content};});
-  apiMsgs.push({role:'user',content:PLAN_PROMPT});
-  callClaude(apiMsgs,function(response){
-    hideLoading();
-    currentSession.waitingForPlan=false;
-    currentSession.plan=response;
-    saveCurrentSession();
-    renderPlanInChat(response);
-    updateChatActions();
-  },function(err){
-    hideLoading();
-    currentSession.waitingForPlan=false;
-    showError(err);updateChatActions();
-  });
-}
-
-function renderPlanInChat(planText){
-  var area=get('chat-area');
-  // Eliminar plan anterior si existe
-  var old=area.querySelector('.plan-container');
-  if(old)old.remove();
-
-  var container=document.createElement('div');
-  container.className='chat-message plan-container';
-
-  var header=document.createElement('div');
-  header.className='chat-message-header';
-  header.innerHTML='<span class="chat-message-role role-claude">Claude</span><span class="chat-message-lbl">Plan de intervención</span>';
-  container.appendChild(header);
-
-  var box=document.createElement('div');
-  box.className='plan-box';
-  box.innerHTML='<div class="plan-box-title">✦ Plan de intervención — '+esc(currentSession.name)+'</div>';
-
-  var lines=planText.split('
-').filter(function(l){return l.trim()&&l.indexOf('|')!==-1;});
-  lines.forEach(function(line){
-    var parts=line.split('|').map(function(p){return p.trim();});
-    if(parts.length<3)return;
-    var loc=parts[0], action=parts[1], prio=parts[2].toUpperCase();
-    var prioClass=prio.indexOf('ALTA')!==-1?'prio-alta':prio.indexOf('MEDIA')!==-1?'prio-media':prio.indexOf('BAJA')!==-1?'prio-baja':'prio-ok';
-    var item=document.createElement('div');
-    item.className='plan-item';
-    item.innerHTML='<span class="plan-item-loc">'+esc(loc)+'</span>'
-      +'<span class="plan-item-action">'+esc(action)+'</span>'
-      +'<span class="plan-prio '+prioClass+'">'+esc(prio)+'</span>';
-    box.appendChild(item);
-  });
-
-  // Si el parsing no dio resultados, mostrar texto plano
-  if(!lines.length){
-    box.innerHTML+='<div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--text);">'+esc(planText)+'</div>';
-  }
-
-  container.appendChild(box);
-  area.insertBefore(container,get('loading-msg'));
-  area.scrollTop=area.scrollHeight;
 }
 
 function callClaude(messages,onOk,onErr){
@@ -731,9 +621,7 @@ function loadSessionById(id){
   currentSession={id:s.id,name:s.name,goal:s.goal,text:s.text,messages:s.messages.slice(),currentPromptIndex:s.currentPromptIndex,waitingForResponse:false,startedAt:s.startedAt,verdict:s.verdict};
   get('section-name').value=s.name;get('section-goal').value=s.goal||'';
   get('input-text').value=s.text;updateCharCount();
-  renderProgressBar(currentSession.currentPromptIndex);renderChat();updateChatActions();
-  if(currentSession.plan)renderPlanInChat(currentSession.plan);
-  closeHistory();
+  renderProgressBar(currentSession.currentPromptIndex);renderChat();updateChatActions();closeHistory();
 }
 
 function deleteSession(id){sessions=sessions.filter(function(s){return s.id!==id;});saveSessions();renderHistoryList();}
@@ -827,7 +715,6 @@ get('btn-close-sidebar').addEventListener('click',closeHistory);
 get('sidebar-overlay').addEventListener('click',closeHistory);
 get('btn-clear-history').addEventListener('click',function(){if(confirm('¿Borrar todo el historial?')){sessions=[];saveSessions();renderHistoryList();}});
 get('btn-export').addEventListener('click',function(){exportSession(null);});
-get('btn-plan').addEventListener('click',requestPlan);
 get('btn-settings').addEventListener('click',openSettings);
 get('settings-save').addEventListener('click',saveSettingsFromModal);
 get('settings-cancel').addEventListener('click',closeSettings);
