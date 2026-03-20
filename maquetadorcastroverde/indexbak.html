@@ -5,18 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Análisis · Castroverde</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
   <style>
     :root {
       --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
       --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
       --red:#c45a3a; --blue:#3a7ab0; --green:#2a7a4a;
-      --cloud:#4A90D9;
       --font-h:'Playfair Display',Georgia,serif;
       --font-body:'Source Serif 4',Georgia,serif;
       --font-ui:'DM Mono',monospace;
@@ -25,41 +18,6 @@
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{height:100%;overflow:hidden;}
     body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.7;display:flex;flex-direction:column;}
-
-    /* ── SYNC BAR ── */
-    #sync-bar{
-      flex-shrink:0;background:var(--text);
-      display:flex;align-items:center;justify-content:flex-end;gap:10px;
-      padding:5px 18px;border-bottom:1px solid rgba(255,255,255,0.06);
-    }
-    .btn-sync{
-      background:none;border:1px solid rgba(74,144,217,0.4);color:#7eb8f0;
-      padding:4px 11px;border-radius:20px;cursor:pointer;
-      font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;
-      transition:background .2s,color .2s,border-color .2s;white-space:nowrap;
-      display:flex;align-items:center;gap:5px;
-    }
-    .btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud);}
-    .btn-sync.synced{border-color:rgba(42,122,74,0.5);color:#7ec87f;}
-    .btn-sync.synced:hover{background:var(--green);color:#fff;border-color:var(--green);}
-    .btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none;}
-    .sync-spinner{display:inline-block;animation:syncSpin 1s linear infinite;}
-    @keyframes syncSpin{to{transform:rotate(360deg);}}
-    .sync-user-text{font-family:var(--font-ui);font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1px;}
-    .btn-signout{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;text-transform:uppercase;}
-    .btn-signout:hover{color:var(--red);background:rgba(196,90,58,.1);}
-    #sync-status{
-      flex-shrink:0;padding:5px 18px;font-family:var(--font-ui);font-size:9px;
-      letter-spacing:1px;text-transform:uppercase;display:none;
-      align-items:center;justify-content:space-between;gap:10px;
-    }
-    #sync-status.visible{display:flex;}
-    #sync-status.ok{background:rgba(42,122,74,.12);color:var(--green);}
-    #sync-status.err{background:rgba(196,90,58,.1);color:var(--red);}
-    #sync-status.info{background:rgba(74,144,217,.1);color:var(--cloud);}
-    .sync-status-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:12px;padding:0 3px;}
-    .sync-status-close:hover{opacity:1;}
-
     header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
     .logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
     .logo span{color:var(--accent);font-style:italic;}
@@ -181,20 +139,6 @@
 </head>
 <body>
 
-<!-- ══ SYNC BAR ══ -->
-<div id="sync-bar">
-  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
-  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
-  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
-    <span id="sync-icon">☁</span>
-    <span id="sync-label">Sincronizar</span>
-  </button>
-</div>
-<div id="sync-status">
-  <span id="sync-status-msg"></span>
-  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
-</div>
-
 <header>
   <div class="logo">Análisis <span>Castroverde</span><small>Editor de secciones · Historia de un municipio</small></div>
   <div class="header-actions">
@@ -270,12 +214,12 @@
     <div class="modal-subtitle">Personaliza el contexto y los prompts · Guardados en este navegador</div>
     <div class="modal-section">
       <div class="modal-section-title">Contexto del libro (System Prompt)</div>
-      <div class="modal-hint" style="margin-bottom:8px;">Se envía a Claude en cada consulta como instrucción de fondo.</div>
+      <div class="modal-hint" style="margin-bottom:8px;">Se envía a Claude en cada consulta como instrucción de fondo. Describe el libro, el estilo del autor y las reglas permanentes.</div>
       <textarea class="modal-textarea tall" id="settings-system" rows="7"></textarea>
     </div>
     <div class="modal-section">
       <div class="modal-section-title">Prompts de análisis</div>
-      <div class="modal-hint" style="margin-bottom:10px;">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
+      <div class="modal-hint" style="margin-bottom:10px;">Variables disponibles: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code> — se sustituyen automáticamente al enviar.</div>
       <div class="ptabs" id="ptabs"></div>
       <div id="ppanels"></div>
     </div>
@@ -304,155 +248,6 @@
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-//  FIREBASE CONFIG
-// ══════════════════════════════════════════════════════
-const firebaseConfig = {
-  apiKey: "AIzaSyA4NdL7mFK6JLUk6sgBiVq2CnZjMa6krUM",
-  authDomain: "castroverde-apps.firebaseapp.com",
-  projectId: "castroverde-apps",
-  storageBucket: "castroverde-apps.firebasestorage.app",
-  messagingSenderId: "371026533141",
-  appId: "1:371026533141:web:315767f60cbf8d6f47671c"
-};
-
-firebase.initializeApp(firebaseConfig);
-const fbAuth     = firebase.auth();
-const fbDb       = firebase.firestore();
-const fbProvider = new firebase.auth.GoogleAuthProvider();
-let fbUser = null;
-
-fbAuth.onAuthStateChanged(function(user) {
-  fbUser = user;
-  updateSyncUI();
-});
-
-function updateSyncUI() {
-  var icon    = get('sync-icon');
-  var label   = get('sync-label');
-  var btn     = get('btn-sync');
-  var userEl  = get('sync-user-text');
-  var signout = get('btn-signout');
-  if (fbUser) {
-    btn.classList.add('synced');
-    icon.textContent  = '✓';
-    label.textContent = 'Sincronizar';
-    userEl.textContent = fbUser.email;
-    userEl.style.display = 'inline';
-    signout.style.display = 'inline';
-  } else {
-    btn.classList.remove('synced');
-    icon.textContent  = '☁';
-    label.textContent = 'Sincronizar';
-    userEl.style.display = 'none';
-    signout.style.display = 'none';
-  }
-}
-
-function handleSync() {
-  if (!fbUser) {
-    setSyncStatus('info', 'Iniciando sesión con Google…');
-    fbAuth.signInWithPopup(fbProvider)
-      .then(function() { return doSync(); })
-      .catch(function(err) { setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
-  } else {
-    doSync();
-  }
-}
-
-function doSync() {
-  if (!fbUser) return;
-  setSyncStatus('info', 'Sincronizando…');
-  get('btn-sync').classList.add('syncing');
-
-  var docRef = fbDb.collection('maquetador').doc(fbUser.uid);
-  docRef.get().then(function(snap) {
-    var localSessions = sessions.slice();
-    var localSettings = JSON.parse(JSON.stringify(settings));
-
-    if (snap.exists) {
-      var remote = snap.data();
-      var remoteSessions = remote.sessions || [];
-      var remoteSettings = remote.settings || null;
-
-      // Merge sessions por id (timestamp)
-      var mergedSessions = mergeSessions(localSessions, remoteSessions);
-
-      // Merge settings: si los remotos son más recientes (tienen settingsUpdatedAt mayor), usar remotos
-      var mergedSettings = localSettings;
-      if (remoteSettings && remote.settingsUpdatedAt) {
-        var localTs = parseInt(localStorage.getItem('castroverde_ana_settings_ts') || '0');
-        var remoteTs = remote.settingsUpdatedAt;
-        if (remoteTs > localTs) {
-          mergedSettings = remoteSettings;
-        }
-      }
-
-      // Guardar merged localmente
-      sessions = mergedSessions;
-      saveSessions();
-      settings = mergedSettings;
-      saveSettings();
-      localStorage.setItem('castroverde_ana_settings_ts', Date.now());
-
-      return docRef.set({
-        sessions: mergedSessions,
-        settings: mergedSettings,
-        settingsUpdatedAt: Date.now(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        renderHistoryList();
-        get('btn-sync').classList.remove('syncing');
-        setSyncStatus('ok', '✓ Sincronizado — ' + mergedSessions.length + ' sesión' + (mergedSessions.length !== 1 ? 'es' : ''));
-      });
-
-    } else {
-      return docRef.set({
-        sessions: localSessions,
-        settings: localSettings,
-        settingsUpdatedAt: Date.now(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        get('btn-sync').classList.remove('syncing');
-        setSyncStatus('ok', '✓ Datos subidos por primera vez — ' + localSessions.length + ' sesión' + (localSessions.length !== 1 ? 'es' : ''));
-      });
-    }
-  }).catch(function(err) {
-    console.error('Sync error:', err);
-    get('btn-sync').classList.remove('syncing');
-    setSyncStatus('err', 'Error al sincronizar: ' + err.message);
-  });
-}
-
-function mergeSessions(local, remote) {
-  var map = {};
-  remote.forEach(function(s) { if (s.id) map[s.id] = s; });
-  local.forEach(function(s)  { if (s.id) map[s.id] = s; }); // local sobreescribe
-  return Object.values(map).sort(function(a, b) { return b.id - a.id; }); // más reciente primero
-}
-
-function setSyncStatus(type, msg) {
-  var el = get('sync-status');
-  get('sync-status-msg').textContent = msg;
-  el.className = 'visible ' + type;
-  if (type === 'ok') setTimeout(closeSyncStatus, 4000);
-}
-
-function closeSyncStatus() {
-  get('sync-status').className = '';
-  updateSyncUI();
-}
-
-function fbSignOut() {
-  fbAuth.signOut().then(function() {
-    fbUser = null;
-    updateSyncUI();
-  });
-}
-
-// ══════════════════════════════════════════════════════
-//  APP (sin cambios)
-// ══════════════════════════════════════════════════════
 var DEFAULT_SYSTEM='Eres un editor literario especializado en ensayo histórico-divulgativo.\n\nSOBRE EL LIBRO:\nLibro de historia local sobre Castroverde de Cerrato (Valladolid, España). Combina rigor histórico con estilo divulgativo y evocador. Dirigido tanto a vecinos del municipio como a lectores interesados en historia local castellana.\n\nESTRUCTURA DEL LIBRO:\n- Historia cronológica completa: prehistoria, romana, medieval, moderna, contemporánea.\n- Segunda parte temática: cofradías, documentos paleográficos, instituciones históricas.\n- Ámbito geográfico: Cerrato vallisoletano, valle del río Esgueva, tierras fronterizas con Palencia.\n\nESTILO DEL AUTOR:\n- Narrativo pero riguroso: prosa literaria con datos históricos precisos.\n- Cercano y evocador: imágenes concretas y sensoriales.\n- Voz propia marcada: entre académico y divulgación culta.\n- Frases con ritmo: alterna oraciones cortas y largas con intención estilística.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, "Castro Viride".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización.\n\nNORMAS:\n- Analiza siempre a nivel global (estructura, tono, ritmo), no frase por frase.\n- Respeta la voz del autor.\n- Sé concreto: ejemplos específicos del texto, no generalidades.\n- El autor tiene notas al pie extensas: NUNCA señales falta de fuentes como problema.';
 
 var DEFAULT_PROMPTS=[
@@ -480,6 +275,7 @@ function loadSettings(){
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}
 function loadSessions(){try{var s=JSON.parse(localStorage.getItem(STORAGE_KEY));if(Array.isArray(s))return s;}catch(e){}return[];}
 function saveSessions(){localStorage.setItem(STORAGE_KEY,JSON.stringify(sessions));}
+
 function get(id){return document.getElementById(id);}
 function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function dateStr(d){var p=function(n){return n<10?'0'+n:''+n;};return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
@@ -506,16 +302,20 @@ function renderChat(){
   get('chat-empty').style.display='none';
   var frag=document.createDocumentFragment();
   currentSession.messages.forEach(function(m){
-    var div=document.createElement('div');div.className='chat-message';
+    var div=document.createElement('div');
+    div.className='chat-message';
     var isUser=m.role==='user';
     var pname=settings.prompts[m.promptIndex]?settings.prompts[m.promptIndex].name:(isUser?'Prompt':'Claude');
     var body=document.createElement('div');
     body.className='chat-message-body '+(isUser?'prompt-body':'response-body');
     body.textContent=m.content;
     if(isUser){body.addEventListener('click',function(){this.classList.toggle('expanded');});}
-    var header=document.createElement('div');header.className='chat-message-header';
+    var header=document.createElement('div');
+    header.className='chat-message-header';
     header.innerHTML='<span class="chat-message-role '+(isUser?'role-prompt':'role-claude')+'">'+(isUser?'Prompt':'Claude')+'</span><span class="chat-message-lbl">'+esc(pname)+'</span>';
-    div.appendChild(header);div.appendChild(body);frag.appendChild(div);
+    div.appendChild(header);
+    div.appendChild(body);
+    frag.appendChild(div);
   });
   area.insertBefore(frag,get('loading-msg'));
   area.scrollTop=area.scrollHeight;
@@ -571,8 +371,10 @@ function startSession(){
   if(text.length<200){showError('El texto es demasiado corto para un análisis de sección.');return;}
   hideError();
   currentSession={
-    id:Date.now(),name:get('section-name').value.trim()||('Sección · '+dateStr(new Date())),
-    goal:get('section-goal').value.trim(),text:text,messages:[],currentPromptIndex:0,
+    id:Date.now(),
+    name:get('section-name').value.trim()||('Sección · '+dateStr(new Date())),
+    goal:get('section-goal').value.trim(),
+    text:text,messages:[],currentPromptIndex:0,
     waitingForResponse:false,startedAt:dateStr(new Date()),verdict:null
   };
   renderProgressBar(0);renderChat();updateChatActions();
@@ -603,7 +405,9 @@ function sendNextPrompt(){
     renderProgressBar(currentSession.currentPromptIndex);
     renderChat();updateChatActions();
   },function(err){
-    hideLoading();currentSession.messages.pop();currentSession.waitingForResponse=false;
+    hideLoading();
+    currentSession.messages.pop();
+    currentSession.waitingForResponse=false;
     showError(err);renderChat();updateChatActions();
   });
 }
@@ -619,12 +423,16 @@ function saveCurrentSession(){
 function loadSessionById(id){
   var s=sessions.find(function(s){return s.id===id;});if(!s)return;
   currentSession={id:s.id,name:s.name,goal:s.goal,text:s.text,messages:s.messages.slice(),currentPromptIndex:s.currentPromptIndex,waitingForResponse:false,startedAt:s.startedAt,verdict:s.verdict};
-  get('section-name').value=s.name;get('section-goal').value=s.goal||'';
+  get('section-name').value=s.name;
+  get('section-goal').value=s.goal||'';
   get('input-text').value=s.text;updateCharCount();
-  renderProgressBar(currentSession.currentPromptIndex);renderChat();updateChatActions();closeHistory();
+  renderProgressBar(currentSession.currentPromptIndex);
+  renderChat();updateChatActions();closeHistory();
 }
 
-function deleteSession(id){sessions=sessions.filter(function(s){return s.id!==id;});saveSessions();renderHistoryList();}
+function deleteSession(id){
+  sessions=sessions.filter(function(s){return s.id!==id;});saveSessions();renderHistoryList();
+}
 
 function renderHistoryList(){
   var list=get('history-list');
@@ -645,7 +453,8 @@ function openHistory(){renderHistoryList();get('history-sidebar').classList.add(
 function closeHistory(){get('history-sidebar').classList.remove('open');get('sidebar-overlay').classList.remove('visible');}
 
 function exportSession(id){
-  var s=id?sessions.find(function(x){return x.id===id;}):currentSession;if(!s)return;
+  var s=id?sessions.find(function(x){return x.id===id;}):currentSession;
+  if(!s)return;
   var lines=['ANÁLISIS DE SECCIÓN/CAPÍTULO · CASTROVERDE DE CERRATO','','Sección: '+s.name,'Fecha: '+s.startedAt,'Objetivo: '+(s.goal||'(no especificado)')];
   if(s.verdict)lines.push('Veredicto P5: '+s.verdict.toUpperCase());
   lines.push('','═'.repeat(60),'');
@@ -655,7 +464,8 @@ function exportSession(id){
   });
   var blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='analisis-'+s.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.txt';a.click();
+  a.download='analisis-'+s.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.txt';
+  a.click();
 }
 
 function newSession(){
@@ -663,8 +473,10 @@ function newSession(){
   currentSession=null;
   get('section-name').value='';get('section-goal').value='';get('input-text').value='';updateCharCount();
   get('chat-area').querySelectorAll('.chat-message').forEach(function(el){el.remove();});
-  get('chat-empty').style.display='flex';get('chat-actions').style.display='none';
-  get('loading-msg').classList.remove('visible');renderProgressBar(-1);hideError();
+  get('chat-empty').style.display='flex';
+  get('chat-actions').style.display='none';
+  get('loading-msg').classList.remove('visible');
+  renderProgressBar(-1);hideError();
 }
 
 function openSettings(){
@@ -679,12 +491,14 @@ function openSettings(){
       +'<textarea class="modal-textarea tall pp-content" data-idx="'+i+'" rows="10">'+esc(p.content)+'</textarea>'
       +'</div>';
   });
-  get('ptabs').innerHTML=tabsHtml;get('ppanels').innerHTML=panelsHtml;
+  get('ptabs').innerHTML=tabsHtml;
+  get('ppanels').innerHTML=panelsHtml;
   get('ptabs').querySelectorAll('.ptab').forEach(function(btn){
     btn.addEventListener('click',function(){
       get('ptabs').querySelectorAll('.ptab').forEach(function(b){b.classList.remove('active');});
       get('ppanels').querySelectorAll('.ppanel').forEach(function(p){p.classList.remove('visible');});
-      btn.classList.add('active');get('pp-'+btn.getAttribute('data-idx')).classList.add('visible');
+      btn.classList.add('active');
+      get('pp-'+btn.getAttribute('data-idx')).classList.add('visible');
     });
   });
   get('modal-settings').classList.add('visible');
@@ -694,14 +508,12 @@ function saveSettingsFromModal(){
   settings.system=get('settings-system').value;
   document.querySelectorAll('.pp-name').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].name=el.value;});
   document.querySelectorAll('.pp-content').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].content=el.value;});
-  saveSettings();
-  localStorage.setItem('castroverde_ana_settings_ts', Date.now()); // marca de tiempo para sync
-  closeSettings();
+  saveSettings();closeSettings();
 }
 function resetSettings(){
   if(!confirm('¿Restaurar todos los ajustes por defecto?'))return;
   settings={system:DEFAULT_SYSTEM,prompts:DEFAULT_PROMPTS.map(function(p){return{name:p.name,label:p.label,content:p.content};})};
-  saveSettings();localStorage.setItem('castroverde_ana_settings_ts', Date.now());openSettings();
+  saveSettings();openSettings();
 }
 
 function openApiKeyModal(){get('modal-key-input').value=API_KEY||'';get('modal-apikey').classList.add('visible');setTimeout(function(){get('modal-key-input').focus();},80);}
@@ -729,7 +541,8 @@ get('modal-btn-save').addEventListener('click',function(){
 });
 get('modal-btn-forget').addEventListener('click',function(){
   if(!confirm('¿Borrar la clave guardada?'))return;
-  API_KEY='';localStorage.removeItem('castroverde_ana_key');get('modal-key-input').value='';updateKeyStatus();closeApiKeyModal();
+  API_KEY='';localStorage.removeItem('castroverde_ana_key');
+  get('modal-key-input').value='';updateKeyStatus();closeApiKeyModal();
 });
 get('modal-btn-cancel').addEventListener('click',closeApiKeyModal);
 get('modal-apikey').addEventListener('click',function(e){if(e.target===this)closeApiKeyModal();});
