@@ -199,7 +199,6 @@
 <div id="sync-bar">
   <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
   <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
-  <button class="btn-ghost btn-sm btn" id="btn-fb-key" onclick="openFbKeyModal()" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
   <button class="btn-sync" id="btn-sync" onclick="handleSync()">
     <span id="sync-icon">☁</span>
     <span id="sync-label">Sincronizar</span>
@@ -303,22 +302,6 @@
   </div>
 </div>
 
-<!-- MODAL FIREBASE KEY -->
-<div class="modal-overlay" id="modal-fbkey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Firebase</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para la sincronización en la nube. Se guarda <strong>solo en este navegador</strong>.<br><br>Consíguela en <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent);">Google Cloud Console</a> → Credenciales → Claves de API.</p>
-    <label class="modal-label">Firebase API Key</label>
-    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
-    <p style="font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:5px;">Empieza por <code>AIzaSy</code>. Solo tú la ves.</p>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL API KEY -->
 <div class="modal-overlay" id="modal-apikey">
   <div class="modal-box modal-box-sm">
@@ -339,11 +322,8 @@
 // ══════════════════════════════════════════════════════
 //  FIREBASE CONFIG
 // ══════════════════════════════════════════════════════
-// Firebase apiKey se carga desde localStorage (nunca en el código)
-var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
-
 const firebaseConfig = {
-  apiKey: FB_API_KEY,
+  apiKey: "AIzaSyA4NdL7mFK6JLUk6sgBiVq2CnZjMa6krUM",
   authDomain: "castroverde-apps.firebaseapp.com",
   projectId: "castroverde-apps",
   storageBucket: "castroverde-apps.firebasestorage.app",
@@ -821,30 +801,6 @@ function resetSettings(){
   saveSettings();localStorage.setItem('castroverde_ana_settings_ts', Date.now());openSettings();
 }
 
-function openFbKeyModal(){
-  get('fb-key-input').value = FB_API_KEY||'';
-  get('modal-fbkey').classList.add('visible');
-  setTimeout(function(){get('fb-key-input').focus();},80);
-}
-function closeFbKeyModal(){ get('modal-fbkey').classList.remove('visible'); }
-
-function saveFbKey(val){
-  if(!val||!val.startsWith('AIzaSy')){ alert('La clave debe empezar por AIzaSy'); return false; }
-  FB_API_KEY = val;
-  localStorage.setItem('castroverde_fb_key', val);
-  // Reiniciar Firebase con la nueva clave
-  try {
-    firebase.app().delete().then(function(){
-      firebaseConfig.apiKey = val;
-      firebase.initializeApp(firebaseConfig);
-      fbAuth2 = firebase.auth();
-      fbDb2   = firebase.firestore();
-    });
-  } catch(e) {}
-  closeFbKeyModal();
-  return true;
-}
-
 function openApiKeyModal(){get('modal-key-input').value=API_KEY||'';get('modal-apikey').classList.add('visible');setTimeout(function(){get('modal-key-input').focus();},80);}
 function closeApiKeyModal(){get('modal-apikey').classList.remove('visible');}
 
@@ -863,19 +819,6 @@ get('settings-cancel').addEventListener('click',closeSettings);
 get('settings-reset').addEventListener('click',resetSettings);
 get('modal-settings').addEventListener('click',function(e){if(e.target===this)closeSettings();});
 get('btn-api-key').addEventListener('click',openApiKeyModal);
-get('btn-fb-key').addEventListener('click',openFbKeyModal);
-get('fb-btn-save').addEventListener('click',function(){
-  var val=get('fb-key-input').value.trim();
-  saveFbKey(val);
-});
-get('fb-btn-forget').addEventListener('click',function(){
-  if(!confirm('¿Borrar la clave de Firebase?'))return;
-  FB_API_KEY='';localStorage.removeItem('castroverde_fb_key');
-  get('fb-key-input').value='';closeFbKeyModal();
-});
-get('fb-btn-cancel').addEventListener('click',closeFbKeyModal);
-get('modal-fbkey').addEventListener('click',function(e){if(e.target===this)closeFbKeyModal();});
-get('fb-key-input').addEventListener('keydown',function(e){if(e.key==='Enter')get('fb-btn-save').click();if(e.key==='Escape')closeFbKeyModal();});
 get('modal-btn-save').addEventListener('click',function(){
   var val=get('modal-key-input').value.trim();
   if(!val){alert('Introduce la clave.');return;}
@@ -901,8 +844,7 @@ renderProgressBar(-1);
 updateCharCount();
 updateKeyStatus();
 renderHistoryList();
-if(!FB_API_KEY)setTimeout(openFbKeyModal,300);
-else if(!API_KEY)setTimeout(openApiKeyModal,300);
+if(!API_KEY)setTimeout(openApiKeyModal,300);
 </script>
 </body>
 </html>
