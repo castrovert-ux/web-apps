@@ -342,25 +342,39 @@
 // Firebase apiKey se carga desde localStorage (nunca en el código)
 var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
 
-const firebaseConfig = {
-  apiKey: FB_API_KEY,
-  authDomain: "castroverde-apps.firebaseapp.com",
-  projectId: "castroverde-apps",
-  storageBucket: "castroverde-apps.firebasestorage.app",
-  messagingSenderId: "371026533141",
-  appId: "1:371026533141:web:315767f60cbf8d6f47671c"
-};
+var fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
 
-firebase.initializeApp(firebaseConfig);
-const fbAuth     = firebase.auth();
-const fbDb       = firebase.firestore();
-const fbProvider = new firebase.auth.GoogleAuthProvider();
-let fbUser = null;
+function initFirebase(apiKey) {
+  if(!apiKey) return false;
+  try {
+    // Si ya hay una app inicializada, eliminarla primero
+    if(firebase.apps.length) {
+      firebase.app().delete().then(function(){ startFirebase(apiKey); });
+    } else {
+      startFirebase(apiKey);
+    }
+    return true;
+  } catch(e) { console.error('Firebase init error:', e); return false; }
+}
 
-fbAuth.onAuthStateChanged(function(user) {
-  fbUser = user;
-  updateSyncUI();
-});
+function startFirebase(apiKey) {
+  var config = {
+    apiKey: apiKey,
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(config);
+  fbAuth     = firebase.auth();
+  fbDb       = firebase.firestore();
+  fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(function(user){ fbUser=user; updateSyncUI(); });
+}
+
+// Inicializar si ya tenemos la clave guardada
+if(FB_API_KEY) initFirebase(FB_API_KEY);
 
 function updateSyncUI() {
   var icon    = get('sync-icon');
@@ -385,6 +399,11 @@ function updateSyncUI() {
 }
 
 function handleSync() {
+  if (!fbAuth) {
+    setSyncStatus('err', 'Introduce primero la clave de Firebase.');
+    setTimeout(openFbKeyModal, 800);
+    return;
+  }
   if (!fbUser) {
     setSyncStatus('info', 'Iniciando sesión con Google…');
     fbAuth.signInWithPopup(fbProvider)
@@ -396,7 +415,7 @@ function handleSync() {
 }
 
 function doSync() {
-  if (!fbUser) return;
+  if (!fbUser||!fbDb) return;
   setSyncStatus('info', 'Sincronizando…');
   get('btn-sync').classList.add('syncing');
 
@@ -479,6 +498,7 @@ function closeSyncStatus() {
 }
 
 function fbSignOut() {
+  if(!fbAuth) return;
   fbAuth.signOut().then(function() {
     fbUser = null;
     updateSyncUI();
@@ -832,16 +852,10 @@ function saveFbKey(val){
   if(!val||!val.startsWith('AIzaSy')){ alert('La clave debe empezar por AIzaSy'); return false; }
   FB_API_KEY = val;
   localStorage.setItem('castroverde_fb_key', val);
-  // Reiniciar Firebase con la nueva clave
-  try {
-    firebase.app().delete().then(function(){
-      firebaseConfig.apiKey = val;
-      firebase.initializeApp(firebaseConfig);
-      fbAuth2 = firebase.auth();
-      fbDb2   = firebase.firestore();
-    });
-  } catch(e) {}
+  initFirebase(val);
   closeFbKeyModal();
+  // Si no hay clave Anthropic, pedirla ahora
+  if(!API_KEY) setTimeout(openApiKeyModal, 400);
   return true;
 }
 
@@ -901,8 +915,8 @@ renderProgressBar(-1);
 updateCharCount();
 updateKeyStatus();
 renderHistoryList();
-if(!FB_API_KEY)setTimeout(openFbKeyModal,300);
-else if(!API_KEY)setTimeout(openApiKeyModal,300);
+if(!FB_API_KEY){ setTimeout(openFbKeyModal,300); }
+else if(!API_KEY){ setTimeout(openApiKeyModal,300); }
 </script>
 </body>
 </html>
