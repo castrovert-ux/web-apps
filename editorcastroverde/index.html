@@ -292,6 +292,7 @@
     #instruc-fragmento::placeholder, #instruc-generales::placeholder { color: var(--border); font-style: italic; }
     #instruc-fragmento:focus, #instruc-generales:focus { border-color: var(--accent); }
     .instruc-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+    .modal-box-sm { width: 420px; max-width: 95vw; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -305,6 +306,7 @@
 <div id="sync-bar">
   <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
   <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-signout" id="btn-fb-key" style="display:inline;color:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.1);padding:2px 8px;border-radius:3px;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;" onmouseover="this.style.color='#7eb8f0'" onmouseout="this.style.color='rgba(255,255,255,.25)'">⚿ Firebase</button>
   <button class="btn-sync" id="btn-sync" onclick="handleSync()">
     <span id="sync-icon">☁</span>
     <span id="sync-label">Sincronizar historial</span>
@@ -427,6 +429,22 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
   </div>
   <div style="padding:10px 13px;border-top:1px solid var(--border);">
     <button class="btn btn-danger" style="width:100%;" id="btn-clear-history">Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- MODAL FIREBASE KEY -->
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <div class="modal-desc">Necesaria para sincronizar el historial en la nube. Se guarda <strong>solo en este navegador</strong>.<br><br>Consíguela en <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> → Credenciales → Claves de API.</div>
+    <label class="modal-label" for="fb-key-input">Firebase API Key</label>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
+    <div class="modal-hint">Empieza por <code>AIzaSy</code>. Solo tú la ves.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
+    </div>
   </div>
 </div>
 
@@ -849,6 +867,26 @@ get('file-input').addEventListener('change', function(e){
   e.target.value='';
 });
 
+// FIREBASE KEY MODAL
+function openFbKeyModal(){ get('fb-key-input').value=FB_API_KEY||''; get('modal-fbkey').classList.add('visible'); setTimeout(function(){ get('fb-key-input').focus(); },80); }
+function closeFbKeyModal(){ get('modal-fbkey').classList.remove('visible'); }
+
+get('btn-fb-key').addEventListener('click', openFbKeyModal);
+get('fb-btn-save').addEventListener('click', function(){
+  var val=get('fb-key-input').value.trim();
+  if(!val||!val.startsWith('AIzaSy')){ alert('La clave debe empezar por AIzaSy'); return; }
+  FB_API_KEY=val; localStorage.setItem('castroverde_fb_key',val);
+  initFirebase(val); closeFbKeyModal();
+});
+get('fb-btn-forget').addEventListener('click', function(){
+  if(!confirm('\u00bfBorrar la clave de Firebase?')) return;
+  FB_API_KEY=''; localStorage.removeItem('castroverde_fb_key');
+  get('fb-key-input').value=''; closeFbKeyModal();
+});
+get('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
+get('modal-fbkey').addEventListener('click', function(e){ if(e.target===this) closeFbKeyModal(); });
+get('fb-key-input').addEventListener('keydown', function(e){ if(e.key==='Enter') get('fb-btn-save').click(); if(e.key==='Escape') closeFbKeyModal(); });
+
 // API KEY
 function updateKeyStatus(){
   var ok=API_KEY&&API_KEY.startsWith('sk-ant-');
@@ -886,7 +924,8 @@ loadVersions();
 updateCharCount();
 updateKeyStatus();
 var _ig=getInstrucGen(); if(_ig&&get('instruc-generales')) get('instruc-generales').value=_ig;
-if(!API_KEY) setTimeout(openApiKeyModal, 300);
+if(!FB_API_KEY) setTimeout(openFbKeyModal, 300);
+else if(!API_KEY) setTimeout(openApiKeyModal, 300);
 
 // SERVICE WORKER
 if('serviceWorker' in navigator){
