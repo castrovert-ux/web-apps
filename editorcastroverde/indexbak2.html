@@ -277,21 +277,6 @@
     .key-status { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; padding: 3px 8px; border-radius: var(--radius); }
     .key-status.ok { color: var(--accent2); border: 1px solid var(--accent2); }
     .key-status.missing { color: var(--red); border: 1px solid var(--red); }
-    .instrucciones-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
-    .instrucciones-toggle { width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between; background: transparent; border: none; cursor: pointer; font-family: var(--font-ui); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
-    .instrucciones-toggle:hover { color: var(--accent); }
-    .instrucciones-body { display: none; padding: 0 15px 10px; }
-    .instrucciones-body.open { display: block; }
-    .instruc-label { font-family: var(--font-ui); font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; display: block; }
-    .instruc-label:first-child { margin-top: 0; }
-    .parte-select { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 9px; font-family: var(--font-ui); font-size: 10px; border-radius: var(--radius); outline: none; cursor: pointer; }
-    .parte-select:focus { border-color: var(--accent); }
-    #instruc-fragmento, #instruc-generales { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-family: var(--font-body); font-size: 12px; line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius); }
-    #instruc-fragmento { height: 60px; }
-    #instruc-generales { height: 72px; }
-    #instruc-fragmento::placeholder, #instruc-generales::placeholder { color: var(--border); font-style: italic; }
-    #instruc-fragmento:focus, #instruc-generales:focus { border-color: var(--accent); }
-    .instruc-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -366,25 +351,6 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
       </div>
     </div>
 
-    <div class="instrucciones-section">
-      <button class="instrucciones-toggle" id="btn-toggle-instruc">
-        <span>✦ Instrucciones para Claude</span>
-        <span id="instruc-arrow">▾ mostrar</span>
-      </button>
-      <div class="instrucciones-body" id="instruc-body">
-        <label class="instruc-label">Parte del libro</label>
-        <select class="parte-select" id="parte-libro">
-          <option value="primera">Primera parte — narrativa divulgativa</option>
-          <option value="segunda">Segunda parte — temática y formal</option>
-        </select>
-        <label class="instruc-label">Instrucciones para este fragmento</label>
-        <textarea id="instruc-fragmento" maxlength="800" placeholder="Instrucción concreta del plan de intervención: ej. Suavizar tono técnico. Reescribir el cierre."></textarea>
-        <label class="instruc-label" id="lbl-instruc-gen">Instrucciones generales <span style="color:var(--accent2);">● guardadas</span></label>
-        <textarea id="instruc-generales" maxlength="3000" placeholder="Perfil tonal y reglas permanentes del libro. Se guarda automáticamente."></textarea>
-        <div class="instruc-hint">Las instrucciones generales se guardan en este navegador y se aplican en cada análisis.</div>
-      </div>
-    </div>
-
     <div class="panel-actions">
       <input type="text" class="fragment-name-input" id="fragment-name" placeholder="Nombre del fragmento (ej: Cap.2 · Prehistoria)" maxlength="60">
       <label class="btn btn-ghost" style="cursor:pointer;">📄 Cargar<input type="file" id="file-input" accept=".txt,.docx" style="display:none;"></label>
@@ -450,20 +416,25 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
 // ══════════════════════════════════════════════════════
 //  FIREBASE CONFIG
 // ══════════════════════════════════════════════════════
-var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
-var fbAuth = null, fbDb = null, fbProvider = null;
+const firebaseConfig = {
+  apiKey: "AIzaSyA4NdL7mFK6JLUk6sgBiVq2CnZjMa6krUM",
+  authDomain: "castroverde-apps.firebaseapp.com",
+  projectId: "castroverde-apps",
+  storageBucket: "castroverde-apps.firebasestorage.app",
+  messagingSenderId: "371026533171",
+  appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
+const fbProvider = new firebase.auth.GoogleAuthProvider();
 let fbUser = null;
 
-function initFirebase(k) {
-  try { if(firebase.apps.length){ firebase.app().delete().then(function(){ startFB(k); }); } else { startFB(k); } }
-  catch(e){ startFB(k); }
-}
-function startFB(k) {
-  firebase.initializeApp({apiKey:k,authDomain:'castroverde-apps.firebaseapp.com',projectId:'castroverde-apps',storageBucket:'castroverde-apps.firebasestorage.app',messagingSenderId:'371026533171',appId:'1:371026533141:web:315767f60cbf8d6f47671c'});
-  fbAuth=firebase.auth(); fbDb=firebase.firestore(); fbProvider=new firebase.auth.GoogleAuthProvider();
-  fbAuth.onAuthStateChanged(function(u){ fbUser=u; updateSyncUI(); });
-}
-if(FB_API_KEY) initFirebase(FB_API_KEY);
+fbAuth.onAuthStateChanged(user => {
+  fbUser = user;
+  updateSyncUI();
+});
 
 function updateSyncUI() {
   const icon    = get('sync-icon');
@@ -575,28 +546,6 @@ var STORAGE_KEY = 'castroverde_v2';
 
 var SYSTEM_PROMPT = 'Eres un asistente literario especializado en historia local castellana. Ayudas al autor de un libro de historia sobre Castroverde de Cerrato, municipio de Valladolid (España).\n\nSOBRE EL LIBRO:\n- Historia cronológica completa: prehistoria, romana, medieval, moderna, contemporánea.\n- Segunda parte temática: cofradías, documentos paleográficos, instituciones históricas.\n- Ámbito: Cerrato vallisoletano, valle del río Esgueva, tierras fronterizas con Palencia.\n\nESTILO DEL AUTOR — NO ALTERAR:\n- Narrativo pero riguroso: prosa literaria con datos históricos precisos.\n- Cercano y evocador: imágenes concretas y sensoriales.\n- Voz propia marcada: entre académico y divulgación culta.\n- Frases con ritmo: alterna oraciones cortas y largas con intención estilística.\n\nSOBRE LAS NOTAS AL PIE:\n- El autor tiene notas al pie extensas. NUNCA señales falta de fuentes como problema.\n- Si se proporcionan notas, úsalas como contexto pero no las incluyas en el texto mejorado.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, "Castro Viride".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización.\n\nREGLAS DE ORO:\n1. NO AÑADIR: prohibido añadir frases, cláusulas, adjetivos no presentes en el original. El texto mejorado nunca será más largo.\n2. NO CAMBIAR LO QUE FUNCIONA: si una frase está bien, no la toques.\n3. SOLO CORREGIR LO ESTRICTAMENTE INCORRECTO: erratas, concordancias, puntuación errónea.\n4. NO CAMBIAR EL ESTILO: no cambies comillas, no sustituyas palabras por sinónimos neutros.\n5. EL INFORME ES LO VALIOSO: explica qué has cambiado y por qué.\n6. SI ESTÁ BIEN, DILO: si no hay errores, devuelve el original intacto y explícalo.\n\nResponde SIEMPRE en JSON válido:\n{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}';
 
-var INSTRUC_GEN_KEY = 'castroverde_instruc_gen';
-function getInstrucGen(){ return localStorage.getItem(INSTRUC_GEN_KEY)||''; }
-function saveInstrucGen(){ localStorage.setItem(INSTRUC_GEN_KEY, get('instruc-generales').value); }
-
-function buildSystem(){
-  var parte = get('parte-libro') ? get('parte-libro').value : 'primera';
-  var pl = parte==='segunda' ? 'SEGUNDA PARTE (tematica y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
-  var gen = getInstrucGen().trim();
-  var extra = '\n\nPARTE DEL LIBRO: Este fragmento pertenece a la '+pl+' del libro.';
-  if(gen) extra += '\n\nINSTRUCCIONES GENERALES DEL AUTOR:\n'+gen;
-  return SYSTEM_PROMPT+extra;
-}
-
-function buildMsg(text,notes,tipo,frag){
-  var lbl={completo:'Revision completa',estilo:'Estilo y voz',ortografia:'Ortografia y gramatica',historico:'Coherencia historica',claridad:'Claridad y estructura'};
-  var m='TIPO DE ANALISIS: '+(lbl[tipo]||'Revision completa')+'\n\n';
-  if(frag&&frag.trim()) m+='INSTRUCCIONES ESPECIFICAS:\n'+frag+'\n\n';
-  if(notes) m+='NOTAS AL PIE (contexto, no modificar):\n\'\'\'\n'+notes+'\n\'\'\'\n\n';
-  m+='FRAGMENTO:\n\'\'\'\n'+text+'\n\'\'\'';
-  return m;
-}
-
 var versions      = [];
 var currentResult = null;
 var activeTab     = 'improved';
@@ -633,7 +582,7 @@ function callClaude(msg, onOk, onErr){
   };
   xhr.ontimeout=function(){ onErr('Timeout. Inténtalo de nuevo.'); };
   xhr.onerror=function(){ onErr('Error de red.'); };
-  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:buildSystem(),messages:[{role:'user',content:msg}]}));
+  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:SYSTEM_PROMPT,messages:[{role:'user',content:msg}]}));
 }
 
 function analyzeText(){
@@ -641,8 +590,10 @@ function analyzeText(){
   var notes=get('notes-text').value.trim();
   if(!text){ showError('Introduce un texto para analizar.'); return; }
   if(text.length<50){ showError('El fragmento es demasiado corto.'); return; }
-    var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value.trim() : '';
-  var msg = buildMsg(text, notes, get('analysis-type').value, instrucFrag);
+  var labels={completo:'Revisión completa',estilo:'Estilo y voz',ortografia:'Ortografía y gramática',historico:'Coherencia histórica',claridad:'Claridad y estructura'};
+  var msg='TIPO DE ANÁLISIS: '+(labels[get('analysis-type').value]||'Revisión completa')+'\n\n'+
+    (notes?'NOTAS AL PIE (contexto, no modificar):\n"""\n'+notes+'\n"""\n\n':'')+
+    'FRAGMENTO:\n"""\n'+text+'\n"""';
   showLoading('Analizando con Claude…'); hideError();
   callClaude(msg, function(response){
     hideLoading();
@@ -874,18 +825,10 @@ get('modal-btn-cancel').addEventListener('click', closeApiKeyModal);
 get('modal-apikey').addEventListener('click', function(e){ if(e.target===this) closeApiKeyModal(); });
 get('modal-key-input').addEventListener('keydown', function(e){ if(e.key==='Enter') get('modal-btn-save').click(); if(e.key==='Escape') closeApiKeyModal(); });
 
-get('btn-toggle-instruc').addEventListener('click', function(){
-  var b=get('instruc-body'),a=get('instruc-arrow');
-  if(b.classList.contains('open')){ b.classList.remove('open'); a.textContent='▾ mostrar'; }
-  else{ b.classList.add('open'); a.textContent='▴ ocultar'; }
-});
-get('instruc-generales').addEventListener('input', saveInstrucGen);
-
 // INIT
 loadVersions();
 updateCharCount();
 updateKeyStatus();
-var _ig=getInstrucGen(); if(_ig&&get('instruc-generales')) get('instruc-generales').value=_ig;
 if(!API_KEY) setTimeout(openApiKeyModal, 300);
 
 // SERVICE WORKER
