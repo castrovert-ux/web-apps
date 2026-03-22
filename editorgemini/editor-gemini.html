@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2a5a8a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Castroverde">
+  <title>Editor Gemini · Castroverde</title>
+  <link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --bg:        #eff2f8;
+      --surface:   #e2e9f5;
+      --card:      #d4dff0;
+      --border:    #aabbd8;
+      --text:      #1a2440;
+      --muted:     #4a6080;
+      --accent:    #2a4a8a;
+      --accent2:   #3a6aae;
+      --red:       #c45a3a;
+      --blue:      #3a7ab0;
+      --cloud:     #4A90D9;
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    3px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── SYNC BAR ── */
+    #sync-bar {
+      flex-shrink: 0;
+      background: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 5px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn-sync {
+      background: none;
+      border: 1px solid rgba(74,144,217,0.4);
+      color: #7eb8f0;
+      padding: 4px 11px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: background .2s, color .2s, border-color .2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-sync:hover { background: var(--cloud); color: #fff; border-color: var(--cloud); }
+    .btn-sync.synced { border-color: rgba(58,158,110,0.5); color: #7ec87f; }
+    .btn-sync.synced:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-sync.syncing { opacity: .6; cursor: default; pointer-events: none; }
+    .sync-spinner { display: inline-block; animation: syncSpin 1s linear infinite; }
+    @keyframes syncSpin { to { transform: rotate(360deg); } }
+    .sync-user-text { font-family: var(--font-ui); font-size: 8px; color: rgba(255,255,255,.35); letter-spacing: 1px; }
+    .btn-signout {
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 8px; letter-spacing: 1px;
+      color: rgba(255,255,255,.25); padding: 2px 6px; border-radius: 3px;
+      transition: color .15s, background .15s; text-transform: uppercase;
+    }
+    .btn-signout:hover { color: var(--red); background: rgba(196,90,58,.1); }
+    #sync-status {
+      flex-shrink: 0;
+      padding: 5px 18px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #sync-status.visible { display: flex; }
+    #sync-status.ok  { background: rgba(58,158,110,.12); color: var(--accent2); }
+    #sync-status.err { background: rgba(196,90,58,.1);   color: var(--red); }
+    #sync-status.info{ background: rgba(74,144,217,.1);  color: var(--cloud); }
+    .sync-status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .6; font-size: 12px; padding: 0 3px; }
+    .sync-status-close:hover { opacity: 1; }
+
+    /* CABECERA */
+    header {
+      flex-shrink: 0; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 22px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+    }
+    .logo { font-family: var(--font-h); font-size: 19px; font-weight: 700; }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small { display: block; font-family: var(--font-ui); font-size: 8px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 1px; }
+    .header-actions { display: flex; gap: 7px; }
+
+    /* LAYOUT */
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; min-height: 0; position: relative; }
+
+    /* PANEL IZQUIERDO */
+    .panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header {
+      flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border);
+      background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .panel-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+    .panel-title span { color: var(--accent); }
+    .analysis-select {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 4px 8px; font-family: var(--font-ui); font-size: 10px;
+      border-radius: var(--radius); cursor: pointer; outline: none;
+    }
+
+    /* TEXTAREA */
+    .text-area-wrap { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+    #input-text {
+      width: 100%; height: 100%; background: transparent; border: none;
+      color: var(--text); font-family: var(--font-body); font-size: 15px;
+      line-height: 1.8; padding: 16px 22px; resize: none; outline: none;
+    }
+    #input-text::placeholder { color: var(--muted); font-style: italic; }
+    .char-count { position: absolute; bottom: 5px; right: 10px; font-family: var(--font-ui); font-size: 9px; color: var(--muted); pointer-events: none; }
+    .char-count.warn { color: var(--red); }
+
+    /* NOTAS */
+    .notes-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+    .notes-toggle {
+      width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between;
+      background: transparent; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .notes-toggle:hover { color: var(--accent); }
+    .notes-body { display: none; padding: 0 15px 10px; }
+    .notes-body.open { display: block; }
+    #notes-text {
+      width: 100%; height: 76px; background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-body); font-size: 12px;
+      line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius);
+    }
+    #notes-text::placeholder { color: var(--border); font-style: italic; }
+    #notes-text:focus { border-color: var(--accent); }
+    .notes-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+
+    /* ACCIONES */
+    .panel-actions {
+      flex-shrink: 0; padding: 9px 15px; border-top: 1px solid var(--border);
+      background: var(--surface); display: flex; gap: 7px; align-items: center;
+    }
+    .fragment-name-input {
+      flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 10px; font-family: var(--font-ui); font-size: 10px;
+      border-radius: var(--radius); outline: none;
+    }
+    .fragment-name-input:focus { border-color: var(--accent); }
+    .fragment-name-input::placeholder { color: var(--muted); }
+
+    /* PANEL DERECHO */
+    .panel-right { display: flex; flex-direction: column; overflow: hidden; }
+    .result-tabs { flex-shrink: 0; display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .result-tab {
+      padding: 10px 15px; border: none; background: transparent;
+      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+      color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+      position: relative; top: 1px; transition: color 0.2s;
+    }
+    .result-tab:hover { color: var(--text); }
+    .result-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .result-content { flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }
+
+    /* BOTONES */
+    .btn {
+      padding: 7px 13px; border: none; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-ui); font-size: 10px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #eef4f3; }
+    .btn-primary:hover:not(:disabled) { background: #d4a23a; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-success { background: var(--accent2); color: #eef4f3; }
+    .btn-success:hover { background: #8ab87e; }
+
+    /* RESULTADOS */
+    .empty-result { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; text-align: center; color: var(--muted); gap: 10px; }
+    .empty-result .big-char { font-family: var(--font-h); font-size: 52px; color: var(--border); line-height: 1; }
+    .empty-result p { font-family: var(--font-ui); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+    .improved-text { font-family: var(--font-body); font-size: 15px; line-height: 1.85; white-space: pre-wrap; }
+    .error-box { display: none; background: rgba(196,90,58,0.1); border: 1px solid var(--red); border-left: 3px solid var(--red); padding: 10px 14px; border-radius: var(--radius); color: var(--red); font-size: 13px; margin-bottom: 10px; }
+
+    /* INFORME */
+    .report-section { margin-bottom: 18px; }
+    .report-section-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+    .report-item { display: flex; gap: 9px; margin-bottom: 8px; font-size: 13px; line-height: 1.6; }
+    .score-row { display: flex; gap: 9px; margin-bottom: 16px; flex-wrap: wrap; }
+    .score-badge { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 13px; text-align: center; min-width: 68px; }
+    .score-badge-label { font-family: var(--font-ui); font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); display: block; margin-bottom: 3px; }
+    .score-badge-value { font-family: var(--font-h); font-size: 21px; font-weight: 700; line-height: 1; }
+    .score-a { color: var(--accent2); } .score-b { color: var(--accent); } .score-c { color: var(--red); }
+
+    /* VERSIONES */
+    .version-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; margin-bottom: 7px; cursor: pointer; transition: border-color 0.2s; }
+    .version-item:hover { border-color: var(--accent); }
+    .version-meta { display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px; }
+    .version-name { font-family: var(--font-h); font-size: 13px; font-weight: 700; }
+    .version-date { font-family: var(--font-ui); font-size: 9px; color: var(--muted); }
+    .version-preview { font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .version-actions { display: flex; gap: 5px; margin-top: 6px; }
+
+    /* VEREDICTO */
+    .verdict-box { background: var(--card); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; }
+    .verdict-title { font-family: var(--font-h); font-size: 17px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .verdict-body { font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+
+    /* COPY BAR */
+    .copy-bar { display: none; flex-shrink: 0; padding: 8px 15px; border-top: 1px solid var(--border); background: var(--surface); gap: 7px; align-items: center; }
+    .copy-bar.visible { display: flex; }
+    .copy-feedback { font-family: var(--font-ui); font-size: 9px; color: var(--accent2); text-transform: uppercase; letter-spacing: 2px; display: none; }
+
+    /* LOADING */
+    .loading-overlay { display: none; position: absolute; inset: 0; background: rgba(238,244,243,0.88); z-index: 50; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+    .loading-overlay.visible { display: flex; }
+    .spinner { width: 26px; height: 26px; border: 1px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+
+    /* SIDEBAR */
+    .history-sidebar { position: fixed; top: 0; right: 0; width: 310px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 200; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s ease; }
+    .history-sidebar.open { transform: translateX(0); }
+    .history-sidebar-header { padding: 13px 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .history-sidebar-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+    .btn-close { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 2px 5px; }
+    .btn-close:hover { color: var(--text); }
+    .history-list { flex: 1; overflow-y: auto; padding: 12px; }
+    .history-empty { text-align: center; padding: 28px 14px; color: var(--muted); font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; line-height: 2; }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.35); z-index: 199; }
+    .sidebar-overlay.visible { display: block; }
+
+    /* MODAL CLAVE API */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.55); z-index: 500; align-items: center; justify-content: center; }
+    .modal-overlay.visible { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 28px 22px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(30,53,50,0.18); }
+    .modal-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal-desc { font-family: var(--font-body); font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+    .modal-desc a { color: var(--accent); }
+    .modal-label { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; display: block; }
+    .modal-input { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; font-family: var(--font-ui); font-size: 12px; border-radius: var(--radius); outline: none; letter-spacing: 0.5px; }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .modal-hint { font-family: var(--font-ui); font-size: 9px; color: var(--border); margin-top: 7px; line-height: 1.6; }
+    .key-status { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; padding: 3px 8px; border-radius: var(--radius); }
+    .key-status.ok { color: var(--accent2); border: 1px solid var(--accent2); }
+    .key-status.missing { color: var(--red); border: 1px solid var(--red); }
+    .instrucciones-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+    .instrucciones-toggle { width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between; background: transparent; border: none; cursor: pointer; font-family: var(--font-ui); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+    .instrucciones-toggle:hover { color: var(--accent); }
+    .instrucciones-body { display: none; padding: 0 15px 10px; }
+    .instrucciones-body.open { display: block; }
+    .instruc-label { font-family: var(--font-ui); font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; display: block; }
+    .instruc-label:first-child { margin-top: 0; }
+    .parte-select { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 9px; font-family: var(--font-ui); font-size: 10px; border-radius: var(--radius); outline: none; cursor: pointer; }
+    .parte-select:focus { border-color: var(--accent); }
+    #instruc-fragmento, #instruc-generales { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-family: var(--font-body); font-size: 12px; line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius); }
+    #instruc-fragmento { height: 60px; }
+    #instruc-generales { height: 72px; }
+    #instruc-fragmento::placeholder, #instruc-generales::placeholder { color: var(--border); font-style: italic; }
+    #instruc-fragmento:focus, #instruc-generales:focus { border-color: var(--accent); }
+    .instruc-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+    .modal-box-sm { width: 420px; max-width: 95vw; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar">
+  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
+  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-signout" id="btn-fb-key" style="display:inline;color:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.1);padding:2px 8px;border-radius:3px;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;" onmouseover="this.style.color='#7eb8f0'" onmouseout="this.style.color='rgba(255,255,255,.25)'">⚿ Firebase</button>
+  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar historial</span>
+  </button>
+</div>
+<div id="sync-status">
+  <span id="sync-status-msg"></span>
+  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
+</div>
+
+<header>
+  <div class="logo">Editor <span>Gemini</span><small>Asistente literario · Historia de un municipio</small></div>
+  <div class="header-actions">
+    <span class="key-status" id="key-status">⚿ clave</span>
+    <button class="btn btn-ghost" id="btn-api-key">⚙ API Key</button>
+    <button class="btn btn-ghost" id="btn-verdict">⚖ Veredicto</button>
+    <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
+    <button class="btn btn-ghost" id="btn-clear-all">✕ Limpiar</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Analizando…</div>
+  </div>
+
+  <div class="panel-left">
+    <div class="panel-header">
+      <span class="panel-title">✍ Tu texto · <span id="fragment-label">nuevo fragmento</span></span>
+      <select class="analysis-select" id="analysis-type">
+        <option value="completo">Revisión completa</option>
+        <option value="estilo">Solo estilo y voz</option>
+        <option value="ortografia">Solo ortografía y gramática</option>
+        <option value="historico">Coherencia histórica</option>
+        <option value="claridad">Claridad y estructura</option>
+      </select>
+    </div>
+
+    <div class="text-area-wrap">
+      <textarea id="input-text" maxlength="4000" placeholder="Pega aquí tu fragmento del libro de Castroverde…
+
+Prehistoria, época medieval, geografía, documentos paleográficos…
+
+Ctrl+Enter para analizar rápido."></textarea>
+      <div class="char-count" id="char-count">0 / 4000</div>
+      <button id="btn-clear-text" title="Borrar texto" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:var(--border);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;transition:color 0.2s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--border)'">✕</button>
+    </div>
+
+    <div class="notes-section">
+      <button class="notes-toggle" id="btn-toggle-notes">
+        <span>📎 Notas al pie — contexto para la IA</span>
+        <span id="notes-arrow">▾ mostrar</span>
+      </button>
+      <div class="notes-body" id="notes-body">
+        <textarea id="notes-text" maxlength="2000" placeholder="Pega las notas al pie del fragmento…
+Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
+        <div class="notes-hint">Contexto para la IA. No aparecen en el texto mejorado ni se modifican.</div>
+      </div>
+    </div>
+
+    <div class="instrucciones-section">
+      <button class="instrucciones-toggle" id="btn-toggle-instruc">
+        <span>✦ Instrucciones para Claude</span>
+        <span id="instruc-arrow">▾ mostrar</span>
+      </button>
+      <div class="instrucciones-body" id="instruc-body">
+        <label class="instruc-label">Parte del libro</label>
+        <select class="parte-select" id="parte-libro">
+          <option value="primera">Primera parte — narrativa divulgativa</option>
+          <option value="segunda">Segunda parte — temática y formal</option>
+        </select>
+        <label class="instruc-label">Instrucciones para este fragmento</label>
+        <textarea id="instruc-fragmento" maxlength="800" placeholder="Instrucción concreta del plan de intervención: ej. Suavizar tono técnico. Reescribir el cierre."></textarea>
+        <label class="instruc-label" id="lbl-instruc-gen">Instrucciones generales <span style="color:var(--accent2);">● guardadas</span></label>
+        <textarea id="instruc-generales" maxlength="3000" placeholder="Perfil tonal y reglas permanentes del libro. Se guarda automáticamente."></textarea>
+        <div class="instruc-hint">Las instrucciones generales se guardan en este navegador y se aplican en cada análisis.</div>
+      </div>
+    </div>
+
+    <div class="panel-actions">
+      <input type="text" class="fragment-name-input" id="fragment-name" placeholder="Nombre del fragmento (ej: Cap.2 · Prehistoria)" maxlength="60">
+      <label class="btn btn-ghost" style="cursor:pointer;">📄 Cargar<input type="file" id="file-input" accept=".txt,.docx" style="display:none;"></label>
+      <button class="btn btn-primary" id="btn-analyze">Analizar →</button>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="result-tabs">
+      <button class="result-tab active" data-tab="improved">Texto mejorado</button>
+      <button class="result-tab" data-tab="report">Informe</button>
+      <button class="result-tab" data-tab="compare">Comparar versiones</button>
+    </div>
+    <div class="result-content">
+      <div class="empty-result" id="empty-result">
+        <div class="big-char">❧</div>
+        <p>Introduce tu texto y pulsa Analizar</p>
+      </div>
+      <div class="error-box" id="error-box"></div>
+      <div id="pane-improved" style="display:none;"></div>
+      <div id="pane-report"   style="display:none;"></div>
+      <div id="pane-compare"  style="display:none;"></div>
+    </div>
+    <div class="copy-bar" id="copy-bar">
+      <button class="btn btn-success" id="btn-copy">⎘ Copiar texto mejorado</button>
+      <button class="btn btn-ghost"   id="btn-save-version">💾 Guardar versión</button>
+      <span class="copy-feedback" id="copy-feedback">¡Copiado!</span>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="history-sidebar" id="history-sidebar">
+  <div class="history-sidebar-header">
+    <span class="history-sidebar-title">Versiones guardadas</span>
+    <button class="btn-close" id="btn-close-sidebar">×</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty">Sin versiones guardadas.<br>Analiza y guarda<br>fragmentos para verlos aquí.</div>
+  </div>
+  <div style="padding:10px 13px;border-top:1px solid var(--border);">
+    <button class="btn btn-danger" style="width:100%;" id="btn-clear-history">Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- MODAL FIREBASE KEY -->
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <div class="modal-desc">Necesaria para sincronizar el historial en la nube. Se guarda <strong>solo en este navegador</strong>.<br><br>Consíguela en <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> → Credenciales → Claves de API.</div>
+    <label class="modal-label" for="fb-key-input">Firebase API Key</label>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
+    <div class="modal-hint">Empieza por <code>AIzaSy</code>. Solo tú la ves.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL API KEY -->
+<div class="modal-overlay" id="modal-apikey">
+  <div class="modal-box">
+    <div class="modal-title">Clave API de Gemini</div>
+    <div class="modal-desc">Tu clave se guarda <strong>solo en este navegador</strong> (localStorage). Nunca sale de tu ordenador ni se sube a ningún servidor.<br><br>Consíguela en <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>.</div>
+    <label class="modal-label" for="modal-key-input">Gemini API Key</label>
+    <input class="modal-input" id="modal-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
+    <div class="modal-hint">La clave empieza por <code>AIzaSy</code>. Solo tú la ves. Para borrarla, pulsa "Olvidar".</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="modal-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="modal-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="modal-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  FIREBASE CONFIG
+// ══════════════════════════════════════════════════════
+var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
+var fbAuth = null, fbDb = null, fbProvider = null;
+let fbUser = null;
+
+function initFirebase(k) {
+  try { if(firebase.apps.length){ firebase.app().delete().then(function(){ startFB(k); }); } else { startFB(k); } }
+  catch(e){ startFB(k); }
+}
+function startFB(k) {
+  firebase.initializeApp({apiKey:k,authDomain:'castroverde-apps.firebaseapp.com',projectId:'castroverde-apps',storageBucket:'castroverde-apps.firebasestorage.app',messagingSenderId:'371026533171',appId:'1:371026533141:web:315767f60cbf8d6f47671c'});
+  fbAuth=firebase.auth(); fbDb=firebase.firestore(); fbProvider=new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(function(u){ fbUser=u; updateSyncUI(); });
+}
+if(FB_API_KEY) initFirebase(FB_API_KEY);
+
+function updateSyncUI() {
+  const icon    = get('sync-icon');
+  const label   = get('sync-label');
+  const btn     = get('btn-sync');
+  const userEl  = get('sync-user-text');
+  const signout = get('btn-signout');
+  if (fbUser) {
+    btn.classList.add('synced');
+    icon.textContent  = '✓';
+    label.textContent = 'Sincronizar historial';
+    userEl.textContent = fbUser.email;
+    userEl.style.display = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.classList.remove('synced');
+    icon.textContent  = '☁';
+    label.textContent = 'Sincronizar historial';
+    userEl.style.display = 'none';
+    signout.style.display = 'none';
+  }
+}
+
+async function handleSync() {
+  if (!fbAuth || !fbProvider) {
+    openFbKeyModal();
+    return;
+  }
+  if (!fbUser) {
+    try {
+      setSyncStatus('info', 'Iniciando sesión con Google…');
+      await fbAuth.signInWithPopup(fbProvider);
+      await doSync();
+    } catch(err) {
+      setSyncStatus('err', 'Error al iniciar sesión: ' + err.message);
+    }
+  } else {
+    await doSync();
+  }
+}
+
+async function doSync() {
+  if (!fbUser || !fbDb) return;
+  setSyncStatus('info', 'Sincronizando historial…');
+  get('btn-sync').classList.add('syncing');
+
+  try {
+    const docRef = fbDb.collection('editor').doc(fbUser.uid);
+    const snap   = await docRef.get();
+    const local  = [...versions];
+
+    if (snap.exists) {
+      const remote = snap.data().versions || [];
+      const merged = mergeVersions(local, remote);
+      versions = merged;
+      saveVersions();
+      await docRef.set({
+        versions: merged,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setSyncStatus('ok', '✓ Sincronizado — ' + merged.length + ' versión' + (merged.length !== 1 ? 'es' : '') + ' en historial');
+    } else {
+      await docRef.set({
+        versions: local,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setSyncStatus('ok', '✓ Historial subido por primera vez — ' + local.length + ' versión' + (local.length !== 1 ? 'es' : ''));
+    }
+
+    renderHistoryList();
+
+  } catch(err) {
+    console.error('Sync error:', err);
+    setSyncStatus('err', 'Error al sincronizar: ' + err.message);
+  }
+
+  get('btn-sync').classList.remove('syncing');
+}
+
+// Merge por timestamp (ts): sin duplicados, orden cronológico
+function mergeVersions(local, remote) {
+  const map = new Map();
+  for (const v of remote) if (v.ts) map.set(v.ts, v);
+  for (const v of local)  if (v.ts) map.set(v.ts, v); // local sobreescribe
+  return Array.from(map.values()).sort((a, b) => a.ts - b.ts);
+}
+
+function setSyncStatus(type, msg) {
+  const el = get('sync-status');
+  get('sync-status-msg').textContent = msg;
+  el.className = 'visible ' + type;
+  if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+}
+
+function closeSyncStatus() {
+  get('sync-status').className = '';
+  updateSyncUI();
+}
+
+async function fbSignOut() {
+  if(fbAuth) await fbAuth.signOut();
+  fbUser = null;
+  updateSyncUI();
+}
+
+// ══════════════════════════════════════════════════════
+//  APP (sin cambios respecto al original)
+// ══════════════════════════════════════════════════════
+var API_KEY    = localStorage.getItem('castroverde_gemini_key') || '';
+var MODEL      = 'gemini-2.0-flash';
+var STORAGE_KEY = 'castroverde_gemini_v1';
+
+var SYSTEM_PROMPT = 'Eres un asistente literario especializado en historia local castellana. Ayudas al autor de un libro de historia sobre Castroverde de Cerrato, municipio de Valladolid (España).\n\nSOBRE EL LIBRO:\n- Historia cronológica completa: prehistoria, romana, medieval, moderna, contemporánea.\n- Segunda parte temática: cofradías, documentos paleográficos, instituciones históricas.\n- Ámbito: Cerrato vallisoletano, valle del río Esgueva, tierras fronterizas con Palencia.\n\nESTILO DEL AUTOR — NO ALTERAR:\n- Narrativo pero riguroso: prosa literaria con datos históricos precisos.\n- Cercano y evocador: imágenes concretas y sensoriales.\n- Voz propia marcada: entre académico y divulgación culta.\n- Frases con ritmo: alterna oraciones cortas y largas con intención estilística.\n\nSOBRE LAS NOTAS AL PIE:\n- El autor tiene notas al pie extensas. NUNCA señales falta de fuentes como problema.\n- Si se proporcionan notas, úsalas como contexto pero no las incluyas en el texto mejorado.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, "Castro Viride".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización.\n\nREGLAS DE ORO:\n1. NO AÑADIR: prohibido añadir frases, cláusulas, adjetivos no presentes en el original. El texto mejorado nunca será más largo.\n2. NO CAMBIAR LO QUE FUNCIONA: si una frase está bien, no la toques.\n3. SOLO CORREGIR LO ESTRICTAMENTE INCORRECTO: erratas, concordancias, puntuación errónea.\n4. NO CAMBIAR EL ESTILO: no cambies comillas, no sustituyas palabras por sinónimos neutros.\n5. EL INFORME ES LO VALIOSO: explica qué has cambiado y por qué.\n6. SI ESTÁ BIEN, DILO: si no hay errores, devuelve el original intacto y explícalo.\n\nResponde SIEMPRE en JSON válido:\n{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}';
+
+var INSTRUC_GEN_KEY = 'castroverde_instruc_gen';
+function getInstrucGen(){ return localStorage.getItem(INSTRUC_GEN_KEY)||''; }
+function saveInstrucGen(){ localStorage.setItem(INSTRUC_GEN_KEY, get('instruc-generales').value); }
+
+function buildSystem(){
+  var parte = get('parte-libro') ? get('parte-libro').value : 'primera';
+  var pl = parte==='segunda' ? 'SEGUNDA PARTE (tematica y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
+  var gen = getInstrucGen().trim();
+  var extra = '\n\nPARTE DEL LIBRO: Este fragmento pertenece a la '+pl+' del libro.';
+  if(gen) extra += '\n\nINSTRUCCIONES GENERALES DEL AUTOR:\n'+gen;
+  return SYSTEM_PROMPT+extra;
+}
+
+function buildMsg(text,notes,tipo,frag){
+  var lbl={completo:'Revision completa',estilo:'Estilo y voz',ortografia:'Ortografia y gramatica',historico:'Coherencia historica',claridad:'Claridad y estructura'};
+  var m='TIPO DE ANALISIS: '+(lbl[tipo]||'Revision completa')+'\n\n';
+  if(frag&&frag.trim()) m+='INSTRUCCIONES ESPECIFICAS:\n'+frag+'\n\n';
+  if(notes) m+='NOTAS AL PIE (contexto, no modificar):\n\'\'\'\n'+notes+'\n\'\'\'\n\n';
+  m+='FRAGMENTO:\n\'\'\'\n'+text+'\n\'\'\'';
+  return m;
+}
+
+var versions      = [];
+var currentResult = null;
+var activeTab     = 'improved';
+
+function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function dateStr(d){ var p=function(n){return n<10?'0'+n:''+n;}; return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function get(id){ return document.getElementById(id); }
+
+function loadVersions(){ try{ var r=localStorage.getItem(STORAGE_KEY); if(r) versions=JSON.parse(r); }catch(e){ versions=[]; } }
+function saveVersions(){ try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(versions)); }catch(e){} }
+
+function callGemini(msg, onOk, onErr){
+  if(!API_KEY){
+    onErr('No hay clave API configurada. Pulsa "⚙ API Key" en la cabecera para introducirla.');
+    return;
+  }
+  var systemPrompt = buildSystem();
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent?key='+API_KEY;
+  var body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: msg }] }],
+    generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+  };
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST', url, true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.timeout=90000;
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState!==4) return;
+    try{
+      var data=JSON.parse(xhr.responseText);
+      if(xhr.status>=200&&xhr.status<300){
+        var txt = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts
+          ? data.candidates[0].content.parts.map(function(p){ return p.text||''; }).join('')
+          : '';
+        if(!txt) onErr('Gemini no devolvió contenido.');
+        else onOk(txt);
+      } else {
+        var errMsg = (data.error && data.error.message) ? data.error.message : 'Error '+xhr.status;
+        onErr(errMsg);
+      }
+    }catch(e){ onErr('Error al procesar la respuesta.'); }
+  };
+  xhr.ontimeout=function(){ onErr('Timeout. Inténtalo de nuevo.'); };
+  xhr.onerror=function(){ onErr('Error de red.'); };
+  xhr.send(JSON.stringify(body));
+}
+
+function analyzeText(){
+  var text=get('input-text').value.trim();
+  var notes=get('notes-text').value.trim();
+  if(!text){ showError('Introduce un texto para analizar.'); return; }
+  if(text.length<50){ showError('El fragmento es demasiado corto.'); return; }
+    var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value.trim() : '';
+  var msg = buildMsg(text, notes, get('analysis-type').value, instrucFrag);
+  showLoading('Analizando con Gemini…'); hideError();
+  callGemini(msg, function(response){
+    hideLoading();
+    try{
+      var clean=response.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+      var result=JSON.parse(clean);
+      currentResult={improved:result.texto_mejorado||text,report:result,original:text,name:get('fragment-name').value.trim()||('Fragmento · '+dateStr(new Date()))};
+      renderResult(currentResult);
+    }catch(e){
+      currentResult={improved:response,report:null,original:text,name:get('fragment-name').value.trim()||'Fragmento'};
+      renderPlain(response);
+    }
+  }, function(err){ hideLoading(); showError(err); });
+}
+
+function requestVerdict(){
+  var text=get('input-text').value.trim();
+  var notes=get('notes-text').value.trim();
+  if(!text){ showError('Introduce el fragmento para el veredicto.'); return; }
+  var msg='SOLICITUD DE VEREDICTO GLOBAL\n\n'+
+    (notes?'NOTAS AL PIE:\n"""\n'+notes+'\n"""\n\n':'')+
+    'Evalúa como revisión editorial final. Devuelve el JSON habitual MÁS estos campos adicionales:\n\n'+
+    '"veredicto": uno de exactamente estos tres valores: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n'+
+    '"veredicto_detalle": párrafo editorial breve (2-3 frases) con el diagnóstico general.\n'+
+    '"veredicto_siguiente_paso": una sola acción concreta y prioritaria que el autor debería hacer antes de publicar (o "Ninguna: el texto está listo." si procede).\n'+
+    '"veredicto_dimensiones": array de exactamente 5 objetos, uno por dimensión, con esta forma:\n'+
+    '  {"dimension":"Estructura","puntuacion":8,"nota":"frase corta explicativa"}\n'+
+    'Las 5 dimensiones son, en este orden: Estructura, Ritmo, Rigor histórico, Cohesión, Voz del autor.\n'+
+    'Las puntuaciones van de 1 a 10.\n\n'+
+    'TEXTO:\n"""\n'+text+'\n"""';
+  showLoading('Elaborando veredicto con Gemini…'); hideError();
+  callGemini(msg, function(response){
+    hideLoading();
+    try{
+      var clean=response.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+      var result=JSON.parse(clean);
+      currentResult={improved:result.texto_mejorado||text,report:result,original:text,name:get('fragment-name').value.trim()||('Veredicto · '+dateStr(new Date())),isVerdict:true};
+      renderResult(currentResult);
+    }catch(e){
+      currentResult={improved:response,report:null,original:text,name:'Veredicto',isVerdict:true};
+      renderPlain(response);
+    }
+  }, function(err){ hideLoading(); showError(err); });
+}
+
+function renderResult(res){
+  get('empty-result').style.display='none';
+  get('copy-bar').classList.add('visible');
+  get('pane-improved').innerHTML='<div style="margin-bottom:12px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">'+esc(res.name)+'</div><div class="improved-text">'+esc(res.improved)+'</div>';
+  var html='';
+  if(res.report){
+    var r=res.report;
+    if(res.isVerdict&&r.veredicto){
+      var vc=r.veredicto.indexOf('LISTO')!==-1?'var(--accent2)':r.veredicto.indexOf('MENOR')!==-1?'var(--accent)':'var(--red)';
+      var vcBg=r.veredicto.indexOf('LISTO')!==-1?'rgba(58,158,110,0.08)':r.veredicto.indexOf('MENOR')!==-1?'rgba(42,122,110,0.08)':'rgba(196,90,58,0.08)';
+      html+='<div class="verdict-box" style="background:'+vcBg+'">';
+      html+='<div class="verdict-title" style="color:'+vc+'">⚖ '+esc(r.veredicto)+'</div>';
+      if(r.veredicto_detalle) html+='<div class="verdict-body">'+esc(r.veredicto_detalle)+'</div>';
+      if(r.veredicto_dimensiones&&r.veredicto_dimensiones.length){
+        html+='<div style="margin-top:16px;display:flex;flex-direction:column;gap:9px;">';
+        r.veredicto_dimensiones.forEach(function(d){
+          var pct=(d.puntuacion/10)*100;
+          var dc=d.puntuacion>=8?'var(--accent2)':d.puntuacion>=6?'var(--accent)':'var(--red)';
+          html+='<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">'+esc(d.dimension)+'</span><span style="font-family:var(--font-h);font-size:15px;font-weight:700;color:'+dc+';">'+d.puntuacion+'<span style="font-size:9px;color:var(--muted);font-family:var(--font-ui);font-weight:400;">/10</span></span></div><div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+dc+';border-radius:2px;transition:width 0.4s;"></div></div>'+(d.nota?'<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">'+esc(d.nota)+'</div>':'')+'</div>';
+        });
+        html+='</div>';
+      }
+      if(r.veredicto_siguiente_paso){ html+='<div style="margin-top:14px;padding:9px 12px;background:var(--surface);border-left:2px solid '+vc+';border-radius:var(--radius);"><div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:'+vc+';margin-bottom:4px;">Siguiente paso</div><div style="font-size:13px;line-height:1.6;">'+esc(r.veredicto_siguiente_paso)+'</div></div>'; }
+      html+='</div>';
+    }
+    if(r.puntuacion){
+      html+='<div class="score-row">';
+      [{k:'estilo',l:'Estilo'},{k:'claridad',l:'Claridad'},{k:'rigor',l:'Rigor'}].forEach(function(s){
+        var v=r.puntuacion[s.k]||0;
+        html+='<div class="score-badge"><span class="score-badge-label">'+s.l+'</span><span class="score-badge-value '+(v>=8?'score-a':v>=6?'score-b':'score-c')+'">'+v+'</span></div>';
+      });
+      html+='</div>';
+    }
+    if(r.cambios_resumen) html+='<div class="report-section"><div class="report-section-title">Resumen de cambios</div><div style="font-size:13px;line-height:1.7;font-style:italic;">'+esc(r.cambios_resumen)+'</div></div>';
+    if(r.observaciones&&r.observaciones.length){
+      html+='<div class="report-section"><div class="report-section-title">Observaciones</div>';
+      var icons={positivo:'✓',mejora:'→',historico:'⊕',estilo:'❧',gramatica:'✎'};
+      var colors={positivo:'var(--accent2)',mejora:'var(--accent)',historico:'var(--blue)',estilo:'var(--muted)',gramatica:'var(--muted)'};
+      r.observaciones.forEach(function(o){ html+='<div class="report-item"><span style="flex-shrink:0;color:'+(colors[o.tipo]||'var(--muted)')+';">'+(icons[o.tipo]||'·')+'</span><span>'+esc(o.texto)+'</span></div>'; });
+      html+='</div>';
+    }
+  } else { html='<div style="color:var(--muted);font-style:italic;font-size:13px;">Sin informe estructurado.</div>'; }
+  get('pane-report').innerHTML=html;
+  get('pane-compare').innerHTML='<div class="report-section"><div class="report-section-title">Original → Revisado</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"><div><div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:7px;">Original</div><div style="font-size:13px;line-height:1.7;color:var(--muted);white-space:pre-wrap;">'+esc(res.original)+'</div></div><div><div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--accent2);margin-bottom:7px;">Revisado</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">'+esc(res.improved)+'</div></div></div></div>';
+  switchTab(activeTab);
+}
+
+function renderPlain(text){
+  get('empty-result').style.display='none'; get('copy-bar').classList.add('visible');
+  get('pane-improved').innerHTML='<div class="improved-text">'+esc(text)+'</div>';
+  get('pane-report').innerHTML='<div style="color:var(--muted);font-style:italic;font-size:13px;">Respuesta en texto libre.</div>';
+  get('pane-compare').innerHTML='';
+  switchTab('improved');
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.result-tab').forEach(function(btn){
+    var t=btn.getAttribute('data-tab');
+    btn.className='result-tab'+(t===tab?' active':'');
+    get('pane-'+t).style.display=t===tab?'block':'none';
+  });
+}
+
+function showLoading(msg){ get('loading-text').textContent=msg; get('loading-overlay').classList.add('visible'); get('btn-analyze').disabled=true; }
+function hideLoading(){ get('loading-overlay').classList.remove('visible'); get('btn-analyze').disabled=false; }
+function showError(msg){ var e=get('error-box'); e.textContent='⚠ '+msg; e.style.display='block'; }
+function hideError(){ get('error-box').style.display='none'; }
+function openHistory(){ renderHistoryList(); get('history-sidebar').classList.add('open'); get('sidebar-overlay').classList.add('visible'); }
+function closeHistory(){ get('history-sidebar').classList.remove('open'); get('sidebar-overlay').classList.remove('visible'); }
+function updateCharCount(){ var l=get('input-text').value.length; var el=get('char-count'); el.textContent=l+' / 4000'; el.className='char-count'+(l>3500?' warn':''); }
+
+function renderHistoryList(){
+  var list=get('history-list');
+  if(!versions.length){ list.innerHTML='<div class="history-empty">Sin versiones guardadas.<br>Analiza y guarda<br>fragmentos para verlos aquí.</div>'; return; }
+  var html='';
+  for(var i=versions.length-1;i>=0;i--){
+    var v=versions[i];
+    html+='<div class="version-item"><div class="version-meta"><span class="version-name">'+esc(v.name)+'</span><span class="version-date">'+v.date+'</span></div><div class="version-preview">'+esc(v.original.substring(0,80))+'…</div><div class="version-actions"><button class="btn btn-ghost" style="font-size:9px;padding:3px 9px;" onclick="loadVersion('+i+')">Cargar</button><button class="btn btn-danger" style="font-size:9px;padding:3px 9px;" onclick="deleteVersion('+i+')">Borrar</button></div></div>';
+  }
+  list.innerHTML=html;
+}
+
+function saveCurrentVersion(){
+  if(!currentResult) return;
+  versions.push({name:currentResult.name,original:currentResult.original,improved:currentResult.improved,report:currentResult.report,date:dateStr(new Date()),ts:Date.now()});
+  saveVersions(); renderHistoryList();
+  var btn=get('btn-save-version'); btn.textContent='✓ Guardado'; btn.style.color='var(--accent2)';
+  setTimeout(function(){ btn.textContent='💾 Guardar versión'; btn.style.color=''; },2000);
+}
+
+function loadVersion(idx){
+  var v=versions[idx]; if(!v) return;
+  get('input-text').value=v.original; get('fragment-name').value=v.name; updateCharCount();
+  currentResult={improved:v.improved,report:v.report,original:v.original,name:v.name};
+  renderResult(currentResult); closeHistory();
+}
+
+function deleteVersion(idx){ versions.splice(idx,1); saveVersions(); renderHistoryList(); }
+
+// EVENTOS
+get('btn-analyze').addEventListener('click', analyzeText);
+get('btn-verdict').addEventListener('click', requestVerdict);
+get('btn-history').addEventListener('click', openHistory);
+get('btn-close-sidebar').addEventListener('click', closeHistory);
+get('sidebar-overlay').addEventListener('click', closeHistory);
+get('btn-save-version').addEventListener('click', saveCurrentVersion);
+
+get('btn-copy').addEventListener('click', function(){
+  if(!currentResult) return;
+  var t=currentResult.improved||'';
+  if(navigator.clipboard){ navigator.clipboard.writeText(t).then(function(){ get('copy-feedback').style.display='inline'; setTimeout(function(){ get('copy-feedback').style.display='none'; },2000); }); }
+  else{ var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); get('copy-feedback').style.display='inline'; setTimeout(function(){ get('copy-feedback').style.display='none'; },2000); }
+});
+
+get('btn-clear-all').addEventListener('click', function(){
+  get('input-text').value=''; get('fragment-name').value=''; get('notes-text').value=''; updateCharCount();
+  currentResult=null; get('empty-result').style.display='flex'; get('copy-bar').classList.remove('visible'); hideError();
+  ['improved','report','compare'].forEach(function(t){ var p=get('pane-'+t); p.style.display='none'; p.innerHTML=''; });
+  switchTab('improved');
+});
+
+get('btn-clear-history').addEventListener('click', function(){
+  if(confirm('¿Borrar todo el historial?')){ versions=[]; saveVersions(); renderHistoryList(); }
+});
+
+get('btn-toggle-notes').addEventListener('click', function(){
+  var body=get('notes-body'); var arrow=get('notes-arrow');
+  if(body.classList.contains('open')){ body.classList.remove('open'); arrow.textContent='▾ mostrar'; }
+  else{ body.classList.add('open'); arrow.textContent='▴ ocultar'; }
+});
+
+document.querySelectorAll('.result-tab').forEach(function(btn){
+  btn.addEventListener('click', function(){ switchTab(btn.getAttribute('data-tab')); });
+});
+
+get('input-text').addEventListener('input', function(){ updateCharCount(); hideError(); });
+get('input-text').addEventListener('keydown', function(e){ if(e.ctrlKey&&(e.key==='Enter'||e.keyCode===13)) analyzeText(); });
+get('btn-clear-text').addEventListener('click', function(){ get('input-text').value=''; updateCharCount(); hideError(); });
+
+get('file-input').addEventListener('change', function(e){
+  var file=e.target.files[0]; if(!file) return;
+  var name=file.name, ext=name.split('.').pop().toLowerCase();
+  if(ext==='txt'){
+    var reader=new FileReader();
+    reader.onload=function(ev){ get('input-text').value=ev.target.result.substring(0,4000); updateCharCount(); if(!get('fragment-name').value) get('fragment-name').value=name.replace('.txt',''); };
+    reader.readAsText(file,'UTF-8');
+  } else if(ext==='docx'){
+    var reader2=new FileReader();
+    reader2.onload=function(ev){
+      if(typeof mammoth==='undefined'){ showError('La librería de Word no está disponible.'); return; }
+      mammoth.extractRawText({arrayBuffer: ev.target.result}).then(function(result){
+        get('input-text').value=result.value.substring(0,4000); updateCharCount();
+        if(!get('fragment-name').value) get('fragment-name').value=name.replace('.docx','');
+      }).catch(function(){ showError('No se pudo leer el archivo .docx.'); });
+    };
+    reader2.readAsArrayBuffer(file);
+  } else { showError('Formato no soportado. Usa archivos .txt o .docx'); }
+  e.target.value='';
+});
+
+// FIREBASE KEY MODAL
+function openFbKeyModal(){ get('fb-key-input').value=FB_API_KEY||''; get('modal-fbkey').classList.add('visible'); setTimeout(function(){ get('fb-key-input').focus(); },80); }
+function closeFbKeyModal(){ get('modal-fbkey').classList.remove('visible'); }
+
+get('btn-fb-key').addEventListener('click', openFbKeyModal);
+get('fb-btn-save').addEventListener('click', function(){
+  var val=get('fb-key-input').value.trim();
+  if(!val||!val.startsWith('AIzaSy')){ alert('La clave debe empezar por AIzaSy'); return; }
+  FB_API_KEY=val; localStorage.setItem('castroverde_fb_key',val);
+  initFirebase(val); closeFbKeyModal();
+});
+get('fb-btn-forget').addEventListener('click', function(){
+  if(!confirm('\u00bfBorrar la clave de Firebase?')) return;
+  FB_API_KEY=''; localStorage.removeItem('castroverde_fb_key');
+  get('fb-key-input').value=''; closeFbKeyModal();
+});
+get('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
+get('modal-fbkey').addEventListener('click', function(e){ if(e.target===this) closeFbKeyModal(); });
+get('fb-key-input').addEventListener('keydown', function(e){ if(e.key==='Enter') get('fb-btn-save').click(); if(e.key==='Escape') closeFbKeyModal(); });
+
+// API KEY
+function updateKeyStatus(){
+  var ok=API_KEY&&API_KEY.startsWith('AIzaSy');
+  var el=get('key-status');
+  if(ok){ el.textContent='⚿ clave OK'; el.className='key-status ok'; }
+  else  { el.textContent='⚿ sin clave'; el.className='key-status missing'; }
+}
+function openApiKeyModal(){ get('modal-key-input').value=API_KEY||''; get('modal-apikey').classList.add('visible'); setTimeout(function(){ get('modal-key-input').focus(); },80); }
+function closeApiKeyModal(){ get('modal-apikey').classList.remove('visible'); }
+
+get('btn-api-key').addEventListener('click', openApiKeyModal);
+get('modal-btn-save').addEventListener('click', function(){
+  var val=get('modal-key-input').value.trim();
+  if(!val){ alert('Introduce la clave antes de guardar.'); return; }
+  if(!val.startsWith('AIzaSy')){ alert('La clave debe empezar por AIzaSy'); return; }
+  API_KEY=val; localStorage.setItem('castroverde_gemini_key',val); updateKeyStatus(); closeApiKeyModal();
+});
+get('modal-btn-forget').addEventListener('click', function(){
+  if(!confirm('¿Borrar la clave guardada?')) return;
+  API_KEY=''; localStorage.removeItem('castroverde_gemini_key'); get('modal-key-input').value=''; updateKeyStatus(); closeApiKeyModal();
+});
+get('modal-btn-cancel').addEventListener('click', closeApiKeyModal);
+get('modal-apikey').addEventListener('click', function(e){ if(e.target===this) closeApiKeyModal(); });
+get('modal-key-input').addEventListener('keydown', function(e){ if(e.key==='Enter') get('modal-btn-save').click(); if(e.key==='Escape') closeApiKeyModal(); });
+
+get('btn-toggle-instruc').addEventListener('click', function(){
+  var b=get('instruc-body'),a=get('instruc-arrow');
+  if(b.classList.contains('open')){ b.classList.remove('open'); a.textContent='▾ mostrar'; }
+  else{ b.classList.add('open'); a.textContent='▴ ocultar'; }
+});
+get('instruc-generales').addEventListener('input', saveInstrucGen);
+
+// INIT
+loadVersions();
+updateCharCount();
+updateKeyStatus();
+var _ig=getInstrucGen(); if(_ig&&get('instruc-generales')) get('instruc-generales').value=_ig;
+if(!FB_API_KEY) setTimeout(openFbKeyModal, 300);
+else if(!API_KEY) setTimeout(openApiKeyModal, 300);
+
+// SERVICE WORKER
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>
