@@ -261,6 +261,7 @@
     <div class="chat-actions" id="chat-actions" style="display:none;">
       <span class="next-prompt-label" id="next-prompt-label">—</span>
       <button class="btn btn-ghost btn-sm" id="btn-export">⎘ Exportar .txt</button>
+      <button class="btn btn-plan btn-sm" id="btn-plan" style="display:none;" disabled>✦ Plan de intervención</button>
       <button class="btn btn-primary" id="btn-next-prompt">Enviar →</button>
     </div>
   </div>
@@ -515,8 +516,7 @@ var DEFAULT_PROMPTS=[
   {name:'P3 · Ritmo',label:'Ritmo',content:'Analiza el ritmo y la densidad de esta sección/capítulo.\n\nIdentifica:\n- Partes lentas o densas\n- Partes ágiles y bien resueltas\n- Bloques que podrían acortarse sin pérdida\n\nPropón mejoras concretas con referencias a fragmentos específicos.'},
   {name:'P4 · Lector',label:'Lector',content:'Actúa como un lector sin conocimientos previos sobre la historia local de Castroverde.\n\nDesde esa perspectiva, describe:\n- Qué partes te enganchan y por qué\n- Dónde pierdes interés\n- Qué cuesta entender o seguir\n- Qué genera curiosidad o ganas de saber más'},
   {name:'P5 · Síntesis',label:'Síntesis',content:'Con todo lo analizado hasta ahora (estructura, tono, ritmo, perspectiva del lector), indica:\n\n1. Los 2 cambios que más mejorarían esta sección/capítulo\n2. Qué parte no debería modificarse bajo ningún concepto\n3. Veredicto: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n4. Justificación breve del veredicto (2-3 frases)'},
-  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.'},
-  {name:'P7 · Plan',label:'Plan',content:'Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.'}
+  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.'}
 ];
 
 var API_KEY=localStorage.getItem('castroverde_ana_key')||'';
@@ -580,6 +580,16 @@ function updateChatActions(){
   if(!currentSession){get('chat-actions').style.display='none';return;}
   get('chat-actions').style.display='flex';
   var idx=currentSession.currentPromptIndex;
+  var planBtn=get('btn-plan');
+  // Mostrar plan si hay al menos 2 respuestas de Claude
+  var claudeResponses=currentSession.messages.filter(function(m){return m.role==='assistant';}).length;
+  if(claudeResponses>=2){
+    planBtn.style.display='';
+    planBtn.disabled=currentSession.waitingForPlan||false;
+    planBtn.textContent=currentSession.waitingForPlan?'Generando…':'✦ Plan de intervención';
+  } else {
+    planBtn.style.display='none';
+  }
   if(idx>=settings.prompts.length){
     get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado</span>';
     get('btn-next-prompt').style.display='none';
@@ -592,6 +602,30 @@ function updateChatActions(){
   }
 }
 
+var PLAN_PROMPT='Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.';
+
+function requestPlan(){
+  if(!currentSession||currentSession.waitingForPlan)return;
+  var claudeResponses=currentSession.messages.filter(function(m){return m.role==='assistant';});
+  if(!claudeResponses.length)return;
+  currentSession.waitingForPlan=true;
+  updateChatActions();
+  showLoading('Generando plan de intervención…');hideError();
+  var apiMsgs=currentSession.messages.map(function(m){return{role:m.role,content:m.content};});
+  apiMsgs.push({role:'user',content:PLAN_PROMPT});
+  callClaude(apiMsgs,function(response){
+    hideLoading();
+    currentSession.waitingForPlan=false;
+    currentSession.plan=response;
+    saveCurrentSession();
+    renderPlanInChat(response);
+    updateChatActions();
+  },function(err){
+    hideLoading();
+    currentSession.waitingForPlan=false;
+    showError(err);updateChatActions();
+  });
+}
 
 function renderPlanInChat(planText){
   var area=get('chat-area');
@@ -699,8 +733,6 @@ function sendNextPrompt(){
     }
     saveCurrentSession();
     renderProgressBar(currentSession.currentPromptIndex);
-    // Si la respuesta es del P7 (Plan), renderizar con formato visual
-    if(idx===6) renderPlanInChat(response);
     renderChat();updateChatActions();
   },function(err){
     hideLoading();currentSession.messages.pop();currentSession.waitingForResponse=false;
@@ -838,6 +870,7 @@ get('btn-close-sidebar').addEventListener('click',closeHistory);
 get('sidebar-overlay').addEventListener('click',closeHistory);
 get('btn-clear-history').addEventListener('click',function(){if(confirm('¿Borrar todo el historial?')){sessions=[];saveSessions();renderHistoryList();}});
 get('btn-export').addEventListener('click',function(){exportSession(null);});
+get('btn-plan').addEventListener('click',requestPlan);
 get('btn-settings').addEventListener('click',openSettings);
 get('settings-save').addEventListener('click',saveSettingsFromModal);
 get('settings-cancel').addEventListener('click',closeSettings);
