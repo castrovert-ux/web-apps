@@ -184,6 +184,9 @@
     .prio-media{background:rgba(138,42,42,0.1);color:var(--accent);border:1px solid var(--accent);}
     .prio-baja{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
     .prio-ok{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
+    .parte-select-ana{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 9px;font-family:var(--font-ui);font-size:10px;border-radius:var(--radius);outline:none;cursor:pointer;margin-bottom:2px;}
+    .parte-select-ana:focus{border-color:var(--accent);}
+    .parte-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:4px;display:block;}
     .key-status{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;padding:3px 8px;border-radius:var(--radius);}
     .key-status.ok{color:var(--green);border:1px solid var(--green);}
     .key-status.missing{color:var(--red);border:1px solid var(--red);}
@@ -231,6 +234,13 @@
     <div class="input-section">
       <label class="input-label" for="section-goal">Objetivo de esta sección/capítulo</label>
       <textarea class="input-field" id="section-goal" rows="3" maxlength="600" style="resize:none;line-height:1.6;" placeholder="Qué quieres conseguir, qué época o tema aborda, qué debe transmitir al lector…"></textarea>
+    </div>
+    <div class="input-section">
+      <label class="parte-label" for="ana-parte-libro">Parte del libro</label>
+      <select class="parte-select-ana" id="ana-parte-libro">
+        <option value="primera">Primera parte — narrativa divulgativa</option>
+        <option value="segunda">Segunda parte — temática y formal</option>
+      </select>
     </div>
     <div class="text-area-wrap">
       <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto de la sección o capítulo…&#10;&#10;Hasta 10 páginas aproximadamente.&#10;El texto se inyecta automáticamente en cada prompt."></textarea>
@@ -287,6 +297,11 @@
       <div class="modal-section-title">Contexto del libro (System Prompt)</div>
       <div class="modal-hint" style="margin-bottom:8px;">Se envía a Claude en cada consulta como instrucción de fondo.</div>
       <textarea class="modal-textarea tall" id="settings-system" rows="7"></textarea>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Perfil tonal del libro</div>
+      <div class="modal-hint" style="margin-bottom:8px;">Define la voz y tono de referencia para cada parte del libro. El analizador lo usará para evaluar cuánto se acerca o aleja el texto de ese perfil.</div>
+      <textarea class="modal-textarea tall" id="settings-tono" rows="7"></textarea>
     </div>
     <div class="modal-section">
       <div class="modal-section-title">Prompts de análisis</div>
@@ -524,6 +539,24 @@ var MODEL='claude-sonnet-4-6';
 var MAX_TOKENS=4000;
 var STORAGE_KEY='castroverde_ana_sessions';
 var SETTINGS_KEY='castroverde_ana_settings';
+var TONO_KEY='castroverde_instruc_gen';
+function getTonoProfile(){ return localStorage.getItem(TONO_KEY)||''; }
+function saveTonoProfile(val){ localStorage.setItem(TONO_KEY,val); }
+
+function getParteLabel(){
+  var el=document.getElementById('ana-parte-libro');
+  if(!el) return 'PRIMERA PARTE (narrativa divulgativa)';
+  return el.value==='segunda'?'SEGUNDA PARTE (tematica y formal)':'PRIMERA PARTE (narrativa divulgativa)';
+}
+
+function buildSystemWithTono(){
+  var base=settings.system;
+  var tono=getTonoProfile().trim();
+  var parte=getParteLabel();
+  var extra='\n\nPARTE DEL LIBRO: Esta sección pertenece a la '+parte+' del libro.';
+  if(tono) extra+='\n\nPERFIL TONAL DE REFERENCIA — úsalo para evaluar cuánto se acerca o aleja el texto de la voz buscada:\n'+tono;
+  return base+extra;
+}
 var settings=loadSettings();
 var sessions=loadSessions();
 var currentSession=null;
@@ -656,7 +689,7 @@ function callClaude(messages,onOk,onErr){
   };
   xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
   xhr.onerror=function(){onErr('Error de red.');};
-  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:settings.system,messages:messages}));
+  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:buildSystemWithTono(),messages:messages}));
 }
 
 function buildPrompt(template,texto,objetivo){
@@ -774,6 +807,8 @@ function newSession(){
 
 function openSettings(){
   get('settings-system').value=settings.system;
+  var tonoEl=document.getElementById('settings-tono');
+  if(tonoEl) tonoEl.value=getTonoProfile();
   var tabsHtml='',panelsHtml='';
   settings.prompts.forEach(function(p,i){
     tabsHtml+='<button class="ptab'+(i===0?' active':'')+'" data-idx="'+i+'">'+esc(p.label)+'</button>';
@@ -797,6 +832,8 @@ function openSettings(){
 function closeSettings(){get('modal-settings').classList.remove('visible');}
 function saveSettingsFromModal(){
   settings.system=get('settings-system').value;
+  var tonoSave=document.getElementById('settings-tono');
+  if(tonoSave) saveTonoProfile(tonoSave.value);
   document.querySelectorAll('.pp-name').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].name=el.value;});
   document.querySelectorAll('.pp-content').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].content=el.value;});
   saveSettings();
@@ -882,6 +919,8 @@ renderProgressBar(-1);
 updateCharCount();
 updateKeyStatus();
 renderHistoryList();
+// Cargar perfil tonal por defecto si no hay ninguno guardado
+if(!getTonoProfile()) saveTonoProfile('VOZ Y TONO DE REFERENCIA — Libro de historia de Castroverde de Cerrato\n\nPrimera parte (narrativa divulgativa):\nNarración cronológica con datos precisos y fechas documentadas. El autor no adorna — deja que los hechos hablen, pero elige qué hecho poner en primer plano. Las frases son directas y de longitud variable: alterna oraciones cortas que dan ritmo con frases más largas que desarrollan el contexto. Cuando hay conflicto o personajes, los nombra y los deja actuar sin comentario moral. Cuando el texto entra en territorio técnico o documental, busca un detalle humano o geográfico concreto que ancle al lector. Los cierres de bloque deben dejar algo concreto y visible. Nunca terminar con una generalización.\n\nSegunda parte (temática y formal):\nMismo rigor documental pero con mayor densidad informativa. El tono se vuelve más expositivo sin caer en el academicismo. Se permiten enumeraciones y datos específicos. Se evita el lenguaje institucional o abstracto.\n\nReglas comunes:\n- No añadir frases, adjetivos ni cláusulas que no estén en el original\n- No sustituir palabras por sinónimos neutros ni cambiar el estilo\n- No terminar párrafos con generalizaciones del tipo "moldean la identidad" o "custodian la memoria"\n- Respetar las notas al pie como fuente de autoridad\n- Si una frase funciona, no tocarla');
 if(!FB_API_KEY){ setTimeout(openFbKeyModal,300); }
 else if(!API_KEY){ setTimeout(openApiKeyModal,300); }
 </script>
