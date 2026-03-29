@@ -734,31 +734,31 @@
     }
     #fb-modal p a:hover { text-decoration: underline; }
 
-    .fb-field {
-      margin-bottom: 12px;
-    }
+    .fb-field { margin-bottom: 12px; }
     .fb-field label {
       display: block;
       font-size: 0.78rem;
       font-weight: 600;
       color: var(--ink-light);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       letter-spacing: 0.02em;
       text-transform: uppercase;
     }
-    .fb-field input {
+    .fb-field textarea {
       width: 100%;
-      padding: 9px 13px;
+      padding: 10px 13px;
       border: 1.5px solid var(--border);
       border-radius: 9px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.88rem;
+      font-family: monospace;
+      font-size: 0.8rem;
       color: var(--ink);
       background: var(--cream);
       outline: none;
+      resize: vertical;
+      line-height: 1.6;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .fb-field input:focus {
+    .fb-field textarea:focus {
       border-color: var(--amber);
       box-shadow: 0 0 0 3px rgba(212,130,10,0.1);
     }
@@ -837,40 +837,19 @@
   <div id="fb-modal">
     <h2>☁️ Conexión con Firebase</h2>
     <p>
-      Pega aquí los datos de tu proyecto Firebase para sincronizar las tareas entre dispositivos.
-      Los encontrarás en <a href="https://console.firebase.google.com/" target="_blank">console.firebase.google.com</a>
-      → tu proyecto → Configuración del proyecto → Tu aplicación web → <em>firebaseConfig</em>.
+      Pega aquí el bloque <em>firebaseConfig</em> de tu proyecto. Lo encontrarás en
+      <a href="https://console.firebase.google.com/" target="_blank">console.firebase.google.com</a>
+      → tu proyecto → Configuración → Tu aplicación web.
     </p>
 
     <div class="fb-field">
-      <label>API Key</label>
-      <input id="fb-apiKey"            type="text" placeholder="AIzaSy…" autocomplete="off"/>
-    </div>
-    <div class="fb-field">
-      <label>Auth Domain</label>
-      <input id="fb-authDomain"        type="text" placeholder="mi-proyecto.firebaseapp.com"/>
-    </div>
-    <div class="fb-field">
-      <label>Project ID</label>
-      <input id="fb-projectId"         type="text" placeholder="mi-proyecto"/>
-    </div>
-    <div class="fb-field">
-      <label>Storage Bucket</label>
-      <input id="fb-storageBucket"     type="text" placeholder="mi-proyecto.appspot.com"/>
-    </div>
-    <div class="fb-field">
-      <label>Messaging Sender ID</label>
-      <input id="fb-messagingSenderId" type="text" placeholder="123456789"/>
-    </div>
-    <div class="fb-field">
-      <label>App ID</label>
-      <input id="fb-appId"             type="text" placeholder="1:123…:web:abc…"/>
-    </div>
-
-    <div class="fb-hint">
-      💡 <strong>Reglas de Firestore recomendadas</strong> (para uso personal):<br>
-      <code>allow read, write: if true;</code><br>
-      Ponlas en Firestore → Reglas. Los datos se guardan en la colección <code>tareas</code>, documento <code>shared</code>.
+      <label>firebaseConfig</label>
+      <textarea id="fb-config-raw" rows="9" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy…",
+  authDomain: "mi-proyecto.firebaseapp.com",
+  projectId: "mi-proyecto",
+  …
+};'></textarea>
     </div>
 
     <div class="fb-modal-actions">
@@ -1045,20 +1024,19 @@
      MODAL FIREBASE
   ══════════════════════════════════════ */
   function abrirModal() {
-    // Rellenar campos si ya hay config guardada
-    const cfg = (() => {
-      try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY)) || {}; }
-      catch { return {}; }
-    })();
-    document.getElementById('fb-apiKey').value            = cfg.apiKey            || '';
-    document.getElementById('fb-authDomain').value        = cfg.authDomain        || '';
-    document.getElementById('fb-projectId').value         = cfg.projectId         || '';
-    document.getElementById('fb-storageBucket').value     = cfg.storageBucket     || '';
-    document.getElementById('fb-messagingSenderId').value = cfg.messagingSenderId  || '';
-    document.getElementById('fb-appId').value             = cfg.appId             || '';
-
+    // Si ya hay config guardada, mostrarla como JSON en el textarea
+    const raw = localStorage.getItem(FB_CONFIG_KEY);
+    const ta  = document.getElementById('fb-config-raw');
+    if (raw) {
+      try {
+        const cfg = JSON.parse(raw);
+        ta.value = JSON.stringify(cfg, null, 2);
+      } catch { ta.value = ''; }
+    } else {
+      ta.value = '';
+    }
     document.getElementById('fb-modal-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('fb-apiKey').focus(), 120);
+    setTimeout(() => ta.focus(), 120);
   }
 
   function cerrarModal() {
@@ -1066,17 +1044,27 @@
   }
 
   async function guardarConfigFirebase() {
-    const cfg = {
-      apiKey:            document.getElementById('fb-apiKey').value.trim(),
-      authDomain:        document.getElementById('fb-authDomain').value.trim(),
-      projectId:         document.getElementById('fb-projectId').value.trim(),
-      storageBucket:     document.getElementById('fb-storageBucket').value.trim(),
-      messagingSenderId: document.getElementById('fb-messagingSenderId').value.trim(),
-      appId:             document.getElementById('fb-appId').value.trim(),
-    };
+    const raw = document.getElementById('fb-config-raw').value.trim();
+    if (!raw) { showToast('⚠️ Pega tu firebaseConfig primero'); return; }
+
+    // Extraer el objeto JSON del bloque firebaseConfig (con o sin "const firebaseConfig =")
+    let cfg;
+    try {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No se encontró un objeto válido');
+      // Convertir claves sin comillas a JSON válido
+      const jsonStr = match[0]
+        .replace(/\/\/.*$/gm, '')           // quitar comentarios
+        .replace(/,\s*\}/g, '}')            // trailing comma
+        .replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":'); // claves sin comillas
+      cfg = JSON.parse(jsonStr);
+    } catch(e) {
+      showToast('❌ No se pudo leer el config. ¿Está bien pegado?');
+      return;
+    }
 
     if (!cfg.apiKey || !cfg.projectId) {
-      showToast('⚠️ API Key y Project ID son obligatorios');
+      showToast('⚠️ El config no tiene apiKey o projectId');
       return;
     }
 
