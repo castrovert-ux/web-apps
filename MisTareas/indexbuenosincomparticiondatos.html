@@ -9,115 +9,6 @@
   <meta name="theme-color" content="#ffffff">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp }            from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot }
-                                        from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-    /* ══════════════════════════════════════
-       CONFIGURACIÓN FIREBASE
-    ══════════════════════════════════════ */
-    const FB_CONFIG_KEY = 'gtd_firebase_config';
-    const FB_DOC_PATH   = { collection: 'tareas', docId: 'shared' };
-
-    let db        = null;
-    let unsubscribe = null;   // listener en tiempo real
-    let _syncEnabled = false;
-
-    /* Leer config guardada */
-    function loadConfig() {
-      try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY)) || null; }
-      catch { return null; }
-    }
-    function saveConfig(cfg) {
-      localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg));
-    }
-
-    /* Inicializar Firebase con la config dada */
-    function initFirebase(cfg) {
-      try {
-        const app = initializeApp(cfg, 'gtd-app');
-        db = getFirestore(app);
-        _syncEnabled = true;
-        return true;
-      } catch (e) {
-        console.error('Firebase init error:', e);
-        return false;
-      }
-    }
-
-    /* ── Guardar las tres listas en Firestore ── */
-    async function fbSave(hoy, pend, realizadas) {
-      if (!_syncEnabled || !db) return;
-      try {
-        const ref = doc(db, FB_DOC_PATH.collection, FB_DOC_PATH.docId);
-        await setDoc(ref, { hoy, pend, realizadas, ts: Date.now() });
-      } catch (e) {
-        console.error('fbSave error:', e);
-        window._showToast('⚠️ Error al sincronizar');
-      }
-    }
-
-    /* ── Escuchar cambios en tiempo real ── */
-    function fbListen() {
-      if (!_syncEnabled || !db) return;
-      if (unsubscribe) unsubscribe();
-      const ref = doc(db, FB_DOC_PATH.collection, FB_DOC_PATH.docId);
-      unsubscribe = onSnapshot(ref, (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
-        // Actualizar localStorage con los datos remotos
-        localStorage.setItem('tareasHoy',        JSON.stringify(data.hoy        || []));
-        localStorage.setItem('tareasPendientes',  JSON.stringify(data.pend       || []));
-        localStorage.setItem('tareasRealizadas',  JSON.stringify(data.realizadas || []));
-        // Re-renderizar la UI
-        if (typeof window._renderAll === 'function') window._renderAll();
-        window._showSyncBadge(true);
-      }, (err) => {
-        console.error('onSnapshot error:', err);
-        window._showSyncBadge(false);
-      });
-    }
-
-    /* ── Cargar una vez (para primer arranque) ── */
-    async function fbLoad() {
-      if (!_syncEnabled || !db) return;
-      try {
-        const ref  = doc(db, FB_DOC_PATH.collection, FB_DOC_PATH.docId);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          localStorage.setItem('tareasHoy',        JSON.stringify(data.hoy        || []));
-          localStorage.setItem('tareasPendientes',  JSON.stringify(data.pend       || []));
-          localStorage.setItem('tareasRealizadas',  JSON.stringify(data.realizadas || []));
-        }
-      } catch(e) { console.error('fbLoad error:', e); }
-    }
-
-    /* ── Exponer al ámbito global ── */
-    window._fbSave    = fbSave;
-    window._fbListen  = fbListen;
-    window._fbLoad    = fbLoad;
-    window._fbEnabled = () => _syncEnabled;
-
-    /* ── Arranque automático si ya hay config ── */
-    window.addEventListener('DOMContentLoaded', async () => {
-      const cfg = loadConfig();
-      if (cfg) {
-        const ok = initFirebase(cfg);
-        if (ok) {
-          await fbLoad();
-          fbListen();
-          window._showSyncBadge(true);
-        }
-      }
-      window._saveConfig  = saveConfig;
-      window._initFirebase = initFirebase;
-    });
-  </script>
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -191,43 +82,6 @@
       text-overflow: ellipsis;
     }
 
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    /* Indicador de sincronización */
-    #sync-badge {
-      display: none;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.7rem;
-      color: var(--amber-light);
-      font-weight: 500;
-      opacity: 0.85;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 12px;
-      border: 1px solid rgba(245,192,100,0.25);
-      transition: background 0.2s;
-    }
-    #sync-badge.ok   { color: #7dcb80; border-color: rgba(125,203,128,0.3); }
-    #sync-badge.fail { color: var(--rose); border-color: rgba(192,88,74,0.3); }
-    #sync-badge:hover { background: rgba(255,255,255,0.06); }
-    #sync-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-      flex-shrink: 0;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
-    }
-
     .btn-hist {
       background: none;
       border: 1.5px solid rgba(245,192,100,0.4);
@@ -240,6 +94,7 @@
       font-weight: 500;
       transition: background 0.2s, color 0.2s, border-color 0.2s;
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .btn-hist:hover, .btn-hist.active {
       background: var(--amber-light);
@@ -367,9 +222,17 @@
     .task-item:last-child { border-bottom: none; }
     .task-item:hover { background: var(--cream); }
 
-    .task-item.dragging  { opacity: 0.4; background: var(--amber-pale); }
-    .task-item.drag-over { border-top: 2px solid var(--amber); background: var(--amber-pale); }
+    /* Drag & Drop */
+    .task-item.dragging {
+      opacity: 0.4;
+      background: var(--amber-pale);
+    }
+    .task-item.drag-over {
+      border-top: 2px solid var(--amber);
+      background: var(--amber-pale);
+    }
 
+    /* Handle de arrastre */
     .drag-handle {
       cursor: grab;
       color: var(--ink-muted);
@@ -384,6 +247,7 @@
     }
     .drag-handle:active { cursor: grabbing; }
 
+    /* custom checkbox */
     .task-check {
       appearance: none;
       -webkit-appearance: none;
@@ -429,6 +293,7 @@
       color: var(--ink-muted);
     }
 
+    /* Fila de acciones */
     .task-actions {
       display: flex;
       align-items: center;
@@ -460,6 +325,7 @@
     }
     .btn-move:hover { background: var(--amber-light); color: var(--ink); }
 
+    /* Botón editar */
     .btn-edit {
       background: none;
       border: none;
@@ -685,214 +551,16 @@
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
-
-    /* ══════════════════════════════════════
-       MODAL FIREBASE
-    ══════════════════════════════════════ */
-    #fb-modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(28,26,23,0.55);
-      z-index: 500;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      backdrop-filter: blur(3px);
-    }
-    #fb-modal-overlay.open { display: flex; }
-
-    #fb-modal {
-      background: var(--warm-white);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 28px 24px 24px;
-      max-width: 520px;
-      width: 100%;
-      box-shadow: 0 12px 48px rgba(28,26,23,0.22);
-      animation: fadeUp 0.25s ease both;
-    }
-
-    #fb-modal h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.25rem;
-      font-weight: 400;
-      color: var(--ink);
-      margin-bottom: 6px;
-    }
-
-    #fb-modal p {
-      font-size: 0.83rem;
-      color: var(--ink-muted);
-      line-height: 1.55;
-      margin-bottom: 18px;
-    }
-
-    #fb-modal p a {
-      color: var(--amber);
-      text-decoration: none;
-    }
-    #fb-modal p a:hover { text-decoration: underline; }
-
-    .fb-field {
-      margin-bottom: 12px;
-    }
-    .fb-field label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--ink-light);
-      margin-bottom: 4px;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-    }
-    .fb-field input {
-      width: 100%;
-      padding: 9px 13px;
-      border: 1.5px solid var(--border);
-      border-radius: 9px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.88rem;
-      color: var(--ink);
-      background: var(--cream);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .fb-field input:focus {
-      border-color: var(--amber);
-      box-shadow: 0 0 0 3px rgba(212,130,10,0.1);
-    }
-
-    .fb-modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-
-    .btn-fb-save {
-      flex: 1;
-      padding: 11px 18px;
-      background: var(--amber);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-      min-width: 120px;
-    }
-    .btn-fb-save:hover { background: #B86E00; }
-
-    .btn-fb-cancel {
-      padding: 11px 16px;
-      background: none;
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
-      color: var(--ink-muted);
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-fb-cancel:hover { background: var(--cream); }
-
-    .btn-fb-clear {
-      padding: 11px 16px;
-      background: none;
-      border: 1.5px solid rgba(192,88,74,0.3);
-      border-radius: 10px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.85rem;
-      color: var(--rose);
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-fb-clear:hover { background: var(--rose-pale); }
-
-    .fb-hint {
-      margin-top: 14px;
-      padding: 10px 14px;
-      background: var(--amber-pale);
-      border-radius: 9px;
-      font-size: 0.78rem;
-      color: var(--ink-light);
-      line-height: 1.55;
-    }
-    .fb-hint code {
-      font-family: monospace;
-      background: rgba(0,0,0,0.07);
-      padding: 1px 5px;
-      border-radius: 4px;
-      font-size: 0.82rem;
-    }
   </style>
 </head>
 <body>
-
-<!-- ══ MODAL FIREBASE ══ -->
-<div id="fb-modal-overlay">
-  <div id="fb-modal">
-    <h2>☁️ Conexión con Firebase</h2>
-    <p>
-      Pega aquí los datos de tu proyecto Firebase para sincronizar las tareas entre dispositivos.
-      Los encontrarás en <a href="https://console.firebase.google.com/" target="_blank">console.firebase.google.com</a>
-      → tu proyecto → Configuración del proyecto → Tu aplicación web → <em>firebaseConfig</em>.
-    </p>
-
-    <div class="fb-field">
-      <label>API Key</label>
-      <input id="fb-apiKey"            type="text" placeholder="AIzaSy…" autocomplete="off"/>
-    </div>
-    <div class="fb-field">
-      <label>Auth Domain</label>
-      <input id="fb-authDomain"        type="text" placeholder="mi-proyecto.firebaseapp.com"/>
-    </div>
-    <div class="fb-field">
-      <label>Project ID</label>
-      <input id="fb-projectId"         type="text" placeholder="mi-proyecto"/>
-    </div>
-    <div class="fb-field">
-      <label>Storage Bucket</label>
-      <input id="fb-storageBucket"     type="text" placeholder="mi-proyecto.appspot.com"/>
-    </div>
-    <div class="fb-field">
-      <label>Messaging Sender ID</label>
-      <input id="fb-messagingSenderId" type="text" placeholder="123456789"/>
-    </div>
-    <div class="fb-field">
-      <label>App ID</label>
-      <input id="fb-appId"             type="text" placeholder="1:123…:web:abc…"/>
-    </div>
-
-    <div class="fb-hint">
-      💡 <strong>Reglas de Firestore recomendadas</strong> (para uso personal):<br>
-      <code>allow read, write: if true;</code><br>
-      Ponlas en Firestore → Reglas. Los datos se guardan en la colección <code>tareas</code>, documento <code>shared</code>.
-    </div>
-
-    <div class="fb-modal-actions">
-      <button class="btn-fb-save"   onclick="guardarConfigFirebase()">✓ Conectar</button>
-      <button class="btn-fb-cancel" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn-fb-clear"  onclick="borrarConfigFirebase()">🗑 Olvidar config</button>
-    </div>
-  </div>
-</div>
 
 <header>
   <div class="header-left">
     <h1>📋 Mis Tareas</h1>
     <span class="header-date" id="header-date"></span>
   </div>
-  <div class="header-right">
-    <span id="sync-badge" onclick="abrirModal()" title="Estado de sincronización — clic para configurar">
-      <span id="sync-dot"></span>
-      <span id="sync-label">Sin sincronizar</span>
-    </span>
-    <button class="btn-hist" id="btn-toggle-hist" onclick="toggleHistorial()">📂 Historial</button>
-  </div>
+  <button class="btn-hist" id="btn-toggle-hist" onclick="toggleHistorial()">📂 Historial</button>
 </header>
 
 <main>
@@ -959,11 +627,7 @@
   const KEY_HOY        = 'tareasHoy';
   const KEY_PEND       = 'tareasPendientes';
   const KEY_REALIZADAS = 'tareasRealizadas';
-  const FB_CONFIG_KEY  = 'gtd_firebase_config';
 
-  /* ══════════════════════════════════════
-     UTILIDADES GENERALES
-  ══════════════════════════════════════ */
   function hoy() { return new Date().toISOString().split('T')[0]; }
 
   function formatFechaLeg(fechaISO) {
@@ -978,11 +642,7 @@
     catch { return []; }
   }
 
-  function guardar(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
-    // Sincronizar con Firebase después de cada escritura local
-    syncToFirebase();
-  }
+  function guardar(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -990,9 +650,6 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2400);
   }
-
-  // Exponer showToast al módulo Firebase
-  window._showToast = showToast;
 
   function setHeaderDate() {
     const d = new Date();
@@ -1006,120 +663,6 @@
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  /* ══════════════════════════════════════
-     SINCRONIZACIÓN FIREBASE
-  ══════════════════════════════════════ */
-
-  // Debounce para no disparar múltiples saves seguidos
-  let _syncTimer = null;
-  function syncToFirebase() {
-    if (!window._fbEnabled || !window._fbEnabled()) return;
-    clearTimeout(_syncTimer);
-    _syncTimer = setTimeout(() => {
-      const hoyData       = cargar(KEY_HOY);
-      const pendData      = cargar(KEY_PEND);
-      const realizadasData= cargar(KEY_REALIZADAS);
-      if (window._fbSave) window._fbSave(hoyData, pendData, realizadasData);
-    }, 400);
-  }
-
-  // Exponer renderAll al módulo Firebase (para onSnapshot)
-  window._renderAll = function() {
-    renderHoy();
-    renderPendientes();
-    const vh = document.getElementById('view-historial');
-    if (vh.classList.contains('visible')) renderHistorial();
-  };
-
-  // Indicador de estado de sincronización
-  window._showSyncBadge = function(ok) {
-    const badge = document.getElementById('sync-badge');
-    const label = document.getElementById('sync-label');
-    badge.style.display = 'flex';
-    badge.className = ok ? 'ok' : 'fail';
-    label.textContent = ok ? 'Sincronizado' : 'Sin conexión';
-  };
-
-  /* ══════════════════════════════════════
-     MODAL FIREBASE
-  ══════════════════════════════════════ */
-  function abrirModal() {
-    // Rellenar campos si ya hay config guardada
-    const cfg = (() => {
-      try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY)) || {}; }
-      catch { return {}; }
-    })();
-    document.getElementById('fb-apiKey').value            = cfg.apiKey            || '';
-    document.getElementById('fb-authDomain').value        = cfg.authDomain        || '';
-    document.getElementById('fb-projectId').value         = cfg.projectId         || '';
-    document.getElementById('fb-storageBucket').value     = cfg.storageBucket     || '';
-    document.getElementById('fb-messagingSenderId').value = cfg.messagingSenderId  || '';
-    document.getElementById('fb-appId').value             = cfg.appId             || '';
-
-    document.getElementById('fb-modal-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('fb-apiKey').focus(), 120);
-  }
-
-  function cerrarModal() {
-    document.getElementById('fb-modal-overlay').classList.remove('open');
-  }
-
-  async function guardarConfigFirebase() {
-    const cfg = {
-      apiKey:            document.getElementById('fb-apiKey').value.trim(),
-      authDomain:        document.getElementById('fb-authDomain').value.trim(),
-      projectId:         document.getElementById('fb-projectId').value.trim(),
-      storageBucket:     document.getElementById('fb-storageBucket').value.trim(),
-      messagingSenderId: document.getElementById('fb-messagingSenderId').value.trim(),
-      appId:             document.getElementById('fb-appId').value.trim(),
-    };
-
-    if (!cfg.apiKey || !cfg.projectId) {
-      showToast('⚠️ API Key y Project ID son obligatorios');
-      return;
-    }
-
-    // Guardar en localStorage
-    if (window._saveConfig) window._saveConfig(cfg);
-
-    // Inicializar Firebase
-    const ok = window._initFirebase ? window._initFirebase(cfg) : false;
-    if (!ok) {
-      showToast('❌ Error al inicializar Firebase. Revisa los datos.');
-      return;
-    }
-
-    cerrarModal();
-    showToast('☁️ Conectando con Firebase…');
-
-    // Cargar datos remotos y arrancar listener
-    if (window._fbLoad)   await window._fbLoad();
-    if (window._fbListen) window._fbListen();
-
-    window._renderAll();
-    window._showSyncBadge(true);
-    showToast('✅ Sincronización activada');
-  }
-
-  function borrarConfigFirebase() {
-    if (!confirm('¿Eliminar la configuración de Firebase? Los datos locales no se borrarán.')) return;
-    localStorage.removeItem(FB_CONFIG_KEY);
-    cerrarModal();
-    const badge = document.getElementById('sync-badge');
-    badge.style.display = 'none';
-    showToast('🗑 Configuración eliminada');
-  }
-
-  // Cerrar modal al hacer clic fuera
-  document.getElementById('fb-modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) cerrarModal();
-  });
-
-  // Atajo de teclado: Escape cierra modal
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') cerrarModal();
-  });
 
   /* ══════════════════════════════════════
      RENDER TAREAS DE HOY (con drag & drop)
@@ -1157,6 +700,7 @@
           </div>
         </div>`;
 
+      // Drag events
       li.addEventListener('dragstart', onDragStart);
       li.addEventListener('dragover',  onDragOver);
       li.addEventListener('dragleave', onDragLeave);
@@ -1167,7 +711,7 @@
     });
   }
 
-  /* ── Drag & Drop ── */
+  /* ── Drag & Drop helpers ── */
   let dragSrcIndex = null;
 
   function onDragStart(e) {
@@ -1181,7 +725,9 @@
     document.querySelectorAll('#list-hoy .task-item').forEach(el => el.classList.remove('drag-over'));
     this.classList.add('drag-over');
   }
-  function onDragLeave() { this.classList.remove('drag-over'); }
+  function onDragLeave() {
+    this.classList.remove('drag-over');
+  }
   function onDrop(e) {
     e.stopPropagation();
     const targetIndex = parseInt(this.dataset.index);
@@ -1246,12 +792,16 @@
       return;
     }
 
+    const ordenadas = [...tareas].sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+    // Construir mapa fecha -> índices originales
     const grupos = {};
     tareas.forEach((t, originalIndex) => {
       if (!grupos[t.fecha]) grupos[t.fecha] = [];
       grupos[t.fecha].push({ ...t, originalIndex });
     });
 
+    // Ordenar fechas descendente
     const fechasOrdenadas = Object.keys(grupos).sort((a,b) => b.localeCompare(a));
 
     let html = '';
@@ -1283,17 +833,19 @@
     let labelEl, actionsEl, textoActual;
 
     if (tipo === 'hoy') {
-      labelEl     = document.getElementById(`label-hoy-${idx}`);
-      actionsEl   = document.getElementById(`actions-hoy-${idx}`);
+      labelEl   = document.getElementById(`label-hoy-${idx}`);
+      actionsEl = document.getElementById(`actions-hoy-${idx}`);
       textoActual = cargar(KEY_HOY)[idx]?.texto || '';
     } else if (tipo === 'pend') {
-      labelEl     = document.getElementById(`label-pend-${idx}`);
-      actionsEl   = document.getElementById(`actions-pend-${idx}`);
+      labelEl   = document.getElementById(`label-pend-${idx}`);
+      actionsEl = document.getElementById(`actions-pend-${idx}`);
       textoActual = cargar(KEY_PEND)[idx]?.texto || '';
     } else if (tipo === 'hist') {
+      // Para historial usamos estructura diferente
       const itemEl = document.getElementById(`hist-item-${idx}`);
       labelEl = document.getElementById(`hist-label-${idx}`);
       textoActual = cargar(KEY_REALIZADAS)[idx]?.texto || '';
+      // Ocultar label y botón editar/check, mostrar inline editor
       itemEl.innerHTML = `
         <span class="hist-dot"></span>
         <div class="edit-row" style="flex:1">
@@ -1309,7 +861,8 @@
       return;
     }
 
-    labelEl.style.display   = 'none';
+    // Hoy y Pendientes
+    labelEl.style.display = 'none';
     actionsEl.style.display = 'none';
 
     const editRow = document.createElement('div');
@@ -1356,7 +909,7 @@
   }
 
   function cancelarEdicion(tipo, idx) {
-    if (tipo === 'hoy')  renderHoy();
+    if (tipo === 'hoy') renderHoy();
     else if (tipo === 'pend') renderPendientes();
     else if (tipo === 'hist') renderHistorial();
   }
@@ -1379,7 +932,7 @@
 
   /* ── Completar tarea ── */
   function completarTarea(i) {
-    const tareas     = cargar(KEY_HOY);
+    const tareas = cargar(KEY_HOY);
     const realizadas = cargar(KEY_REALIZADAS);
     realizadas.push({ texto: tareas[i].texto, fecha: hoy() });
     guardar(KEY_REALIZADAS, realizadas);
@@ -1392,7 +945,7 @@
   /* ── Mover tarea de hoy a pendientes ── */
   function moverAPendientes(i) {
     const tareas = cargar(KEY_HOY);
-    const tarea  = tareas.splice(i, 1)[0];
+    const tarea = tareas.splice(i, 1)[0];
     guardar(KEY_HOY, tareas);
     const pend = cargar(KEY_PEND);
     pend.push({ texto: tarea.texto, fecha: hoy() });
@@ -1406,7 +959,7 @@
   function editarFechaHist(idx, fechaActual) {
     const itemEl = document.getElementById(`hist-item-${idx}`);
     if (!itemEl) return;
-    const tareas     = cargar(KEY_REALIZADAS);
+    const tareas = cargar(KEY_REALIZADAS);
     const textoActual = tareas[idx]?.texto || '';
     itemEl.innerHTML = `
       <span class="hist-dot"></span>
@@ -1445,7 +998,7 @@
 
   /* ── Mover pendiente a hoy ── */
   function moverAHoy(i) {
-    const pend  = cargar(KEY_PEND);
+    const pend = cargar(KEY_PEND);
     const tarea = pend.splice(i, 1)[0];
     guardar(KEY_PEND, pend);
     const tareas = cargar(KEY_HOY);
@@ -1491,6 +1044,7 @@
     const tareas = cargar(KEY_HOY);
     tareas.push({ texto: tarea.texto, fecha: hoy() });
     guardar(KEY_HOY, tareas);
+    // Volver a la vista principal y refrescar ambas listas
     const vp  = document.getElementById('view-principal');
     const vh  = document.getElementById('view-historial');
     const btn = document.getElementById('btn-toggle-hist');
@@ -1527,14 +1081,6 @@
   setHeaderDate();
   renderHoy();
   renderPendientes();
-
-  // Si no hay config Firebase, mostrar el modal al primer uso
-  window.addEventListener('DOMContentLoaded', () => {
-    const cfg = localStorage.getItem('gtd_firebase_config');
-    if (!cfg) {
-      setTimeout(() => abrirModal(), 600);
-    }
-  });
 </script>
   <script src="../volver.js"></script>
 </body>
