@@ -477,39 +477,6 @@
     .hist-task { flex: 1; color: var(--ink-light); word-break: break-word; }
     .hist-check-icon { color: var(--sage); font-size: 0.85rem; flex-shrink: 0; }
 
-    .btn-move-pend {
-      background: var(--amber-pale);
-      color: var(--amber);
-      border: 1px solid rgba(212,130,10,0.2);
-      border-radius: 7px;
-      padding: 5px 10px;
-      font-size: 0.72rem;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-      min-height: 30px;
-    }
-    .btn-move-pend:hover { background: var(--amber-light); color: var(--ink); }
-
-    .btn-date-edit {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--ink-muted);
-      font-size: 0.9rem;
-      border-radius: 5px;
-      transition: color 0.15s, background 0.15s;
-      flex-shrink: 0;
-      min-height: 30px;
-      min-width: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .btn-date-edit:hover { color: var(--amber); background: var(--amber-pale); }
-
     .btn-return {
       background: var(--sage-pale);
       color: var(--sage);
@@ -691,8 +658,6 @@
         <div class="task-body">
           <label class="task-label" for="hoy-${i}" id="label-hoy-${i}">${escHtml(t.texto)}</label>
           <div class="task-actions" id="actions-hoy-${i}">
-            <button class="btn-move-pend" title="Mover a pendientes"
-              onclick="moverAPendientes(${i})">⏳ A pendientes</button>
             <button class="btn-edit" title="Editar tarea"
               onclick="iniciarEdicion('hoy', ${i})">✏️</button>
             <button class="btn-delete" title="Eliminar tarea"
@@ -814,8 +779,6 @@
           <span class="hist-task" id="hist-label-${t.originalIndex}">${escHtml(t.texto)}</span>
           <button class="btn-return" title="Devolver a tareas de hoy"
             onclick="devolverAHoy(${t.originalIndex})">↩ A hoy</button>
-          <button class="btn-date-edit" title="Cambiar fecha"
-            onclick="editarFechaHist(${t.originalIndex}, '${t.fecha}')">📅</button>
           <button class="btn-edit" title="Editar tarea"
             onclick="iniciarEdicion('hist', ${t.originalIndex})">✏️</button>
           <span class="hist-check-icon">✓</span>
@@ -940,51 +903,6 @@
     guardar(KEY_HOY, tareas);
     renderHoy();
     showToast('🎉 ¡Tarea completada!');
-  }
-
-  /* ── Mover tarea de hoy a pendientes ── */
-  function moverAPendientes(i) {
-    const tareas = cargar(KEY_HOY);
-    const tarea = tareas.splice(i, 1)[0];
-    guardar(KEY_HOY, tareas);
-    const pend = cargar(KEY_PEND);
-    pend.push({ texto: tarea.texto, fecha: hoy() });
-    guardar(KEY_PEND, pend);
-    renderHoy();
-    renderPendientes();
-    showToast('⏳ Tarea movida a pendientes');
-  }
-
-  /* ── Editar fecha en historial ── */
-  function editarFechaHist(idx, fechaActual) {
-    const itemEl = document.getElementById(`hist-item-${idx}`);
-    if (!itemEl) return;
-    const tareas = cargar(KEY_REALIZADAS);
-    const textoActual = tareas[idx]?.texto || '';
-    itemEl.innerHTML = `
-      <span class="hist-dot"></span>
-      <span class="hist-task">${escHtml(textoActual)}</span>
-      <div class="edit-row" style="flex-shrink:0; gap:6px;">
-        <input type="date" class="edit-input" id="edit-fecha-hist-${idx}"
-          value="${fechaActual}" style="width:150px; min-width:unset; padding:5px 8px; font-size:0.85rem;"/>
-        <button class="btn-save" onclick="guardarFechaHist(${idx})">Guardar</button>
-        <button class="btn-cancel-edit" onclick="renderHistorial()">Cancelar</button>
-      </div>`;
-    setTimeout(() => {
-      const inp = document.getElementById(`edit-fecha-hist-${idx}`);
-      if (inp) inp.focus();
-    }, 50);
-  }
-
-  function guardarFechaHist(idx) {
-    const inp = document.getElementById(`edit-fecha-hist-${idx}`);
-    if (!inp) return;
-    const nuevaFecha = inp.value;
-    if (!nuevaFecha) { inp.focus(); return; }
-    const tareas = cargar(KEY_REALIZADAS);
-    if (tareas[idx]) { tareas[idx].fecha = nuevaFecha; guardar(KEY_REALIZADAS, tareas); }
-    renderHistorial();
-    showToast('📅 Fecha actualizada');
   }
 
   /* ── Eliminar tarea de hoy ── */
