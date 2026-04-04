@@ -481,7 +481,9 @@ async function fetchTranslations(word, fromLang, toLang) {
 
 async function fetchDictData(word) {
   try {
-    const r=await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${enc(word.toLowerCase())}`);
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),4000);
+    const r=await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${enc(word.toLowerCase())}`,{signal:ctrl.signal});
+    clearTimeout(tid);
     if(!r.ok) return {phonetic:'',pos:'',rawEx:[]};
     const dd=await r.json(),entry=dd[0];
     const phonetic=entry.phonetic||(entry.phonetics||[]).find(p=>p.text)?.text||'';
