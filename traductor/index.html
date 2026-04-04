@@ -9,75 +9,17 @@
 <meta name="theme-color" content="#ffffff">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
 :root{
   --bg:#f5f2ee;--surface:#fff;--accent:#2d6a4f;--al:#b7e4c7;--am:#d8f3dc;
   --t1:#1a1a2e;--t2:#555b6e;--tm:#9aa0b0;--bd:#e2ddd6;
   --sh:0 4px 24px rgba(0,0,0,.07);--r:16px;--red:#c0392b;--blue:#2c4a7c;
-  --cloud:#4A90D9;--cloud-pale:#EAF2FB;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 0 80px}
 
-/* ── SYNC BAR (top, full width) ── */
-#sync-topbar {
-  width:100%;
-  background:var(--t1);
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:10px;
-  padding:7px 20px;
-  flex-shrink:0;
-}
-.btn-sync {
-  background:none;
-  border:1.5px solid rgba(74,144,217,0.45);
-  color:#7eb8f0;
-  padding:5px 13px;
-  border-radius:20px;
-  cursor:pointer;
-  font-family:'DM Sans',sans-serif;
-  font-size:0.78rem;
-  font-weight:500;
-  transition:background .2s,color .2s,border-color .2s;
-  white-space:nowrap;
-  display:flex;
-  align-items:center;
-  gap:5px;
-}
-.btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud)}
-.btn-sync.synced{border-color:rgba(45,106,79,0.5);color:#7ec87f}
-.btn-sync.synced:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none}
-.sync-spinner{display:inline-block;animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.user-info-text{font-size:.72rem;color:rgba(255,255,255,.4)}
-.btn-signout{background:none;border:none;cursor:pointer;font-size:.72rem;color:rgba(255,255,255,.3);padding:2px 6px;border-radius:4px;transition:color .15s,background .15s;font-family:'DM Sans',sans-serif}
-.btn-signout:hover{color:var(--red);background:rgba(192,88,74,.1)}
-#sync-status-bar{
-  width:100%;
-  padding:7px 20px;
-  font-size:.78rem;
-  display:none;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-#sync-status-bar.visible{display:flex}
-#sync-status-bar.ok{background:var(--am);color:var(--accent)}
-#sync-status-bar.err{background:#fdecea;color:var(--red)}
-#sync-status-bar.info{background:var(--cloud-pale);color:var(--cloud)}
-.sync-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;padding:0 4px;font-size:1rem}
-.sync-close:hover{opacity:1}
 
-/* ── REST OF ORIGINAL STYLES (unchanged) ── */
 header{text-align:center;margin:28px 0 16px;padding:0 16px}
 header h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:600;letter-spacing:-.5px}
 header h1 span{color:var(--accent)}
@@ -215,19 +157,6 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
 </head>
 <body>
 
-<!-- ══ SYNC TOP BAR ══ -->
-<div id="sync-topbar">
-  <span class="user-info-text" id="user-email-text" style="display:none"></span>
-  <button class="btn-signout" id="btn-signout" style="display:none" onclick="signOut()">Cerrar sesión</button>
-  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
-    <span id="sync-icon">☁️</span>
-    <span id="sync-label">Sincronizar vocabulario</span>
-  </button>
-</div>
-<div id="sync-status-bar">
-  <span id="sync-status-msg"></span>
-  <button class="sync-close" onclick="closeSyncBar()">✕</button>
-</div>
 
 <header>
   <h1>Our <span>Translator</span></h1>
@@ -310,186 +239,11 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
   <div id="quizBody" style="width:100%"></div>
 </div>
 
-<footer>Sin API key · Google Translate · Wiktionary · MyMemory · Datamuse · Guardado en el navegador</footer>
+<footer>Google Translate · Wiktionary · MyMemory · Datamuse · Guardado en el navegador</footer>
 
 <script>
 // ══════════════════════════════════════════════════════
-//  FIREBASE CONFIG
-// ══════════════════════════════════════════════════════
-const firebaseConfig = {
-  apiKey: "AIzaSyA4NdL7mFK6JLUk6sgBiVq2CnZjMa6krUM",
-  authDomain: "castroverde-apps.firebaseapp.com",
-  projectId: "castroverde-apps",
-  storageBucket: "castroverde-apps.firebasestorage.app",
-  messagingSenderId: "371026533141",
-  appId: "1:371026533141:web:315767f60cbf8d6f47671c"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
-const provider = new firebase.auth.GoogleAuthProvider();
-let currentUser = null;
-
-auth.onAuthStateChanged(user => {
-  currentUser = user;
-  updateSyncUI();
-});
-
-function updateSyncUI() {
-  const icon  = document.getElementById('sync-icon');
-  const label = document.getElementById('sync-label');
-  const btn   = document.getElementById('btn-sync');
-  const emailEl  = document.getElementById('user-email-text');
-  const signoutEl = document.getElementById('btn-signout');
-  if (currentUser) {
-    btn.classList.add('synced');
-    icon.textContent  = '✅';
-    label.textContent = 'Sincronizar vocabulario';
-    emailEl.textContent = currentUser.email;
-    emailEl.style.display = 'inline';
-    signoutEl.style.display = 'inline';
-  } else {
-    btn.classList.remove('synced');
-    icon.textContent  = '☁️';
-    label.textContent = 'Sincronizar vocabulario';
-    emailEl.style.display = 'none';
-    signoutEl.style.display = 'none';
-  }
-}
-
-async function handleSync() {
-  if (!currentUser) {
-    try {
-      setSyncStatus('info', '🔐 Iniciando sesión con Google…');
-      await auth.signInWithPopup(provider);
-      await doSync();
-    } catch(err) {
-      setSyncStatus('err', '❌ Error al iniciar sesión: ' + err.message);
-    }
-  } else {
-    await doSync();
-  }
-}
-
-async function doSync() {
-  if (!currentUser) return;
-  setSyncStatus('info', '⏳ Sincronizando vocabulario…');
-  document.getElementById('btn-sync').classList.add('syncing');
-
-  try {
-    const uid = currentUser.uid;
-    const docRef = db.collection('traductor').doc(uid);
-    const snap = await docRef.get();
-
-    const localVocab  = [...vocab];
-    const localStats  = {...stats};
-    const localSC     = quizSessionCount;
-
-    if (snap.exists) {
-      const remote = snap.data();
-      const remoteVocab = remote.vocab  || [];
-      const remoteStats = remote.stats  || {};
-      const remoteSC    = remote.quizSessionCount || 0;
-
-      // Merge vocab: combine by id, prefer local when same id exists
-      const mergedVocab = mergeVocab(localVocab, remoteVocab);
-
-      // Merge stats: for same id, add ok/fail counts, keep latest lastSeen
-      const mergedStats = mergeStats(localStats, remoteStats);
-
-      // quizSessionCount: use the higher value
-      const mergedSC = Math.max(localSC, remoteSC);
-
-      // Save merged to localStorage
-      vocab = mergedVocab;
-      stats = mergedStats;
-      quizSessionCount = mergedSC;
-      saveVocab();
-      saveStats();
-      try { localStorage.setItem('lexio_sc', mergedSC); } catch(_) {}
-
-      // Upload merged to Firestore
-      await docRef.set({
-        vocab: mergedVocab,
-        stats: mergedStats,
-        quizSessionCount: mergedSC,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      updateVocabCount();
-      setSyncStatus('ok', `✅ Sincronizado — ${mergedVocab.length} palabra${mergedVocab.length!==1?'s':''} en vocabulario`);
-
-    } else {
-      // Primera vez: subir datos locales
-      await docRef.set({
-        vocab: localVocab,
-        stats: localStats,
-        quizSessionCount: localSC,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      setSyncStatus('ok', `✅ Vocabulario subido por primera vez — ${localVocab.length} palabra${localVocab.length!==1?'s':''}`);
-    }
-
-    // Re-render si estamos en la pestaña vocab o quiz
-    const activeTab = document.querySelector('.tab.on')?.dataset?.tab;
-    if (activeTab === 'vocab') renderVocab();
-    if (activeTab === 'quiz')  renderQuiz();
-
-  } catch(err) {
-    console.error('Sync error:', err);
-    setSyncStatus('err', '❌ Error al sincronizar: ' + err.message);
-  }
-
-  document.getElementById('btn-sync').classList.remove('syncing');
-}
-
-// Combina dos arrays de vocab sin duplicar por id
-// Si mismo id en ambos, gana el local (más reciente en ese dispositivo)
-function mergeVocab(local, remote) {
-  const map = new Map();
-  // Primero remotos, luego locales (locales sobreescriben)
-  for (const v of remote) map.set(v.id, v);
-  for (const v of local)  map.set(v.id, v);
-  return Array.from(map.values());
-}
-
-// Combina stats: suma ok/fail, usa el lastSeen mayor
-function mergeStats(local, remote) {
-  const result = {};
-  const allKeys = new Set([...Object.keys(local), ...Object.keys(remote)]);
-  for (const k of allKeys) {
-    const l = local[k]  || {ok:0, fail:0, lastSeen:0};
-    const r = remote[k] || {ok:0, fail:0, lastSeen:0};
-    result[k] = {
-      ok:       l.ok   + r.ok,
-      fail:     l.fail + r.fail,
-      lastSeen: Math.max(l.lastSeen, r.lastSeen)
-    };
-  }
-  return result;
-}
-
-function setSyncStatus(type, msg) {
-  const bar = document.getElementById('sync-status-bar');
-  document.getElementById('sync-status-msg').textContent = msg;
-  bar.className = 'visible ' + type;
-  if (type === 'ok') setTimeout(closeSyncBar, 4000);
-}
-
-function closeSyncBar() {
-  document.getElementById('sync-status-bar').className = '';
-  updateSyncUI();
-}
-
-async function signOut() {
-  await auth.signOut();
-  currentUser = null;
-  updateSyncUI();
-}
-
-// ══════════════════════════════════════════════════════
-//  LANGUAGE PAIR CONFIG (sin cambios)
+//  LANGUAGE PAIR CONFIG
 // ══════════════════════════════════════════════════════
 const LANG_PAIRS = {
   'es-en': { a:'es', b:'en', labelA:'Español', labelB:'Inglés', flagA:'🇪🇸', flagB:'🇬🇧', nameA:'español', nameB:'inglés' },
