@@ -1,335 +1,410 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ilustrador · Castroverde</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2a7a6e">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg:        #eef4f3;
-      --surface:   #e2edeb;
-      --card:      #d6e8e5;
-      --border:    #b4d0cc;
-      --text:      #1e3532;
-      --muted:     #5a8a84;
-      --accent:    #2a7a6e;
-      --accent2:   #3a9e6e;
-      --red:       #c45a3a;
-      --font-h:    'Playfair Display', Georgia, serif;
-      --font-body: 'Source Serif 4', Georgia, serif;
-      --font-ui:   'DM Mono', monospace;
-      --radius:    3px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
-    body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.7; display: flex; flex-direction: column; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de prompts · Imágenes del libro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 11px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .logo { font-family: var(--font-h); font-size: 19px; font-weight: 700; }
-    .logo span { color: var(--accent); font-style: italic; }
-    .logo small { display: block; font-family: var(--font-ui); font-size: 8px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 1px; }
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: #faf8f4;
+    color: #1a1814;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
 
-    .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; min-height: 0; }
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e8e2d8;
+    padding: 2.5rem 2.25rem 2.5rem;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+  }
 
-    .panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-    .panel-header { flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; }
-    .panel-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
-    .panel-title span { color: var(--accent); }
+  .app-header {
+    border-bottom: 1px solid #e8e2d8;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.75rem;
+  }
 
-    .form-scroll { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .app-header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+    color: #1a1814;
+    margin-bottom: 4px;
+  }
 
-    .field-label { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; display: block; }
-    .field-hint  { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+  .app-header p {
+    font-size: 15px;
+    color: #777060;
+    font-style: italic;
+  }
 
-    textarea.field-input, input.field-input {
-      width: 100%; background: var(--card); border: 1px solid var(--border);
-      color: var(--text); padding: 8px 11px; font-family: var(--font-body); font-size: 13px;
-      border-radius: var(--radius); outline: none; resize: none;
-    }
-    textarea.field-input:focus, input.field-input:focus { border-color: var(--accent); }
-    textarea.field-input::placeholder, input.field-input::placeholder { color: var(--muted); font-style: italic; }
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #999080;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'EB Garamond', serif;
+  }
 
-    .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .style-btn {
-      background: var(--card); border: 1px solid var(--border); color: var(--muted);
-      padding: 7px 6px; border-radius: var(--radius); cursor: pointer;
-      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
-      text-align: center; transition: all 0.15s; line-height: 1.4;
-    }
-    .style-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .style-btn.active { background: var(--accent); border-color: var(--accent); color: #eef4f3; }
-    .style-btn small { display: block; font-size: 7px; opacity: 0.75; margin-top: 1px; letter-spacing: 0.5px; text-transform: none; font-style: italic; }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 1px;
+    background: #B89A5A;
+  }
 
-    .format-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-    .format-btn {
-      background: var(--card); border: 1px solid var(--border); color: var(--muted);
-      padding: 8px 4px; border-radius: var(--radius); cursor: pointer;
-      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
-      text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 5px;
-    }
-    .format-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .format-btn.active { background: var(--accent); border-color: var(--accent); color: #eef4f3; }
-    .format-icon { border: 1.5px solid currentColor; border-radius: 1px; }
+  textarea {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 13px 15px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #1a1814;
+    background: #fff;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
 
-    .panel-actions { flex-shrink: 0; padding: 10px 15px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 7px; align-items: center; }
+  textarea:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
 
-    .panel-right { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); position: relative; }
-    .result-header { flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; }
+  textarea::placeholder {
+    color: #bbb5a8;
+    font-style: italic;
+  }
 
-    .image-area { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 20px; position: relative; }
+  .note-tip {
+    font-size: 12.5px;
+    color: #aaa496;
+    font-style: italic;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
 
-    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); text-align: center; }
-    .empty-state .big-char { font-family: var(--font-h); font-size: 64px; color: var(--border); line-height: 1; }
-    .empty-state p { font-family: var(--font-ui); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
 
-    .result-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--radius); box-shadow: 0 4px 24px rgba(30,53,50,0.15); display: none; }
-    .result-img.visible { display: block; }
+  @media (max-width: 540px) {
+    .fields-grid { grid-template-columns: 1fr; }
+  }
 
-    .loading-overlay { display: none; position: absolute; inset: 0; background: rgba(238,244,243,0.92); z-index: 50; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
-    .loading-overlay.visible { display: flex; }
-    .spinner { width: 26px; height: 26px; border: 1px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
-    .loading-sub  { font-family: var(--font-ui); font-size: 9px; color: var(--border); letter-spacing: 1px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
 
-    .result-bar { display: none; flex-shrink: 0; padding: 9px 15px; border-top: 1px solid var(--border); background: var(--surface); gap: 7px; align-items: center; }
-    .result-bar.visible { display: flex; }
-    .result-prompt { font-family: var(--font-ui); font-size: 9px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  select {
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 32px 9px 12px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14.5px;
+    color: #1a1814;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23999' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
 
-    .error-box { display: none; background: rgba(196,90,58,0.1); border: 1px solid var(--red); border-left: 3px solid var(--red); padding: 10px 14px; border-radius: var(--radius); color: var(--red); font-size: 12px; margin: 10px 15px 0; flex-shrink: 0; }
+  select:focus { outline: none; border-color: #B89A5A; }
 
-    .btn { padding: 7px 13px; border: none; border-radius: var(--radius); cursor: pointer; font-family: var(--font-ui); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.2s; white-space: nowrap; }
-    .btn-primary { background: var(--accent); color: #eef4f3; }
-    .btn-primary:hover:not(:disabled) { background: #1f5c54; }
-    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-success { background: var(--accent2); color: #eef4f3; }
-    .btn-success:hover { background: #2e7d54; }
+  .divider {
+    border: none;
+    border-top: 1px solid #eee8df;
+    margin: 1.5rem 0;
+  }
 
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-  </style>
+  .fixed-block {
+    background: #faf7f2;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 7px 7px 0;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #6a6258;
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  .fixed-block .fixed-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #B89A5A;
+    font-style: normal;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-generate {
+    width: 100%;
+    padding: 13px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.07);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-generate:hover { background: rgba(184,154,90,0.14); }
+  .btn-generate:active { transform: scale(0.99); }
+
+  .ornament {
+    text-align: center;
+    color: #B89A5A;
+    font-size: 20px;
+    opacity: 0.4;
+    letter-spacing: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .output-area {
+    border: 1px solid #ddd8ce;
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .output-area.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #f7f4ef;
+    border-bottom: 1px solid #e8e2d8;
+  }
+
+  .output-title {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999080;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-copy {
+    font-family: 'EB Garamond', serif;
+    font-size: 13.5px;
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: transparent;
+    color: #B89A5A;
+    cursor: pointer;
+    transition: background 0.12s;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-copy:hover { background: rgba(184,154,90,0.1); }
+  .btn-copy.copied { background: rgba(184,154,90,0.18); color: #8a6e2f; border-color: #8a6e2f; }
+
+  .output-text {
+    padding: 16px 18px;
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: #1a1814;
+    font-family: 'EB Garamond', Georgia, serif;
+    white-space: pre-wrap;
+    background: #fff;
+    word-break: break-word;
+  }
+
+  .scene-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo">Ilustrador <span>Castroverde</span><small>Generador de imágenes históricas · Stable Diffusion XL</small></div>
-</header>
+<div class="container">
 
-<div class="layout">
-
-  <div class="panel-left">
-    <div class="panel-header">
-      <span class="panel-title">✍ Describe tu <span>ilustración</span></span>
-    </div>
-
-    <div class="form-scroll">
-
-      <div>
-        <label class="field-label" for="desc-es">Descripción</label>
-        <textarea class="field-input" id="desc-es" rows="4"
-          placeholder="Ej: Vista del castillo de Castroverde de Cerrato en el siglo XV, con el valle del Esgueva al fondo, campos de cereal, aldeanos trabajando…"></textarea>
-        <div class="field-hint">Describe con detalle: época, lugar, personajes, luz, atmósfera. Ctrl+Enter para generar.</div>
-      </div>
-
-      <div>
-        <label class="field-label">Estilo artístico</label>
-        <div class="style-grid" id="style-grid">
-          <button class="style-btn active" data-style="old engraving, woodcut print, black and white, detailed hatching, 15th century illustration style">🖨 Grabado medieval<small>xilografía, talla en madera</small></button>
-          <button class="style-btn" data-style="oil painting, realistic, detailed, warm golden light, old masters style, museum quality">🖼 Óleo histórico<small>estilo maestros antiguos</small></button>
-          <button class="style-btn" data-style="antique map illustration, hand-drawn cartography, sepia tones, decorative compass rose, parchment texture, medieval cartography style">🗺 Mapa antiguo<small>cartografía medieval</small></button>
-          <button class="style-btn" data-style="watercolor painting, soft muted colors, loose brushwork, historical book illustration">🎨 Acuarela<small>ilustración de libro</small></button>
-          <button class="style-btn" data-style="vintage sepia photograph, aged photo, early 20th century photography, documentary style">📷 Fotografía sepia<small>fotografía antigua</small></button>
-          <button class="style-btn" data-style="detailed pencil sketch, architectural drawing, fine cross-hatching, technical illustration">✏ Dibujo a lápiz<small>boceto arquitectónico</small></button>
-        </div>
-      </div>
-
-      <div>
-        <label class="field-label">Formato</label>
-        <div class="format-grid" id="format-grid">
-          <button class="format-btn active" data-w="1024" data-h="1024">
-            <div class="format-icon" style="width:22px;height:22px;"></div>
-            Cuadrado
-          </button>
-          <button class="format-btn" data-w="1280" data-h="720">
-            <div class="format-icon" style="width:28px;height:16px;"></div>
-            Apaisado
-          </button>
-          <button class="format-btn" data-w="720" data-h="1280">
-            <div class="format-icon" style="width:16px;height:28px;"></div>
-            Vertical
-          </button>
-        </div>
-        <div class="field-hint">Apaisado para portada o doble página · Vertical para interior</div>
-      </div>
-
-      <div>
-        <label class="field-label" for="negative">Excluir <span style="font-style:italic;text-transform:none;letter-spacing:0;">(opcional)</span></label>
-        <input class="field-input" id="negative" type="text" placeholder="Ej: coches, cables eléctricos, personas modernas…">
-        <div class="field-hint">Elementos que no deben aparecer en la imagen.</div>
-      </div>
-
-    </div>
-
-    <div class="error-box" id="error-box"></div>
-
-    <div class="panel-actions">
-      <button class="btn btn-ghost" id="btn-clear" style="flex-shrink:0;">✕ Limpiar</button>
-      <button class="btn btn-primary" id="btn-generate" style="flex:1;">Generar ilustración →</button>
-    </div>
+  <div class="app-header">
+    <h1>Generador de prompts para imágenes</h1>
+    <p>Describe la escena con el máximo detalle. El estilo fotográfico se aplicará automáticamente.</p>
   </div>
 
-  <div class="panel-right">
-    <div class="result-header">
-      <span class="panel-title">✦ Resultado</span>
+  <!-- Escena -->
+  <div class="scene-header">
+    <div class="section-label">Descripción de la escena</div>
+  </div>
+  <textarea id="scene" rows="6" placeholder="Describe la escena con todo el detalle posible: elementos arquitectónicos, personajes, objetos, acción, época, lugar, atmósfera... Cuanto más específico, mejor resultado."></textarea>
+  <p class="note-tip">Ej: Una puerta de entrada a una fortaleza medieval del siglo X, con dos guardias armados con lanzas a ambos lados, iluminados por antorchas de piedra incrustadas en el muro...</p>
+
+  <!-- Selectores -->
+  <div class="fields-grid">
+
+    <div class="field-group">
+      <div class="section-label">Momento del día / luz</div>
+      <select id="lighting">
+        <option value="dramatic golden hour sunlight entering from a low angle, casting long, soft shadows, emphasizing the rough stone texture and age">Hora dorada (amanecer/atardecer)</option>
+        <option value="harsh midday sun casting short, sharp shadows, bleaching stone surfaces with intense light">Mediodía despejado</option>
+        <option value="deep twilight with fading blue light on the horizon, torchlight becoming dominant, warm glow against cool sky">Crepúsculo</option>
+        <option value="full night lit by torchlight and moonlight, deep shadows with warm flickering amber glow from the flames">Noche con antorchas</option>
+        <option value="soft overcast diffuse light, flat and cold, emphasizing texture without harsh shadows, muted tones">Día nublado</option>
+        <option value="dramatic storm light, dark turbulent clouds with shafts of pale light breaking through, tense atmosphere">Luz de tormenta</option>
+        <option value="soft pre-dawn blue light, cold and quiet, first light barely touching the horizon, deep shadows still dominant">Madrugada / alba</option>
+      </select>
     </div>
 
-    <div class="image-area" id="image-area">
-      <div class="loading-overlay" id="loading-overlay">
-        <div class="spinner"></div>
-        <div class="loading-text">Generando ilustración…</div>
-        <div class="loading-sub" id="loading-sub">Puede tardar entre 10 y 30 segundos</div>
-      </div>
-      <div class="empty-state" id="empty-state">
-        <div class="big-char">❧</div>
-        <p>Describe tu ilustración y pulsa Generar</p>
-      </div>
-      <img class="result-img" id="result-img" alt="Ilustración generada">
+    <div class="field-group">
+      <div class="section-label">Paleta de color</div>
+      <select id="palette">
+        <option value="earthy, warm, natural tones — ochres, siennas, aged stone grays">Tierra y cálido (por defecto)</option>
+        <option value="cool stone grays, muted blues, silver morning haze, cold and austere">Piedra fría y azul</option>
+        <option value="rich ochres, burnt sienna, deep chestnut shadows — Rembrandt-like tonal depth">Ocre y sombras profundas</option>
+        <option value="desaturated, almost monochromatic with subtle warm highlights, documentary restraint">Casi monocromático</option>
+        <option value="vivid autumn colors — russet, gold, deep olive green, amber foliage">Otoño vívido</option>
+        <option value="cold winter palette — frost whites, pale grey stone, bleached winter sky, blue shadows">Invierno frío</option>
+        <option value="deep jewel-like tones at night — dark navy sky, amber torch glow, rich shadow blacks">Noche profunda y gemas</option>
+      </select>
     </div>
 
-    <div class="result-bar" id="result-bar">
-      <span class="result-prompt" id="result-prompt"></span>
-      <button class="btn btn-success" id="btn-download">⬇ Descargar</button>
+    <div class="field-group">
+      <div class="section-label">Encuadre / composición</div>
+      <select id="composition">
+        <option value="cinematic, symmetrical framing, strong depth perspective leading the eye into the scene, balanced and monumental">Simétrico y cinematográfico</option>
+        <option value="low angle shot looking up, emphasizing height, power and scale of the architecture, wide angle lens distortion">Ángulo bajo (contrapicado)</option>
+        <option value="high angle bird's eye view looking down onto the scene, revealing spatial layout and patterns from above">Ángulo alto (picado)</option>
+        <option value="extreme close-up detail shot, macro focus on surface texture and material, very shallow depth of field, background dissolved">Primer plano de detalle</option>
+        <option value="wide establishing shot showing full context of location, human figures small and dwarfed by architecture and landscape">Plano general</option>
+        <option value="rule of thirds composition, subject off-center, strong foreground elements framing the main subject in depth">Regla de tercios</option>
+        <option value="over-the-shoulder perspective, intimate point of view, viewer feels present inside the scene">Perspectiva subjetiva / hombro</option>
+      </select>
     </div>
+
+    <div class="field-group">
+      <div class="section-label">Cámara / óptica</div>
+      <select id="camera">
+        <option value="medium format camera with natural film grain, deep focus, and extremely sharp textures across the full frame">Formato medio (general, por defecto)</option>
+        <option value="35mm film camera with slight vignetting, natural perspective, authentic documentary feel, slight halation in highlights">35mm — estética documental</option>
+        <option value="large format view camera, extreme corner-to-corner sharpness, maximum tonal and textural detail">Gran formato — máximo detalle</option>
+        <option value="telephoto 200mm compression, background elements drawn close, very shallow depth of field, subject isolated">Teleobjetivo 200mm</option>
+        <option value="wide angle 24mm lens, expansive environmental view, slight barrel distortion, full spatial context">Gran angular 24mm</option>
+        <option value="tilt-shift lens, selective focus plane, miniature-like depth control, parts of the image soft while center is razor sharp">Tilt-shift — plano de foco selectivo</option>
+      </select>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Bloque fijo -->
+  <div class="section-label">Estilo constante (aplicado a todas las imágenes)</div>
+  <div class="fixed-block">
+    <div class="fixed-label">Fijo · no editable</div>
+    Captured in an ultra-realistic historical documentary film aesthetic. 8k, highly detailed, photorealistic, no fantasy elements. Extremely sharp textures.
+  </div>
+
+  <!-- Botón generar -->
+  <button class="btn-generate" onclick="buildPrompt()">✦ Generar prompt completo</button>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- Output -->
+  <div class="output-area" id="outputArea">
+    <div class="output-header">
+      <span class="output-title">Prompt generado</span>
+      <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
+    </div>
+    <div class="output-text" id="outputText"></div>
   </div>
 
 </div>
 
 <script>
-var selectedStyle = document.querySelector('.style-btn.active').dataset.style;
-var selectedW = 1024;
-var selectedH = 1024;
-
-function get(id){ return document.getElementById(id); }
-function showError(msg){ var e=get('error-box'); e.textContent='⚠ '+msg; e.style.display='block'; }
-function hideError(){ get('error-box').style.display='none'; }
-
-// Estilo
-document.querySelectorAll('.style-btn').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    document.querySelectorAll('.style-btn').forEach(function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-    selectedStyle = btn.dataset.style;
-  });
-});
-
-// Formato
-document.querySelectorAll('.format-btn').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    document.querySelectorAll('.format-btn').forEach(function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-    selectedW = parseInt(btn.dataset.w);
-    selectedH = parseInt(btn.dataset.h);
-  });
-});
-
-// ⚠ CAMBIA ESTA URL por la de tu Cloudflare Worker tras desplegarlo
-var WORKER_URL = 'https://castroverde-img.castrovert.workers.dev';
-
-function generateImage(){
-  var desc = get('desc-es').value.trim();
-  if(!desc){ showError('Escribe una descripción antes de generar.'); return; }
-
-  var negative = get('negative').value.trim() || 'modern, cars, electricity poles, anachronistic, blurry, low quality, deformed, ugly';
-  var prompt = desc + ', ' + selectedStyle;
-
-  hideError();
-  get('empty-state').style.display = 'none';
-  get('result-img').classList.remove('visible');
-  get('result-bar').classList.remove('visible');
-  get('loading-overlay').classList.add('visible');
-  get('btn-generate').disabled = true;
-
-  var secs = 0;
-  var timer = setInterval(function(){
-    secs++;
-    get('loading-sub').textContent = 'Generando… ' + secs + 's';
-  }, 1000);
-
-  fetch(WORKER_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt:          prompt,
-      negative_prompt: negative,
-      width:           selectedW,
-      height:          selectedH,
-    }),
-  })
-  .then(function(res) {
-    if (!res.ok) {
-      return res.json().then(function(err) {
-        throw new Error(err.error || 'Error ' + res.status);
-      });
+  function buildPrompt() {
+    const scene = document.getElementById('scene').value.trim();
+    if (!scene) {
+      const ta = document.getElementById('scene');
+      ta.focus();
+      ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => {
+        ta.style.borderColor = '';
+        ta.style.boxShadow = '';
+      }, 1800);
+      return;
     }
-    return res.blob();
-  })
-  .then(function(blob) {
-    clearInterval(timer);
-    var objectUrl = URL.createObjectURL(blob);
-    var img = get('result-img');
-    img.onload = function(){
-      get('loading-overlay').classList.remove('visible');
-      get('btn-generate').disabled = false;
-      img.classList.add('visible');
-      img._objectUrl  = objectUrl;
-      img._filename   = 'castroverde-' + Date.now() + '.jpg';
-      get('result-prompt').textContent = desc;
-      get('result-bar').classList.add('visible');
-    };
-    img.src = objectUrl;
-  })
-  .catch(function(err) {
-    clearInterval(timer);
-    get('loading-overlay').classList.remove('visible');
-    get('btn-generate').disabled = false;
-    get('empty-state').style.display = 'flex';
-    console.error('Error generando imagen:', err);
-    showError('No se pudo generar la imagen: ' + (err.message || 'error desconocido'));
-  });
-}
 
-get('btn-download').addEventListener('click', function(){
-  var img = get('result-img');
-  if(!img._objectUrl) return;
-  var a = document.createElement('a');
-  a.href = img._objectUrl;
-  a.download = img._filename || 'ilustracion.jpg';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-});
+    const lighting = document.getElementById('lighting').value;
+    const palette  = document.getElementById('palette').value;
+    const comp     = document.getElementById('composition').value;
+    const camera   = document.getElementById('camera').value;
 
-// Limpiar
-get('btn-clear').addEventListener('click', function(){
-  get('desc-es').value = '';
-  get('negative').value = '';
-  hideError();
-  get('result-img').classList.remove('visible');
-  get('result-bar').classList.remove('visible');
-  get('empty-state').style.display = 'flex';
-});
+    const prompt =
+      scene + '\n\n' +
+      'Captured in an ultra-realistic historical documentary film aesthetic. ' +
+      'Shot on a ' + camera + '.\n' +
+      'Lighting: ' + lighting + '.\n' +
+      'Color palette: ' + palette + '.\n' +
+      'Composition: ' + comp + '.\n' +
+      '8k, highly detailed, photorealistic, no fantasy elements.';
 
-get('btn-generate').addEventListener('click', generateImage);
-get('desc-es').addEventListener('keydown', function(e){
-  if(e.ctrlKey && (e.key==='Enter'||e.keyCode===13)) generateImage();
-});
+    document.getElementById('outputText').textContent = prompt;
+
+    const area = document.getElementById('outputArea');
+    area.classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
+
+    setTimeout(() => {
+      area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
+  }
+
+  function copyPrompt() {
+    const text = document.getElementById('outputText').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copiar';
+        btn.classList.remove('copied');
+      }, 2200);
+    });
+  }
 </script>
+
 </body>
 </html>
