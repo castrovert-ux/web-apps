@@ -482,6 +482,18 @@
   .scene-header {
     margin-bottom: 8px;
   }
+
+  .style-selector-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #B89A5A;
+    font-style: normal;
+    font-weight: 500;
+    margin-bottom: 4px;
+    font-family: 'EB Garamond', serif;
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -563,11 +575,21 @@
 
   <div class="divider"></div>
 
-  <!-- Bloque fijo -->
-  <div class="section-label">Estilo constante (aplicado a todas las imágenes)</div>
-  <div class="fixed-block">
-    <div class="fixed-label">Fijo · no editable</div>
-    Captured in an ultra-realistic historical documentary film aesthetic. 8k, highly detailed, photorealistic, no fantasy elements. Extremely sharp textures.
+  <!-- Selector de estilo -->
+  <div class="section-label">Modo de estilo</div>
+  <div class="field-group" style="margin-bottom: 12px;">
+    <select id="styleMode" onchange="updateStylePreview()">
+      <option value="photo">Fotografía documental histórica (por defecto)</option>
+      <option value="romantic">Pintura romántica · Estilo Delacroix (s. XIX)</option>
+      <option value="renaissance">Pintura renacentista · Estilo Raphael / Da Vinci</option>
+      <option value="baroque">Pintura barroca · Estilo Caravaggio / Rembrandt</option>
+      <option value="watercolor">Acuarela histórica · Ilustración de manuscrito</option>
+      <option value="engraving">Grabado en acero · Ilustración enciclopédica</option>
+    </select>
+  </div>
+  <div class="fixed-block" id="stylePreview">
+    <div class="fixed-label" id="stylePreviewLabel">Estilo activo</div>
+    <span id="stylePreviewText"></span>
   </div>
 
   <!-- Botón generar -->
@@ -638,6 +660,46 @@
     }
   };
 
+  const STYLES = {
+    photo: {
+      label: "Fotografía documental histórica",
+      text: "Captured in an ultra-realistic historical documentary film aesthetic. 8k, highly detailed, photorealistic, no fantasy elements. Extremely sharp textures.",
+      suffix: "8k, highly detailed, photorealistic, no fantasy elements."
+    },
+    romantic: {
+      label: "Pintura romántica · Delacroix (s. XIX)",
+      text: "Pintura al óleo de estilo romántico del siglo XIX, inspirada en Eugène Delacroix. Escena dramática con gran dinamismo, figuras en movimiento, composición con diagonales marcadas. Iluminación dramática con alto contraste, paleta rica y vibrante con predominio de tonos cálidos. Pincelada suelta y expresiva, textura de óleo con impasto visible, atmósfera con ligera neblina. Composición narrativa y cargada de emoción.",
+      suffix: "Oil painting, Romanticism, Delacroix style, dramatic composition, impasto texture, emotional narrative."
+    },
+    renaissance: {
+      label: "Pintura renacentista · Raphael / Da Vinci",
+      text: "Pintura al óleo de estilo renacentista italiano del siglo XV-XVI, inspirada en Raphael y Leonardo da Vinci. Composición equilibrada y armónica con uso del sfumato. Figuras idealizadas con anatomía precisa, fondos con perspectiva aérea y paisajes lejanos. Paleta serena de verdes, azules y ocres dorados. Pincelada invisible y acabado suave, luz difusa y envolvente que modela los volúmenes con delicadeza.",
+      suffix: "Renaissance oil painting, sfumato technique, balanced composition, idealized figures, Italian cinquecento."
+    },
+    baroque: {
+      label: "Pintura barroca · Caravaggio / Rembrandt",
+      text: "Pintura al óleo de estilo barroco del siglo XVII, inspirada en Caravaggio y Rembrandt. Técnica de claroscuro extremo con tenebrismo pronunciado: figuras emergiendo de la oscuridad en un foco de luz dramática. Paleta de negros profundos, ocres cálidos y blancos luminosos. Pincelada rica y pastosa, textura de óleo densa. Composición teatral, psicología de los personajes muy marcada, realismo físico sin idealizaciones.",
+      suffix: "Baroque oil painting, chiaroscuro, tenebrism, Caravaggio style, dramatic lighting, rich impasto."
+    },
+    watercolor: {
+      label: "Acuarela histórica · Ilustración de manuscrito",
+      text: "Ilustración en acuarela de estilo histórico, evocando los manuscritos iluminados y los atlas geográficos del siglo XVIII. Trazos a pluma con línea fina y precisa, lavados de color transparentes y luminosos. Paleta de azules cobalto, rojos carmín, ocres dorados y verdes esmeralda. Papel envejecido como fondo, con ligeras manchas de tiempo. Estética de ilustración científica naturalista, delicada y erudita.",
+      suffix: "Historical watercolor illustration, manuscript style, ink linework, transparent washes, antique paper texture."
+    },
+    engraving: {
+      label: "Grabado en acero · Ilustración enciclopédica",
+      text: "Grabado en acero de estilo enciclopédico, inspirado en las ilustraciones de la Encyclopédie de Diderot y D'Alembert (siglo XVIII). Líneas muy finas y precisas, sombreado mediante tramas de líneas paralelas y cruzadas (hatching y cross-hatching). Escala de grises pura sin color. Detalle arquitectónico y técnico extremo. Composición informativa y rigurosa, fondo neutro o ligeramente veteado como papel antiguo.",
+      suffix: "Steel engraving, encyclopedic illustration, hatching technique, grayscale, 18th century style, highly detailed linework."
+    }
+  };
+
+  function updateStylePreview() {
+    const mode = document.getElementById('styleMode').value;
+    const s = STYLES[mode];
+    document.getElementById('stylePreviewLabel').textContent = s.label;
+    document.getElementById('stylePreviewText').textContent = s.text;
+  }
+
   const STORAGE_KEY = 'prompt_historial_v1';
 
   function loadHistorial() {
@@ -689,15 +751,25 @@
     const palette     = document.getElementById('palette').value;
     const composition = document.getElementById('composition').value;
     const camera      = document.getElementById('camera').value;
+    const styleMode   = document.getElementById('styleMode').value;
+    const style       = STYLES[styleMode];
 
-    const prompt =
-      scene + '\n\n' +
-      'Captured in an ultra-realistic historical documentary film aesthetic. ' +
-      'Shot on a ' + camera + '.\n' +
-      'Lighting: ' + lighting + '.\n' +
-      'Color palette: ' + palette + '.\n' +
-      'Composition: ' + composition + '.\n' +
-      '8k, highly detailed, photorealistic, no fantasy elements.';
+    const isPhoto = styleMode === 'photo';
+
+    const prompt = isPhoto
+      ? scene + '\n\n' +
+        'Captured in an ultra-realistic historical documentary film aesthetic. ' +
+        'Shot on a ' + camera + '.\n' +
+        'Lighting: ' + lighting + '.\n' +
+        'Color palette: ' + palette + '.\n' +
+        'Composition: ' + composition + '.\n' +
+        '8k, highly detailed, photorealistic, no fantasy elements.'
+      : scene + '\n\n' +
+        style.text + '\n' +
+        'Lighting: ' + lighting + '.\n' +
+        'Color palette / mood: ' + palette + '.\n' +
+        'Composition: ' + composition + '.\n' +
+        style.suffix;
 
     document.getElementById('outputText').textContent = prompt;
     const area = document.getElementById('outputArea');
@@ -706,7 +778,7 @@
     document.getElementById('copyBtn').classList.remove('copied');
 
     /* Guardar en historial */
-    const entry = { id: Date.now(), date: new Date().toISOString(), scene, lighting, palette, composition, camera, prompt };
+    const entry = { id: Date.now(), date: new Date().toISOString(), scene, lighting, palette, composition, camera, styleMode, prompt };
     const list = loadHistorial();
     list.unshift(entry);
     saveHistorial(list);
@@ -755,12 +827,14 @@
       const pLabel   = label('palette', e.palette);
       const cLabel   = label('composition', e.composition);
       const camLabel = label('camera', e.camera);
+      const styleLabel = e.styleMode ? (STYLES[e.styleMode] ? STYLES[e.styleMode].label : e.styleMode) : 'Foto documental';
       return `
       <div class="hist-item" id="hitem-${e.id}">
         <div class="hist-item-header" onclick="toggleItem(${e.id})">
           <div class="hist-meta">
             <div class="hist-scene-preview">${esc(preview)}</div>
             <div class="hist-tags">
+              <span class="hist-tag">${esc(styleLabel)}</span>
               <span class="hist-tag">${esc(lLabel)}</span>
               <span class="hist-tag">${esc(pLabel)}</span>
               <span class="hist-tag">${esc(cLabel)}</span>
@@ -821,6 +895,8 @@
     setSelectValue('palette',     entry.palette);
     setSelectValue('composition', entry.composition);
     setSelectValue('camera',      entry.camera);
+    setSelectValue('styleMode',   entry.styleMode || 'photo');
+    updateStylePreview();
     document.getElementById('outputText').textContent = entry.prompt;
     document.getElementById('outputArea').classList.add('visible');
     document.getElementById('copyBtn').textContent = 'Copiar';
@@ -857,6 +933,7 @@
   }
 
   /* Inicializar */
+  updateStylePreview();
   updateCount();
 </script>
 
