@@ -8,6 +8,9 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
@@ -158,6 +161,20 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
 <body>
 
 
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar" style="background:#1a1a2e;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 20px;border-bottom:1px solid rgba(255,255,255,0.06)">
+  <span id="sync-user-text" style="display:none;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px;font-family:monospace"></span>
+  <button id="btn-signout" onclick="fbSignOut()" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;text-transform:uppercase;font-family:monospace">Cerrar sesión</button>
+  <button id="btn-sync" onclick="handleSync()" style="background:none;border:1px solid rgba(45,106,79,0.5);color:#7ec8a0;padding:4px 11px;border-radius:20px;cursor:pointer;font-size:10px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:5px;font-family:monospace;transition:all .2s">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar vocabulario</span>
+  </button>
+</div>
+<div id="sync-status" style="display:none;padding:5px 20px;font-size:10px;letter-spacing:1px;text-transform:uppercase;align-items:center;justify-content:space-between;gap:10px">
+  <span id="sync-status-msg"></span>
+  <button onclick="closeSyncStatus()" style="background:none;border:none;cursor:pointer;opacity:.6;font-size:12px;padding:0 3px">✕</button>
+</div>
+
 <header>
   <h1>Our <span>Translator</span></h1>
   <p>Vocabulary · Study</p>
@@ -243,6 +260,127 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
 
 <script>
 // ══════════════════════════════════════════════════════
+//  FIREBASE
+// ══════════════════════════════════════════════════════
+var firebaseConfig = {
+  apiKey: "AIzaSyAnqySqGTWFFjBESReTW4hZ24_ReFCHO70",
+  authDomain: "castroverde-apps.firebaseapp.com",
+  projectId: "castroverde-apps",
+  storageBucket: "castroverde-apps.firebasestorage.app",
+  messagingSenderId: "371026533141",
+  appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+};
+firebase.initializeApp(firebaseConfig);
+var fbAuth     = firebase.auth();
+var fbDb       = firebase.firestore();
+var fbProvider = new firebase.auth.GoogleAuthProvider();
+var fbUser     = null;
+
+fbAuth.onAuthStateChanged(function(user) {
+  fbUser = user;
+  updateSyncUI();
+  if (user && vocab.length === 0) autoRestoreFromFirestore();
+});
+
+function updateSyncUI() {
+  var userEl  = document.getElementById('sync-user-text');
+  var signout = document.getElementById('btn-signout');
+  var btn     = document.getElementById('btn-sync');
+  var icon    = document.getElementById('sync-icon');
+  var label   = document.getElementById('sync-label');
+  if (fbUser) {
+    btn.style.borderColor = 'rgba(45,106,79,0.8)';
+    icon.textContent  = '✓';
+    label.textContent = 'Sincronizar vocabulario';
+    userEl.textContent    = fbUser.email;
+    userEl.style.display  = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.style.borderColor = 'rgba(45,106,79,0.5)';
+    icon.textContent      = '☁';
+    label.textContent     = 'Sincronizar vocabulario';
+    userEl.style.display  = 'none';
+    signout.style.display = 'none';
+  }
+}
+
+function handleSync() {
+  if (!fbUser) {
+    setSyncStatus('info', 'Iniciando sesión con Google…');
+    fbAuth.signInWithPopup(fbProvider)
+      .then(function() { return doSync(); })
+      .catch(function(err) { setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
+  } else {
+    doSync();
+  }
+}
+
+function doSync() {
+  if (!fbUser) return;
+  setSyncStatus('info', 'Sincronizando vocabulario…');
+  var docRef = fbDb.collection('traductor').doc(fbUser.uid);
+  docRef.get().then(function(snap) {
+    var localVocab = vocab.slice();
+    var localStats = Object.assign({}, stats);
+    if (snap.exists) {
+      var remoteVocab = snap.data().vocab || [];
+      var remoteStats = snap.data().stats || {};
+      // Merge vocab: local prevalece, añadir los remotos que no existan localmente
+      var localIds = {};
+      localVocab.forEach(function(v) { localIds[v.id] = true; });
+      remoteVocab.forEach(function(v) { if (!localIds[v.id]) { vocab.push(v); localIds[v.id] = true; } });
+      // Merge stats
+      Object.keys(remoteStats).forEach(function(k) { if (!localStats[k]) stats[k] = remoteStats[k]; });
+      saveVocab(); saveStats(); updateVocabCount(); renderVocab();
+    }
+    return docRef.set({
+      vocab: vocab,
+      stats: stats,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's' : ''));
+    });
+  }).catch(function(err) {
+    setSyncStatus('err', 'Error: ' + err.message);
+  });
+}
+
+function autoRestoreFromFirestore() {
+  var docRef = fbDb.collection('traductor').doc(fbUser.uid);
+  docRef.get().then(function(snap) {
+    if (snap.exists && vocab.length === 0) {
+      var remoteVocab = snap.data().vocab || [];
+      var remoteStats = snap.data().stats || {};
+      if (remoteVocab.length > 0) {
+        vocab = remoteVocab;
+        stats = remoteStats;
+        saveVocab(); saveStats(); updateVocabCount(); renderVocab();
+        setSyncStatus('ok', '✓ ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's restauradas' : ' restaurada') + ' desde la nube');
+      }
+    }
+  }).catch(function(err) { console.warn('Auto-restore error:', err); });
+}
+
+function setSyncStatus(type, msg) {
+  var el = document.getElementById('sync-status');
+  var colors = { ok: 'rgba(76,175,80,.12)', err: 'rgba(192,57,43,.1)', info: 'rgba(45,106,79,.1)' };
+  var textColors = { ok: '#2e7d32', err: '#c0392b', info: '#2d6a4f' };
+  el.style.display    = 'flex';
+  el.style.background = colors[type] || colors.info;
+  el.style.color      = textColors[type] || textColors.info;
+  document.getElementById('sync-status-msg').textContent = msg;
+  if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+}
+
+function closeSyncStatus() {
+  document.getElementById('sync-status').style.display = 'none';
+}
+
+function fbSignOut() {
+  fbAuth.signOut().then(function() { fbUser = null; updateSyncUI(); });
+}
+
+// ══════════════════════════════════════════════════════
 //  LANGUAGE PAIR CONFIG
 // ══════════════════════════════════════════════════════
 const LANG_PAIRS = {
@@ -273,8 +411,26 @@ let quizSession = [], quizIdx = 0, quizScore = 0, quizAnswered = false;
 let vocabFilter = 'all';
 
 function getLP()   { return LANG_PAIRS[activePair]; }
-function saveVocab(){ try { localStorage.setItem(STORE, JSON.stringify(vocab)); } catch(_){} }
-function saveStats(){ try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(_){} }
+function saveVocab(){
+  try { localStorage.setItem(STORE, JSON.stringify(vocab)); } catch(_){}
+  fbAutoSave();
+}
+function saveStats(){
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(_){}
+}
+
+var fbSaveTimer = null;
+function fbAutoSave() {
+  if (!fbUser) return;
+  clearTimeout(fbSaveTimer);
+  fbSaveTimer = setTimeout(function() {
+    fbDb.collection('traductor').doc(fbUser.uid).set({
+      vocab: vocab,
+      stats: stats,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(err) { console.warn('fbAutoSave error:', err); });
+  }, 2000); // espera 2s antes de subir, para no disparar en cada tecla
+}
 function getStat(id){ return stats[String(id)] || {ok:0,fail:0,lastSeen:0}; }
 function wordWeight(v){
   const s = getStat(v.id);
