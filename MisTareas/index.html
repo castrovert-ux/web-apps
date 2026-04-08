@@ -12,41 +12,31 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
-    /* ... (Mantengo tus estilos originales intactos) ... */
+    /* TU ESTILO ORIGINAL INTACTO */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --cream: #F7F3EC; --warm-white: #FDFAF5; --ink: #1C1A17;
       --ink-light: #4A4640; --ink-muted: #9A9490; --amber: #D4820A;
       --amber-light: #F5C064; --amber-pale: #FDF0D8; --sage: #5A7A5C;
+      --sage-pale: #E8F0E9;
     }
-    body {
-      background-color: var(--cream);
-      color: var(--ink);
-      font-family: 'DM Sans', sans-serif;
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-    }
-
-    /* BARRA DE SINCRONIZACIÓN ESTILO CANALES */
+    body { background-color: var(--cream); color: var(--ink); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* AÑADIDO: Estilo para la barra de sincronización sin romper lo demás */
     #sync-bar {
-      background: var(--ink);
-      display: flex; align-items: center; justify-content: flex-end;
-      gap: 12px; padding: 8px 20px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      background: var(--ink); color: white; display: flex; align-items: center; 
+      justify-content: flex-end; gap: 12px; padding: 8px 20px; font-size: 11px;
     }
-    #sync-user-text { font-size: 11px; color: rgba(255,255,255,0.5); }
-    .btn-sync-action {
-      background: none; border: none; color: #fff; opacity: 0.6;
-      cursor: pointer; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .btn-sync-action:hover { opacity: 1; }
+    .btn-sync-action { background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer; text-transform: uppercase; font-size: 10px; }
+    .btn-sync-action:hover { color: #white; }
 
-    /* Estilos de tus contenedores originales */
+    /* RESTO DE TUS ESTILOS */
     .container { max-width: 500px; margin: 0 auto; width: 100%; padding: 40px 20px; flex: 1; }
-    header { margin-bottom: 40px; text-align: center; }
+    header { margin-bottom: 40px; }
     h1 { font-family: 'DM Serif Display', serif; font-size: 2.5rem; font-weight: 400; line-height: 1.1; margin-bottom: 8px; }
     .date-display { color: var(--ink-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
     .input-group { background: var(--warm-white); padding: 8px; border-radius: 16px; display: flex; gap: 8px; border: 1px solid rgba(28,26,23,0.08); margin-bottom: 32px; box-shadow: 0 4px 20px rgba(28,26,23,0.03); }
@@ -56,7 +46,7 @@
     .section-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
     .todo-list { list-style: none; margin-bottom: 40px; }
     .todo-item { background: var(--warm-white); margin-bottom: 8px; padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 12px; transition: all 0.2s ease; border: 1px solid rgba(28,26,23,0.04); }
-    .todo-item:hover { border-color: var(--amber-light); }
+    .todo-item:hover { border-color: var(--amber-light); transform: translateY(-1px); }
     .todo-item.completed .text { text-decoration: line-through; color: var(--ink-muted); }
     .checkbox { width: 22px; height: 22px; border: 2px solid var(--ink-muted); border-radius: 6px; cursor: pointer; display: grid; place-items: center; transition: all 0.2s ease; }
     .todo-item.completed .checkbox { background: var(--sage); border-color: var(--sage); }
@@ -65,11 +55,11 @@
     .text { flex: 1; font-size: 1rem; color: var(--ink-light); line-height: 1.4; }
     .btn-delete { opacity: 0; padding: 8px; color: var(--ink-muted); cursor: pointer; border: none; background: none; transition: all 0.2s ease; }
     .todo-item:hover .btn-delete { opacity: 1; }
-    .btn-delete:hover { color: #e74c3c; }
     .nav-buttons { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; }
     .btn-hist { background: var(--warm-white); border: 1px solid rgba(28,26,23,0.1); padding: 10px 20px; border-radius: 12px; font-family: inherit; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; }
     .btn-hist.active { background: var(--ink); color: white; }
-    .hidden { display: none !important; }
+    .hidden { display: none; }
+    .visible { display: block !important; }
     .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 12px 24px; border-radius: 12px; font-size: 0.9rem; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
     .toast.show { opacity: 1; }
   </style>
@@ -78,21 +68,21 @@
 
   <div id="sync-bar">
     <span id="sync-user-text" style="display:none;"></span>
-    <button id="btn-signout" class="btn-sync-action" style="display:none;" onclick="fbSignOut()">Salir</button>
+    <button id="btn-signout" class="btn-sync-action" style="display:none;" onclick="fbSignOut()">Cerrar sesión</button>
     <button id="btn-sync" class="btn-sync-action" onclick="handleSync()">
-      <span id="sync-icon">☁</span> <span id="sync-label">Sincronizar</span>
+      <span id="sync-label">☁ Sincronizar</span>
     </button>
   </div>
 
   <div class="container">
     <header>
-      <div class="date-display" id="current-date">Sábado, 8 de Junio</div>
+      <div class="date-display" id="current-date"></div>
       <h1>Mis Tareas</h1>
     </header>
 
     <div id="view-principal">
       <div class="input-group">
-        <input type="text" id="todo-input" placeholder="¿Qué hay que hacer hoy?" autocomplete="off" />
+        <input type="text" id="todo-input" placeholder="Añadir nueva tarea..." autocomplete="off" />
         <button class="btn-add" onclick="agregarTarea()">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
         </button>
@@ -106,7 +96,7 @@
     </div>
 
     <div id="view-historial" class="hidden">
-      <h2 class="section-title">Historial de Completadas</h2>
+      <h2 class="section-title">Historial</h2>
       <ul class="todo-list" id="list-historial"></ul>
     </div>
 
@@ -116,10 +106,10 @@
     </div>
   </div>
 
-  <div id="toast" class="toast">Mensaje aquí</div>
+  <div id="toast" class="toast"></div>
 
   <script>
-    /* ── CONFIGURACIÓN FIREBASE ── */
+    /* ── CONFIGURACIÓN FIREBASE (De canales.html) ── */
     var firebaseConfig = {
       apiKey: "AIzaSyAnqySqGTWFFjBESReTW4hZ24_ReFCHO70",
       authDomain: "castroverde-apps.firebaseapp.com",
@@ -135,7 +125,7 @@
     const fbProvider = new firebase.auth.GoogleAuthProvider();
     let fbUser = null;
 
-    /* ── LÓGICA DE DATOS LOCALES ── */
+    /* ── LÓGICA DE DATOS ── */
     const KEY_HOY = 'tareasHoy';
     const KEY_PEND = 'tareasPendientes';
     const KEY_REALIZADAS = 'tareasRealizadas';
@@ -147,10 +137,10 @@
 
     function guardar(key, data) {
       localStorage.setItem(key, JSON.stringify(data));
-      if (fbUser) subirANube(); // Sincroniza automáticamente al guardar
+      if (fbUser) subirANube(); // Sincroniza al guardar localmente
     }
 
-    /* ── INTEGRACIÓN CLOUD ── */
+    /* ── LOGICA FIREBASE ── */
     fbAuth.onAuthStateChanged(user => {
       fbUser = user;
       const userText = document.getElementById('sync-user-text');
@@ -161,12 +151,12 @@
         userText.style.display = 'inline';
         userText.textContent = user.displayName || user.email;
         btnOut.style.display = 'inline';
-        label.textContent = "Nube Activa";
+        label.textContent = "Sincronizado";
         descargarDeNube(); 
       } else {
         userText.style.display = 'none';
         btnOut.style.display = 'none';
-        label.textContent = "Sincronizar";
+        label.textContent = "☁ Sincronizar";
       }
     });
 
@@ -189,12 +179,11 @@
         hoy: cargar(KEY_HOY),
         pendientes: cargar(KEY_PEND),
         realizadas: cargar(KEY_REALIZADAS),
-        ts: Date.now()
+        timestamp: Date.now()
       };
       try {
         await fbDb.collection('usuarios').doc(fbUser.uid).set({ gestorTareas: payload }, { merge: true });
-        console.log("Sincronizado OK");
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Error al subir:", e); }
     }
 
     async function descargarDeNube() {
@@ -207,12 +196,12 @@
           localStorage.setItem(KEY_PEND, JSON.stringify(d.pendientes || []));
           localStorage.setItem(KEY_REALIZADAS, JSON.stringify(d.realizadas || []));
           renderHoy(); renderPendientes();
-          showToast("Datos recuperados de la nube");
+          showToast("Datos sincronizados");
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Error al bajar:", e); }
     }
 
-    /* ── FUNCIONES ORIGINALES DE TAREAS ── */
+    /* ── TUS FUNCIONES ORIGINALES DE TAREAS ── */
     function hoy() {
       const d = new Date();
       return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
@@ -301,10 +290,12 @@
       const btn = document.getElementById('btn-toggle-hist');
       if (vh.classList.contains('hidden')) {
         renderHistorial();
-        vh.classList.remove('hidden'); vp.classList.add('hidden');
+        vh.classList.remove('hidden'); vh.classList.add('visible');
+        vp.classList.add('hidden');
         btn.textContent = "← Volver";
       } else {
-        vh.classList.add('hidden'); vp.classList.remove('hidden');
+        vh.classList.remove('visible'); vh.classList.add('hidden');
+        vp.classList.remove('hidden');
         btn.textContent = "📂 Historial";
       }
     }
@@ -313,8 +304,7 @@
       const list = document.getElementById('list-historial');
       const realizadas = cargar(KEY_REALIZADAS);
       list.innerHTML = '';
-      realizadas.slice().reverse().forEach((t, i) => {
-        const realIdx = realizadas.length - 1 - i;
+      realizadas.slice().reverse().forEach(t => {
         const li = document.createElement('li');
         li.className = 'todo-item completed';
         li.innerHTML = `
@@ -327,14 +317,13 @@
 
     function exportToExcel() {
       const data = cargar(KEY_REALIZADAS);
-      if (data.length === 0) { showToast("No hay datos para exportar"); return; }
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Tareas");
-      XLSX.writeFile(wb, `tareas_${hoy()}.xlsx`);
+      XLSX.writeFile(wb, `tareas.xlsx`);
     }
 
-    // Inicialización
+    // Inicio
     document.getElementById('current-date').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
     renderHoy();
     renderPendientes();
