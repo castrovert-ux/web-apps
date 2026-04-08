@@ -702,7 +702,7 @@
   }
 
   // ── Funciones de sincronización con la nube ──
-  async function subirANube() {
+  function subirANube() {
     if (!fbUser) return;
     const datos = {
       hoy: cargar(KEY_HOY),
@@ -710,33 +710,27 @@
       realizadas: cargar(KEY_REALIZADAS),
       lastUpdate: new Date().getTime()
     };
-    try {
-      await fbDb.collection('usuarios').doc(fbUser.uid).set({ gestorTareas: datos }, { merge: true });
-      showToast("✅ Tareas guardadas en la nube");
-    } catch (e) {
-      console.error(e);
-      showToast("❌ Error al guardar");
-    }
+    fbDb.collection('usuarios').doc(fbUser.uid).set({ gestorTareas: datos }, { merge: true })
+      .then(function() { showToast("✅ Tareas guardadas en la nube"); })
+      .catch(function(e) { console.error(e); showToast("❌ Error al guardar"); });
   }
 
-  async function descargarDeNube() {
+  function descargarDeNube() {
     if (!fbUser) return;
-    try {
-      const doc = await fbDb.collection('usuarios').doc(fbUser.uid).get();
-      if (doc.exists && doc.data().gestorTareas) {
-        const d = doc.data().gestorTareas;
-        guardar(KEY_HOY, d.hoy || []);
-        guardar(KEY_PEND, d.pendientes || []);
-        guardar(KEY_REALIZADAS, d.realizadas || []);
-        // Refrescar la interfaz
-        renderHoy();
-        renderPendientes();
-        if(document.getElementById('view-historial').classList.contains('visible')) renderHistorial();
-        showToast("📂 Datos recuperados");
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    fbDb.collection('usuarios').doc(fbUser.uid).get()
+      .then(function(doc) {
+        if (doc.exists && doc.data().gestorTareas) {
+          const d = doc.data().gestorTareas;
+          localStorage.setItem(KEY_HOY,        JSON.stringify(d.hoy        || []));
+          localStorage.setItem(KEY_PEND,       JSON.stringify(d.pendientes || []));
+          localStorage.setItem(KEY_REALIZADAS, JSON.stringify(d.realizadas || []));
+          renderHoy();
+          renderPendientes();
+          if (document.getElementById('view-historial').classList.contains('visible')) renderHistorial();
+          showToast("📂 Datos recuperados");
+        }
+      })
+      .catch(function(e) { console.error(e); });
   }
 
   // Gestión del estado de usuario
@@ -762,14 +756,11 @@
     }
   });
 
-  async function handleSync() {
+  function handleSync() {
     if (!fbUser) {
-      try {
-        await fbAuth.signInWithPopup(fbProvider);
-        showToast("Sesión iniciada");
-      } catch (e) {
-        showToast("Error al conectar");
-      }
+      fbAuth.signInWithPopup(fbProvider)
+        .then(function() { showToast("Sesión iniciada"); })
+        .catch(function(e) { showToast("Error al conectar: " + e.message); });
     } else {
       subirANube();
     }
