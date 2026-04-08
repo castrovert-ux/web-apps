@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz: Aplicación Cl@ve</title>
+<title>Quiz: Aplicación Cl@ve (10 preguntas)</title>
 <style>
-  /* Usamos fuentes del sistema para evitar esperas de carga externa */
   :root {
     --c1: #0056b3; --c2: #003d7a; --c3: #FFD93D; --c4: #FF6B6B;
     --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
@@ -19,9 +18,7 @@
   }
 
   .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .blob {
-    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
-  }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; }
   .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
   .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; }
 
@@ -44,7 +41,6 @@
     font-size: 1.05rem; text-align: left; cursor: pointer; transition: 0.2s;
   }
   .option-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--c1); }
-  
   .option-btn.correct { background: rgba(42, 157, 92, 0.4); border-color: #2a9d5c; }
   .option-btn.wrong { background: rgba(230, 57, 70, 0.3); border-color: #e63946; }
 
@@ -56,155 +52,8 @@
 
   .results { display: none; text-align: center; padding: 40px; }
   .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 5px solid var(--c1); display: flex; align-items: center; justify-content: center; margin: 20px auto; font-size: 1.8rem; font-weight: bold; }
-  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="bg-blobs">
-  <div class="blob"></div><div class="blob"></div>
-</div>
-
-<div class="container">
-  <div class="header">
-    <h1>Cuestionario Cl@ve</h1>
-  </div>
-
-  <div id="quiz-area">
-    <div class="progress-wrap">
-      <div class="progress-label">
-        <span id="prog-label">Pregunta 1 de 6</span>
-        <span id="prog-score">⭐ 0 pts</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
-    </div>
-
-    <div class="question-card">
-      <div id="q-text" class="q-text">Cargando pregunta...</div>
-      <div id="q-options" class="options"></div>
-      <div id="q-feedback" class="feedback"></div>
-      <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
-    </div>
-  </div>
-
-  <div id="results" class="results">
-    <h2>¡Cuestionario Terminado!</h2>
-    <div class="score-circle" id="score-num">0/6</div>
-    <p id="result-msg"></p>
-    <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; border-radius:10px; border:none; background:var(--c1); color:white; cursor:pointer;">Reiniciar</button>
-  </div>
-</div>
-
-<script>
-// Datos del manual Cl@ve [cite: 1, 2, 4, 9, 21, 26, 39]
-const questions = [
-    { 
-        q: "¿Qué es obligatorio antes de poder usar el sistema?", 
-        options: ["Estar dado de alta en Cl@ve", "Comprar un ordenador", "Llamar por teléfono"], 
-        correct: 0,
-        expl: "Para que todo funcione, primero tienes que estar dado de alta. [cite: 2]"
-    },
-    { 
-        q: "¿Cuál es la forma más fácil de activarlo?", 
-        options: ["Por correo electrónico", "En persona en la Agencia Tributaria", "Esperar un código por carta"], 
-        correct: 1,
-        expl: "La forma más fácil es pedir cita y hacerlo en persona para que activen todo allí mismo. [cite: 3, 4, 8]"
-    },
-    { 
-        q: "¿Para qué sirve esta app principalmente?", 
-        options: ["Para jugar", "Para gestiones en páginas oficiales", "Para enviar fotos"], 
-        correct: 1,
-        expl: "Se usa para entrar en sitios como Hacienda o la Seguridad Social sin ir en persona. [cite: 10, 13]"
-    },
-    { 
-        q: "¿Qué botón hay que pulsar en la web oficial?", 
-        options: ["Registro", "Acceder con Cl@ve", "Ayuda"], 
-        correct: 1,
-        expl: "Debes buscar siempre el botón 'Acceder con Cl@ve' para iniciar el proceso. [cite: 21]"
-    },
-    { 
-        q: "¿Qué recibes habitualmente en la Opción A?", 
-        options: ["Un mensaje SMS con números", "Una videollamada", "Un paquete en casa"], 
-        correct: 0,
-        expl: "Lo más común es recibir un mensaje con un código que debes escribir en la web. [cite: 26, 28, 29]"
-    },
-    { 
-        q: "¿Para qué sirve el botón 'ESCANEAR QR'?", 
-        options: ["Para cuando usas el móvil", "Para cuando entras desde el ordenador", "Para pagar"], 
-        correct: 1,
-        expl: "Ese botón se usa para identificarte cuando accedes a la web desde un PC. [cite: 39]"
-    }
-];
-
-let currentIdx = 0;
-let score = 0;
-let answered = false;
-
-function loadQuestion() {
-    answered = false;
-    const qData = questions[currentIdx];
-    
-    // Actualizar textos
-    document.getElementById('q-text').innerText = qData.q;
-    document.getElementById('prog-label').innerText = "Pregunta " + (currentIdx + 1) + " de " + questions.length;
-    document.getElementById('prog-fill').style.width = ((currentIdx) / questions.length * 100) + "%";
-    
-    // Resetear feedback y botón siguiente
-    document.getElementById('q-feedback').style.display = 'none';
-    document.getElementById('btn-next').style.display = 'none';
-    
-    // Cargar opciones
-    const optionsDiv = document.getElementById('q-options');
-    optionsDiv.innerHTML = '';
-    
-    qData.options.forEach((opt, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.innerText = opt;
-        btn.onclick = function() { checkAnswer(i); };
-        optionsDiv.appendChild(btn);
-    });
-}
-
-function checkAnswer(idx) {
-    if (answered) return;
-    answered = true;
-    
-    const qData = questions[currentIdx];
-    const btns = document.getElementsByClassName('option-btn');
-    const fb = document.getElementById('q-feedback');
-
-    if (idx === qData.correct) {
-        btns[idx].classList.add('correct');
-        score++;
-        fb.innerText = "¡Correcto! " + qData.expl;
-        fb.className = "feedback correct-fb";
-    } else {
-        btns[idx].classList.add('wrong');
-        btns[qData.correct].classList.add('correct');
-        fb.innerText = "No es correcto. " + qData.expl;
-        fb.className = "feedback wrong-fb";
-    }
-
-    document.getElementById('prog-score').innerText = "⭐ " + score + " pts";
-    fb.style.display = 'block';
-    document.getElementById('btn-next').style.display = 'block';
-}
-
-function nextQuestion() {
-    currentIdx++;
-    if (currentIdx < questions.length) {
-        loadQuestion();
-    } else {
-        document.getElementById('quiz-area').classList.add('hidden');
-        document.getElementById('results').style.display = 'block';
-        document.getElementById('score-num').innerText = score + "/" + questions.length;
-        document.getElementById('result-msg').innerText = score > 4 ? "¡Dominas el acceso con Cl@ve!" : "Te recomendamos repasar la guía paso a paso.";
-    }
-}
-
-// Iniciar directamente sin esperar a eventos complejos
-loadQuestion();
-</script>
-</body>
-</html>
+<div class="bg-blobs"><div class="blob
