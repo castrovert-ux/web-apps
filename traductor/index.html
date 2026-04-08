@@ -263,7 +263,7 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
 //  FIREBASE
 // ══════════════════════════════════════════════════════
 var firebaseConfig = {
-  apiKey: "AIzaSyAnqySqGTWFFjBESReTW4hZ24_ReFCHO70",
+  apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs",
   authDomain: "castroverde-apps.firebaseapp.com",
   projectId: "castroverde-apps",
   storageBucket: "castroverde-apps.firebasestorage.app",
@@ -275,6 +275,7 @@ var fbAuth     = firebase.auth();
 var fbDb       = firebase.firestore();
 var fbProvider = new firebase.auth.GoogleAuthProvider();
 var fbUser     = null;
+var fbPopupOpen = false;
 
 fbAuth.onAuthStateChanged(function(user) {
   fbUser = user;
@@ -305,11 +306,13 @@ function updateSyncUI() {
 }
 
 function handleSync() {
+  if (fbPopupOpen) return;
   if (!fbUser) {
+    fbPopupOpen = true;
     setSyncStatus('info', 'Iniciando sesión con Google…');
     fbAuth.signInWithPopup(fbProvider)
-      .then(function() { return doSync(); })
-      .catch(function(err) { setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
+      .then(function() { fbPopupOpen = false; return doSync(); })
+      .catch(function(err) { fbPopupOpen = false; setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
   } else {
     doSync();
   }
