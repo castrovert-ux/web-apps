@@ -1,176 +1,94 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuestionario Cl@ve - 10 Preguntas</title>
-    <style>
-        :root {
-            --c1: #0056b3; --bg: #0a1628; --card: #111d35; --text: #ffffff; --accent: #FFD93D;
-        }
-        body {
-            font-family: sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            margin: 0;
-            padding: 20px;
-        }
-        #quiz-container {
-            width: 100%;
-            max-width: 650px;
-            background: var(--card);
-            padding: 30px;
-            border-radius: 15px;
-            border: 1px solid #2e4f8a;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .header { text-align: center; color: var(--accent); margin-bottom: 20px; }
-        .stats { display: flex; justify-content: space-between; color: #8a9bbf; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold; }
-        .question { font-size: 1.3rem; margin-bottom: 20px; line-height: 1.4; }
-        .option {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 10px;
-            background: #1c2a4a;
-            color: white;
-            border: 1px solid #3d5a80;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: left;
-            font-size: 1rem;
-            transition: 0.2s;
-        }
-        .option:hover { background: #2e4f8a; }
-        .correct { background: #2a9d5c !important; border-color: #fff; }
-        .wrong { background: #e63946 !important; }
-        #feedback {
-            margin-top: 15px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-            background: #0d2b55;
-            line-height: 1.4;
-            border: 1px solid #2e4f8a;
-        }
-        #next-btn {
-            display: none;
-            width: 100%;
-            padding: 15px;
-            background: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin-top: 20px;
-            cursor: pointer;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Aplicación Cl@ve</title>
+<style>
+  :root {
+    --c1: #0056b3; --c2: #003d7a; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; justify-content: center; padding: 20px;
+  }
+
+  .container { width: 100%; max-width: 600px; }
+  .header { text-align: center; margin-bottom: 20px; }
+  h1 { color: var(--c3); font-size: 1.8rem; }
+
+  .progress-info { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 10px; color: var(--sub); }
+  
+  .card { background: var(--card); border: 1px solid #2e4f8a; border-radius: 12px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+  .q-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; line-height: 1.4; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    background: #1c2a4a; border: 1px solid #3d5a80; border-radius: 8px; padding: 14px;
+    color: white; text-align: left; cursor: pointer; font-size: 1rem;
+  }
+  .option-btn:hover { background: #2e4f8a; }
+  .correct { background: #2a9d5c !important; }
+  .wrong { background: #e63946 !important; }
+
+  .feedback { display: none; margin-top: 15px; padding: 12px; border-radius: 8px; background: #0d2b55; font-weight: bold; }
+  .btn-next { display: none; width: 100%; margin-top: 15px; padding: 12px; border-radius: 8px; border: none; background: var(--c3); color: black; font-weight: bold; cursor: pointer; }
+
+  .results { display: none; text-align: center; }
+  .hidden { display: none !important; }
+</style>
 </head>
 <body>
 
-<div id="quiz-container">
-    <div class="header"><h1>Cuestionario Cl@ve</h1></div>
-    
-    <div id="quiz-ui">
-        <div class="stats">
-            <span id="progress-text">Pregunta 1 de 10</span>
-            <span id="score-text">Puntos: 0</span>
-        </div>
-        <div id="question-text" class="question"></div>
-        <div id="options-container"></div>
-        <div id="feedback"></div>
-        <button id="next-btn" onclick="handleNext()">Siguiente Pregunta →</button>
+<div class="container">
+  <div class="header"><h1>Cuestionario Cl@ve</h1></div>
+
+  <div id="quiz-area">
+    <div class="progress-info">
+      <span id="prog-txt">Pregunta 1 de 6</span>
+      <span id="score-txt">⭐ 0 pts</span>
     </div>
 
-    <div id="result-ui" style="display:none; text-align:center;">
-        <h2>¡Cuestionario Completado!</h2>
-        <p style="font-size: 3rem; margin: 20px 0;" id="final-score"></p>
-        <button onclick="location.reload()" style="padding:12px 25px; cursor:pointer; background:var(--c1); color:white; border:none; border-radius:5px;">Reiniciar Cuestionario</button>
+    <div class="card">
+      <div id="q-text" class="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
+      <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
     </div>
+  </div>
+
+  <div class="results" id="results">
+    <h2>¡Terminado!</h2>
+    <div style="font-size: 2.5rem; margin: 20px 0;" id="score-final"></div>
+    <button onclick="location.reload()" style="padding:10px 20px; cursor:pointer;">Reiniciar</button>
+  </div>
 </div>
 
 <script>
-    const questions = [
-        { q: "¿Qué es indispensable antes de empezar a usar Cl@ve?", a: ["Estar dado de alta en el sistema", "Tener un móvil con 5G", "Saber inglés"], c: 0, e: "Para que todo funcione, primero debes estar registrado en Cl@ve." },
-        { q: "¿Cuál es la forma más fácil de activarlo según el manual?", a: ["Por correo ordinario", "En persona en la Agencia Tributaria", "Por una llamada de voz"], c: 1, e: "Ir en persona es lo más fácil porque sales con todo listo al momento." },
-        { q: "¿Para qué sirve principalmente esta aplicación?", a: ["Para redes sociales", "Para gestiones en páginas oficiales", "Para edición de documentos"], c: 1, e: "Se usa para entrar en Hacienda, Seguridad Social, etc., desde casa." },
-        { q: "¿Cuál es el primer paso para usarlo desde el móvil?", a: ["Ir a la oficina", "Abrir el navegador (ej. Chrome)", "Reiniciar el móvil"], c: 1, e: "El proceso empieza abriendo el navegador de internet en tu teléfono." },
-        { q: "¿Qué botón debes buscar en la web oficial?", a: ["Configuración", "Acceder con Cl@ve", "Suscribirse"], c: 1, e: "Busca siempre el botón que diga 'Acceder con Cl@ve'." },
-        { q: "¿Qué dato personal suele pedir el sistema al inicio?", a: ["Tu número de cuenta", "Tu DNI", "Tu código postal"], c: 1, e: "El DNI es necesario para identificarte correctamente." },
-        { q: "¿Cómo funciona la Opción A (SMS)?", a: ["Escribes un código que recibes por mensaje", "Te mandan un paquete", "Llamas a un contestador"], c: 0, e: "Recibes un código numérico por mensaje y lo escribes en la web." },
-        { q: "¿Cómo se confirma el acceso con la Opción B?", a: ["Pulsando 'Confirmar' en la app Cl@ve", "Enviando un correo", "Haciendo una foto"], c: 0, e: "Solo tienes que abrir la app en tu móvil y aceptar la petición." },
-        { q: "¿Cuándo se usa el botón 'ESCANEAR QR'?", a: ["Siempre que uses el móvil", "Cuando accedes desde un ordenador", "Para pagar en tiendas"], c: 1, e: "El QR sirve para conectar el móvil con la sesión del ordenador." },
-        { q: "¿Qué es lo más importante a recordar siempre?", a: ["Usar siempre webs oficiales", "Dar tus claves a cualquiera", "No actualizar la app"], c: 0, e: "La seguridad es clave: haz tus trámites siempre en sitios del Gobierno." }
-    ];
+const questions = [
+    { q: "¿Qué es obligatorio antes de usar el sistema?", o: ["Estar dado de alta en Cl@ve", "Tener 5G", "Tener cuenta bancaria"], c: 0, e: "Primero debes registrarte en el sistema." },
+    { q: "¿Cuál es la forma más fácil de activarlo?", o: ["Por carta", "En persona en la Agencia Tributaria", "Por email"], c: 1, e: "En persona es lo más rápido y seguro." },
+    { q: "¿Para qué sirve esta app principalmente?", o: ["Para jugar", "Para gestiones en páginas oficiales", "Para mandar fotos"], c: 1, e: "Para trámites de Hacienda, Seguridad Social, etc." },
+    { q: "¿Qué botón hay que pulsar en la web oficial?", o: ["Registro", "Acceder con Cl@ve", "Ayuda"], c: 1, e: "Debes buscar el botón 'Acceder con Cl@ve'." },
+    { q: "¿Qué recibes en la Opción A?", o: ["Un código por SMS", "Una llamada", "Una carta"], c: 0, e: "Recibes un mensaje de texto con números." },
+    { q: "¿Para qué sirve el botón 'ESCANEAR QR'?", o: ["Para usar el móvil", "Para usar el ordenador", "Para pagar"], c: 1, e: "Es para conectar el móvil con el PC." }
+];
 
-    let current = 0;
-    let score = 0;
-    let answered = false;
+let currentIdx = 0;
+let score = 0;
+let answered = false;
 
-    function load() {
-        answered = false;
-        const data = questions[current];
-        document.getElementById('question-text').innerText = data.q;
-        document.getElementById('progress-text').innerText = "Pregunta " + (current + 1) + " de 10";
-        document.getElementById('score-text').innerText = "Puntos: " + score;
-        document.getElementById('feedback').style.display = 'none';
-        document.getElementById('next-btn').style.display = 'none';
-        
-        const container = document.getElementById('options-container');
-        container.innerHTML = '';
-        
-        data.a.forEach((text, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'option';
-            btn.innerText = text;
-            btn.onclick = () => check(i);
-            container.appendChild(btn);
-        });
-    }
-
-    function check(index) {
-        if (answered) return;
-        answered = true;
-        
-        const data = questions[current];
-        const btns = document.getElementsByClassName('option');
-        const feed = document.getElementById('feedback');
-        
-        if (index === data.c) {
-            btns[index].classList.add('correct');
-            score++;
-            feed.innerHTML = "<strong>✅ ¡Correcto!</strong><br>" + data.e;
-            feed.style.color = "#6BCB77";
-        } else {
-            btns[index].classList.add('wrong');
-            btns[data.c].classList.add('correct');
-            feed.innerHTML = "<strong>💡 Nota informativa:</strong><br>" + data.e;
-            feed.style.color = "#FF6B6B";
-        }
-        
-        document.getElementById('score-text').innerText = "Puntos: " + score;
-        feed.style.display = 'block';
-        document.getElementById('next-btn').style.display = 'block';
-    }
-
-    function handleNext() {
-        current++;
-        if (current < questions.length) {
-            load();
-        } else {
-            document.getElementById('quiz-ui').style.display = 'none';
-            document.getElementById('result-ui').style.display = 'block';
-            document.getElementById('final-score').innerText = score + " / 10";
-        }
-    }
-
-    // Inicio automático al cargar
-    load();
-</script>
-
-</body>
-</html>
+function loadQuestion() {
+    answered = false;
+    const qData = questions[currentIdx];
+    document.getElementById('q-text').innerText = qData.q;
+    document.getElementById('prog-txt').innerText = `Pregunta ${currentIdx + 1} de 6`;
+    document.getElementById('q-feedback').style.display = 'none';
+    document.getElementById('btn-next').style.display = 'none';
+    
+    const optionsDiv = document.getElementById('q-options');
+    optionsDiv.innerHTML = '';
+    qData.o.forEach((opt,
