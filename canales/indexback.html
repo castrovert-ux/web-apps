@@ -267,7 +267,7 @@
 //  FIREBASE CONFIG
 // ══════════════════════════════════════════════════════
 var firebaseConfig = {
-  apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs",
+  apiKey: "AIzaSyA4NdL7mFK6JLUk6sgBiVq2CnZjMa6krUM",
   authDomain: "castroverde-apps.firebaseapp.com",
   projectId: "castroverde-apps",
   storageBucket: "castroverde-apps.firebasestorage.app",
@@ -284,7 +284,31 @@ var fbUser     = null;
 fbAuth.onAuthStateChanged(function(user) {
   fbUser = user;
   updateSyncUI();
+  // Si el usuario está logueado y localStorage está vacío, restaurar desde Firestore
+  if (user && channels.length === 0) {
+    autoRestoreFromFirestore();
+  }
 });
+
+function autoRestoreFromFirestore() {
+  var docRef = fbDb.collection('canales').doc(fbUser.uid);
+  docRef.get().then(function(snap) {
+    if (snap.exists) {
+      var remoteChannels = snap.data().channels || [];
+      if (remoteChannels.length > 0 && channels.length === 0) {
+        remoteChannels.forEach(function(ch) {
+          channels.push({ url: ch.url, channelId: ch.channelId, uploadsId: ch.uploadsId, name: ch.name, status: 'loading', errorMsg: null });
+        });
+        saveToStorage();
+        renderChannelList();
+        setSyncStatus('ok', '✓ ' + remoteChannels.length + ' canal' + (remoteChannels.length !== 1 ? 'es restaurados' : ' restaurado') + ' desde la nube');
+        refreshAll();
+      }
+    }
+  }).catch(function(err) {
+    console.warn('Auto-restore error:', err);
+  });
+}
 
 function updateSyncUI() {
   var icon    = document.getElementById('sync-icon');
@@ -730,6 +754,8 @@ btnList.onclick = function(){ setViewMode('list'); };
 function init() {
   loadFromStorage();
   renderChannelList();
+  // Si hay canales en local, los cargamos de inmediato
+  // Si localStorage estaba vacío, Firebase los restaurará al detectar la sesión (autoRestoreFromFirestore)
   if (channels.length > 0) refreshAll();
 }
 
