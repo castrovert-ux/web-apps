@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Uso de la Aplicación Cl@ve</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #0056b3; --c2: #003d7a; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+
+  .header { text-align: center; margin-bottom: 40px; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.8rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
+  }
+
+  .progress-wrap { margin-bottom: 30px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
+  }
+
+  .q-type-badge {
+    display: inline-flex; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+    background: rgba(0, 86, 179, 0.2); color: #4ade80;
+  }
+
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px; color: var(--text);
+    font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 14px; transition: 0.2s;
+  }
+  .option-btn:hover:not(:disabled) { background: rgba(0, 86, 179, 0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-letter {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+  }
+  
+  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: #6BCB77; }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+
+  .feedback { display: none; margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 700; line-height: 1.4; animation: fadeIn 0.3s ease; }
+  .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid #217346; }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-next {
+    display: none; width: 100%; max-width: 200px; margin: 0 0 0 auto;
+    padding: 14px; border-radius: 14px; border: none; font-weight: 800;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
+  }
+
+  .results { display: none; text-align: center; }
+  .score-circle {
+    width: 120px; height: 120px; border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 20px auto;
+    font-size: 2rem; font-family: 'Fredoka One';
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">
