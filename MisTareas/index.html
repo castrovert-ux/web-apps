@@ -275,4 +275,69 @@
       realizadas.push({ ...tarea, fin: hoy() });
       guardar(KEY_REALIZADAS, realizadas);
       renderHoy();
-      showToast("¡
+      showToast("¡Tarea completada!");
+    }
+
+    function pasarAHoy(idx) {
+      const pend = cargar(KEY_PEND);
+      const tarea = pend.splice(idx, 1)[0];
+      guardar(KEY_PEND, pend);
+      const h = cargar(KEY_HOY);
+      h.push({ ...tarea, fecha: hoy() });
+      guardar(KEY_HOY, h);
+      renderHoy(); renderPendientes();
+    }
+
+    function eliminarTarea(key, idx) {
+      const data = cargar(key);
+      data.splice(idx, 1);
+      guardar(key, data);
+      key === KEY_HOY ? renderHoy() : renderPendientes();
+    }
+
+    function toggleHistorial() {
+      const vp = document.getElementById('view-principal');
+      const vh = document.getElementById('view-historial');
+      const btn = document.getElementById('btn-toggle-hist');
+      if (vh.classList.contains('hidden')) {
+        renderHistorial();
+        vh.classList.remove('hidden'); vp.classList.add('hidden');
+        btn.textContent = "← Volver";
+      } else {
+        vh.classList.add('hidden'); vp.classList.remove('hidden');
+        btn.textContent = "📂 Historial";
+      }
+    }
+
+    function renderHistorial() {
+      const list = document.getElementById('list-historial');
+      const realizadas = cargar(KEY_REALIZADAS);
+      list.innerHTML = '';
+      realizadas.slice().reverse().forEach((t, i) => {
+        const realIdx = realizadas.length - 1 - i;
+        const li = document.createElement('li');
+        li.className = 'todo-item completed';
+        li.innerHTML = `
+          <div class="checkbox"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" style="display:block"><path d="M5 13l4 4L19 7"></path></svg></div>
+          <span class="text">${t.texto} <small style="display:block; opacity:0.5">${t.fin}</small></span>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function exportToExcel() {
+      const data = cargar(KEY_REALIZADAS);
+      if (data.length === 0) { showToast("No hay datos para exportar"); return; }
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Tareas");
+      XLSX.writeFile(wb, `tareas_${hoy()}.xlsx`);
+    }
+
+    // Inicialización
+    document.getElementById('current-date').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+    renderHoy();
+    renderPendientes();
+  </script>
+</body>
+</html>
