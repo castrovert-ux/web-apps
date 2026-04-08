@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz: Aplicación Cl@ve (10 preguntas)</title>
+<title>Cuestionario Cl@ve</title>
 <style>
   :root {
     --c1: #0056b3; --c2: #003d7a; --c3: #FFD93D; --c4: #FF6B6B;
@@ -11,49 +11,77 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  
   body {
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-    background: var(--bg); color: var(--text);
-    min-height: 100vh; margin: 0;
+    /* Usamos fuentes estándar del sistema para que no dependa de internet */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 40px;
   }
 
-  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; }
-  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
-  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; }
+  /* Fondo decorativo simple */
+  .bg-decor {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at 10% 10%, rgba(0, 86, 179, 0.15), transparent),
+                radial-gradient(circle at 90% 90%, rgba(255, 107, 107, 0.1), transparent);
+    z-index: -1;
+  }
 
-  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+  .container { width: 90%; max-width: 700px; position: relative; }
+
   .header { text-align: center; margin-bottom: 30px; }
-  h1 { font-size: 2.2rem; color: var(--c3); margin-bottom: 10px; text-transform: uppercase; }
+  h1 { color: var(--c3); font-size: 2rem; text-transform: uppercase; letter-spacing: 1px; }
 
-  .progress-wrap { margin-bottom: 25px; }
-  .progress-label { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; font-weight: bold; color: var(--sub); }
+  .progress-wrap { margin-bottom: 20px; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; color: var(--sub); font-weight: bold; }
   .progress-bar { height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--c1); width: 0%; transition: width 0.3s; }
 
-  .question-card { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-  .q-text { font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; line-height: 1.4; }
+  .card { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+  .question-text { font-size: 1.25rem; font-weight: bold; margin-bottom: 20px; line-height: 1.4; color: #fff; }
 
-  .options { display: flex; flex-direction: column; gap: 12px; }
+  .options-list { display: flex; flex-direction: column; gap: 10px; }
   .option-btn {
     background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 12px; padding: 15px 20px; color: var(--text);
-    font-size: 1.05rem; text-align: left; cursor: pointer; transition: 0.2s;
+    border-radius: 10px; padding: 15px; color: #fff; font-size: 1rem;
+    text-align: left; cursor: pointer; transition: all 0.2s;
   }
   .option-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--c1); }
   .option-btn.correct { background: rgba(42, 157, 92, 0.4); border-color: #2a9d5c; }
   .option-btn.wrong { background: rgba(230, 57, 70, 0.3); border-color: #e63946; }
 
-  .feedback { display: none; margin-top: 20px; padding: 15px; border-radius: 10px; font-weight: 600; }
-  .feedback.correct-fb { background: rgba(42,157,92,0.2); color: #6BCB77; border: 1px solid #2a9d5c; }
-  .feedback.wrong-fb { background: rgba(230,57,70,0.2); color: #FF6B6B; border: 1px solid #e63946; }
+  .feedback { display: none; margin-top: 15px; padding: 15px; border-radius: 8px; font-weight: 500; line-height: 1.4; border: 1px solid transparent; }
+  .feedback.is-correct { background: rgba(42,157,92,0.15); color: #6BCB77; border-color: #2a9d5c; }
+  .feedback.is-wrong { background: rgba(230,57,70,0.1); color: #FF6B6B; border-color: #e63946; }
 
-  .btn-next { display: none; width: 100%; margin-top: 20px; padding: 15px; border-radius: 12px; border: none; font-weight: 800; background: var(--c3); color: #000; cursor: pointer; font-size: 1.1rem; }
+  .next-btn { display: none; width: 100%; margin-top: 20px; padding: 15px; border-radius: 10px; border: none; font-weight: bold; background: var(--c3); color: #000; cursor: pointer; font-size: 1.1rem; }
 
-  .results { display: none; text-align: center; padding: 40px; }
-  .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 5px solid var(--c1); display: flex; align-items: center; justify-content: center; margin: 20px auto; font-size: 1.8rem; font-weight: bold; }
+  .result-screen { display: none; text-align: center; padding: 30px; }
+  .score-box { font-size: 3rem; font-weight: bold; color: var(--c3); margin: 20px 0; }
+  
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="bg-blobs"><div class="blob
+<div class="bg-decor"></div>
+
+<div class="container">
+  <div id="quiz-ui">
+    <div class="header"><h1>Uso de la App Cl@ve</h1></div>
+    
+    <div class="progress-wrap">
+      <div class="progress-info">
+        <span id="txt-step">Pregunta 1 de 10</span>
+        <span id="txt-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div id="bar-fill" class="progress-fill"></div></div>
+    </div>
+
+    <div class="card">
+      <div id="q-text"
