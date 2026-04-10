@@ -384,29 +384,7 @@ function startFirebase(apiKey) {
   fbAuth     = firebase.auth();
   fbDb       = firebase.firestore();
   fbProvider = new firebase.auth.GoogleAuthProvider();
-  fbAuth.onAuthStateChanged(function(user){
-    fbUser=user;
-    updateSyncUI();
-    if (user && fbDb && sessions.length === 0) autoRestoreFromFirestore();
-  });
-}
-
-function autoRestoreFromFirestore() {
-  var docRef = fbDb.collection('maquetador').doc(fbUser.uid);
-  docRef.get().then(function(snap) {
-    if (snap.exists) {
-      var remote = snap.data();
-      var remoteSessions = remote.sessions || [];
-      var remoteSettings = remote.settings || null;
-      if (remoteSessions.length > 0 && sessions.length === 0) {
-        sessions = remoteSessions;
-        saveSessions();
-        if (remoteSettings) { settings = remoteSettings; saveSettings(); }
-        renderHistoryList();
-        setSyncStatus('ok', '✓ ' + remoteSessions.length + ' sesión' + (remoteSessions.length !== 1 ? 'es restauradas' : ' restaurada') + ' desde la nube');
-      }
-    }
-  }).catch(function(err) { console.warn('Auto-restore error:', err); });
+  fbAuth.onAuthStateChanged(function(user){ fbUser=user; updateSyncUI(); });
 }
 
 // Inicializar si ya tenemos la clave guardada
