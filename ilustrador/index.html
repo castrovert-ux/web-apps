@@ -429,7 +429,90 @@
   }
 
   .hist-body-actions { display: flex; gap: 8px; margin-top: 10px; }
-  .scene-header { margin-bottom: 8px; }
+  /* === PROXY MODAL === */
+  .proxy-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,24,20,0.55);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .proxy-modal {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0d8c8;
+    padding: 24px 26px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  }
+  .proxy-modal h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-style: italic;
+    font-weight: 500;
+    color: #1a1814;
+    margin-bottom: 8px;
+  }
+  .proxy-modal p {
+    font-size: 13.5px;
+    color: #6a6258;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .proxy-modal input {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 13px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14px;
+    color: #1a1814;
+    margin-bottom: 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .proxy-modal input:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+  .proxy-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-proxy-save {
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    padding: 7px 20px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.09);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .btn-proxy-save:hover { background: rgba(184,154,90,0.18); }
+  .btn-proxy-cancel {
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd8ce;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+  }
+  .btn-proxy-cancel:hover { border-color: #aaa; color: #555; }
+
+  .proxy-url-indicator {
+    font-size: 11px;
+    color: #aaa496;
+    font-style: italic;
+    margin-top: 5px;
+    cursor: pointer;
+    display: inline-block;
+  }
+  .proxy-url-indicator:hover { color: #B89A5A; text-decoration: underline; }
+  .proxy-url-indicator.configured { color: #7a9a60; }
+</style>
 
   /* === AI ASSIST BLOCK === */
   .ai-assist-block {
@@ -607,6 +690,7 @@
       <button class="btn-collapse" id="btnCollapse" onclick="toggleAssist()" title="Contraer">▲</button>
     </div>
     <p class="note-tip" style="margin-bottom:12px;">Describe brevemente la escena en español. La IA la expandirá con todo el detalle necesario y la traducirá al inglés lista para usar.</p>
+    <span class="proxy-url-indicator" id="proxyIndicator" onclick="showProxyModal()">⚙ URL del proxy de IA: no configurada</span>
 
     <textarea id="sceneRaw" rows="3" placeholder="Ej: Un monje copista trabajando a la luz de una vela en un scriptorium medieval, rodeado de manuscritos..."></textarea>
 
@@ -1014,8 +1098,17 @@ RULES:
 
     const userPrompt = `Scene description in Spanish (brief, to be expanded):\n"${raw}"${context}\n\nWrite the expanded scene description in English.`;
 
+    const proxyUrl = localStorage.getItem('anthropic_proxy_url') || '';
+    if (!proxyUrl) {
+      btn.disabled = false;
+      document.getElementById('expandBtnText').textContent = '✦ Expandir descripción con IA';
+      document.getElementById('expandSpinner').style.display = 'none';
+      showProxyModal();
+      return;
+    }
+
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1058,8 +1151,61 @@ RULES:
     document.getElementById('expandResultText').textContent = '';
   }
 
+  function updateProxyIndicator() {
+    const url = localStorage.getItem('anthropic_proxy_url') || '';
+    const el = document.getElementById('proxyIndicator');
+    if (!el) return;
+    if (url) {
+      const short = url.replace('https://', '').split('/')[0];
+      el.textContent = '⚙ Proxy IA: ' + short;
+      el.classList.add('configured');
+    } else {
+      el.textContent = '⚙ URL del proxy de IA: no configurada';
+      el.classList.remove('configured');
+    }
+  }
+
+  function showProxyModal() {
+    const url = localStorage.getItem('anthropic_proxy_url') || '';
+    document.getElementById('proxyUrlInput').value = url;
+    document.getElementById('proxyModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('proxyUrlInput').focus(), 80);
+  }
+
+  function closeProxyModal() {
+    document.getElementById('proxyModal').style.display = 'none';
+  }
+
+  function saveProxyUrl() {
+    const val = document.getElementById('proxyUrlInput').value.trim().replace(/\/$/, '');
+    if (!val) { document.getElementById('proxyUrlInput').focus(); return; }
+    localStorage.setItem('anthropic_proxy_url', val);
+    closeProxyModal();
+    updateProxyIndicator();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('proxyModal').addEventListener('click', function(e) {
+      if (e.target === this) closeProxyModal();
+    });
+  });
+
+  updateProxyIndicator();
   updateCount();
 </script>
+
+<!-- Proxy config modal -->
+<div class="proxy-modal-overlay" id="proxyModal" style="display:none;">
+  <div class="proxy-modal">
+    <h3>Configurar proxy de IA</h3>
+    <p>Para evitar bloqueos CORS, las llamadas a la IA se hacen a través de un Cloudflare Worker propio. Pega aquí la URL de tu Worker (p.ej: <em>https://anthropic-proxy.tu-usuario.workers.dev</em>).</p>
+    <input type="url" id="proxyUrlInput" placeholder="https://anthropic-proxy.tu-usuario.workers.dev" autocomplete="off" spellcheck="false">
+    <div class="proxy-modal-actions">
+      <button class="btn-proxy-cancel" onclick="closeProxyModal()">Cancelar</button>
+      <button class="btn-proxy-save" onclick="saveProxyUrl()">Guardar y continuar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
