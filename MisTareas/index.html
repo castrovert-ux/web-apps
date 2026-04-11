@@ -676,7 +676,6 @@
   function guardar(key, val) { 
     localStorage.setItem(key, JSON.stringify(val));
     // Los cambios locales se suben solo cuando el usuario pulsa Sincronizar
-    // (no hay auto-guardado automático para evitar conflictos de timestamp)
   }
 
   function showToast(msg) {
@@ -701,7 +700,6 @@
 
   // ── Funciones de sincronización con la nube ──
 
-  // Sube los datos locales a Firebase (solo se llama cuando queremos guardar)
   function subirANube(silencioso) {
     if (!fbUser) return Promise.resolve();
     const datos = {
@@ -712,12 +710,12 @@
     };
     return fbDb.collection('usuarios').doc(fbUser.uid).set({ gestorTareas: datos }, { merge: true })
       .then(function() {
-        if (!silencioso) showToast("✅ Tareas guardadas en la nube");
+        localStorage.setItem('gestorUltimaSubida', datos.lastUpdate);
+        if (!silencioso) showToast("\u2705 Tareas guardadas en la nube");
       })
-      .catch(function(e) { console.error(e); if (!silencioso) showToast("❌ Error al guardar"); });
+      .catch(function(e) { console.error(e); if (!silencioso) showToast("\u274C Error al guardar"); });
   }
 
-  // Aplica los datos de la nube al localStorage y refresca la UI
   function aplicarDatosNube(d) {
     localStorage.setItem(KEY_HOY,        JSON.stringify(d.hoy        || []));
     localStorage.setItem(KEY_PEND,       JSON.stringify(d.pendientes || []));
@@ -727,55 +725,37 @@
     if (document.getElementById('view-historial').classList.contains('visible')) renderHistorial();
   }
 
-  // Sincronización bidireccional real:
-  // 1. Descarga los datos de la nube (recibe cambios de otros dispositivos)
-  // 2. Fusiona con lo local: gana siempre el más reciente por lista
-  // 3. Sube el resultado fusionado
+  // Sincronización bidireccional: compara el timestamp de la nube con la
+  // última subida conocida en este dispositivo. Si la nube es más reciente,
+  // descarga; si lo local es más reciente, sube.
   function sincronizarBidireccional() {
     if (!fbUser) return;
     var btnSync = document.getElementById('btn-sync');
     if (btnSync) btnSync.disabled = true;
-    showToast("🔄 Sincronizando…");
+    showToast("\uD83D\uDD04 Sincronizando\u2026");
 
     fbDb.collection('usuarios').doc(fbUser.uid).get()
       .then(function(doc) {
-        // Si no hay nada en la nube, subimos lo local directamente
         if (!doc.exists || !doc.data().gestorTareas) {
+          // Sin datos en la nube: subir lo local
           return subirANube(false);
         }
-
         var d = doc.data().gestorTareas;
         var tsNube = d.lastUpdate || 0;
+        var tsUltimaSubida = parseInt(localStorage.getItem('gestorUltimaSubida')) || 0;
 
-        // Comparamos por timestamp: la fuente más reciente gana
-        // Para cada lista, tomamos la versión más reciente (nube vs local)
-        // No podemos fusionar tarea a tarea sin IDs únicos, así que
-        // elegimos la versión completa más reciente de cada lista individualmente
-        // usando el timestamp global de la nube vs el de la última subida local.
-        var tsLocalSubida = parseInt(localStorage.getItem('gestorUltimaSubida')) || 0;
-
-        var hayDatosNubeRecientes = tsNube > tsLocalSubida;
-
-        if (hayDatosNubeRecientes) {
-          // La nube tiene cambios que no están en local → aplicar nube
+        if (tsNube > tsUltimaSubida) {
+          // La nube tiene cambios más recientes que la última vez que subimos
           aplicarDatosNube(d);
-          // Guardamos cuándo fue la última subida que conocemos
           localStorage.setItem('gestorUltimaSubida', tsNube);
-          showToast("📲 Datos actualizados desde la nube");
+          showToast("\uD83D\uDCF2 Datos actualizados desde la nube");
         } else {
-          // Local es igual o más reciente → subir
-          return subirANube(false).then(function() {
-            localStorage.setItem('gestorUltimaSubida', new Date().getTime());
-          });
+          // Lo local es igual o más reciente: subir
+          return subirANube(false);
         }
       })
-      .catch(function(e) {
-        console.error(e);
-        showToast("❌ Error al sincronizar");
-      })
-      .finally(function() {
-        if (btnSync) btnSync.disabled = false;
-      });
+      .catch(function(e) { console.error(e); showToast("\u274C Error al sincronizar"); })
+      .finally(function() { if (btnSync) btnSync.disabled = false; });
   }
 
   // Gestión del estado de usuario
@@ -790,7 +770,7 @@
       userText.textContent = user.displayName || user.email;
       btnSignout.style.display = 'inline';
       syncLabel.textContent = "Sincronizar";
-      // Al iniciar sesión: sincronización bidireccional automática
+      // Al iniciar sesión: sync bidireccional automática
       sincronizarBidireccional();
     } else {
       userText.style.display = 'none';
@@ -1234,6 +1214,23 @@
   renderHoy();
   renderPendientes();
 </script>
-  <script src="../volver.js"></script>
+  <script>
+    (function() {
+      var btn = document.createElement('button');
+      btn.textContent = '← Volver';
+      btn.style.cssText = [
+        'position:fixed', 'bottom:18px', 'left:18px', 'z-index:9999',
+        'background:#1C1A17', 'color:#F7F3EC', 'border:none',
+        'border-radius:20px', 'padding:8px 16px',
+        "font-family:'DM Sans',sans-serif", 'font-size:0.8rem',
+        'cursor:pointer', 'box-shadow:0 2px 8px rgba(0,0,0,0.25)',
+        'opacity:0.75', 'transition:opacity 0.2s'
+      ].join(';');
+      btn.onmouseenter = function() { btn.style.opacity = '1'; };
+      btn.onmouseleave = function() { btn.style.opacity = '0.75'; };
+      btn.onclick = function() { history.back(); };
+      document.body.appendChild(btn);
+    })();
+  </script>
 </body>
 </html>
