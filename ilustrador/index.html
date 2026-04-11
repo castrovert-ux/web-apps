@@ -656,8 +656,25 @@
   .proxy-url-indicator.configured { color: #7a9a60; }
 
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
+
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar" style="background:#1a1814;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 20px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:0;">
+  <span id="sync-user-text" style="display:none;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px;font-family:monospace"></span>
+  <button id="btn-signout" onclick="fbSignOut()" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;text-transform:uppercase;font-family:monospace">Cerrar sesión</button>
+  <button id="btn-sync" onclick="handleSync()" style="background:none;border:1px solid rgba(184,154,90,0.5);color:#c9a96e;padding:4px 11px;border-radius:20px;cursor:pointer;font-size:10px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:5px;font-family:monospace;transition:all .2s">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar historial</span>
+  </button>
+</div>
+<div id="sync-status" style="display:none;padding:5px 20px;font-size:10px;letter-spacing:1px;text-transform:uppercase;align-items:center;justify-content:space-between;gap:10px;">
+  <span id="sync-status-msg"></span>
+  <button onclick="closeSyncStatus()" style="background:none;border:none;cursor:pointer;opacity:.6;font-size:12px;padding:0 3px">✕</button>
+</div>
 
 <div class="container">
 
@@ -1172,6 +1189,134 @@
   updateProxyIndicator();
 
   updateCount();
+
+  // ══════════════════════════════════════════════════════
+  //  FIREBASE · Sincronización bidireccional
+  // ══════════════════════════════════════════════════════
+  var firebaseConfig = {
+    apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs",
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var fbAuth     = firebase.auth();
+  var fbDb       = firebase.firestore();
+  var fbProvider = new firebase.auth.GoogleAuthProvider();
+  var fbUser     = null;
+  var fbPopupOpen = false;
+
+  fbAuth.onAuthStateChanged(function(user) {
+    fbUser = user;
+    updateSyncUI();
+    if (user) sincronizarBidireccional();
+  });
+
+  function updateSyncUI() {
+    var userEl  = document.getElementById('sync-user-text');
+    var signout = document.getElementById('btn-signout');
+    var btn     = document.getElementById('btn-sync');
+    var icon    = document.getElementById('sync-icon');
+    var label   = document.getElementById('sync-label');
+    if (fbUser) {
+      btn.style.borderColor = 'rgba(184,154,90,0.8)';
+      icon.textContent  = '✓';
+      label.textContent = 'Sincronizar historial';
+      userEl.textContent    = fbUser.email;
+      userEl.style.display  = 'inline';
+      signout.style.display = 'inline';
+    } else {
+      btn.style.borderColor = 'rgba(184,154,90,0.5)';
+      icon.textContent      = '☁';
+      label.textContent     = 'Sincronizar historial';
+      userEl.style.display  = 'none';
+      signout.style.display = 'none';
+    }
+  }
+
+  function handleSync() {
+    if (fbPopupOpen) return;
+    if (!fbUser) {
+      fbPopupOpen = true;
+      setSyncStatus('info', 'Iniciando sesión con Google…');
+      fbAuth.signInWithPopup(fbProvider)
+        .then(function() { fbPopupOpen = false; sincronizarBidireccional(); })
+        .catch(function(err) { fbPopupOpen = false; setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
+    } else {
+      sincronizarBidireccional();
+    }
+  }
+
+  // Sincronización bidireccional: compara timestamp de la nube con la
+  // última subida conocida en este dispositivo.
+  function sincronizarBidireccional() {
+    if (!fbUser) return;
+    var btnSync = document.getElementById('btn-sync');
+    if (btnSync) btnSync.disabled = true;
+    setSyncStatus('info', 'Sincronizando historial…');
+    var docRef = fbDb.collection('promptsIlustraciones').doc(fbUser.uid);
+
+    docRef.get()
+      .then(function(snap) {
+        // Sin datos en la nube → subir directamente
+        if (!snap.exists || !(snap.data().historial || []).length) {
+          return subirANube(docRef);
+        }
+
+        var tsNube = snap.data().lastUpdate || 0;
+        var tsUltimaSubida = parseInt(localStorage.getItem('promptsUltimaSubida')) || 0;
+
+        if (tsNube > tsUltimaSubida) {
+          // La nube tiene datos más recientes → descargar
+          var historialNube = snap.data().historial || [];
+          saveHistorial(historialNube);
+          localStorage.setItem('promptsUltimaSubida', tsNube);
+          updateCount();
+          if (document.getElementById('historialPanel').classList.contains('visible')) renderHistorial();
+          setSyncStatus('ok', '📲 ' + historialNube.length + ' prompt' + (historialNube.length !== 1 ? 's actualizados' : ' actualizado') + ' desde la nube');
+        } else {
+          // Lo local es igual o más reciente → subir
+          return subirANube(docRef);
+        }
+      })
+      .catch(function(err) { setSyncStatus('err', 'Error: ' + err.message); })
+      .finally(function() { if (btnSync) btnSync.disabled = false; });
+  }
+
+  function subirANube(docRef) {
+    var historial = loadHistorial();
+    var ts = new Date().getTime();
+    return docRef.set({
+      historial: historial,
+      lastUpdate: ts,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      localStorage.setItem('promptsUltimaSubida', ts);
+      var n = historial.length;
+      setSyncStatus('ok', '✓ Sincronizado — ' + n + ' prompt' + (n !== 1 ? 's' : ''));
+    });
+  }
+
+  function setSyncStatus(type, msg) {
+    var el = document.getElementById('sync-status');
+    var colors     = { ok: 'rgba(184,154,90,.1)', err: 'rgba(192,57,43,.1)', info: 'rgba(184,154,90,.07)' };
+    var textColors = { ok: '#8a6e2f',             err: '#c0392b',            info: '#999080' };
+    el.style.display    = 'flex';
+    el.style.background = colors[type]     || colors.info;
+    el.style.color      = textColors[type] || textColors.info;
+    document.getElementById('sync-status-msg').textContent = msg;
+    if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+  }
+
+  function closeSyncStatus() {
+    document.getElementById('sync-status').style.display = 'none';
+  }
+
+  function fbSignOut() {
+    fbAuth.signOut().then(function() { fbUser = null; updateSyncUI(); });
+  }
 </script>
 
 <!-- Proxy config modal -->

@@ -280,7 +280,8 @@ var fbPopupOpen = false;
 fbAuth.onAuthStateChanged(function(user) {
   fbUser = user;
   updateSyncUI();
-  if (user && vocab.length === 0) autoRestoreFromFirestore();
+  // Al iniciar sesión: sincronización bidireccional automática
+  if (user) sincronizarBidireccional();
 });
 
 function updateSyncUI() {
@@ -311,57 +312,62 @@ function handleSync() {
     fbPopupOpen = true;
     setSyncStatus('info', 'Iniciando sesión con Google…');
     fbAuth.signInWithPopup(fbProvider)
-      .then(function() { fbPopupOpen = false; return doSync(); })
+      .then(function() { fbPopupOpen = false; sincronizarBidireccional(); })
       .catch(function(err) { fbPopupOpen = false; setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
   } else {
-    doSync();
+    sincronizarBidireccional();
   }
 }
 
-function doSync() {
+// Sincronización bidireccional con timestamp:
+// - Compara cuándo subió por última vez este dispositivo vs. el lastUpdate de la nube
+// - Si la nube es más reciente → descarga (otro dispositivo subió cambios)
+// - Si lo local es más reciente → sube
+function sincronizarBidireccional() {
   if (!fbUser) return;
+  var btnSync = document.getElementById('btn-sync');
+  if (btnSync) btnSync.disabled = true;
   setSyncStatus('info', 'Sincronizando vocabulario…');
   var docRef = fbDb.collection('traductor').doc(fbUser.uid);
+
   docRef.get().then(function(snap) {
-    var localVocab = vocab.slice();
-    var localStats = Object.assign({}, stats);
-    if (snap.exists) {
+    // Sin datos en la nube → subir directamente
+    if (!snap.exists || !(snap.data().vocab || []).length) {
+      return subirANube(docRef);
+    }
+
+    var tsNube = snap.data().lastUpdate || 0;
+    var tsUltimaSubida = parseInt(localStorage.getItem('tradUltimaSubida')) || 0;
+
+    if (tsNube > tsUltimaSubida) {
+      // La nube tiene cambios más recientes → descargar
       var remoteVocab = snap.data().vocab || [];
       var remoteStats = snap.data().stats || {};
-      // Merge vocab: local prevalece, añadir los remotos que no existan localmente
-      var localIds = {};
-      localVocab.forEach(function(v) { localIds[v.id] = true; });
-      remoteVocab.forEach(function(v) { if (!localIds[v.id]) { vocab.push(v); localIds[v.id] = true; } });
-      // Merge stats
-      Object.keys(remoteStats).forEach(function(k) { if (!localStats[k]) stats[k] = remoteStats[k]; });
+      vocab = remoteVocab;
+      stats = remoteStats;
       saveVocab(); saveStats(); updateVocabCount(); renderVocab();
+      localStorage.setItem('tradUltimaSubida', tsNube);
+      setSyncStatus('ok', '📲 ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's actualizadas' : ' actualizada') + ' desde la nube');
+    } else {
+      // Lo local es igual o más reciente → subir
+      return subirANube(docRef);
     }
-    return docRef.set({
-      vocab: vocab,
-      stats: stats,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function() {
-      setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's' : ''));
-    });
-  }).catch(function(err) {
-    setSyncStatus('err', 'Error: ' + err.message);
-  });
+  })
+  .catch(function(err) { setSyncStatus('err', 'Error: ' + err.message); })
+  .finally(function() { if (btnSync) btnSync.disabled = false; });
 }
 
-function autoRestoreFromFirestore() {
-  var docRef = fbDb.collection('traductor').doc(fbUser.uid);
-  docRef.get().then(function(snap) {
-    if (snap.exists && vocab.length === 0) {
-      var remoteVocab = snap.data().vocab || [];
-      var remoteStats = snap.data().stats || {};
-      if (remoteVocab.length > 0) {
-        vocab = remoteVocab;
-        stats = remoteStats;
-        saveVocab(); saveStats(); updateVocabCount(); renderVocab();
-        setSyncStatus('ok', '✓ ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's restauradas' : ' restaurada') + ' desde la nube');
-      }
-    }
-  }).catch(function(err) { console.warn('Auto-restore error:', err); });
+function subirANube(docRef) {
+  var ts = new Date().getTime();
+  return docRef.set({
+    vocab: vocab,
+    stats: stats,
+    lastUpdate: ts,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    localStorage.setItem('tradUltimaSubida', ts);
+    setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's' : ''));
+  });
 }
 
 function setSyncStatus(type, msg) {
