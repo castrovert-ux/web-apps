@@ -675,9 +675,11 @@
 
   function guardar(key, val) { 
     localStorage.setItem(key, JSON.stringify(val));
+    // Marcar timestamp local para que la sync sepa que hay cambios locales
+    setLocalTimestamp(new Date().getTime());
     // Auto-guardado en la nube si el usuario está conectado
     if (fbUser) {
-      subirANube();
+      subirANube(true);
     }
   }
 
@@ -701,36 +703,89 @@
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── Marca de tiempo local ──
+  const KEY_LAST_UPDATE = 'gestorLastUpdate';
+
+  function getLocalTimestamp() {
+    return parseInt(localStorage.getItem(KEY_LAST_UPDATE)) || 0;
+  }
+  function setLocalTimestamp(ts) {
+    localStorage.setItem(KEY_LAST_UPDATE, ts);
+  }
+
   // ── Funciones de sincronización con la nube ──
-  function subirANube() {
+  function subirANube(silencioso) {
     if (!fbUser) return;
+    const ts = new Date().getTime();
     const datos = {
       hoy: cargar(KEY_HOY),
       pendientes: cargar(KEY_PEND),
       realizadas: cargar(KEY_REALIZADAS),
-      lastUpdate: new Date().getTime()
+      lastUpdate: ts
     };
     fbDb.collection('usuarios').doc(fbUser.uid).set({ gestorTareas: datos }, { merge: true })
-      .then(function() { showToast("✅ Tareas guardadas en la nube"); })
+      .then(function() {
+        setLocalTimestamp(ts);
+        if (!silencioso) showToast("✅ Tareas guardadas en la nube");
+      })
       .catch(function(e) { console.error(e); showToast("❌ Error al guardar"); });
   }
 
-  function descargarDeNube() {
+  function aplicarDatosNube(d) {
+    localStorage.setItem(KEY_HOY,        JSON.stringify(d.hoy        || []));
+    localStorage.setItem(KEY_PEND,       JSON.stringify(d.pendientes || []));
+    localStorage.setItem(KEY_REALIZADAS, JSON.stringify(d.realizadas || []));
+    setLocalTimestamp(d.lastUpdate || 0);
+    renderHoy();
+    renderPendientes();
+    if (document.getElementById('view-historial').classList.contains('visible')) renderHistorial();
+  }
+
+  function descargarDeNube(silencioso) {
     if (!fbUser) return;
     fbDb.collection('usuarios').doc(fbUser.uid).get()
       .then(function(doc) {
         if (doc.exists && doc.data().gestorTareas) {
           const d = doc.data().gestorTareas;
-          localStorage.setItem(KEY_HOY,        JSON.stringify(d.hoy        || []));
-          localStorage.setItem(KEY_PEND,       JSON.stringify(d.pendientes || []));
-          localStorage.setItem(KEY_REALIZADAS, JSON.stringify(d.realizadas || []));
-          renderHoy();
-          renderPendientes();
-          if (document.getElementById('view-historial').classList.contains('visible')) renderHistorial();
-          showToast("📂 Datos recuperados");
+          aplicarDatosNube(d);
+          if (!silencioso) showToast("📂 Datos recuperados de la nube");
+        } else {
+          if (!silencioso) showToast("☁️ Sin datos en la nube todavía");
         }
       })
-      .catch(function(e) { console.error(e); });
+      .catch(function(e) { console.error(e); showToast("❌ Error al descargar"); });
+  }
+
+  // Sincronización bidireccional: compara timestamps y usa los más recientes
+  function sincronizarBidireccional() {
+    if (!fbUser) return;
+    showToast("🔄 Sincronizando…");
+    fbDb.collection('usuarios').doc(fbUser.uid).get()
+      .then(function(doc) {
+        const tsLocal = getLocalTimestamp();
+
+        // No hay datos en la nube → subir lo local
+        if (!doc.exists || !doc.data().gestorTareas) {
+          subirANube(false);
+          return;
+        }
+
+        const d = doc.data().gestorTareas;
+        const tsNube = d.lastUpdate || 0;
+
+        if (tsNube > tsLocal) {
+          // La nube es más reciente → descargar
+          aplicarDatosNube(d);
+          showToast("📲 Datos actualizados desde la nube");
+        } else if (tsLocal > tsNube) {
+          // Lo local es más reciente → subir
+          subirANube(false);
+        } else {
+          // Iguales → ya están sincronizados
+          showToast("✅ Ya estás sincronizado");
+        }
+      })
+      .catch(function(e) { console.error(e); showToast("❌ Error al sincronizar"); });
   }
 
   // Gestión del estado de usuario
@@ -744,11 +799,9 @@
       userText.style.display = 'inline';
       userText.textContent = user.displayName || user.email;
       btnSignout.style.display = 'inline';
-      syncLabel.textContent = "Sincronizado";
-      const hayDatosLocales = cargar(KEY_HOY).length || cargar(KEY_PEND).length || cargar(KEY_REALIZADAS).length;
-      if (!hayDatosLocales) {
-        descargarDeNube();
-      }
+      syncLabel.textContent = "Sincronizar";
+      // Al iniciar sesión, hacer siempre sincronización bidireccional automática
+      sincronizarBidireccional();
     } else {
       userText.style.display = 'none';
       btnSignout.style.display = 'none';
@@ -762,7 +815,7 @@
         .then(function() { showToast("Sesión iniciada"); })
         .catch(function(e) { showToast("Error al conectar: " + e.message); });
     } else {
-      subirANube();
+      sincronizarBidireccional();
     }
   }
 
