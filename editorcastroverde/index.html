@@ -412,7 +412,7 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
     </div>
     <div class="copy-bar" id="copy-bar">
       <button class="btn btn-success" id="btn-copy">⎘ Copiar texto mejorado</button>
-      <button class="btn btn-ghost"   id="btn-save-version">💾 Guardar versión</button>
+      <button class="btn btn-ghost"   id="btn-save-version" style="display:none;">💾 Guardar versión</button>
       <span class="copy-feedback" id="copy-feedback">¡Copiado!</span>
     </div>
   </div>
@@ -675,6 +675,7 @@ function analyzeText(){
       var result=JSON.parse(clean);
       currentResult={improved:result.texto_mejorado||text,report:result,original:text,name:get('fragment-name').value.trim()||('Fragmento · '+dateStr(new Date()))};
       renderResult(currentResult);
+      autoSaveVersion();
     }catch(e){
       currentResult={improved:response,report:null,original:text,name:get('fragment-name').value.trim()||'Fragmento'};
       renderPlain(response);
@@ -707,6 +708,7 @@ function requestVerdict(){
       var result=JSON.parse(clean);
       currentResult={improved:result.texto_mejorado||text,report:result,original:text,name:get('fragment-name').value.trim()||('Veredicto · '+dateStr(new Date())),isVerdict:true};
       renderResult(currentResult);
+      autoSaveVersion();
     }catch(e){
       currentResult={improved:response,report:null,original:text,name:'Veredicto',isVerdict:true};
       renderPlain(response);
@@ -796,6 +798,13 @@ function renderHistoryList(){
     html+='<div class="version-item"><div class="version-meta"><span class="version-name">'+esc(v.name)+'</span><span class="version-date">'+v.date+'</span></div><div class="version-preview">'+esc(v.original.substring(0,80))+'…</div>'+instrucPreview+'<div class="version-actions"><button class="btn btn-ghost" style="font-size:9px;padding:3px 9px;" onclick="loadVersion('+i+')">Cargar</button><button class="btn btn-danger" style="font-size:9px;padding:3px 9px;" onclick="deleteVersion('+i+')">Borrar</button></div></div>';
   }
   list.innerHTML=html;
+}
+
+function autoSaveVersion(){
+  if(!currentResult) return;
+  var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value : '';
+  versions.push({name:currentResult.name,original:currentResult.original,improved:currentResult.improved,report:currentResult.report,instrucFragmento:instrucFrag,date:dateStr(new Date()),ts:Date.now()});
+  saveVersions(); renderHistoryList();
 }
 
 function saveCurrentVersion(){
