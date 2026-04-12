@@ -21,12 +21,15 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Solo cachear recursos locales; las llamadas a la API van siempre a la red
+  // Dejar pasar sin interceptar las llamadas externas
+  // (anthropic.com requiere cabeceras especiales que el SW no puede reenviar)
   if (e.request.url.includes('anthropic.com') ||
-      e.request.url.includes('fonts.googleapis.com') ||
+      e.request.url.includes('googleapis.com') ||
+      e.request.url.includes('gstatic.com') ||
+      e.request.url.includes('firestore.googleapis.com') ||
+      e.request.url.includes('identitytoolkit.googleapis.com') ||
       e.request.url.includes('cdnjs.cloudflare.com')) {
-    e.respondWith(fetch(e.request));
-    return;
+    return; // Sin e.respondWith → el navegador gestiona la petición directamente
   }
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
