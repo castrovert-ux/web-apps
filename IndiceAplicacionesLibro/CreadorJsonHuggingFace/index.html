@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Castroverde - Hugging Face JSON Creator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        textarea { width: 100%; height: 150px; margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; transition: 0.3s; }
+        .btn-save { background: #3498db; color: white; }
+        .btn-download { background: #27ae60; color: white; }
+        .btn-clear { background: #e74c3c; color: white; }
+        button:hover { opacity: 0.8; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; max-height: 400px; }
+        .status { font-size: 0.9em; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📚 Castroverde: Dataset Manager</h1>
+    
+    <h3>1. Índice del Libro (Permanente)</h3>
+    <textarea id="indiceInput" placeholder="Pega aquí el índice completo..."></textarea>
+    <button class="btn-save" onclick="saveIndice()">Guardar Índice</button>
+    <span id="indiceStatus" class="status"></span>
+
+    <hr>
+
+    <h3>2. Añadir Resultado JSON</h3>
+    <p>Pega aquí el bloque JSON que yo te genere para acumularlo:</p>
+    <textarea id="jsonInput" placeholder='[{"id": "cost_001", ...}]'></textarea>
+    <div class="controls">
+        <button class="btn-save" onclick="appendJson()">Añadir al archivo</button>
+        <button class="btn-download" onclick="downloadJson()">Descargar JSON Final</button>
+        <button class="btn-clear" onclick="clearData()">Borrar Todo</button>
+    </div>
+
+    <h3>Vista Previa del Dataset:</h3>
+    <pre id="preview">[]</pre>
+</div>
+
+<script>
+    // Cargar datos al iniciar
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedIndice = localStorage.getItem('castroverde_indice');
+        if (savedIndice) {
+            document.getElementById('indiceInput').value = savedIndice;
+            document.getElementById('indiceStatus').innerText = "✅ Índice cargado de la memoria.";
+        }
+        updatePreview();
+    });
+
+    function saveIndice() {
+        const indice = document.getElementById('indiceInput').value;
+        localStorage.setItem('castroverde_indice', indice);
+        document.getElementById('indiceStatus').innerText = "✅ Índice guardado permanentemente.";
+    }
+
+    function appendJson() {
+        const input = document.getElementById('jsonInput').value;
+        if (!input) return;
+
+        try {
+            const newData = JSON.parse(input);
+            let currentData = JSON.parse(localStorage.getItem('castroverde_dataset') || "[]");
+            
+            // Si es un array, concatenamos. Si es un objeto, lo añadimos.
+            if (Array.isArray(newData)) {
+                currentData = currentData.concat(newData);
+            } else {
+                currentData.push(newData);
+            }
+
+            localStorage.setItem('castroverde_dataset', JSON.stringify(currentData));
+            document.getElementById('jsonInput').value = "";
+            updatePreview();
+        } catch (e) {
+            alert("Error: El formato JSON no es válido. Asegúrate de copiar el bloque completo.");
+        }
+    }
+
+    function updatePreview() {
+        const data = localStorage.getItem('castroverde_dataset') || "[]";
+        document.getElementById('preview').innerText = JSON.stringify(JSON.parse(data), null, 2);
+    }
+
+    function downloadJson() {
+        const data = localStorage.getItem('castroverde_dataset') || "[]";
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dataset_castroverde.json';
+        a.click();
+    }
+
+    function clearData() {
+        if (confirm("¿Seguro que quieres borrar todo el progreso del JSON acumulado?")) {
+            localStorage.setItem('castroverde_dataset', "[]");
+            updatePreview();
+        }
+    }
+</script>
+
+</body>
+</html>
