@@ -6,10 +6,10 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f0f2f5; color: #1c1e21; }
         .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        h1 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; }
         .section { background: #fafafa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
         h3 { margin-top: 0; color: #444; }
-        textarea { width: 100%; height: 120px; margin: 10px 0; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; box-sizing: border-box; }
+        textarea { width: 100%; height: 120px; margin: 10px 0; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; box-sizing: border-box; font-size: 14px; }
         .controls { display: flex; gap: 10px; flex-wrap: wrap; }
         button { padding: 10px 18px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; }
         .btn-blue { background: #1a73e8; color: white; }
@@ -19,6 +19,7 @@
         button:hover { opacity: 0.85; transform: translateY(-1px); }
         pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; max-height: 300px; font-size: 13px; }
         .badge { background: #e8f0fe; color: #1a73e8; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        #msgCopiado { color: #34a853; font-weight: bold; margin-left: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -28,35 +29,37 @@
     
     <div class="section">
         <h3>1. Índice Maestro <span class="badge">Permanente</span></h3>
-        <textarea id="indiceInput" placeholder="Pega aquí el índice del libro para referencia..."></textarea>
+        <textarea id="indiceInput" placeholder="Pega aquí el índice del libro..."></textarea>
         <button class="btn-blue" onclick="saveIndice()">💾 Guardar Índice</button>
     </div>
 
     <div class="section" style="border-left: 5px solid #fbbc05;">
         <h3>2. Procesar Nuevo Texto</h3>
-        <p>Pega el fragmento del libro aquí abajo para generar la petición que me enviarás:</p>
+        <p>Pega el fragmento aquí y pulsa el botón amarillo para enviármelo:</p>
         <textarea id="textoParaProcesar" placeholder="Pega el texto original del libro aquí..."></textarea>
-        <button class="btn-copy" onclick="prepararPeticion()">📋 Copiar Petición para la IA</button>
-        <p id="msgCopiado" style="color: #34a853; display:none; font-size: 0.9em; margin-top: 5px;">¡Copiado al portapapeles! Ahora pégalo en el chat conmigo.</p>
+        <div class="controls">
+            <button class="btn-copy" onclick="prepararPeticion()">📋 Copiar Petición para Gemini</button>
+            <button style="background: #999; color: white;" onclick="document.getElementById('textoParaProcesar').value=''">🧹 Limpiar</button>
+            <span id="msgCopiado">¡Copiado!</span>
+        </div>
     </div>
 
     <div class="section" style="border-left: 5px solid #34a853;">
         <h3>3. Integrar Resultado JSON</h3>
-        <p>Pega el JSON que yo te responda aquí para ir creando el archivo final:</p>
-        <textarea id="jsonInput" placeholder='Pega el bloque {"id": "...", ...} aquí'></textarea>
+        <p>Pega el JSON que yo te responda aquí:</p>
+        <textarea id="jsonInput" placeholder='Pega aquí el { "id": ... }'></textarea>
         <div class="controls">
             <button class="btn-green" onclick="appendJson()">➕ Añadir al Dataset</button>
             <button class="btn-blue" onclick="downloadJson()">📥 Descargar .JSON Final</button>
-            <button class="btn-red" onclick="clearData()">🗑️ Limpiar Todo</button>
+            <button class="btn-red" onclick="clearData()">🗑️ Borrar Dataset</button>
         </div>
     </div>
 
-    <h3>Vista Previa del Archivo (.json):</h3>
+    <h3>Vista Previa del Archivo:</h3>
     <pre id="preview">[]</pre>
 </div>
 
 <script>
-    // Cargar persistencia
     document.addEventListener('DOMContentLoaded', () => {
         const savedIndice = localStorage.getItem('castroverde_indice');
         if (savedIndice) document.getElementById('indiceInput').value = savedIndice;
@@ -65,28 +68,40 @@
 
     function saveIndice() {
         localStorage.setItem('castroverde_indice', document.getElementById('indiceInput').value);
-        alert("Índice guardado correctamente.");
+        alert("Índice guardado.");
     }
 
     function prepararPeticion() {
         const texto = document.getElementById('textoParaProcesar').value;
         if (!texto) return alert("Pega algún texto primero.");
         
-        const prompt = `Analiza este fragmento según el índice guardado y devuélveme el JSON para mi dataset:\n\nTEXTO:\n"${texto}"`;
+        // Creamos la petición completa
+        const prompt = `Analiza este fragmento según el índice que ya tenemos y devuélveme el objeto JSON para mi dataset:\n\nTEXTO:\n"${texto}"`;
         
-        navigator.clipboard.writeText(prompt).then(() => {
-            const msg = document.getElementById('msgCopiado');
-            msg.style.display = 'block';
-            setTimeout(() => msg.style.display = 'none', 3000);
-        });
+        // Método de copia compatible
+        const tempInput = document.createElement("textarea");
+        tempInput.value = prompt;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+
+        const msg = document.getElementById('msgCopiado');
+        msg.style.display = 'inline';
+        setTimeout(() => msg.style.display = 'none', 2000);
     }
 
     function appendJson() {
         const input = document.getElementById('jsonInput').value;
         if (!input) return;
         try {
-            const newData = JSON.parse(input);
+            // Limpiamos posibles espacios o textos extra antes del JSON
+            const jsonMatch = input.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+            if (!jsonMatch) throw new Error("No se encontró un JSON válido");
+            
+            const newData = JSON.parse(jsonMatch[0]);
             let currentData = JSON.parse(localStorage.getItem('castroverde_dataset') || "[]");
+            
             if (Array.isArray(newData)) currentData = currentData.concat(newData);
             else currentData.push(newData);
             
@@ -94,7 +109,7 @@
             document.getElementById('jsonInput').value = "";
             updatePreview();
         } catch (e) {
-            alert("Error: El JSON no es válido. Asegúrate de copiar solo el bloque entre llaves { } o corchetes [ ].");
+            alert("Error: No se pudo leer el JSON. Asegúrate de copiar todo el bloque desde { hasta }.");
         }
     }
 
