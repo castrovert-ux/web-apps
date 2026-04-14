@@ -31,9 +31,6 @@
         .sticky-bar { position: sticky; top: 0; z-index: 1000; background: var(--p); padding: 10px 0; border-bottom: 2px solid var(--a); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         #jsonEditor { display: none; }
         .badge { font-size: 0.7em; background: var(--a); padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
-        
-        /* Nuevo estilo para la caja de instrucción */
-        .custom-prompt-card { background: #1a1a2e; border: 2px dashed #e94560; }
     </style>
 </head>
 <body>
@@ -45,7 +42,7 @@
             <span id="counter" class="badge">0</span>
         </div>
         <div style="display:flex; gap:10px;">
-            <button class="btn btn-main" onclick="generatePrompt()">Generar Prompt Personalizado</button>
+            <button class="btn btn-main" onclick="generatePrompt()">Generar Prompt Contextual</button>
             <button class="btn btn-sec" onclick="copyOnlyIDs()">Copiar IDs</button>
         </div>
     </div>
@@ -74,16 +71,6 @@
             <button class="btn btn-sec" style="flex:1" onclick="resetFilters()">Resetear</button>
             <button class="btn btn-sec" style="flex:1" onclick="toggleEditor()">Cargar Datos</button>
         </div>
-    </div>
-
-    <!-- NUEVA CAJA DE INSTRUCCIÓN PERSONALIZADA -->
-    <div class="card custom-prompt-card">
-        <label>Instrucción o pregunta específica sobre los bloques seleccionados</label>
-        <textarea id="customInstruction" rows="4" 
-                  placeholder="Ej: ¿Qué relación existe entre la familia López y el Monasterio de San Juan? Explica la evolución cronológica y menciona posibles conflictos..."></textarea>
-        <small style="color:#999; display:block; margin-top:5px;">
-            Esta pregunta se añadirá automáticamente al prompt que se copie
-        </small>
     </div>
 
     <div id="jsonEditor" class="card">
@@ -178,23 +165,11 @@
             return `- ${b.id}: ${b.titulo}`;
         });
 
-        if(selected.length === 0) return alert("Selecciona al menos un bloque primero");
+        if(selected.length === 0) return alert("Selecciona bloques primero");
 
-        const customQuestion = document.getElementById('customInstruction').value.trim();
-
-        const prompt = `Actúa como historiador experto en Castroverde de Cerrato.
-
-Necesito que respondas a la siguiente pregunta utilizando **exclusivamente** los siguientes bloques de conocimiento de mi dataset:
-
-**Pregunta:**
-${customQuestion || "Cruza los datos de las entidades mencionadas y genera una síntesis que conecte estos temas."}
-
-**Bloques seleccionados:**
-${selected.join('\n')}`;
-
-        navigator.clipboard.writeText(prompt).then(() => {
-            alert("¡Prompt personalizado copiado al portapapeles! ✅\n\nYa puedes pegarlo directamente en Grok, Claude o ChatGPT.");
-        });
+        const prompt = `Actúa como historiador experto en Castroverde de Cerrato. Necesito un análisis profundo utilizando como base exclusiva los siguientes bloques de conocimiento de mi dataset:\n\n${selected.join('\n')}\n\nPor favor, cruza los datos de las entidades mencionadas y genera una síntesis que conecte estos temas.`;
+        
+        navigator.clipboard.writeText(prompt).then(() => alert("¡Prompt Contextual copiado al portapapeles!"));
     }
 
     function copyOnlyIDs() {
