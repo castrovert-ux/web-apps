@@ -32,6 +32,7 @@
         #jsonEditor { display: none; }
         .badge { font-size: 0.7em; background: var(--a); padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
         
+        /* Nuevo estilo para la caja de instrucción */
         .custom-prompt-card { background: #1a1a2e; border: 2px dashed #e94560; }
     </style>
 </head>
@@ -44,7 +45,7 @@
             <span id="counter" class="badge">0</span>
         </div>
         <div style="display:flex; gap:10px;">
-            <button class="btn btn-main" onclick="generarPromptContextual()">Generar Prompt Contextual</button>
+            <button class="btn btn-main" onclick="generatePrompt()">Generar Prompt Personalizado</button>
             <button class="btn btn-sec" onclick="copyOnlyIDs()">Copiar IDs</button>
         </div>
     </div>
@@ -75,13 +76,13 @@
         </div>
     </div>
 
-    <!-- Caja de instrucción personalizada -->
+    <!-- NUEVA CAJA DE INSTRUCCIÓN PERSONALIZADA -->
     <div class="card custom-prompt-card">
-        <label>Instrucción o pregunta específica</label>
+        <label>Instrucción o pregunta específica sobre los bloques seleccionados</label>
         <textarea id="customInstruction" rows="4" 
-                  placeholder="Ej: Dame un punto resumido para un libro narrativo sobre la vida comunitaria y los consejos durante el siglo XV..."></textarea>
+                  placeholder="Ej: ¿Qué relación existe entre la familia López y el Monasterio de San Juan? Explica la evolución cronológica y menciona posibles conflictos..."></textarea>
         <small style="color:#999; display:block; margin-top:5px;">
-            Esta instrucción se añadirá al prompt final
+            Esta pregunta se añadirá automáticamente al prompt que se copie
         </small>
     </div>
 
@@ -94,7 +95,7 @@
 </div>
 
 <script>
-    let currentData = [];   // Aquí se guardan todos los bloques
+    let currentData = [];
 
     window.onload = () => {
         const saved = localStorage.getItem('cv_final_data');
@@ -146,7 +147,7 @@
 
         const filtered = currentData.filter(b => {
             const textMatch = !search || JSON.stringify(b).toLowerCase().includes(search);
-            const sigloMatch = sigs.length === 0 || (b.siglo && b.siglo.principal && b.siglo.principal.some(s => sigs.includes(s)));
+            const sigloMatch = sigs.length === 0 || b.siglo.principal.some(s => sigs.includes(s));
             const temaMatch = !tema || b.tema === tema;
             const subMatch = !sub || b.subtema === sub;
             const tagMatch = tags.length === 0 || (b.tags && tags.some(t => b.tags.includes(t)));
@@ -161,46 +162,38 @@
         document.getElementById('counter').innerText = data.length;
         list.innerHTML = data.map(b => `
             <div class="block-item">
-                <input type="checkbox" class="sel-blk" value="${b.id}">
+                <input type="checkbox" class="sel-blk" value="${b.id}" data-title="${b.titulo}">
                 <div class="block-content">
                     <span class="block-id">${b.id}</span>
                     <h4>${b.titulo}</h4>
-                    <p>${b.resumen_corto || (b.texto ? b.texto.substring(0, 120) + '...' : '')}</p>
+                    <p>${b.resumen_corto || b.texto.substring(0, 100) + '...'}</p>
                 </div>
             </div>
         `).join('');
     }
 
-    // ====================== NUEVA FUNCIÓN SOLICITADA ======================
-    function generarPromptContextual() {
-        const seleccionados = Array.from(document.querySelectorAll('.sel-blk:checked'));
-        
-        if (seleccionados.length === 0) {
-            alert("Por favor, selecciona al menos un bloque.");
-            return;
-        }
-
-        let bloquesTexto = "";
-
-        seleccionados.forEach(checkbox => {
-            const idBuscado = checkbox.value;
-            const infoCompleta = currentData.find(item => item.id === idBuscado);
-            
-            if (infoCompleta) {
-                bloquesTexto += `--- BLOQUE: ${infoCompleta.id} (${infoCompleta.titulo}) ---\n`;
-                bloquesTexto += `CONTENIDO: ${infoCompleta.texto || "Sin texto disponible"}\n\n`;
-            }
+    function generatePrompt() {
+        const selected = Array.from(document.querySelectorAll('.sel-blk:checked')).map(cb => {
+            const b = currentData.find(d => d.id === cb.value);
+            return `- ${b.id}: ${b.titulo}`;
         });
 
-        const instruccionPersonalizada = document.getElementById('customInstruction').value.trim();
+        if(selected.length === 0) return alert("Selecciona al menos un bloque primero");
 
-        const promptFinal = `Actúa como historiador experto en Castroverde de Cerrato. Utiliza como base exclusiva la información de estos bloques de mi dataset:
+        const customQuestion = document.getElementById('customInstruction').value.trim();
 
-${bloquesTexto}
-Instrucción específica: ${instruccionPersonalizada || "Analiza estos datos con frases cortas y directas, integrando las fechas y nombres en el relato. Evita el tono académico y busca un cierre visual y concreto. Cruza la información y genera una síntesis."}`;
+        const prompt = `Actúa como historiador experto en Castroverde de Cerrato.
 
-        navigator.clipboard.writeText(promptFinal).then(() => {
-            alert("¡Prompt completo copiado al portapapeles!\n\nYa puedes pegarlo directamente en Grok, Claude o ChatGPT.");
+Necesito que respondas a la siguiente pregunta utilizando **exclusivamente** los siguientes bloques de conocimiento de mi dataset:
+
+**Pregunta:**
+${customQuestion || "Cruza los datos de las entidades mencionadas y genera una síntesis que conecte estos temas."}
+
+**Bloques seleccionados:**
+${selected.join('\n')}`;
+
+        navigator.clipboard.writeText(prompt).then(() => {
+            alert("¡Prompt personalizado copiado al portapapeles! ✅\n\nYa puedes pegarlo directamente en Grok, Claude o ChatGPT.");
         });
     }
 
