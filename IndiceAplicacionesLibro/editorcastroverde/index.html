@@ -293,6 +293,21 @@
     #instruc-fragmento:focus, #instruc-generales:focus { border-color: var(--accent); }
     .instruc-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
     .modal-box-sm { width: 420px; max-width: 95vw; }
+    /* MODAL AJUSTES */
+    .modal-box-lg { width: 760px; max-width: 97vw; }
+    .modal-subtitle { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 22px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+    .modal-textarea { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; font-family: var(--font-body); font-size: 13px; border-radius: var(--radius); outline: none; resize: vertical; line-height: 1.6; min-height: 80px; }
+    .modal-textarea:focus { border-color: var(--accent); }
+    .modal-textarea.tall { min-height: 150px; }
+    .modal-hint-inline { font-family: var(--font-ui); font-size: 8px; color: var(--muted); margin-top: 4px; line-height: 1.6; margin-bottom: 10px; }
+    .ptabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ptab { padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; font-family: var(--font-ui); font-size: 9px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .ptab.active { background: var(--accent); color: #eef4f3; border-color: var(--accent); }
+    .ptab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+    .ppanel { display: none; }
+    .ppanel.visible { display: block; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -322,6 +337,7 @@
   <div class="header-actions">
     <span class="key-status" id="key-status">⚿ clave</span>
     <button class="btn btn-ghost" id="btn-api-key">⚙ API Key</button>
+    <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
     <button class="btn btn-ghost" id="btn-verdict">⚖ Veredicto</button>
     <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
     <button class="btn btn-ghost" id="btn-clear-all">✕ Limpiar</button>
@@ -429,6 +445,40 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
   </div>
   <div style="padding:10px 13px;border-top:1px solid var(--border);">
     <button class="btn btn-danger" style="width:100%;" id="btn-clear-history">Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- MODAL AJUSTES -->
+<div class="modal-overlay" id="modal-settings" style="align-items:flex-start;padding:20px;overflow-y:auto;">
+  <div class="modal-box modal-box-lg" style="margin:auto;">
+    <div class="modal-title">Ajustes de prompts</div>
+    <div class="modal-subtitle">Personaliza el system prompt y los prompts de análisis · Guardados en este navegador</div>
+    <div class="modal-section">
+      <div class="modal-section-title">System prompt (instrucción base a Claude)</div>
+      <div class="modal-hint-inline">Define el rol, la voz de referencia y las normas de edición. Se envía en cada análisis.</div>
+      <textarea class="modal-textarea tall" id="settings-system" rows="10"></textarea>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Prompt de análisis / mejora</div>
+      <div class="modal-hint-inline">Variables disponibles: <code>{{tipo}}</code> · <code>{{instruc_frag}}</code> · <code>{{notas}}</code> · <code>{{texto}}</code></div>
+      <div class="ptabs" id="settings-ptabs">
+        <button class="ptab active" data-idx="0">Análisis</button>
+        <button class="ptab" data-idx="1">Veredicto</button>
+      </div>
+      <div id="settings-ppanels">
+        <div class="ppanel visible" id="spp-0">
+          <textarea class="modal-textarea tall" id="settings-prompt-analisis" rows="9"></textarea>
+        </div>
+        <div class="ppanel" id="spp-1">
+          <textarea class="modal-textarea tall" id="settings-prompt-veredicto" rows="9"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
+      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
   </div>
 </div>
 
@@ -595,7 +645,19 @@ var MODEL      = 'claude-sonnet-4-6';
 var MAX_TOKENS = 2048;
 var STORAGE_KEY = 'castroverde_v2';
 
-var SYSTEM_PROMPT = 'Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro de historia de Castroverde de Cerrato y tu objetivo es doble: corregir los errores técnicos del texto Y acercar su prosa a la voz de referencia del autor.\n\nVOZ DE REFERENCIA — EL MODELO AL QUE DEBES APROXIMARTE:\nEsta es la voz que el autor quiere para su libro. Úsala como guía activa:\n\n\"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano, a media hora en coche de Valladolid, es tierra de frontera donde su territorio limita con la provincia de Palencia. Es también uno de esos lugares que condensan en sus calles la historia común de la España rural: un esplendor ya pasado; la importancia de la agricultura y el éxodo que vació los pueblos.\nNo era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla. Por sus calles y senderos no solo transitaron pastores, labriegos y soldados; también desfilaron reyes, nobles y las intrigas de una corte itinerante que encontró aquí una parada estratégica donde tomar decisiones e incluso llorar a sus muertos.\"\n\nRASSGOS DE ESA VOZ QUE DEBES REPRODUCIR:\n- Frases declarativas cortas con peso propio: \"No era un lugar cualquiera.\"\n- Movimiento de lo concreto a lo histórico sin solemnidad forzada.\n- Datos precisos (fechas, cifras, nombres) integrados en la narración, no en paréntesis ni apartados.\n- Ritmo alternado: frase corta, frase larga con desarrollo, frase corta de cierre.\n- Cierres de párrafo concretos y visuales. Nunca abstracciones del tipo \"moldean la identidad\" o \"custodian la memoria\".\n- Tono cercano, directo, sin distancia académica ni efectismo literario.\n\nQUÉ DEBES HACER CON CADA TEXTO:\n1. CORREGIR erratas, concordancias rotas, puntuación errónea, signos de apertura ausentes (¿¡), repeticiones de palabra en el mismo párrafo.\n2. MEJORAR la prosa acercándola a la voz de referencia: reorganizar si el ritmo es torpe, simplificar si la frase es enrevesada, concretar si el cierre es vago, dar viveza si el tono es plano.\n3. RESPETAR el contenido histórico: no inventes datos, no cambies fechas ni nombres, no añadas información que no esté en el original o en las notas.\n4. NO ALARGAR: el texto mejorado puede ser igual de largo o más corto, nunca más largo salvo que una corrección estructural lo requiera.\n\nSOBRE LAS NOTAS AL PIE:\n- El autor tiene notas al pie extensas. NUNCA señales falta de fuentes como problema.\n- Si se proporcionan notas, úsalas como contexto histórico pero no las incluyas en el texto mejorado.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, \"Castro Viride\".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización agrícola.\n\nEN EL INFORME:\n- Lista cada cambio técnico con su justificación.\n- Lista cada mejora de estilo explicando qué rasgo de la voz de referencia estabas aplicando.\n- Si un párrafo ya estaba bien, dilo.\n- El texto_mejorado DEBE reflejar todas las correcciones identificadas. No puedes señalar un problema en el informe y dejarlo sin corregir en el texto.\n\nResponde SIEMPRE en JSON válido. IMPORTANTE: no uses bloques de codigo, no escribas ```json ni ```, empieza directamente con { y termina con }:\n{\"texto_mejorado\":\"...\",\"puntuacion\":{\"estilo\":8,\"claridad\":7,\"rigor\":9},\"observaciones\":[{\"tipo\":\"positivo\",\"texto\":\"...\"}],\"cambios_resumen\":\"...\"}';
+var DEFAULT_SYSTEM_PROMPT = 'Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro de historia de Castroverde de Cerrato y tu objetivo es doble: corregir los errores técnicos del texto Y acercar su prosa a la voz de referencia del autor.\n\nVOZ DE REFERENCIA — EL MODELO AL QUE DEBES APROXIMARTE:\nEsta es la voz que el autor quiere para su libro. Úsala como guía activa:\n\n\"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano, a media hora en coche de Valladolid, es tierra de frontera donde su territorio limita con la provincia de Palencia. Es también uno de esos lugares que condensan en sus calles la historia común de la España rural: un esplendor ya pasado; la importancia de la agricultura y el éxodo que vació los pueblos.\nNo era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla. Por sus calles y senderos no solo transitaron pastores, labriegos y soldados; también desfilaron reyes, nobles y las intrigas de una corte itinerante que encontró aquí una parada estratégica donde tomar decisiones e incluso llorar a sus muertos.\"\n\nRASSGOS DE ESA VOZ QUE DEBES REPRODUCIR:\n- Frases declarativas cortas con peso propio: \"No era un lugar cualquiera.\"\n- Movimiento de lo concreto a lo histórico sin solemnidad forzada.\n- Datos precisos (fechas, cifras, nombres) integrados en la narración, no en paréntesis ni apartados.\n- Ritmo alternado: frase corta, frase larga con desarrollo, frase corta de cierre.\n- Cierres de párrafo concretos y visuales. Nunca abstracciones del tipo \"moldean la identidad\" o \"custodian la memoria\".\n- Tono cercano, directo, sin distancia académica ni efectismo literario.\n\nQUÉ DEBES HACER CON CADA TEXTO:\n1. CORREGIR erratas, concordancias rotas, puntuación errónea, signos de apertura ausentes (¿¡), repeticiones de palabra en el mismo párrafo.\n2. MEJORAR la prosa acercándola a la voz de referencia: reorganizar si el ritmo es torpe, simplificar si la frase es enrevesada, concretar si el cierre es vago, dar viveza si el tono es plano.\n3. RESPETAR el contenido histórico: no inventes datos, no cambies fechas ni nombres, no añadas información que no esté en el original o en las notas.\n4. NO ALARGAR: el texto mejorado puede ser igual de largo o más corto, nunca más largo salvo que una corrección estructural lo requiera.\n\nSOBRE LA PUNTUACIÓN Y LOS SIGNOS — NORMAS ESTRICTAS:\n- PUNTO Y COMA (;): evítalo salvo que sea imprescindible para separar elementos de una enumeración compleja. Nunca lo uses donde un punto o una coma funcionan mejor. Si encuentras punto y coma en el original que pueda eliminarse sin pérdida, elimínalo.\n- INCISOS CON GUIONES (—texto—): úsalos solo cuando el inciso aporte información que no puede integrarse de otro modo en la frase. Nunca para añadir una explicación que el lector ya puede inferir. Si el inciso es prescindible, suprímelo o fúndelo en la frase principal.\n- PARÉNTESIS EXPLICATIVOS: no los uses en el texto mejorado para añadir glosas o aclaraciones entre paréntesis. Si la información es relevante, intégrala en la prosa; si no es relevante, omítela.\n- ENUMERACIONES CON DOS PUNTOS seguidas de lista: solo si la lista tiene tres o más elementos y no fluye mejor como frase corrida.\n- EXCLAMACIONES E INTERROGACIONES RETÓRICAS: no las añadas si no estaban en el original.\n- PUNTOS SUSPENSIVOS: no los añadas.\nEN GENERAL: prioriza siempre la puntuación mínima necesaria para que la frase sea clara. La prosa fluye mejor con menos signos.\n\nSOBRE LAS NOTAS AL PIE:\n- El autor tiene notas al pie extensas. NUNCA señales falta de fuentes como problema.\n- Si se proporcionan notas, úsalas como contexto histórico pero no las incluyas en el texto mejorado.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, \"Castro Viride\".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización agrícola.\n\nEN EL INFORME:\n- Lista cada cambio técnico con su justificación.\n- Lista cada mejora de estilo explicando qué rasgo de la voz de referencia estabas aplicando.\n- Si un párrafo ya estaba bien, dilo.\n- El texto_mejorado DEBE reflejar todas las correcciones identificadas. No puedes señalar un problema en el informe y dejarlo sin corregir en el texto.\n\nResponde SIEMPRE en JSON válido. IMPORTANTE: no uses bloques de codigo, no escribas ```json ni ```, empieza directamente con { y termina con }:\n{\"texto_mejorado\":\"...\",\"puntuacion\":{\"estilo\":8,\"claridad\":7,\"rigor\":9},\"observaciones\":[{\"tipo\":\"positivo\",\"texto\":\"...\"}],\"cambios_resumen\":\"...\"}';
+
+var DEFAULT_PROMPT_ANALISIS = 'TIPO DE ANALISIS: {{tipo}}\n\n{{instruc_frag}}{{notas}}FRAGMENTO:\n\'\'\'\n{{texto}}\n\'\'\'';
+var DEFAULT_PROMPT_VEREDICTO = 'SOLICITUD DE VEREDICTO GLOBAL\n\n{{notas}}Evalúa como revisión editorial final. Devuelve el JSON habitual MÁS estos campos adicionales:\n\n"veredicto": uno de exactamente estos tres valores: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n"veredicto_detalle": párrafo editorial breve (2-3 frases) con el diagnóstico general.\n"veredicto_siguiente_paso": una sola acción concreta y prioritaria que el autor debería hacer antes de publicar (o "Ninguna: el texto está listo." si procede).\n"veredicto_dimensiones": array de exactamente 5 objetos, uno por dimensión, con esta forma:\n  {"dimension":"Estructura","puntuacion":8,"nota":"frase corta explicativa"}\nLas 5 dimensiones son, en este orden: Estructura, Ritmo, Rigor histórico, Cohesión, Voz del autor.\nLas puntuaciones van de 1 a 10.\n\nFRAGMENTO:\n\'\'\'\n{{texto}}\n\'\'\'';
+
+var SETTINGS_KEY_EDITOR = 'castroverde_editor_settings';
+function loadEditorSettings(){
+  try{ var s=JSON.parse(localStorage.getItem(SETTINGS_KEY_EDITOR)); if(s&&s.system) return s; }catch(e){}
+  return {system:DEFAULT_SYSTEM_PROMPT, promptAnalisis:DEFAULT_PROMPT_ANALISIS, promptVeredicto:DEFAULT_PROMPT_VEREDICTO};
+}
+function saveEditorSettings(s){ localStorage.setItem(SETTINGS_KEY_EDITOR,JSON.stringify(s)); }
+var editorSettings = loadEditorSettings();
+var SYSTEM_PROMPT = editorSettings.system;
 
 var INSTRUC_GEN_KEY = 'castroverde_instruc_gen';
 function getInstrucGen(){ return localStorage.getItem(INSTRUC_GEN_KEY)||''; }
@@ -607,16 +669,19 @@ function buildSystem(){
   var gen = getInstrucGen().trim();
   var extra = '\n\nPARTE DEL LIBRO: Este fragmento pertenece a la '+pl+' del libro.';
   if(gen) extra += '\n\nINSTRUCCIONES GENERALES DEL AUTOR:\n'+gen;
-  return SYSTEM_PROMPT+extra;
+  return editorSettings.system+extra;
 }
 
 function buildMsg(text,notes,tipo,frag){
   var lbl={completo:'Revision completa',estilo:'Estilo y voz',ortografia:'Ortografia y gramatica',historico:'Coherencia historica',claridad:'Claridad y estructura'};
-  var m='TIPO DE ANALISIS: '+(lbl[tipo]||'Revision completa')+'\n\n';
-  if(frag&&frag.trim()) m+='INSTRUCCIONES ESPECIFICAS:\n'+frag+'\n\n';
-  if(notes) m+='NOTAS AL PIE (contexto, no modificar):\n\'\'\'\n'+notes+'\n\'\'\'\n\n';
-  m+='FRAGMENTO:\n\'\'\'\n'+text+'\n\'\'\'';
-  return m;
+  var tpl = editorSettings.promptAnalisis || DEFAULT_PROMPT_ANALISIS;
+  var instrucFrag = (frag&&frag.trim()) ? 'INSTRUCCIONES ESPECIFICAS:\n'+frag+'\n\n' : '';
+  var notasPart = notes ? 'NOTAS AL PIE (contexto, no modificar):\n\'\'\'\n'+notes+'\n\'\'\'\n\n' : '';
+  return tpl
+    .replace(/\{\{tipo\}\}/g, lbl[tipo]||'Revision completa')
+    .replace(/\{\{instruc_frag\}\}/g, instrucFrag)
+    .replace(/\{\{notas\}\}/g, notasPart)
+    .replace(/\{\{texto\}\}/g, text);
 }
 
 var versions      = [];
@@ -688,17 +753,11 @@ function requestVerdict(){
   var text=get('input-text').value.trim();
   var notes=get('notes-text').value.trim();
   if(!text){ showError('Introduce el fragmento para el veredicto.'); return; }
-  var msg='SOLICITUD DE VEREDICTO GLOBAL\n\n'+
-    (notes?'NOTAS AL PIE:\n"""\n'+notes+'\n"""\n\n':'')+
-    'Evalúa como revisión editorial final. Devuelve el JSON habitual MÁS estos campos adicionales:\n\n'+
-    '"veredicto": uno de exactamente estos tres valores: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n'+
-    '"veredicto_detalle": párrafo editorial breve (2-3 frases) con el diagnóstico general.\n'+
-    '"veredicto_siguiente_paso": una sola acción concreta y prioritaria que el autor debería hacer antes de publicar (o "Ninguna: el texto está listo." si procede).\n'+
-    '"veredicto_dimensiones": array de exactamente 5 objetos, uno por dimensión, con esta forma:\n'+
-    '  {"dimension":"Estructura","puntuacion":8,"nota":"frase corta explicativa"}\n'+
-    'Las 5 dimensiones son, en este orden: Estructura, Ritmo, Rigor histórico, Cohesión, Voz del autor.\n'+
-    'Las puntuaciones van de 1 a 10.\n\n'+
-    'TEXTO:\n"""\n'+text+'\n"""';
+  var tpl = editorSettings.promptVeredicto || DEFAULT_PROMPT_VEREDICTO;
+  var notasPart = notes ? 'NOTAS AL PIE:\n"""\n'+notes+'\n"""\n\n' : '';
+  var msg = tpl
+    .replace(/\{\{notas\}\}/g, notasPart)
+    .replace(/\{\{texto\}\}/g, text);
   showLoading('Elaborando veredicto editorial…'); hideError();
   callClaude(msg, function(response){
     hideLoading();
@@ -828,9 +887,49 @@ function loadVersion(idx){
 
 function deleteVersion(idx){ versions.splice(idx,1); saveVersions(); renderHistoryList(); }
 
+// ── AJUSTES DE PROMPTS ──
+function openSettings(){
+  get('settings-system').value = editorSettings.system || DEFAULT_SYSTEM_PROMPT;
+  get('settings-prompt-analisis').value = editorSettings.promptAnalisis || DEFAULT_PROMPT_ANALISIS;
+  get('settings-prompt-veredicto').value = editorSettings.promptVeredicto || DEFAULT_PROMPT_VEREDICTO;
+  // Activar tab 0
+  get('settings-ptabs').querySelectorAll('.ptab').forEach(function(b){ b.classList.remove('active'); });
+  get('settings-ppanels').querySelectorAll('.ppanel').forEach(function(p){ p.classList.remove('visible'); });
+  get('settings-ptabs').querySelector('[data-idx="0"]').classList.add('active');
+  get('spp-0').classList.add('visible');
+  get('modal-settings').classList.add('visible');
+}
+function closeSettings(){ get('modal-settings').classList.remove('visible'); }
+function saveSettingsFromModal(){
+  editorSettings.system          = get('settings-system').value;
+  editorSettings.promptAnalisis  = get('settings-prompt-analisis').value;
+  editorSettings.promptVeredicto = get('settings-prompt-veredicto').value;
+  saveEditorSettings(editorSettings);
+  closeSettings();
+}
+function resetSettings(){
+  if(!confirm('¿Restaurar todos los prompts a su estado original?')) return;
+  editorSettings = {system:DEFAULT_SYSTEM_PROMPT, promptAnalisis:DEFAULT_PROMPT_ANALISIS, promptVeredicto:DEFAULT_PROMPT_VEREDICTO};
+  saveEditorSettings(editorSettings);
+  openSettings();
+}
+
 // EVENTOS
 get('btn-analyze').addEventListener('click', analyzeText);
 get('btn-verdict').addEventListener('click', requestVerdict);
+get('btn-settings').addEventListener('click', openSettings);
+get('settings-save').addEventListener('click', saveSettingsFromModal);
+get('settings-cancel').addEventListener('click', closeSettings);
+get('settings-reset').addEventListener('click', resetSettings);
+get('modal-settings').addEventListener('click', function(e){ if(e.target===this) closeSettings(); });
+get('settings-ptabs').querySelectorAll('.ptab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    get('settings-ptabs').querySelectorAll('.ptab').forEach(function(b){ b.classList.remove('active'); });
+    get('settings-ppanels').querySelectorAll('.ppanel').forEach(function(p){ p.classList.remove('visible'); });
+    btn.classList.add('active');
+    get('spp-'+btn.getAttribute('data-idx')).classList.add('visible');
+  });
+});
 get('btn-history').addEventListener('click', openHistory);
 get('btn-close-sidebar').addEventListener('click', closeHistory);
 get('sidebar-overlay').addEventListener('click', closeHistory);
