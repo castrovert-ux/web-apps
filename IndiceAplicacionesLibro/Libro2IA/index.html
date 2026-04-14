@@ -18,7 +18,18 @@
         .btn-main:hover { opacity: 0.8; transform: translateY(-2px); }
         .btn-sec { background: #0f3460; color: white; border: 1px solid var(--a); }
 
-        .block-item { background: #1a1a2e; border: 1px solid #0f3460; margin: 10px 0; padding: 15px; border-radius: 8px; display: flex; align-items: flex-start; gap: 15px; transition: 0.2s; }
+        .block-item { 
+            background: #1a1a2e; 
+            border: 1px solid #0f3460; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 15px; 
+            transition: 0.2s; 
+            cursor: pointer;
+        }
         .block-item:hover { border-color: var(--a); }
         .block-id { font-family: monospace; color: var(--a); font-weight: bold; }
         .block-content { flex-grow: 1; }
@@ -31,8 +42,44 @@
         .sticky-bar { position: sticky; top: 0; z-index: 1000; background: var(--p); padding: 10px 0; border-bottom: 2px solid var(--a); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         #jsonEditor { display: none; }
         .badge { font-size: 0.7em; background: var(--a); padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
-        
-        .custom-prompt-card { background: #1a1a2e; border: 2px dashed #e94560; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #16213e;
+            border: 2px solid var(--a);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 25px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e94560;
+            padding-bottom: 10px;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--a);
+            font-size: 28px;
+            cursor: pointer;
+        }
+        .modal-body p { line-height: 1.6; margin-bottom: 15px; }
+        .modal-info { font-size: 0.9em; color: #aaa; margin: 8px 0; }
     </style>
 </head>
 <body>
@@ -75,25 +122,19 @@
         </div>
     </div>
 
-    <!-- NUEVO: Prompt Nuclear editable -->
+    <!-- Prompt Nuclear editable -->
     <div class="card custom-prompt-card">
         <label>Prompt Nuclear / Instrucción Base (editable)</label>
         <textarea id="nuclearPrompt" rows="6">Céntrate exclusivamente en Castroverde de Cerrato, su imagen, su importancia histórica y su contexto específico dentro del Cerrato palentino. Destaca siempre lo que hace único a este pueblo y a su gente. Evita cualquier información genérica que pudiera aplicarse a otros lugares.
 
 Escribe en un tono narrativo ameno y cercano, como si estuvieras contando una historia del pueblo a sus vecinos. Usa frases cortas y fluidas, evita el lenguaje académico. Haz que el relato sea fácil de leer y con un toque visual y humano.</textarea>
-        <small style="color:#999; display:block; margin-top:5px;">
-            Puedes editar este texto siempre que quieras. Se incluirá en todos los prompts que generes.
-        </small>
     </div>
 
-    <!-- Instrucción específica (sigue existiendo) -->
+    <!-- Instrucción específica -->
     <div class="card custom-prompt-card">
         <label>Instrucción o pregunta específica (opcional)</label>
         <textarea id="customInstruction" rows="4" 
-                  placeholder="Ej: Dame un punto resumido para un libro narrativo sobre la vida comunitaria y los consejos durante el siglo XV, poniéndolo en perspectiva con la comunidad y otras entidades superiores."></textarea>
-        <small style="color:#999; display:block; margin-top:5px;">
-            Esta instrucción se añade después del Prompt Nuclear
-        </small>
+                  placeholder="Ej: Dame un punto resumido para un libro narrativo sobre la vida comunitaria..."></textarea>
     </div>
 
     <div id="jsonEditor" class="card">
@@ -102,6 +143,17 @@ Escribe en un tono narrativo ameno y cercano, como si estuvieras contando una hi
     </div>
 
     <div id="resultsList"></div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle"></h3>
+            <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
 </div>
 
 <script>
@@ -171,8 +223,8 @@ Escribe en un tono narrativo ameno y cercano, como si estuvieras contando una hi
         const list = document.getElementById('resultsList');
         document.getElementById('counter').innerText = data.length;
         list.innerHTML = data.map(b => `
-            <div class="block-item">
-                <input type="checkbox" class="sel-blk" value="${b.id}">
+            <div class="block-item" onclick="showBlockDetail('${b.id}')">
+                <input type="checkbox" class="sel-blk" value="${b.id}" onclick="event.stopImmediatePropagation()">
                 <div class="block-content">
                     <span class="block-id">${b.id}</span>
                     <h4>${b.titulo}</h4>
@@ -182,7 +234,49 @@ Escribe en un tono narrativo ameno y cercano, como si estuvieras contando una hi
         `).join('');
     }
 
-    // ====================== FUNCIÓN ACTUALIZADA ======================
+    // Mostrar detalle del bloque en modal
+    function showBlockDetail(id) {
+        const block = currentData.find(b => b.id === id);
+        if (!block) return;
+
+        const modal = document.getElementById('modal');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+
+        title.textContent = `${block.id} - ${block.titulo}`;
+
+        let html = `<p><strong>Texto completo:</strong><br>${block.texto || 'Sin texto disponible'}</p>`;
+
+        if (block.siglo) {
+            html += `<div class="modal-info"><strong>Siglo:</strong> ${block.siglo.principal ? block.siglo.principal.join(', ') : ''}</div>`;
+        }
+        html += `<div class="modal-info"><strong>Tema:</strong> ${block.tema || '—'}</div>`;
+        html += `<div class="modal-info"><strong>Subtema:</strong> ${block.subtema || '—'}</div>`;
+
+        if (block.tags && block.tags.length > 0) {
+            html += `<div class="modal-info"><strong>Tags:</strong> ${block.tags.join(', ')}</div>`;
+        }
+
+        body.innerHTML = html;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === "Escape") {
+            closeModal();
+        }
+    });
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
     function generarPromptContextual() {
         const seleccionados = Array.from(document.querySelectorAll('.sel-blk:checked'));
         
