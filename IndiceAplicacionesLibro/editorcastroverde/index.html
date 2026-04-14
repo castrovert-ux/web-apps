@@ -529,7 +529,21 @@ function initFirebase(k) {
 function startFB(k) {
   firebase.initializeApp({apiKey:k,authDomain:'castroverde-apps.firebaseapp.com',projectId:'castroverde-apps',storageBucket:'castroverde-apps.firebasestorage.app',messagingSenderId:'371026533141',appId:'1:371026533141:web:315767f60cbf8d6f47671c'});
   fbAuth=firebase.auth(); fbDb=firebase.firestore(); fbProvider=new firebase.auth.GoogleAuthProvider();
-  fbAuth.onAuthStateChanged(function(u){ fbUser=u; updateSyncUI(); });
+  fbAuth.onAuthStateChanged(function(u){
+    fbUser=u;
+    updateSyncUI();
+    if (u && fbDb) {
+      // Restaurar settings desde Firestore si son más recientes que los locales
+      var localTs = parseInt(localStorage.getItem('castroverde_editor_settings_ts') || '0');
+      fbDb.collection('editor').doc(u.uid).get().then(function(snap){
+        if (snap.exists && snap.data().editorSettings && snap.data().editorSettingsTs > localTs) {
+          editorSettings = snap.data().editorSettings;
+          saveEditorSettings(editorSettings);
+          localStorage.setItem('castroverde_editor_settings_ts', snap.data().editorSettingsTs);
+        }
+      }).catch(function(){});
+    }
+  });
 }
 if(FB_API_KEY) initFirebase(FB_API_KEY);
 
@@ -582,20 +596,39 @@ async function doSync() {
     const docRef = fbDb.collection('editor').doc(fbUser.uid);
     const snap   = await docRef.get();
     const local  = [...versions];
+    const localSettings = JSON.parse(JSON.stringify(editorSettings));
+    const localSettingsTs = parseInt(localStorage.getItem('castroverde_editor_settings_ts') || '0');
 
     if (snap.exists) {
-      const remote = snap.data().versions || [];
+      const data   = snap.data();
+      const remote = data.versions || [];
       const merged = mergeVersions(local, remote);
       versions = merged;
       saveVersions();
+
+      // Merge settings: gana el más reciente
+      var mergedSettings = localSettings;
+      if (data.editorSettings && data.editorSettingsTs) {
+        if (data.editorSettingsTs > localSettingsTs) {
+          mergedSettings = data.editorSettings;
+          editorSettings = mergedSettings;
+          saveEditorSettings(editorSettings);
+          localStorage.setItem('castroverde_editor_settings_ts', data.editorSettingsTs);
+        }
+      }
+
       await docRef.set({
         versions: merged,
+        editorSettings: mergedSettings,
+        editorSettingsTs: Math.max(localSettingsTs, data.editorSettingsTs || 0),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       setSyncStatus('ok', '✓ Sincronizado — ' + merged.length + ' versión' + (merged.length !== 1 ? 'es' : '') + ' en historial');
     } else {
       await docRef.set({
         versions: local,
+        editorSettings: localSettings,
+        editorSettingsTs: localSettingsTs || Date.now(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       setSyncStatus('ok', '✓ Historial subido por primera vez — ' + local.length + ' versión' + (local.length !== 1 ? 'es' : ''));
@@ -905,6 +938,7 @@ function saveSettingsFromModal(){
   editorSettings.promptAnalisis  = get('settings-prompt-analisis').value;
   editorSettings.promptVeredicto = get('settings-prompt-veredicto').value;
   saveEditorSettings(editorSettings);
+  localStorage.setItem('castroverde_editor_settings_ts', Date.now());
   closeSettings();
 }
 function resetSettings(){
