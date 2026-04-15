@@ -4,15 +4,123 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aplicaciones del Libro</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
-  <!-- ... (todas tus etiquetas link y meta se mantienen iguales) ... -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2">
+  <link rel="manifest" href="manifest.json?v=2">
+  <meta name="theme-color" content="#0f0c29">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MisApps">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
   <style>
-    /* ... (todo tu CSS anterior se mantiene igual) ... */
+    :root {
+      --bg-from:   #0f0c29;
+      --bg-mid:    #302b63;
+      --bg-to:     #24243e;
+      --card-bg:   rgba(255, 255, 255, 0.07);
+      --card-border: rgba(255, 255, 255, 0.13);
+      --card-hover: rgba(255, 255, 255, 0.14);
+      --accent:    #e8c76b;
+      --accent2:   #f07f5a;
+      --text:      #f0eef8;
+      --text-muted: rgba(240, 238, 248, 0.55);
+      --modal-bg:  rgba(18, 15, 40, 0.97);
+      --input-bg:  rgba(255,255,255,0.08);
+      --input-border: rgba(255,255,255,0.18);
+      --danger:    #e05c5c;
+      --success:   #5ce08a;
+      --radius:    18px;
+      --radius-sm: 10px;
+      --shadow:    0 8px 40px rgba(0,0,0,0.45);
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-    /* NUEVOS ESTILOS PARA DRAG AND DROP */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-mid) 50%, var(--bg-to) 100%);
+      min-height: 100vh;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(232,199,107,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(240,127,90,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 56px 24px 32px;
+    }
+
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+    }
+
+    #app-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px 120px;
+    }
+
     .app-card {
-      user-select: none;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 28px 16px 22px;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(12px);
       transition: all var(--transition);
+      animation: cardIn 0.5s ease both;
+      user-select: none;
+    }
+
+    .app-card:hover {
+      background: var(--card-hover);
+      border-color: rgba(232,199,107,0.35);
+      transform: translateY(-5px) scale(1.03);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,199,107,0.2);
     }
 
     .app-card.dragging {
@@ -29,29 +137,265 @@
       box-shadow: 0 0 0 3px rgba(232, 199, 107, 0.3);
     }
 
-    /* Indicador de orden en modo edición (opcional) */
-    .app-card::after {
-      content: attr(data-order);
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      font-size: 0.65rem;
-      background: rgba(0,0,0,0.4);
-      color: white;
-      padding: 2px 6px;
-      border-radius: 6px;
-      opacity: 0;
-      transition: opacity 0.2s;
+    .app-icon {
+      font-size: 2.6rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+      transition: transform var(--transition);
     }
 
-    .app-card:hover::after {
-      opacity: 0.7;
+    .app-card:hover .app-icon {
+      transform: scale(1.15) rotate(-3deg);
     }
+
+    .app-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.01em;
+      line-height: 1.3;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    #btn-config {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 100;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(232,199,107,0.18);
+      border: 1px solid rgba(232,199,107,0.4);
+      color: var(--accent);
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    }
+
+    #btn-config:hover {
+      background: rgba(232,199,107,0.3);
+      transform: scale(1.1) rotate(45deg);
+    }
+
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition);
+    }
+
+    #modal-overlay.open {
+      display: flex;
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #modal {
+      background: var(--modal-bg);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 32px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+      transform: translateY(24px) scale(0.97);
+      transition: transform var(--transition);
+    }
+
+    #modal-overlay.open #modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .modal-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.3rem;
+    }
+
+    #btn-close-modal {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: var(--text-muted);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.92rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      background: rgba(232,199,107,0.06);
+    }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #1a1530;
+      font-weight: 600;
+    }
+
+    .btn-danger, .btn-edit, .btn-success {
+      padding: 6px 12px;
+      font-size: 0.82rem;
+    }
+
+    .btn-danger { background: rgba(224,92,92,0.15); color: var(--danger); border: 1px solid rgba(224,92,92,0.25); }
+    .btn-edit   { background: rgba(255,255,255,0.07); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); }
+    .btn-success{ background: rgba(92,224,138,0.15); color: var(--success); border: 1px solid rgba(92,224,138,0.25); }
+
+    .btn-download {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 13px;
+      margin-top: 8px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 24px 0;
+    }
+
+    #apps-admin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .admin-item {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .admin-item-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .admin-item-name { font-weight: 500; font-size: 0.9rem; }
+    .admin-item-url { font-size: 0.75rem; color: var(--text-muted); }
+
+    .edit-form {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .edit-form.visible { display: flex; }
+
+    #empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      right: 28px;
+      z-index: 300;
+      background: rgba(18,15,40,0.95);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+
+    #toast.show { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body>
 
-  <!-- ... (tu HTML hasta el main se mantiene igual) ... -->
+  <header>
+    <h1>✦ Aplicaciones del libro</h1>
+    <p>Todas tus aplicaciones, en un solo lugar</p>
+  </header>
 
   <main id="app-grid">
     <div id="empty-state" style="display:none;">
@@ -62,64 +406,58 @@
 
   <button id="btn-config" title="Configuración">⚙️</button>
 
-  <!-- Modal (sin cambios) -->
   <div id="modal-overlay">
     <div id="modal">
-      <!-- ... todo el contenido del modal se mantiene igual ... -->
+      <div class="modal-header">
+        <h2>⚙️ Administración</h2>
+        <button id="btn-close-modal">✕</button>
+      </div>
+
+      <p class="section-title">➕ Añadir aplicación</p>
+      <div class="form-row">
+        <div>
+          <label for="new-name">Nombre *</label>
+          <input type="text" id="new-name" placeholder="Mi App">
+        </div>
+        <div>
+          <label for="new-folder">Nombre de carpeta *</label>
+          <input type="text" id="new-folder" placeholder="mi-app">
+        </div>
+      </div>
+      <div class="form-row" style="grid-template-columns: 1fr; margin-bottom: 12px;">
+        <div>
+          <label for="new-icon">Icono (emoji)</label>
+          <input type="text" id="new-icon" placeholder="📦" maxlength="4" style="max-width:80px;">
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-add-app">➕ Añadir aplicación</button>
+
+      <hr class="divider">
+
+      <p class="section-title">📋 Aplicaciones actuales</p>
+      <div id="apps-admin-list"></div>
+
+      <hr class="divider">
+
+      <button class="btn btn-download" id="btn-download">⬇️ Descargar nuevo index.html</button>
     </div>
   </div>
 
-  <div id="toast"></div>
+  <div id="toast" role="status"></div>
 
   <script>
-    // ============================================================
-    // DATOS
-    // ============================================================
     // __APPS_START__
     let apps = [
-      {
-        "id": "3zigmjd",
-        "name": "Editor de Castroverde",
-        "url": "editorcastroverde/",
-        "icon": "📓"
-      },
-      {
-        "id": "9hweyeh",
-        "name": "Cuestionarios",
-        "url": "cuestionarios/",
-        "icon": "📑"
-      },
-      {
-        "id": "b39rjxj",
-        "name": "Maquetador de Castroverde",
-        "url": "maquetadorcastroverde/",
-        "icon": "📓"
-      },
-      {
-        "id": "9z0jzeo",
-        "name": "Ilustrador",
-        "url": "ilustrador2/",
-        "icon": "🖌️"
-      },
-      {
-        "id": "ififxi0",
-        "name": "Libro 2 - Inteligencia Artificial",
-        "url": "Libro2IA/",
-        "icon": "✨"
-      },
-      {
-        "id": "2jsbi9s",
-        "name": "Creador Json Libro 2",
-        "url": "CreadorJsonHuggingFace/",
-        "icon": "🤗"
-      }
+      {"id":"3zigmjd","name":"Editor de Castroverde","url":"editorcastroverde/","icon":"📓"},
+      {"id":"9hweyeh","name":"Cuestionarios","url":"cuestionarios/","icon":"📑"},
+      {"id":"b39rjxj","name":"Maquetador de Castroverde","url":"maquetadorcastroverde/","icon":"📓"},
+      {"id":"9z0jzeo","name":"Ilustrador","url":"ilustrador2/","icon":"🖌️"},
+      {"id":"ififxi0","name":"Libro 2 - Inteligencia Artificial","url":"Libro2IA/","icon":"✨"},
+      {"id":"2jsbi9s","name":"Creador Json Libro 2","url":"CreadorJsonHuggingFace/","icon":"🤗"}
     ];
     // __APPS_END__
 
-    // ============================================================
-    // UTILIDADES
-    // ============================================================
-    function uid() { return Math.random().toString(36).slice(2, 9); }
+    function uid() { return Math.random().toString(36).slice(2,9); }
 
     function showToast(msg, duration = 2500) {
       const toast = document.getElementById('toast');
@@ -130,22 +468,12 @@
     }
 
     function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
     }
 
-    // ============================================================
-    // RENDERIZADO DEL GRID (con soporte drag & drop)
-    // ============================================================
     function renderGrid() {
       const grid = document.getElementById('app-grid');
       const empty = document.getElementById('empty-state');
-
-      // Eliminar solo las tarjetas (mantener empty-state)
       grid.querySelectorAll('.app-card').forEach(el => el.remove());
 
       if (apps.length === 0) {
@@ -154,88 +482,111 @@
       }
       empty.style.display = 'none';
 
-      apps.forEach((app, index) => {
+      apps.forEach((app, i) => {
         const a = document.createElement('a');
         a.className = 'app-card';
         a.href = app.url;
         a.draggable = true;
         a.dataset.id = app.id;
-        a.style.animationDelay = `${index * 50}ms`;
+        a.style.animationDelay = `${i * 60}ms`;
         a.innerHTML = `
           <span class="app-icon">${escapeHtml(app.icon || '📦')}</span>
-          <span class="app-name">${escapeHtml(app.name)}</span>
-        `;
+          <span class="app-name">${escapeHtml(app.name)}</span>`;
         grid.appendChild(a);
       });
 
       initDragAndDrop();
     }
 
-    // ============================================================
-    // DRAG AND DROP
-    // ============================================================
-    let draggedElement = null;
+    let dragged = null;
 
     function initDragAndDrop() {
-      const cards = document.querySelectorAll('.app-card');
-
-      cards.forEach(card => {
-        card.addEventListener('dragstart', (e) => {
-          draggedElement = card;
+      document.querySelectorAll('.app-card').forEach(card => {
+        card.addEventListener('dragstart', () => {
+          dragged = card;
           setTimeout(() => card.classList.add('dragging'), 0);
         });
 
         card.addEventListener('dragend', () => {
           card.classList.remove('dragging');
-          draggedElement = null;
           document.querySelectorAll('.app-card').forEach(c => c.classList.remove('drag-over'));
+          dragged = null;
         });
 
-        card.addEventListener('dragover', (e) => {
+        card.addEventListener('dragover', e => {
           e.preventDefault();
-          if (card !== draggedElement) {
-            card.classList.add('drag-over');
-          }
+          if (card !== dragged) card.classList.add('drag-over');
         });
 
-        card.addEventListener('dragleave', () => {
-          card.classList.remove('drag-over');
-        });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
 
-        card.addEventListener('drop', (e) => {
+        card.addEventListener('drop', e => {
           e.preventDefault();
-          card.classList.remove('drag-over');
+          if (!dragged || dragged === card) return;
 
-          if (draggedElement && draggedElement !== card) {
-            const fromId = draggedElement.dataset.id;
-            const toId = card.dataset.id;
+          const fromId = dragged.dataset.id;
+          const toId = card.dataset.id;
 
-            const fromIndex = apps.findIndex(a => a.id === fromId);
-            const toIndex = apps.findIndex(a => a.id === toId);
+          const fromIdx = apps.findIndex(a => a.id === fromId);
+          const toIdx = apps.findIndex(a => a.id === toId);
 
-            if (fromIndex !== -1 && toIndex !== -1) {
-              // Reordenar el array
-              const [movedApp] = apps.splice(fromIndex, 1);
-              apps.splice(toIndex, 0, movedApp);
-
-              renderGrid();           // volver a renderizar con nuevo orden
-              showToast('📋 Orden actualizado');
-            }
+          if (fromIdx > -1 && toIdx > -1) {
+            const [moved] = apps.splice(fromIdx, 1);
+            apps.splice(toIdx, 0, moved);
+            renderGrid();
+            showToast('📋 Orden de las aplicaciones actualizado');
           }
         });
       });
     }
 
-    // ============================================================
-    // Resto de funciones (addApp, deleteApp, saveEdit, etc.)
-    // ============================================================
-    function addApp() {
-      const name   = document.getElementById('new-name').value.trim();
-      const folder = document.getElementById('new-folder').value.trim().replace(/\/+$/, '');
-      const icon   = document.getElementById('new-icon').value.trim() || '📦';
+    function renderAdminList() {
+      const list = document.getElementById('apps-admin-list');
+      list.innerHTML = '';
 
-      if (!name)   { showToast('⚠️ El nombre es obligatorio.'); return; }
-      if (!folder) { showToast('⚠️ El nombre de carpeta es obligatorio.'); return; }
+      if (apps.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px 0">Sin aplicaciones todavía.</p>';
+        return;
+      }
+
+      apps.forEach(app => {
+        const div = document.createElement('div');
+        div.className = 'admin-item';
+        div.dataset.id = app.id;
+        div.innerHTML = `
+          <span class="admin-item-icon">${escapeHtml(app.icon)}</span>
+          <div class="admin-item-info">
+            <div class="admin-item-name">${escapeHtml(app.name)}</div>
+            <div class="admin-item-url">${escapeHtml(app.url)}</div>
+          </div>
+          <div class="admin-item-actions" style="display:flex;gap:6px">
+            <button class="btn btn-edit btn-edit-app" data-id="${app.id}">✏️</button>
+            <button class="btn btn-danger btn-delete-app" data-id="${app.id}">🗑</button>
+          </div>
+          <div class="edit-form" id="edit-form-${app.id}">
+            <div class="form-row">
+              <div><label>Nombre *</label><input type="text" class="edit-name" value="${escapeHtml(app.name)}"></div>
+              <div><label>Carpeta *</label><input type="text" class="edit-url" value="${escapeHtml(app.url)}"></div>
+            </div>
+            <div class="form-row" style="grid-template-columns:80px 1fr;margin-bottom:0">
+              <div><label>Icono</label><input type="text" class="edit-icon" value="${escapeHtml(app.icon)}" maxlength="4"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-success btn-save-edit" data-id="${app.id}">✔ Guardar</button>
+              <button class="btn btn-edit btn-cancel-edit" data-id="${app.id}">✕ Cancelar</button>
+            </div>
+          </div>`;
+        list.appendChild(div);
+      });
+    }
+
+    function addApp() {
+      const name = document.getElementById('new-name').value.trim();
+      let folder = document.getElementById('new-folder').value.trim().replace(/\/+$/, '');
+      const icon = document.getElementById('new-icon').value.trim() || '📦';
+
+      if (!name) return showToast('⚠️ El nombre es obligatorio');
+      if (!folder) return showToast('⚠️ La carpeta es obligatoria');
 
       apps.push({ id: uid(), name, url: folder + '/', icon });
 
@@ -245,27 +596,16 @@
 
       renderGrid();
       renderAdminList();
-      showToast(`✅ "${name}" añadida.`);
+      showToast(`✅ "${name}" añadida`);
     }
 
     function deleteApp(id) {
       const app = apps.find(a => a.id === id);
-      if (!app) return;
-      if (!confirm(`¿Eliminar "${app.name}"?`)) return;
-
+      if (!app || !confirm(`¿Eliminar "${app.name}"?`)) return;
       apps = apps.filter(a => a.id !== id);
       renderGrid();
       renderAdminList();
-      showToast(`🗑 "${app.name}" eliminada.`);
-    }
-
-    function toggleEditForm(id) {
-      const form = document.getElementById(`edit-form-${id}`);
-      if (!form) return;
-      document.querySelectorAll('.edit-form.visible').forEach(f => {
-        if (f.id !== `edit-form-${id}`) f.classList.remove('visible');
-      });
-      form.classList.toggle('visible');
+      showToast(`🗑 "${app.name}" eliminada`);
     }
 
     function saveEdit(id) {
@@ -273,92 +613,78 @@
       if (!form) return;
 
       const name = form.querySelector('.edit-name').value.trim();
-      const url  = form.querySelector('.edit-url').value.trim();
+      const url = form.querySelector('.edit-url').value.trim();
       const icon = form.querySelector('.edit-icon').value.trim() || '📦';
 
-      if (!name || !url) {
-        showToast('⚠️ Nombre y carpeta son obligatorios.');
-        return;
-      }
+      if (!name || !url) return showToast('⚠️ Nombre y carpeta son obligatorios');
 
       const app = apps.find(a => a.id === id);
       if (app) {
         app.name = name;
-        app.url  = url;
+        app.url = url;
         app.icon = icon;
       }
 
       renderGrid();
       renderAdminList();
-      showToast(`✏️ "${name}" actualizada.`);
+      showToast(`✏️ "${name}" actualizada`);
     }
 
-    // Renderizado del modal (sin cambios importantes)
-    function renderAdminList() {
-      const list = document.getElementById('apps-admin-list');
-      list.innerHTML = '';
-
-      if (apps.length === 0) {
-        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:16px 0">Sin aplicaciones todavía.</p>';
-        return;
-      }
-
-      apps.forEach(app => {
-        const item = document.createElement('div');
-        item.className = 'admin-item';
-        item.dataset.id = app.id;
-        item.innerHTML = `...` ; // (mantengo tu código original de admin-item)
-        // Copia aquí el innerHTML completo de tu versión original si quieres, o dime y te lo doy entero
-      });
-    }
-
-    // Modal y eventos (sin cambios)
-    const overlay = document.getElementById('modal-overlay');
-
-    function openModal() {
+    // Eventos del modal
+    document.getElementById('btn-config').addEventListener('click', () => {
       renderAdminList();
+      const overlay = document.getElementById('modal-overlay');
       overlay.style.display = 'flex';
-      requestAnimationFrame(() => overlay.classList.add('open'));
-    }
-
-    function closeModal() {
-      overlay.classList.remove('open');
-      setTimeout(() => overlay.style.display = 'none', 300);
-    }
-
-    // Eventos
-    document.getElementById('btn-config').addEventListener('click', openModal);
-    document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-    document.getElementById('btn-add-app').addEventListener('click', addApp);
-    document.getElementById('new-folder').addEventListener('keydown', e => {
-      if (e.key === 'Enter') addApp();
+      setTimeout(() => overlay.classList.add('open'), 10);
     });
 
-    // Descarga (se conserva el orden actual)
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+      const overlay = document.getElementById('modal-overlay');
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.style.display = 'none', 300);
+    });
+
+    document.getElementById('btn-add-app').addEventListener('click', addApp);
+    document.getElementById('new-folder').addEventListener('keydown', e => { if (e.key === 'Enter') addApp(); });
+
+    // Delegación de eventos en la lista de administración
+    document.getElementById('apps-admin-list').addEventListener('click', e => {
+      const id = e.target.dataset.id;
+      if (!id) return;
+
+      if (e.target.classList.contains('btn-delete-app')) deleteApp(id);
+      if (e.target.classList.contains('btn-edit-app')) {
+        document.getElementById(`edit-form-${id}`).classList.toggle('visible');
+      }
+      if (e.target.classList.contains('btn-save-edit')) saveEdit(id);
+      if (e.target.classList.contains('btn-cancel-edit')) {
+        document.getElementById(`edit-form-${id}`).classList.remove('visible');
+      }
+    });
+
+    // Descargar index.html con el orden actual
     document.getElementById('btn-download').addEventListener('click', () => {
-      const appsJson = JSON.stringify(apps, null, 2);
       let src = document.documentElement.outerHTML;
 
-      src = src.replace(/id="modal-overlay"([^>]*?)class="([^"]*)\bopen\b([^"]*)"/, 'id="modal-overlay"$1class="$2$3"');
-      src = src.replace(/(id="modal-overlay"[^>]*?)style="[^"]*display\s*:\s*flex[^"]*"/g, '$1');
+      src = src.replace(/class="[^"]*\bopen\b[^"]*"/, 'class=""');
+      src = src.replace(/style="[^"]*display\s*:\s*flex[^"]*"/g, '');
 
       src = src.replace(
         /\/\/ __APPS_START__[\s\S]*?\/\/ __APPS_END__/,
-        `// __APPS_START__\n    let apps = ${appsJson};\n    // __APPS_END__`
+        `// __APPS_START__\n    let apps = ${JSON.stringify(apps, null, 2)};\n    // __APPS_END__`
       );
 
-      const blob = new Blob([src], { type: 'text/html;charset=utf-8' });
+      const blob = new Blob([src], {type: 'text/html;charset=utf-8'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'index.html'; a.click();
+      a.href = url;
+      a.download = 'index.html';
+      a.click();
       URL.revokeObjectURL(url);
-      showToast('⬇️ index.html descargado con el nuevo orden.');
+      showToast('⬇️ index.html descargado con el nuevo orden');
     });
 
-    // INICIO
+    // Iniciar
     renderGrid();
   </script>
 </body>
