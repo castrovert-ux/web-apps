@@ -184,6 +184,9 @@
     .prio-media{background:rgba(138,42,42,0.1);color:var(--accent);border:1px solid var(--accent);}
     .prio-baja{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
     .prio-ok{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
+    .parte-select-ana{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 9px;font-family:var(--font-ui);font-size:10px;border-radius:var(--radius);outline:none;cursor:pointer;margin-bottom:2px;}
+    .parte-select-ana:focus{border-color:var(--accent);}
+    .parte-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:4px;display:block;}
     .key-status{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;padding:3px 8px;border-radius:var(--radius);}
     .key-status.ok{color:var(--green);border:1px solid var(--green);}
     .key-status.missing{color:var(--red);border:1px solid var(--red);}
@@ -232,6 +235,13 @@
       <label class="input-label" for="section-goal">Objetivo de esta sección/capítulo</label>
       <textarea class="input-field" id="section-goal" rows="3" maxlength="600" style="resize:none;line-height:1.6;" placeholder="Qué quieres conseguir, qué época o tema aborda, qué debe transmitir al lector…"></textarea>
     </div>
+    <div class="input-section">
+      <label class="parte-label" for="ana-parte-libro">Parte del libro</label>
+      <select class="parte-select-ana" id="ana-parte-libro">
+        <option value="primera">Primera parte — narrativa divulgativa</option>
+        <option value="segunda">Segunda parte — temática y formal</option>
+      </select>
+    </div>
     <div class="text-area-wrap">
       <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto de la sección o capítulo…&#10;&#10;Hasta 10 páginas aproximadamente.&#10;El texto se inyecta automáticamente en cada prompt."></textarea>
       <div class="char-count" id="char-count">0 / 20.000</div>
@@ -261,7 +271,6 @@
     <div class="chat-actions" id="chat-actions" style="display:none;">
       <span class="next-prompt-label" id="next-prompt-label">—</span>
       <button class="btn btn-ghost btn-sm" id="btn-export">⎘ Exportar .txt</button>
-      <button class="btn btn-plan btn-sm" id="btn-plan" style="display:none;" disabled>✦ Plan de intervención</button>
       <button class="btn btn-primary" id="btn-next-prompt">Enviar →</button>
     </div>
   </div>
@@ -288,6 +297,11 @@
       <div class="modal-section-title">Contexto del libro (System Prompt)</div>
       <div class="modal-hint" style="margin-bottom:8px;">Se envía a Claude en cada consulta como instrucción de fondo.</div>
       <textarea class="modal-textarea tall" id="settings-system" rows="7"></textarea>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Perfil tonal del libro</div>
+      <div class="modal-hint" style="margin-bottom:8px;">Define la voz y tono de referencia para cada parte del libro. El analizador lo usará para evaluar cuánto se acerca o aleja el texto de ese perfil.</div>
+      <textarea class="modal-textarea tall" id="settings-tono" rows="7"></textarea>
     </div>
     <div class="modal-section">
       <div class="modal-section-title">Prompts de análisis</div>
@@ -370,7 +384,29 @@ function startFirebase(apiKey) {
   fbAuth     = firebase.auth();
   fbDb       = firebase.firestore();
   fbProvider = new firebase.auth.GoogleAuthProvider();
-  fbAuth.onAuthStateChanged(function(user){ fbUser=user; updateSyncUI(); });
+  fbAuth.onAuthStateChanged(function(user){
+    fbUser=user;
+    updateSyncUI();
+    if (user && fbDb && sessions.length === 0) autoRestoreFromFirestore();
+  });
+}
+
+function autoRestoreFromFirestore() {
+  var docRef = fbDb.collection('maquetador').doc(fbUser.uid);
+  docRef.get().then(function(snap) {
+    if (snap.exists) {
+      var remote = snap.data();
+      var remoteSessions = remote.sessions || [];
+      var remoteSettings = remote.settings || null;
+      if (remoteSessions.length > 0 && sessions.length === 0) {
+        sessions = remoteSessions;
+        saveSessions();
+        if (remoteSettings) { settings = remoteSettings; saveSettings(); }
+        renderHistoryList();
+        setSyncStatus('ok', '✓ ' + remoteSessions.length + ' sesión' + (remoteSessions.length !== 1 ? 'es restauradas' : ' restaurada') + ' desde la nube');
+      }
+    }
+  }).catch(function(err) { console.warn('Auto-restore error:', err); });
 }
 
 // Inicializar si ya tenemos la clave guardada
@@ -508,7 +544,7 @@ function fbSignOut() {
 // ══════════════════════════════════════════════════════
 //  APP (sin cambios)
 // ══════════════════════════════════════════════════════
-var DEFAULT_SYSTEM='Eres un editor literario especializado en ensayo histórico-divulgativo.\n\nSOBRE EL LIBRO:\nLibro de historia local sobre Castroverde de Cerrato (Valladolid, España). Combina rigor histórico con estilo divulgativo y evocador. Dirigido tanto a vecinos del municipio como a lectores interesados en historia local castellana.\n\nESTRUCTURA DEL LIBRO:\n- Historia cronológica completa: prehistoria, romana, medieval, moderna, contemporánea.\n- Segunda parte temática: cofradías, documentos paleográficos, instituciones históricas.\n- Ámbito geográfico: Cerrato vallisoletano, valle del río Esgueva, tierras fronterizas con Palencia.\n\nESTILO DEL AUTOR:\n- Narrativo pero riguroso: prosa literaria con datos históricos precisos.\n- Cercano y evocador: imágenes concretas y sensoriales.\n- Voz propia marcada: entre académico y divulgación culta.\n- Frases con ritmo: alterna oraciones cortas y largas con intención estilística.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, "Castro Viride".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización.\n\nNORMAS:\n- Analiza siempre a nivel global (estructura, tono, ritmo), no frase por frase.\n- Respeta la voz del autor.\n- Sé concreto: ejemplos específicos del texto, no generalidades.\n- El autor tiene notas al pie extensas: NUNCA señales falta de fuentes como problema.';
+var DEFAULT_SYSTEM='Eres un editor literario especializado en ensayo histórico-divulgativo.\n\nSOBRE EL LIBRO:\nLibro de historia local sobre Castroverde de Cerrato (Valladolid, España). Combina rigor histórico con estilo divulgativo y evocador. Dirigido tanto a vecinos del municipio como a lectores interesados en historia local castellana.\n\nESTRUCTURA DEL LIBRO:\n- Historia cronológica completa: prehistoria, romana, medieval, moderna, contemporánea.\n- Segunda parte temática: cofradías, documentos paleográficos, instituciones históricas.\n- Ámbito geográfico: Cerrato vallisoletano, valle del río Esgueva, tierras fronterizas con Palencia.\n\nVOZ DE REFERENCIA — EL MODELO AL QUE DEBE APROXIMARSE EL TEXTO:\n\n\"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano, a media hora en coche de Valladolid, es tierra de frontera donde su territorio limita con la provincia de Palencia. Es también uno de esos lugares que condensan en sus calles la historia común de la España rural: un esplendor ya pasado; la importancia de la agricultura y el éxodo que vació los pueblos.\nNo era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla. Por sus calles y senderos no solo transitaron pastores, labriegos y soldados; también desfilaron reyes, nobles y las intrigas de una corte itinerante que encontró aquí una parada estratégica donde tomar decisiones e incluso llorar a sus muertos.\"\n\nRASSGOS DE ESA VOZ QUE DEBES USAR COMO GUÍA:\n- Frases declarativas cortas con peso propio: \"No era un lugar cualquiera.\"\n- Movimiento de lo concreto a lo histórico sin solemnidad forzada.\n- Datos precisos (fechas, cifras, nombres) integrados en la narración, no en paréntesis ni apartados.\n- Ritmo alternado: frase corta, frase larga con desarrollo, frase corta de cierre.\n- Cierres de párrafo concretos y visuales. Nunca abstracciones del tipo \"moldean la identidad\" o \"custodian la memoria\".\n- Tono cercano, directo, sin distancia académica ni efectismo literario.\n\nSOBRE LA PUNTUACIÓN Y LOS SIGNOS — NORMAS ESTRICTAS:\n- PUNTO Y COMA (;): evítalo salvo que sea imprescindible para separar elementos de una enumeración compleja. Nunca donde un punto o una coma funcionan mejor. Señala los que aparezcan en el texto analizado que puedan eliminarse sin pérdida.\n- INCISOS CON GUIONES (—texto—): solo cuando el inciso aporte información que no puede integrarse de otro modo. Nunca para añadir una explicación que el lector ya puede inferir. Si es prescindible, señalarlo.\n- PARÉNTESIS EXPLICATIVOS: si la información es relevante, mejor integrarla en la prosa. Si no es relevante, señalar que puede omitirse.\n- EN GENERAL: la prosa fluye mejor con menos signos. Señala siempre los casos donde la puntuación interrumpe el ritmo sin aportar claridad.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, \"Castro Viride\".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización.\n\nNORMAS:\n- Analiza siempre a nivel global (estructura, tono, ritmo), no frase por frase.\n- Evalúa cuánto se acerca o aleja el texto de la voz de referencia descrita arriba.\n- Sé concreto: ejemplos específicos del texto, no generalidades.\n- El autor tiene notas al pie extensas: NUNCA señales falta de fuentes como problema.';
 
 var DEFAULT_PROMPTS=[
   {name:'P1 · Estructura',label:'Estructura',content:'Actúa como editor especializado en ensayo histórico-divulgativo.\n\nObjetivo de esta sección/capítulo: {{objetivo}}\n\nAnaliza el texto a nivel global. Evalúa:\n- Estructura general\n- Claridad del hilo narrativo\n- Equilibrio entre rigor y divulgación\n- Ritmo general\n- Coherencia interna\n- Eficacia del inicio y del cierre\n\nProporciona:\n1. Resumen de la estructura\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
@@ -516,7 +552,8 @@ var DEFAULT_PROMPTS=[
   {name:'P3 · Ritmo',label:'Ritmo',content:'Analiza el ritmo y la densidad de esta sección/capítulo.\n\nIdentifica:\n- Partes lentas o densas\n- Partes ágiles y bien resueltas\n- Bloques que podrían acortarse sin pérdida\n\nPropón mejoras concretas con referencias a fragmentos específicos.'},
   {name:'P4 · Lector',label:'Lector',content:'Actúa como un lector sin conocimientos previos sobre la historia local de Castroverde.\n\nDesde esa perspectiva, describe:\n- Qué partes te enganchan y por qué\n- Dónde pierdes interés\n- Qué cuesta entender o seguir\n- Qué genera curiosidad o ganas de saber más'},
   {name:'P5 · Síntesis',label:'Síntesis',content:'Con todo lo analizado hasta ahora (estructura, tono, ritmo, perspectiva del lector), indica:\n\n1. Los 2 cambios que más mejorarían esta sección/capítulo\n2. Qué parte no debería modificarse bajo ningún concepto\n3. Veredicto: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n4. Justificación breve del veredicto (2-3 frases)'},
-  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.'}
+  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.'},
+  {name:'P7 · Plan',label:'Plan',content:'Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.'}
 ];
 
 var API_KEY=localStorage.getItem('castroverde_ana_key')||'';
@@ -524,6 +561,24 @@ var MODEL='claude-sonnet-4-6';
 var MAX_TOKENS=4000;
 var STORAGE_KEY='castroverde_ana_sessions';
 var SETTINGS_KEY='castroverde_ana_settings';
+var TONO_KEY='castroverde_instruc_gen';
+function getTonoProfile(){ return localStorage.getItem(TONO_KEY)||''; }
+function saveTonoProfile(val){ localStorage.setItem(TONO_KEY,val); }
+
+function getParteLabel(){
+  var el=document.getElementById('ana-parte-libro');
+  if(!el) return 'PRIMERA PARTE (narrativa divulgativa)';
+  return el.value==='segunda'?'SEGUNDA PARTE (tematica y formal)':'PRIMERA PARTE (narrativa divulgativa)';
+}
+
+function buildSystemWithTono(){
+  var base=settings.system;
+  var tono=getTonoProfile().trim();
+  var parte=getParteLabel();
+  var extra='\n\nPARTE DEL LIBRO: Esta sección pertenece a la '+parte+' del libro.';
+  if(tono) extra+='\n\nPERFIL TONAL DE REFERENCIA — úsalo para evaluar cuánto se acerca o aleja el texto de la voz buscada:\n'+tono;
+  return base+extra;
+}
 var settings=loadSettings();
 var sessions=loadSessions();
 var currentSession=null;
@@ -580,16 +635,6 @@ function updateChatActions(){
   if(!currentSession){get('chat-actions').style.display='none';return;}
   get('chat-actions').style.display='flex';
   var idx=currentSession.currentPromptIndex;
-  var planBtn=get('btn-plan');
-  // Mostrar plan si hay al menos 2 respuestas de Claude
-  var claudeResponses=currentSession.messages.filter(function(m){return m.role==='assistant';}).length;
-  if(claudeResponses>=2){
-    planBtn.style.display='';
-    planBtn.disabled=currentSession.waitingForPlan||false;
-    planBtn.textContent=currentSession.waitingForPlan?'Generando…':'✦ Plan de intervención';
-  } else {
-    planBtn.style.display='none';
-  }
   if(idx>=settings.prompts.length){
     get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado</span>';
     get('btn-next-prompt').style.display='none';
@@ -602,30 +647,6 @@ function updateChatActions(){
   }
 }
 
-var PLAN_PROMPT='Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.';
-
-function requestPlan(){
-  if(!currentSession||currentSession.waitingForPlan)return;
-  var claudeResponses=currentSession.messages.filter(function(m){return m.role==='assistant';});
-  if(!claudeResponses.length)return;
-  currentSession.waitingForPlan=true;
-  updateChatActions();
-  showLoading('Generando plan de intervención…');hideError();
-  var apiMsgs=currentSession.messages.map(function(m){return{role:m.role,content:m.content};});
-  apiMsgs.push({role:'user',content:PLAN_PROMPT});
-  callClaude(apiMsgs,function(response){
-    hideLoading();
-    currentSession.waitingForPlan=false;
-    currentSession.plan=response;
-    saveCurrentSession();
-    renderPlanInChat(response);
-    updateChatActions();
-  },function(err){
-    hideLoading();
-    currentSession.waitingForPlan=false;
-    showError(err);updateChatActions();
-  });
-}
 
 function renderPlanInChat(planText){
   var area=get('chat-area');
@@ -690,7 +711,7 @@ function callClaude(messages,onOk,onErr){
   };
   xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
   xhr.onerror=function(){onErr('Error de red.');};
-  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:settings.system,messages:messages}));
+  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:buildSystemWithTono(),messages:messages}));
 }
 
 function buildPrompt(template,texto,objetivo){
@@ -733,6 +754,8 @@ function sendNextPrompt(){
     }
     saveCurrentSession();
     renderProgressBar(currentSession.currentPromptIndex);
+    // Si la respuesta es del P7 (Plan), renderizar con formato visual
+    if(idx===6) renderPlanInChat(response);
     renderChat();updateChatActions();
   },function(err){
     hideLoading();currentSession.messages.pop();currentSession.waitingForResponse=false;
@@ -806,6 +829,8 @@ function newSession(){
 
 function openSettings(){
   get('settings-system').value=settings.system;
+  var tonoEl=document.getElementById('settings-tono');
+  if(tonoEl) tonoEl.value=getTonoProfile();
   var tabsHtml='',panelsHtml='';
   settings.prompts.forEach(function(p,i){
     tabsHtml+='<button class="ptab'+(i===0?' active':'')+'" data-idx="'+i+'">'+esc(p.label)+'</button>';
@@ -829,6 +854,8 @@ function openSettings(){
 function closeSettings(){get('modal-settings').classList.remove('visible');}
 function saveSettingsFromModal(){
   settings.system=get('settings-system').value;
+  var tonoSave=document.getElementById('settings-tono');
+  if(tonoSave) saveTonoProfile(tonoSave.value);
   document.querySelectorAll('.pp-name').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].name=el.value;});
   document.querySelectorAll('.pp-content').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].content=el.value;});
   saveSettings();
@@ -870,7 +897,6 @@ get('btn-close-sidebar').addEventListener('click',closeHistory);
 get('sidebar-overlay').addEventListener('click',closeHistory);
 get('btn-clear-history').addEventListener('click',function(){if(confirm('¿Borrar todo el historial?')){sessions=[];saveSessions();renderHistoryList();}});
 get('btn-export').addEventListener('click',function(){exportSession(null);});
-get('btn-plan').addEventListener('click',requestPlan);
 get('btn-settings').addEventListener('click',openSettings);
 get('settings-save').addEventListener('click',saveSettingsFromModal);
 get('settings-cancel').addEventListener('click',closeSettings);
@@ -915,6 +941,8 @@ renderProgressBar(-1);
 updateCharCount();
 updateKeyStatus();
 renderHistoryList();
+// Cargar perfil tonal por defecto si no hay ninguno guardado
+if(!getTonoProfile()) saveTonoProfile('VOZ Y TONO DE REFERENCIA — Libro de historia de Castroverde de Cerrato\n\nPrimera parte (narrativa divulgativa):\nNarración cronológica con datos precisos y fechas documentadas. El autor no adorna — deja que los hechos hablen, pero elige qué hecho poner en primer plano. Las frases son directas y de longitud variable: alterna oraciones cortas que dan ritmo con frases más largas que desarrollan el contexto. Cuando hay conflicto o personajes, los nombra y los deja actuar sin comentario moral. Cuando el texto entra en territorio técnico o documental, busca un detalle humano o geográfico concreto que ancle al lector. Los cierres de bloque deben dejar algo concreto y visible. Nunca terminar con una generalización.\n\nSegunda parte (temática y formal):\nMismo rigor documental pero con mayor densidad informativa. El tono se vuelve más expositivo sin caer en el academicismo. Se permiten enumeraciones y datos específicos. Se evita el lenguaje institucional o abstracto.\n\nReglas comunes:\n- No añadir frases, adjetivos ni cláusulas que no estén en el original\n- No sustituir palabras por sinónimos neutros ni cambiar el estilo\n- No terminar párrafos con generalizaciones del tipo "moldean la identidad" o "custodian la memoria"\n- Respetar las notas al pie como fuente de autoridad\n- Si una frase funciona, no tocarla');
 if(!FB_API_KEY){ setTimeout(openFbKeyModal,300); }
 else if(!API_KEY){ setTimeout(openApiKeyModal,300); }
 </script>
