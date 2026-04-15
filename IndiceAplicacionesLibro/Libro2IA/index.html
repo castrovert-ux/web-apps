@@ -1,316 +1,143 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Castroverde de Cerrato • Buscador del Libro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-        body { font-family: 'Inter', system_ui, sans-serif; }
-        .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Castroverde - Buscador de Costumbres por Siglo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+    h1 { text-align: center; color: #2c3e50; }
+    .controls { text-align: center; margin: 20px 0; }
+    select, input, button { padding: 10px; margin: 5px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background: #34495e; color: white; }
+    tr:nth-child(even) { background: #f2f2f2; }
+    .seccion { font-weight: bold; color: #2980b9; }
+    .siglos { font-size: 0.9em; color: #e67e22; }
+  </style>
 </head>
-<body class="bg-gray-50">
+<body>
+  <h1>📜 Castroverde de Cerrato - Buscador de Costumbres</h1>
+  <p style="text-align:center;">Filtra por siglo para encontrar pinceladas de vida cotidiana, organización municipal y costumbres para tu libro</p>
 
-    <div class="max-w-7xl mx-auto p-6">
-        <!-- HEADER -->
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h1 class="text-4xl font-semibold text-gray-900">Castroverde de Cerrato</h1>
-                <p class="text-xl text-gray-600 mt-1">Buscador inteligente del libro • 220 páginas</p>
-            </div>
-            <div class="text-right">
-                <div class="text-sm text-gray-500">34 entradas • Páginas 1-220</div>
-                <a href="https://github.com" target="_blank" 
-                   class="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 mt-2">
-                    <i class="fab fa-github"></i> Subir a GitHub Pages
-                </a>
-            </div>
-        </div>
+  <div class="controls">
+    <select id="sigloSelect">
+      <option value="">Todos los siglos</option>
+      <option value="XI">Siglo XI</option>
+      <option value="XII">Siglo XII</option>
+      <option value="XIII">Siglo XIII</option>
+      <option value="XIV">Siglo XIV</option>
+      <option value="XV">Siglo XV</option>
+      <option value="XVI">Siglo XVI</option>
+      <option value="XVII">Siglo XVII</option>
+      <option value="XVIII">Siglo XVIII</option>
+      <option value="XIX">Siglo XIX</option>
+      <option value="XX">Siglo XX</option>
+    </select>
 
-        <!-- FILTROS -->
-        <div class="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <input type="text" id="busqueda" placeholder="Buscar en título, resumen o tags..." style="width: 300px;">
 
-                <!-- Buscador general -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">🔎 BUSCAR EN TODO EL LIBRO</label>
-                    <input id="searchInput" 
-                           type="text" 
-                           placeholder="Título, resumen, contenido o etiqueta..."
-                           class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 text-sm">
-                </div>
+    <button onclick="filtrar()">🔍 Buscar</button>
+    <button onclick="limpiar()">Limpiar</button>
+  </div>
 
-                <!-- Sección -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">📂 SECCIÓN</label>
-                    <select id="seccionSelect" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 text-sm">
-                        <option value="">Todas las secciones</option>
-                    </select>
-                </div>
+  <table id="resultados">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Sección</th>
+        <th>Título (Páginas)</th>
+        <th>Resumen</th>
+        <th>Siglos</th>
+        <th>Tags</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-                <!-- Siglo -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">📅 SIGLO</label>
-                    <select id="sigloSelect" multiple 
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 text-sm h-28">
-                        <!-- Se rellena con JS -->
-                    </select>
-                    <p class="text-[10px] text-gray-400 mt-1">Mantén Ctrl/Cmd para seleccionar varios</p>
-                </div>
+  <script>
+    // ==================== DATASET COMPLETO ====================
+    const dataset = [
+      {"id":"cv_adm_001","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Merindad del Cerrato (págs. 1-6)","resumen":"Inclusión de Castroverde en la Merindad del Cerrato desde 1385 y su papel como centro administrativo intermedio.","siglo":"XIV-XV","siglos":["XIV","XV"],"tags":["Merindad","Cerrato","Administración"]},
+      {"id":"cv_adm_002","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Diócesis de Palencia (págs. 7-8)","resumen":"Historia de la pertenencia eclesiástica de Castroverde, desde la restauración de la diócesis palentina en 1059 hasta su paso a la de Valladolid en 1954.","siglo":"XI-XX","siglos":["XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"],"tags":["Diócesis","Palencia","Valladolid"]},
+      {"id":"cv_adm_003","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"El Partido Judicial de Valoria la Buena (pág. 8)","resumen":"Adscripción administrativa de Castroverde al partido judicial de Valoria la Buena desde 1834 hasta su integración en el de Valladolid en los años 70.","siglo":"XIX-XX","siglos":["XIX","XX"],"tags":["Partido Judicial"]},
+      {"id":"cv_adm_004","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Encomienda de Castroverde de Cerrato (págs. 9-11)","resumen":"Origen y evolución de la Encomienda bajo la Orden de Santiago (siglos XII-XVI)...","siglo":"XII-XVI","siglos":["XII","XIII","XIV","XV","XVI"],"tags":["Encomienda","Orden de Santiago"]},
+      {"id":"cv_adm_005","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Jurisdicción de Castroverde de Cerrato (págs. 11-13)","resumen":"Evolución de la jurisdicción de Castroverde desde 1350...","siglo":"XIV-XIX","siglos":["XIV","XV","XVI","XVII","XVIII","XIX"],"tags":["Jurisdicción","Behetrías"]},
+      {"id":"cv_adm_006","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"El Marqués de Aguilafuente (págs. 13-27)","resumen":"Estudio del señorío de los Zúñiga...","siglo":"XVI-XX","siglos":["XVI","XVII","XVIII","XIX","XX"],"tags":["Marqués de Aguilafuente","Señorío"]},
+      {"id":"cv_org_001","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Organización de los bienes y actos (págs. 27-28)","resumen":"Estructura del Ayuntamiento de Castroverde como cabeza de la hermandad...","siglo":"XV-XIX","siglos":["XV","XVI","XVII","XVIII","XIX"],"tags":["Ayuntamiento","Bienes Comunales"]},
+      {"id":"cv_org_002","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Organización de los bienes y actos (pág. 28)","resumen":"Gestión del calendario anual de la villa...","siglo":"XVII-XVIII","siglos":["XVII","XVIII"],"tags":["Concejo","Ganado","Vendimia"]},
+      {"id":"cv_org_003","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de Montes (págs. 28-29)","resumen":"Regulación y protección de la masa arbolada...","siglo":"XVII-XVIII","siglos":["XVII","XVIII"],"tags":["Montes","Gestión Forestal"]},
+      {"id":"cv_org_004","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de Prados Boyales (pág. 29)","resumen":"Evolución del ganado de trabajo...","siglo":"XV-XIX","siglos":["XV","XVI","XVII","XVIII","XIX"],"tags":["Prados Boyales","Ganado"]},
+      {"id":"cv_org_005","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento del río y arroyos (págs. 29-30)","resumen":"Historia de las crecidas del río Esgueva...","siglo":"XVII-XX","siglos":["XVII","XVIII","XIX","XX"],"tags":["Río Esgueva","Inundaciones"]},
+      {"id":"cv_org_006","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de la caza y la pesca (págs. 30-31)","resumen":"Regulación estricta de los recursos cinegéticos...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Caza","Pesca"]},
+      {"id":"cv_org_007","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de la Limpieza (pág. 31)","resumen":"Normativa sobre la higiene de espacios públicos...","siglo":"XVII-XVIII","siglos":["XVII","XVIII"],"tags":["Limpieza","Higiene"]},
+      {"id":"cv_org_008","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Control de Pesas y Medidas (págs. 31-32)","resumen":"Regulación del comercio local...","siglo":"XVII-XX","siglos":["XVII","XVIII","XIX","XX"],"tags":["Pesas y Medidas","Comercio"]},
+      {"id":"cv_org_009","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de los bienes comunales (págs. 32-34)","resumen":"Gestión y protección de las tierras concejiles (oraños)...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Bienes Comunales","Oraños","Corralizas"]},
+      {"id":"cv_org_010","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de los bienes vecinales (págs. 34-35)","resumen":"Protección de cultivos, viñas y colmenares...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Bienes Vecinales","Agricultura"]},
+      {"id":"cv_org_011","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Vendimia, viñas y guardas (págs. 35-36)","resumen":"Regulación de la vendimia y el sistema de vigilancia...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Vendimia","Viñas"]},
+      {"id":"cv_org_012","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Gastos Concejiles (págs. 36-41)","resumen":"Análisis de la economía municipal...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Gastos Concejiles","Impuestos"]},
+      {"id":"cv_org_013","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Oficiales y profesiones ligadas al concejo (págs. 41-51)","resumen":"Descripción de la estructura administrativa...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Oficiales","Alcalde Mayor"]},
+      {"id":"cv_vida_001","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Montes y pastos comunales (págs. 51-58)","resumen":"La importancia estratégica de los recursos forestales...","siglo":"XV-XX","siglos":["XV","XVI","XVII","XVIII","XIX","XX"],"tags":["Montes Comunales","Pastos"]},
+      {"id":"cv_vida_002","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Renta de tierras en la villa y la comunidad (págs. 58-72)","resumen":"Análisis de los arrendamientos de tierras...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Arrendamientos","Desamortización"]},
+      {"id":"cv_vida_003","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Negocios y Abastos (págs. 72-86)","resumen":"Regulación municipal de los servicios esenciales...","siglo":"XVII-XX","siglos":["XVII","XVIII","XIX","XX"],"tags":["Mesón","Taberna","Carnicería"]},
+      {"id":"cv_vida_004","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Ganadería (págs. 86-94)","resumen":"Evolución de la ganadería lanar...","siglo":"XVII-XX","siglos":["XVII","XVIII","XIX","XX"],"tags":["Ganadería","Oveja Churra"]},
+      {"id":"cv_vida_005","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Impuestos durante el Antiguo Régimen (págs. 94-99)","resumen":"Estudio de la fiscalidad histórica en la villa...","siglo":"XVI-XIX","siglos":["XVI","XVII","XVIII","XIX"],"tags":["Impuestos","Diezmo","Tercias Reales"]},
+      {"id":"cv_vida_006","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Censos y Préstamos (págs. 99-106)","resumen":"Estudio del sistema de financiación municipal...","siglo":"XVII-XIX","siglos":["XVII","XVIII","XIX"],"tags":["Censos","Préstamos"]},
+      {"id":"cv_pob_001","seccion":"MUJERES Y HOMBRES","titulo":"Evolución demográfica (págs. 106-117)","resumen":"Análisis del crecimiento poblacional de Castroverde...","siglo":"XVIII-XX","siglos":["XVIII","XIX","XX"],"tags":["Demografía"]},
+      {"id":"cv_pob_002","seccion":"MUJERES Y HOMBRES","titulo":"Familias (págs. 117-129)","resumen":"Estudio genealógico de las familias...","siglo":"XV-XX","siglos":["XV","XVI","XVII","XVIII","XIX","XX"],"tags":["Genealogía","Familias"]},
+      {"id":"cv_pob_003","seccion":"MUJERES Y HOMBRES","titulo":"Personajes Importantes (págs. 129-131)","resumen":"Repaso de las figuras históricas que pasaron por la villa...","siglo":"XV-XIX","siglos":["XV","XVI","XVII","XVIII","XIX"],"tags":["Personajes Importantes"]},
+      {"id":"cv_soc_001","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Una Sociedad Campesina (págs. 131-140)","resumen":"Análisis de la vida rural desde el medievo...","siglo":"XIV-XX","siglos":["XIV","XV","XVI","XVII","XVIII","XIX","XX"],"tags":["Sociedad Campesina","Etnografía"]},
+      {"id":"cv_soc_002","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Iglesia: Un mundo sacralizado (págs. 141-158)","resumen":"El papel omnipotente de la Iglesia...","siglo":"XVI-XIX","siglos":["XVI","XVII","XVIII","XIX"],"tags":["Iglesia","Religiosidad"]},
+      {"id":"cv_soc_003","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Propiedades de la Iglesia de Castroverde (págs. 158-171)","resumen":"Análisis del patrimonio eclesiástico...","siglo":"XVIII-XIX","siglos":["XVIII","XIX"],"tags":["Propiedades Eclesiásticas"]},
+      {"id":"cv_soc_004","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Las cofradías de Castroverde (págs. 171-205)","resumen":"Estudio de las congregaciones religiosas...","siglo":"XV-XX","siglos":["XV","XVI","XVII","XVIII","XIX","XX"],"tags":["Cofradías"]},
+      {"id":"cv_soc_005","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Asistencia Social en la Villa (págs. 205-207)","resumen":"Estudio de la pobreza y los mecanismos de beneficencia...","siglo":"XVIII-XIX","siglos":["XVIII","XIX"],"tags":["Asistencia Social"]},
+      {"id":"cv_soc_006","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Fiestas, costumbres y actos comunitarios (págs. 207-220)","resumen":"Descripción de las formas de reunión concejil...","siglo":"XV-XIX","siglos":["XV","XVI","XVII","XVIII","XIX"],"tags":["Fiestas","Tradiciones"]}
+    ];
 
-                <!-- Etiquetas populares -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">🏷️ ETIQUETAS</label>
-                    <div id="tagsContainer" class="flex flex-wrap gap-2 max-h-28 overflow-y-auto">
-                        <!-- Se rellena con JS -->
-                    </div>
-                </div>
-            </div>
+    function filtrar() {
+      const sigloSeleccionado = document.getElementById("sigloSelect").value;
+      const texto = document.getElementById("busqueda").value.toLowerCase().trim();
 
-            <div class="flex justify-between items-center mt-6">
-                <button onclick="resetFilters()" 
-                        class="text-sm flex items-center gap-2 text-gray-500 hover:text-red-600">
-                    <i class="fas fa-undo"></i> BORRAR FILTROS
-                </button>
-                <div class="text-sm text-gray-500">
-                    <span id="resultCount" class="font-semibold text-blue-600">34</span> resultados
-                </div>
-            </div>
-        </div>
+      const tbody = document.querySelector("#resultados tbody");
+      tbody.innerHTML = "";
 
-        <!-- RESULTADOS -->
-        <div id="results" class="space-y-4">
-            <!-- Se rellena con JavaScript -->
-        </div>
-    </div>
+      const filtrados = dataset.filter(item => {
+        const coincideSiglo = !sigloSeleccionado || item.siglos.includes(sigloSeleccionado);
+        const coincideTexto = !texto || 
+          item.titulo.toLowerCase().includes(texto) ||
+          item.resumen.toLowerCase().includes(texto) ||
+          item.tags.some(tag => tag.toLowerCase().includes(texto));
+        return coincideSiglo && coincideTexto;
+      });
 
-    <!-- MODAL DETALLE -->
-    <div id="modal" onclick="if(event.target===this)hideModal()" 
-         class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-        <div onclick="event.stopImmediatePropagation()" 
-             class="bg-white rounded-3xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <div class="px-8 py-6 border-b">
-                <h2 id="modalTitle" class="text-2xl font-semibold"></h2>
-                <div id="modalMeta" class="text-sm text-gray-500 mt-1"></div>
-            </div>
-            <div id="modalContent" class="p-8 overflow-y-auto max-h-[60vh] text-gray-700 leading-relaxed"></div>
-            <div class="px-8 py-4 border-t flex justify-end">
-                <button onclick="hideModal()" 
-                        class="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-2xl">
-                    Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
+      if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">No se encontraron resultados</td></tr>`;
+        return;
+      }
 
-    <script>
-        // ==================== DATASET COMPLETO ====================
-        const dataset = [
-            {"id":"cv_adm_001","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Merindad del Cerrato (págs. 1-6)","resumen":"Inclusión de Castroverde en la Merindad del Cerrato desde 1385 y su papel como centro administrativo intermedio.","contenido_extendido":"Castroverde de Cerrato fue un punto administrativo importante dentro de la Merindad del Cerrato y ya desde el año 1385 contamos con documentos que atestiguan la inclusión de Castroverde en la merindad del Cerrato... [Texto completo de las 6 páginas incluyendo las 12 Provisiones Reales mencionadas]","siglo":"XIV-XV","tags":["Merindad","Cerrato","Administración","Reyes","Impuestos"]},
-            {"id":"cv_adm_002","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Diócesis de Palencia (págs. 7-8)","resumen":"Historia de la pertenencia eclesiástica de Castroverde, desde la restauración de la diócesis palentina en 1059 hasta su paso a la de Valladolid en 1954.","contenido_extendido":"Castroverde de Cerrato perteneció a la diócesis palentina desde su restauración en el año 1059...","siglo":"XI-XX","tags":["Diócesis","Palencia","Valladolid","Arciprestazgo","Peñafiel","Esguevillas","Fernando I","Enrique III"]},
-            {"id":"cv_adm_003","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"El Partido Judicial de Valoria la Buena (pág. 8)","resumen":"Adscripción administrativa de Castroverde al partido judicial de Valoria la Buena desde 1834 hasta su integración en el de Valladolid en los años 70.","contenido_extendido":"Castroverde de Cerrato estuvo adscrita administrativa al Partido Judicial de Valoria la Buena...","siglo":"XIX-XX","tags":["Partido Judicial","Valoria la Buena","Valladolid","Administración","Esgueva","1834"]},
-            {"id":"cv_adm_004","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Encomienda de Castroverde de Cerrato (págs. 9-11)","resumen":"Origen y evolución de la Encomienda bajo la Orden de Santiago (siglos XII-XVI), incluyendo su expansión tras la guerra de sucesión castellana y su importancia estratégica.","contenido_extendido":"Los comienzos de la Encomienda de Castroverde de Cerrato fueron coetáneos a su creación como villa...","siglo":"XII-XVI","tags":["Encomienda","Orden de Santiago","Castrotorafe","Villalar","Baltanás","Álvaro de Bazán","Enrique IV","Guerra de Sucesión"]},
-            {"id":"cv_adm_005","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Jurisdicción de Castroverde de Cerrato (págs. 11-13)","resumen":"Evolución de la jurisdicción de Castroverde desde 1350, incluyendo las nueve aldeas originales, los poblados extinguidos y el proceso de emancipación de las villas cercanas.","contenido_extendido":"La primera prueba documental de una jurisdicción que englobaba a Castroverde y su entorno...","siglo":"XIV-XIX","tags":["Jurisdicción","Behetrías","Villanueva de Valdovas","Fombellida","Torre de Esgueva","Villaco","Poblados Extinguidos","Santa Hermandad"]},
-            {"id":"cv_adm_006","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"El Marqués de Aguilafuente (págs. 13-27)","resumen":"Estudio del señorío de los Zúñiga: desde la compra de la villa en 1537 y la creación del mayorazgo hasta la evolución de sus bienes y la genealogía de los marqueses.","contenido_extendido":"La figura del Marqués de Aguilafuente dominó Castroverde durante tres siglos...","siglo":"XVI-XX","tags":["Marqués de Aguilafuente","Zúñiga","Mayorazgo","Señorío","Genealogía","Bienes","Carlos I","Venta de Villas"]},
-            {"id":"cv_org_001","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Organización de los bienes y actos (págs. 27-28)","resumen":"Estructura del Ayuntamiento de Castroverde como cabeza de la hermandad: cargos, sistema de convocatoria por campana y gestión de bienes comunales.","contenido_extendido":"La organización municipal de Castroverde reflejaba su estatus de cabeza de villa y tierra...","siglo":"XV-XIX","tags":["Ayuntamiento","Villa y Arrabal","Regidores","Campana","Bienes Comunales","Ordenanzas","Alhóndiga"]},
-            {"id":"cv_org_002","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Organización de los bienes y actos (pág. 28)","resumen":"Gestión del calendario anual de la villa por el concejo: eventos comunales, reparto de recursos (leña), organización del ganado y ciclos agrícolas.","contenido_extendido":"El concejo de Castroverde funcionaba como el eje articulador de la vida comunal...","siglo":"XVII-XVIII","tags":["Concejo","Leña","San Pedro","Ganado","Vendimia","Soportales","Pastos","Bienes Eclesiásticos"]},
-            {"id":"cv_org_003","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de Montes (págs. 28-29)","resumen":"Regulación y protección de la masa arbolada por el concejo: control de talas, reparto de suertes de leña para uso doméstico y labores de repoblación forestal.","contenido_extendido":"El cuidado de los montes era una prioridad para el concejo de Castroverde...","siglo":"XVII-XVIII","tags":["Montes","Leña","Encina","Olmo","Valseco","Repoblación","Gestión Forestal","Bienes Comunales"]},
-            {"id":"cv_org_004","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de Prados Boyales (pág. 29)","resumen":"Evolución del ganado de trabajo y gestión de los prados comunales: el sistema de 'cotear' y 'descotear' para proteger las siembras y alimentar a los bueyes y equinos.","contenido_extendido":"Históricamente, el buey fue el principal animal de trabajo en Castroverde...","siglo":"XV-XIX","tags":["Prados Boyales","Ganado","Bueyes","Caballos","Coteado","San Juan de Valdovas","Agricultura","Multas"]},
-            {"id":"cv_org_005","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento del río y arroyos (págs. 29-30)","resumen":"Historia de las crecidas del río Esgueva y gestión comunal de la limpieza de cauces ('mondas') para proteger las cosechas y el funcionamiento de los molinos.","contenido_extendido":"La gestión del agua era un desafío constante en Castroverde...","siglo":"XVII-XX","tags":["Río Esgueva","Inundaciones","Monda","Molinos","Villaco","Puentes","Ordenación Rural","Gestión del Agua"]},
-            {"id":"cv_org_006","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de la caza y la pesca (págs. 30-31)","resumen":"Regulación estricta de los recursos cinegéticos y piscícolas: periodos de veda, control de armas y perros, y el sistema de arrendamiento de la pesca del río.","contenido_extendido":"Durante el siglo XVII, el concejo de Castroverde ejerció un control férreo sobre la caza y la pesca...","siglo":"XVII-XIX","tags":["Caza","Pesca","Veda","Multas","Arcabuces","Galgos","Hérmedes","Río Esgueva"]},
-            {"id":"cv_org_007","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de la Limpieza (pág. 31)","resumen":"Normativa sobre la higiene de espacios públicos: la obligatoriedad de los vecinos de limpiar calles y calzadas bajo pena de multa y el cuidado de eras y ermitas.","contenido_extendido":"La limpieza urbana en Castroverde era una carga vecinal regulada por el concejo...","siglo":"XVII-XVIII","tags":["Limpieza","Higiene","Calles","Eras","Multas","Letanías","Ducados","Aderezo"]},
-            {"id":"cv_org_008","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Control de Pesas y Medidas (págs. 31-32)","resumen":"Regulación del comercio local mediante la figura del fiel medidor y el contraste anual de pesas y medidas para asegurar la honestidad en las transacciones.","contenido_extendido":"Para garantizar la corrección en los intercambios comerciales...","siglo":"XVII-XX","tags":["Pesas y Medidas","Comercio","Fiel Medidor","Celemín","Balanzas","Economía Local","Patrones Oficiales"]},
-            {"id":"cv_org_009","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de los bienes comunales (págs. 32-34)","resumen":"Gestión y protección de las tierras concejiles (oraños) y regulación de las corralizas de ganado frente a la ocupación particular.","contenido_extendido":"El mantenimiento de los bienes comunales era la mayor carga de trabajo para el concejo de Castroverde...","siglo":"XVII-XIX","tags":["Bienes Comunales","Oraños","Corralizas","Ordenanzas Municipales","Cañadas","Propiedad Pública"]},
-            {"id":"cv_org_010","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Mantenimiento de los bienes vecinales (págs. 34-35)","resumen":"Protección de cultivos, viñas y colmenares frente al ganado: regulación de pastos, control de animales asilvestrados y normas para la recolección (espigadoras y rebusca).","contenido_extendido":"La protección de los bienes privados (cereales, viñas y colmenares)...","siglo":"XVII-XIX","tags":["Bienes Vecinales","Ganadería","Agricultura","Colmenares","Espigadoras","Perros Asilvestrados","Viñas","Corrales"]},
-            {"id":"cv_org_011","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Vendimia, viñas y guardas (págs. 35-36)","resumen":"Regulación de la vendimia y el sistema de vigilancia del campo mediante guardas jurados para proteger cultivos y montes.","contenido_extendido":"La vendimia en Castroverde estaba estrictamente regulada...","siglo":"XVII-XIX","tags":["Vendimia","Viñas","Guardas","Cosecheros","Vigilancia","Cuesta de la Rosa","Ordenanzas","Francisco Santos"]},
-            {"id":"cv_org_012","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Gastos Concejiles (págs. 36-41)","resumen":"Análisis de la economía municipal: gastos ordinarios (salarios, impuestos reales y señoriales), extraordinarios (reparaciones y justicia) y de asistencia social.","contenido_extendido":"La hacienda de Castroverde gestionaba una compleja red de pagos...","siglo":"XVII-XIX","tags":["Gastos Concejiles","Martiniega","Impuestos","Hospicio de Inocentes","Alojamiento de Tropas","Puentes","Economía Local","Marqués de Aguilafuente"]},
-            {"id":"cv_org_013","seccion":"ORGANIZACIÓN MUNICIPAL","titulo":"Oficiales y profesiones ligadas al concejo (págs. 41-51)","resumen":"Descripción de la estructura administrativa y cargos del concejo: desde los oficiales mayores nombrados por el Marqués hasta los oficios menores y el sistema de elección.","contenido_extendido":"La estructura administrativa de Castroverde mantenía una dualidad histórica...","siglo":"XVII-XIX","tags":["Oficiales","Alcalde Mayor","Regidores","Escribano","Villa y Arrabal","Procurador General","Elecciones","Marqués de Aguilafuente"]},
-            {"id":"cv_vida_001","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Montes y pastos comunales (págs. 51-58)","resumen":"La importancia estratégica de los recursos forestales y pastos como motor energético y económico, los conflictos territoriales por su uso y su privatización final en el siglo XX.","contenido_extendido":"El monte representaba para Castroverde lo que el petróleo a la sociedad moderna...","siglo":"XV-XX","tags":["Montes Comunales","Pastos","Leña","Pleitos Territoriales","Desamortización","Tres Hitos","Piñel de Arriba","Economía de Subsistencia"]},
-            {"id":"cv_vida_002","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Renta de tierras en la villa y la comunidad (págs. 58-72)","resumen":"Análisis de los arrendamientos de tierras concejiles, comunitarias y eclesiásticas: el sistema de subastas, el pago en especie y el impacto de la desamortización.","contenido_extendido":"La explotación de la tierra en Castroverde se organizaba mediante un complejo sistema de rentas...","siglo":"XVII-XIX","tags":["Arrendamientos","El Cañal","Desamortización","Mercedarios","Subastas","Villanueva","Rentas en especie","Propiedad de la Tierra"]},
-            {"id":"cv_vida_003","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Negocios y Abastos (págs. 72-86)","resumen":"Regulación municipal de los servicios esenciales: mesones, tabernas, carnicerías y panaderías. Incluye las condiciones de arrendamiento y el control de precios y calidad.","contenido_extendido":"El concejo garantizaba el abastecimiento mediante un sistema de arrendamientos públicos...","siglo":"XVII-XX","tags":["Negocios","Mesón","Taberna","Carnicería","Abadejo","Panaderías","Alhóndiga","Guarda de ganado"]},
-            {"id":"cv_vida_004","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Ganadería (págs. 86-94)","resumen":"Evolución de la ganadería lanar, el predominio de la oveja churra y el conflicto histórico por el uso del suelo frente a la expansión agrícola.","contenido_extendido":"La ganadería en Castroverde ha sido un factor de subsistencia clave...","siglo":"XVII-XX","tags":["Ganadería","Oveja Churra","Conflictos Agrarios","Pastos","Camino de las Cruces","Casco Urbano","Privatización","Siglo XX"]},
-            {"id":"cv_vida_005","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Impuestos durante el Antiguo Régimen (págs. 94-99)","resumen":"Estudio de la fiscalidad histórica en la villa: el monopolio y distribución de la sal, y el complejo sistema de cobro de Diezmos y Tercias Reales.","contenido_extendido":"La fiscalidad en el Antiguo Régimen marcaba profundamente la economía de Castroverde...","siglo":"XVI-XIX","tags":["Impuestos","Sal","Diezmo","Tercias Reales","Duque de Béjar","Salinas de Añana","Villanueva de Valdovas","Fiscalidad"]},
-            {"id":"cv_vida_006","seccion":"VIDA LOCAL EN EL MUNICIPIO","titulo":"Censos y Préstamos (págs. 99-106)","resumen":"Estudio del sistema de financiación municipal a través de los censos: préstamos perpetuos con entidades eclesiásticas, su impacto en la economía local y su redención tras la desamortización.","contenido_extendido":"En el Antiguo Régimen, el censo era el principal instrumento de crédito...","siglo":"XVII-XIX","tags":["Censos","Préstamos","Hacienda Municipal","Desamortización","Mercedarios","San Bernardo de Valbuena","Pósito Real","Crédito"]},
-            {"id":"cv_pob_001","seccion":"MUJERES Y HOMBRES","titulo":"Evolución demográfica (págs. 106-117)","resumen":"Análisis del crecimiento poblacional de Castroverde: del estancamiento inicial a la explosión demográfica del siglo XIX y el estudio de la procedencia geográfica de sus habitantes.","contenido_extendido":"Castroverde muestra una evolución demográfica singular comparada con sus vecinos...","siglo":"XVIII-XX","tags":["Demografía","Censo","Evolución Poblacional","Inmigración","Siglo XIX","Cerrato","Movilidad Geográfica","Crisis de subsistencia"]},
-            {"id":"cv_pob_002","seccion":"MUJERES Y HOMBRES","titulo":"Familias (págs. 117-129)","resumen":"Estudio genealógico de las familias con mayor implantación en Castroverde durante el siglo XX, rastreando su procedencia y evolución desde el siglo XVII.","contenido_extendido":"Este capítulo analiza la formación de los linajes familiares que han definido Castroverde...","siglo":"XV-XX","tags":["Genealogía","Familias","Apellidos","González","De las Moras","Escudero","Linajes","Historia Familiar"]},
-            {"id":"cv_pob_003","seccion":"MUJERES Y HOMBRES","titulo":"Personajes Importantes (págs. 129-131)","resumen":"Repaso de las figuras históricas que pasaron por la villa, desde monarcas hasta comendadores, y análisis de los linajes locales que ostentaron el poder municipal.","contenido_extendido":"Castroverde recibió a lo largo de los siglos a figuras de la alta nobleza y la realeza...","siglo":"XV-XIX","tags":["Personajes Importantes","Juana I de Castilla","Álvaro de Bazán","Marqués de Aguilafuente","Familia Escudero","Familia Benito","Luis de Espinosa","Alcaldes Mayores"]},
-            {"id":"cv_soc_001","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Una Sociedad Campesina (págs. 131-140)","resumen":"Análisis de la vida rural desde el medievo hasta la mecanización del siglo XX: crisis demográficas, útiles de labranza tradicionales, la cultura del vino y el impacto del cultivo de la remolacha.","contenido_extendido":"Castroverde ha sido históricamente una sociedad volcada al campo...","siglo":"XIV-XX","tags":["Sociedad Campesina","Peste Negra","Arado Romano","Vino","Lagarejo","Remolacha","Río Esgueva","Etnografía"]},
-            {"id":"cv_soc_002","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Iglesia: Un mundo sacralizado (págs. 141-158)","resumen":"El papel omnipotente de la Iglesia en la vida local: organización del clero, control de la moralidad pública, gestión de los diezmos y casos históricos de nulidad matrimonial.","contenido_extendido":"La Iglesia en Castroverde articulaba la convivencia mediante un control férreo...","siglo":"XVI-XIX","tags":["Iglesia","Diezmos","Moralidad","Divorcio","Capellanías","Duque de Béjar","Nulidad Matrimonial","Religiosidad"]},
-            {"id":"cv_soc_003","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Propiedades de la Iglesia de Castroverde (págs. 158-171)","resumen":"Análisis del patrimonio eclesiástico y los mecanismos de recaudación: el control de la primicia, el diezmo compartido entre pueblos y la influencia cultural del clero rural.","contenido_extendido":"La parroquia de Castroverde funcionaba como el eje de integración social...","siglo":"XVIII-XIX","tags":["Propiedades Eclesiásticas","Primicia","Diezmo","Unidades de Medida","Clero Rural","Hacienda Parroquial","Jurisdicción Eclesiástica","Cohesión Social"]},
-            {"id":"cv_soc_004","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Las cofradías de Castroverde (págs. 171-205)","resumen":"Estudio de las congregaciones religiosas como ejes de auxilio mutuo, su patrimonio económico antes de la desamortización y su papel en los ritos de paso y la caridad social.","contenido_extendido":"Las cofradías en Castroverde eran mucho más que entes religiosos...","siglo":"XV-XX","tags":["Cofradías","San Andrés","Virgen del Carmen","Vera Cruz","Socorro Mutuo","Patrimonio","Ritos Funerarios","Testimonios Históricos"]},
-            {"id":"cv_soc_005","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Asistencia Social en la Villa (págs. 205-207)","resumen":"Estudio de la pobreza y los mecanismos de beneficencia en el ámbito rural: la figura del pobre de solemnidad, la ayuda a transeúntes y el papel de las instituciones en situaciones de extrema necesidad.","contenido_extendido":"La asistencia social en Castroverde se movía entre la caridad institucional...","siglo":"XVIII-XIX","tags":["Asistencia Social","Pobres de Solemnidad","Beneficencia","Transeúntes","Viudez","Hospitalidad","Justicia Local","Caridad"]},
-            {"id":"cv_soc_006","seccion":"SOCIEDAD Y COSTUMBRES","titulo":"Fiestas, costumbres y actos comunitarios (págs. 207-220)","resumen":"Descripción de las formas de reunión concejil, las celebraciones vinculadas al campo y el impacto social del sistema de reclutamiento militar (las quintas).","contenido_extendido":"La vida comunitaria en Castroverde se regía por usos y costumbres ancestrales...","siglo":"XV-XIX","tags":["Fiestas","Tradiciones","Concejo Abierto","Quintas","Sustitutos Militares","Derecho Consuetudinario","Vino y Queso"]}
-        ];
+      filtrados.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.id}</td>
+          <td class="seccion">${item.seccion}</td>
+          <td><strong>${item.titulo}</strong></td>
+          <td>${item.resumen}</td>
+          <td class="siglos">${item.siglos.join(" · ")}</td>
+          <td>${item.tags.join(", ")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-        // ==================== VARIABLES GLOBALES ====================
-        let selectedTags = new Set();
+    function limpiar() {
+      document.getElementById("sigloSelect").value = "";
+      document.getElementById("busqueda").value = "";
+      filtrar();
+    }
 
-        // ==================== FUNCIONES DE FILTRADO ====================
-        function filterData() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-            const seccion = document.getElementById('seccionSelect').value;
-            const siglosSeleccionados = Array.from(document.getElementById('sigloSelect').selectedOptions).map(o => o.value);
-
-            const filtered = dataset.filter(item => {
-                // Filtro por texto
-                const textMatch = !searchTerm || 
-                    item.titulo.toLowerCase().includes(searchTerm) ||
-                    item.resumen.toLowerCase().includes(searchTerm) ||
-                    item.contenido_extendido.toLowerCase().includes(searchTerm) ||
-                    item.tags.some(tag => tag.toLowerCase().includes(searchTerm));
-
-                // Filtro por sección
-                const seccionMatch = !seccion || item.seccion === seccion;
-
-                // Filtro por siglo
-                const sigloMatch = siglosSeleccionados.length === 0 || 
-                    siglosSeleccionados.some(siglo => item.siglo.includes(siglo));
-
-                // Filtro por etiquetas seleccionadas
-                const tagsMatch = selectedTags.size === 0 || 
-                    Array.from(selectedTags).every(tag => item.tags.includes(tag));
-
-                return textMatch && seccionMatch && sigloMatch && tagsMatch;
-            });
-
-            renderResults(filtered);
-        }
-
-        function renderResults(results) {
-            const container = document.getElementById('results');
-            container.innerHTML = '';
-
-            if (results.length === 0) {
-                container.innerHTML = `
-                    <div class="bg-white rounded-3xl p-12 text-center">
-                        <p class="text-2xl text-gray-400">😕 No se encontraron resultados</p>
-                        <p class="text-gray-500 mt-2">Prueba a quitar algún filtro</p>
-                    </div>`;
-                document.getElementById('resultCount').textContent = '0';
-                return;
-            }
-
-            results.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'bg-white rounded-3xl shadow-sm border border-gray-100 p-6 card-hover cursor-pointer';
-                card.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="flex items-center gap-3">
-                                <span class="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-2xl">${item.seccion}</span>
-                                <span class="text-xs text-gray-400">${item.siglo}</span>
-                            </div>
-                            <h3 class="text-xl font-semibold mt-3">${item.titulo}</h3>
-                            <p class="text-gray-600 mt-2 line-clamp-3">${item.resumen}</p>
-                        </div>
-                        <div class="text-right text-sm text-gray-400 whitespace-nowrap">
-                            📍 ${item.titulo.match(/págs?\.\s*([\d-]+)/)?.[1] || '—'}
-                        </div>
-                    </div>
-                    <div class="mt-4 flex flex-wrap gap-1">
-                        ${item.tags.map(tag => `<span onclick="event.stopImmediatePropagation(); toggleTag('${tag}')" class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-2xl cursor-pointer">${tag}</span>`).join('')}
-                    </div>
-                `;
-                card.onclick = () => showDetail(item);
-                container.appendChild(card);
-            });
-
-            document.getElementById('resultCount').textContent = results.length;
-        }
-
-        function showDetail(item) {
-            document.getElementById('modalTitle').textContent = item.titulo;
-            document.getElementById('modalMeta').innerHTML = `
-                <span class="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-2xl text-xs">${item.seccion}</span>
-                <span class="ml-3 text-sm">${item.siglo} • ${item.titulo.match(/págs?\.\s*([\d-]+)/)?.[1] || ''}</span>
-            `;
-            document.getElementById('modalContent').innerHTML = `
-                <p class="text-lg font-medium mb-4">${item.resumen}</p>
-                <div class="prose text-gray-700">${item.contenido_extendido}</div>
-                <div class="mt-8 pt-6 border-t flex flex-wrap gap-2">
-                    ${item.tags.map(tag => `<span class="px-4 py-1 text-xs bg-gray-100 rounded-3xl">${tag}</span>`).join('')}
-                </div>
-            `;
-            document.getElementById('modal').classList.remove('hidden');
-        }
-
-        function hideModal() {
-            document.getElementById('modal').classList.add('hidden');
-        }
-
-        // ==================== FILTROS DINÁMICOS ====================
-        function populateFilters() {
-            // Secciones
-            const secciones = [...new Set(dataset.map(i => i.seccion))];
-            const seccionSelect = document.getElementById('seccionSelect');
-            secciones.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s;
-                opt.textContent = s;
-                seccionSelect.appendChild(opt);
-            });
-
-            // Siglos únicos
-            const siglos = [...new Set(dataset.map(i => i.siglo))].sort();
-            const sigloSelect = document.getElementById('sigloSelect');
-            siglos.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s;
-                opt.textContent = s;
-                sigloSelect.appendChild(opt);
-            });
-
-            // Tags únicas
-            let allTags = new Set();
-            dataset.forEach(item => item.tags.forEach(t => allTags.add(t)));
-            allTags = Array.from(allTags).sort();
-
-            const tagsContainer = document.getElementById('tagsContainer');
-            allTags.forEach(tag => {
-                const chip = document.createElement('div');
-                chip.className = 'px-4 py-1 text-xs bg-white border border-gray-200 hover:border-blue-300 rounded-3xl cursor-pointer transition-colors flex items-center gap-1';
-                chip.innerHTML = `<i class="fas fa-tag text-[10px]"></i> ${tag}`;
-                chip.onclick = () => toggleTag(tag, chip);
-                tagsContainer.appendChild(chip);
-            });
-        }
-
-        function toggleTag(tag, element) {
-            if (selectedTags.has(tag)) {
-                selectedTags.delete(tag);
-                if (element) element.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
-            } else {
-                selectedTags.add(tag);
-                if (element) element.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
-            }
-            filterData();
-        }
-
-        function resetFilters() {
-            selectedTags.clear();
-            document.getElementById('searchInput').value = '';
-            document.getElementById('seccionSelect').value = '';
-            document.getElementById('sigloSelect').selectedIndex = -1;
-            document.querySelectorAll('#tagsContainer > div').forEach(el => {
-                el.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
-            });
-            filterData();
-        }
-
-        // ==================== INICIO ====================
-        window.onload = () => {
-            populateFilters();
-            renderResults(dataset); // mostrar todo al principio
-
-            // Live filtering
-            document.getElementById('searchInput').addEventListener('input', filterData);
-            document.getElementById('seccionSelect').addEventListener('change', filterData);
-            document.getElementById('sigloSelect').addEventListener('change', filterData);
-        };
-    </script>
+    // Cargar todas las entradas al abrir
+    window.onload = filtrar;
+  </script>
 </body>
 </html>
