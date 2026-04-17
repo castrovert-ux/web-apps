@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análisis · Castroverde</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
+      --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
+      --red:#c45a3a; --blue:#3a7ab0; --green:#2a7a4a;
+      --cloud:#4A90D9;
+      --font-h:'Playfair Display',Georgia,serif;
+      --font-body:'Source Serif 4',Georgia,serif;
+      --font-ui:'DM Mono',monospace;
+      --radius:3px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;overflow:hidden;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.7;display:flex;flex-direction:column;}
+
+    /* ── SYNC BAR ── */
+    #sync-bar{
+      flex-shrink:0;background:var(--text);
+      display:flex;align-items:center;justify-content:flex-end;gap:10px;
+      padding:5px 18px;border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .btn-sync{
+      background:none;border:1px solid rgba(74,144,217,0.4);color:#7eb8f0;
+      padding:4px 11px;border-radius:20px;cursor:pointer;
+      font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;
+      transition:background .2s,color .2s,border-color .2s;white-space:nowrap;
+      display:flex;align-items:center;gap:5px;
+    }
+    .btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud);}
+    .btn-sync.synced{border-color:rgba(42,122,74,0.5);color:#7ec87f;}
+    .btn-sync.synced:hover{background:var(--green);color:#fff;border-color:var(--green);}
+    .btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none;}
+    .sync-spinner{display:inline-block;animation:syncSpin 1s linear infinite;}
+    @keyframes syncSpin{to{transform:rotate(360deg);}}
+    .sync-user-text{font-family:var(--font-ui);font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1px;}
+    .btn-signout{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;text-transform:uppercase;}
+    .btn-signout:hover{color:var(--red);background:rgba(196,90,58,.1);}
+    #sync-status{
+      flex-shrink:0;padding:5px 18px;font-family:var(--font-ui);font-size:9px;
+      letter-spacing:1px;text-transform:uppercase;display:none;
+      align-items:center;justify-content:space-between;gap:10px;
+    }
+    #sync-status.visible{display:flex;}
+    #sync-status.ok{background:rgba(42,122,74,.12);color:var(--green);}
+    #sync-status.err{background:rgba(196,90,58,.1);color:var(--red);}
+    #sync-status.info{background:rgba(74,144,217,.1);color:var(--cloud);}
+    .sync-status-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:12px;padding:0 3px;}
+    .sync-status-close:hover{opacity:1;}
+
+    header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
+    .logo span{color:var(--accent);font-style:italic;}
+    .logo small{display:block;font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
+    .header-actions{display:flex;gap:7px;align-items:center;}
+    .layout{flex:1;display:grid;grid-template-columns:370px 1fr;overflow:hidden;min-height:0;}
+    .panel-left{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
+    .panel-header{flex-shrink:0;padding:9px 15px;border-bottom:1px solid var(--border);background:var(--card);}
+    .panel-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+    .input-section{flex-shrink:0;padding:10px 15px;border-bottom:1px solid var(--border);}
+    .input-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:5px;display:block;}
+    .input-field{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;line-height:1.5;}
+    .input-field:focus{border-color:var(--accent);}
+    .input-field::placeholder{color:var(--border);font-style:italic;}
+    .text-area-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+    #input-text{width:100%;height:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.8;padding:14px 15px 24px;resize:none;outline:none;}
+    #input-text::placeholder{color:var(--muted);font-style:italic;}
+    .char-count{position:absolute;bottom:5px;right:10px;font-family:var(--font-ui);font-size:9px;color:var(--muted);pointer-events:none;}
+    .char-count.warn{color:var(--red);}
+    .panel-actions{flex-shrink:0;padding:9px 15px;border-top:1px solid var(--border);background:var(--card);display:flex;gap:7px;align-items:center;}
+    .panel-right{display:flex;flex-direction:column;overflow:hidden;}
+    .prompt-bar{flex-shrink:0;padding:12px 18px 8px;border-bottom:1px solid var(--border);background:var(--surface);}
+    .prompt-bar-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:8px;display:block;}
+    .prompt-steps{display:flex;gap:5px;}
+    .prompt-step{flex:1;position:relative;padding-bottom:16px;}
+    .prompt-step-bar{height:3px;background:var(--border);border-radius:2px;transition:background 0.3s;}
+    .prompt-step.done .prompt-step-bar{background:var(--accent2);}
+    .prompt-step.active .prompt-step-bar{background:var(--accent);}
+    .prompt-step-lbl{position:absolute;bottom:0;left:0;right:0;text-align:center;font-family:var(--font-ui);font-size:7px;text-transform:uppercase;letter-spacing:0.5px;color:var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .prompt-step.done .prompt-step-lbl{color:var(--accent2);}
+    .prompt-step.active .prompt-step-lbl{color:var(--accent);}
+    .chat-area{flex:1;overflow-y:auto;padding:18px 22px;min-height:0;display:flex;flex-direction:column;gap:16px;}
+    .chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;color:var(--muted);gap:10px;min-height:200px;}
+    .chat-empty .big-char{font-family:var(--font-h);font-size:52px;color:var(--border);line-height:1;}
+    .chat-empty p{font-family:var(--font-ui);font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+    .chat-message{display:flex;flex-direction:column;gap:5px;}
+    .chat-message-header{display:flex;align-items:center;gap:8px;}
+    .chat-message-role{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;padding:2px 7px;border-radius:var(--radius);}
+    .role-prompt{background:var(--card);color:var(--accent);border:1px solid var(--border);}
+    .role-claude{background:var(--accent);color:var(--bg);}
+    .chat-message-lbl{font-family:var(--font-ui);font-size:9px;color:var(--muted);}
+    .chat-message-body{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:14px;line-height:1.8;white-space:pre-wrap;}
+    .prompt-body{color:var(--muted);font-size:12px;font-style:italic;max-height:80px;overflow:hidden;position:relative;cursor:pointer;}
+    .prompt-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--surface));}
+    .prompt-body.expanded{max-height:none;}
+    .prompt-body.expanded::after{display:none;}
+    .response-body{color:var(--text);}
+    .chat-actions{flex-shrink:0;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:8px;align-items:center;}
+    .next-prompt-label{font-family:var(--font-ui);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;flex:1;}
+    .next-prompt-label span{color:var(--accent);}
+    .btn{padding:7px 13px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.2s;white-space:nowrap;}
+    .btn-primary{background:var(--accent);color:var(--bg);}
+    .btn-primary:hover:not(:disabled){background:var(--accent2);}
+    .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-danger{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn-danger:hover{border-color:var(--red);color:var(--red);}
+    .btn-sm{padding:4px 9px;font-size:9px;}
+    .error-box{display:none;background:rgba(196,90,58,0.1);border:1px solid var(--red);border-left:3px solid var(--red);padding:10px 14px;border-radius:var(--radius);color:var(--red);font-size:13px;margin:0 18px 8px;}
+    .loading-msg{display:none;align-items:center;gap:10px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+    .loading-msg.visible{display:flex;}
+    .spinner{width:18px;height:18px;border:1px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite;flex-shrink:0;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-text{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+    .history-sidebar{position:fixed;top:0;right:0;width:350px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:200;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s ease;}
+    .history-sidebar.open{transform:translateX(0);}
+    .history-sidebar-header{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .history-sidebar-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--muted);}
+    .btn-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 5px;}
+    .btn-close:hover{color:var(--text);}
+    .history-list{flex:1;overflow-y:auto;padding:12px;}
+    .history-empty{text-align:center;padding:28px 14px;color:var(--muted);font-family:var(--font-ui);font-size:10px;text-transform:uppercase;letter-spacing:2px;line-height:2;}
+    .session-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;margin-bottom:8px;transition:border-color 0.2s;}
+    .session-item:hover{border-color:var(--accent);}
+    .session-meta{display:flex;justify-content:space-between;margin-bottom:4px;gap:8px;}
+    .session-name{font-family:var(--font-h);font-size:13px;font-weight:700;}
+    .session-date{font-family:var(--font-ui);font-size:9px;color:var(--muted);flex-shrink:0;}
+    .session-info{font-family:var(--font-ui);font-size:9px;color:var(--muted);margin-bottom:5px;}
+    .session-verdict{display:inline-block;font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:1px;padding:2px 6px;border-radius:var(--radius);margin-bottom:5px;}
+    .verdict-listo{background:rgba(42,122,74,0.15);color:var(--green);border:1px solid var(--green);}
+    .verdict-menor{background:rgba(138,42,42,0.1);color:var(--accent);border:1px solid var(--accent);}
+    .verdict-mayor{background:rgba(196,90,58,0.1);color:var(--red);border:1px solid var(--red);}
+    .session-actions{display:flex;gap:5px;margin-top:5px;}
+    .sidebar-footer{padding:10px 13px;border-top:1px solid var(--border);}
+    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.35);z-index:199;}
+    .sidebar-overlay.visible{display:block;}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.55);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+    .modal-overlay.visible{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:740px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
+    .modal-box-sm{width:430px;}
+    .modal-title{font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;}
+    .modal-subtitle{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:22px;}
+    .modal-section{margin-bottom:20px;}
+    .modal-section-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+    .modal-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:4px;display:block;margin-top:10px;}
+    .modal-label:first-child{margin-top:0;}
+    .modal-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;}
+    .modal-input:focus{border-color:var(--accent);}
+    .modal-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;resize:vertical;line-height:1.6;min-height:80px;}
+    .modal-textarea:focus{border-color:var(--accent);}
+    .modal-textarea.tall{min-height:140px;}
+    .modal-hint{font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:4px;line-height:1.6;}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+    .ptabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;}
+    .ptab{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;font-family:var(--font-ui);font-size:9px;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+    .ptab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+    .ptab:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+    .ppanel{display:none;}
+    .ppanel.visible{display:block;}
+    .btn-plan{background:var(--accent2);color:var(--bg);border:none;}
+    .btn-plan:hover:not(:disabled){background:var(--accent);}
+    .btn-plan:disabled{opacity:0.4;cursor:not-allowed;}
+    .plan-box{background:var(--bg);border:1px solid var(--accent2);border-left:3px solid var(--accent2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;}
+    .plan-box-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent2);margin-bottom:12px;}
+    .plan-item{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start;}
+    .plan-item:last-child{border-bottom:none;padding-bottom:0;}
+    .plan-item-loc{font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
+    .plan-item-action{font-size:13px;line-height:1.6;color:var(--text);}
+    .plan-prio{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:1px;padding:2px 6px;border-radius:var(--radius);white-space:nowrap;align-self:start;margin-top:2px;}
+    .prio-alta{background:rgba(196,90,58,0.12);color:var(--red);border:1px solid var(--red);}
+    .prio-media{background:rgba(138,42,42,0.1);color:var(--accent);border:1px solid var(--accent);}
+    .prio-baja{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
+    .prio-ok{background:rgba(42,122,74,0.1);color:var(--green);border:1px solid var(--green);}
+    .parte-select-ana{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 9px;font-family:var(--font-ui);font-size:10px;border-radius:var(--radius);outline:none;cursor:pointer;margin-bottom:2px;}
+    .parte-select-ana:focus{border-color:var(--accent);}
+    .parte-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:4px;display:block;}
+    .key-status{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;padding:3px 8px;border-radius:var(--radius);}
+    .key-status.ok{color:var(--green);border:1px solid var(--green);}
+    .key-status.missing{color:var(--red);border:1px solid var(--red);}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    ::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+  </style>
+</head>
+<body>
+
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar">
+  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
+  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-ghost btn-sm btn" id="btn-fb-key" onclick="openFbKeyModal()" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
+  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar</span>
+  </button>
+</div>
+<div id="sync-status">
+  <span id="sync-status-msg"></span>
+  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
+</div>
+
+<header>
+  <div class="logo">Análisis <span>Castroverde</span><small>Editor de secciones · Historia de un municipio</small></div>
+  <div class="header-actions">
+    <span class="key-status" id="key-status">⚿ clave</span>
+    <button class="btn btn-ghost" id="btn-api-key">⚙ API Key</button>
+    <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
+    <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
+    <button class="btn btn-ghost" id="btn-new-session">✕ Nueva sesión</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="panel-left">
+    <div class="panel-header"><span class="panel-title">✍ Sección / Capítulo</span></div>
+    <div class="input-section">
+      <label class="input-label" for="section-name">Nombre de la sección o capítulo</label>
+      <input class="input-field" id="section-name" type="text" placeholder="Ej: Cap. 3 · Época medieval" maxlength="80">
+    </div>
+    <div class="input-section">
+      <label class="input-label" for="section-goal">Objetivo de esta sección/capítulo</label>
+      <textarea class="input-field" id="section-goal" rows="3" maxlength="600" style="resize:none;line-height:1.6;" placeholder="Qué quieres conseguir, qué época o tema aborda, qué debe transmitir al lector…"></textarea>
+    </div>
+    <div class="input-section">
+      <label class="parte-label" for="ana-parte-libro">Parte del libro</label>
+      <select class="parte-select-ana" id="ana-parte-libro">
+        <option value="primera">Primera parte — narrativa divulgativa</option>
+        <option value="segunda">Segunda parte — temática y formal</option>
+      </select>
+    </div>
+    <div class="text-area-wrap">
+      <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto de la sección o capítulo…&#10;&#10;Hasta 10 páginas aproximadamente.&#10;El texto se inyecta automáticamente en cada prompt."></textarea>
+      <div class="char-count" id="char-count">0 / 20.000</div>
+    </div>
+    <div class="panel-actions">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">📄 .txt<input type="file" id="file-input" accept=".txt" style="display:none;"></label>
+      <button class="btn btn-primary" id="btn-start" style="flex:1;">Iniciar análisis →</button>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="prompt-bar">
+      <span class="prompt-bar-label">Progreso del análisis</span>
+      <div class="prompt-steps" id="prompt-steps"></div>
+    </div>
+    <div class="chat-area" id="chat-area">
+      <div class="chat-empty" id="chat-empty">
+        <div class="big-char">❦</div>
+        <p>Pega tu texto e inicia el análisis</p>
+      </div>
+      <div class="loading-msg" id="loading-msg">
+        <div class="spinner"></div>
+        <span class="loading-text" id="loading-text">Analizando…</span>
+      </div>
+    </div>
+    <div class="error-box" id="error-box"></div>
+    <div class="chat-actions" id="chat-actions" style="display:none;">
+      <span class="next-prompt-label" id="next-prompt-label">—</span>
+      <button class="btn btn-ghost btn-sm" id="btn-export">⎘ Exportar .txt</button>
+      <button class="btn btn-primary" id="btn-next-prompt">Enviar →</button>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="history-sidebar" id="history-sidebar">
+  <div class="history-sidebar-header">
+    <span class="history-sidebar-title">Historial de sesiones</span>
+    <button class="btn-close" id="btn-close-sidebar">×</button>
+  </div>
+  <div class="history-list" id="history-list"></div>
+  <div class="sidebar-footer">
+    <button class="btn btn-danger btn-sm" id="btn-clear-history" style="width:100%;">Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- MODAL AJUSTES -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal-box">
+    <div class="modal-title">Ajustes de la aplicación</div>
+    <div class="modal-subtitle">Personaliza el contexto y los prompts · Guardados en este navegador</div>
+    <div class="modal-section">
+      <div class="modal-section-title">Contexto del libro (System Prompt)</div>
+      <div class="modal-hint" style="margin-bottom:8px;">Se envía al modelo en cada consulta como instrucción de fondo.</div>
+      <textarea class="modal-textarea tall" id="settings-system" rows="7"></textarea>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Perfil tonal del libro</div>
+      <div class="modal-hint" style="margin-bottom:8px;">Define la voz y tono de referencia para cada parte del libro. El analizador lo usará para evaluar cuánto se acerca o aleja el texto de ese perfil.</div>
+      <textarea class="modal-textarea tall" id="settings-tono" rows="7"></textarea>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Prompts de análisis</div>
+      <div class="modal-hint" style="margin-bottom:10px;">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
+      <div class="ptabs" id="ptabs"></div>
+      <div id="ppanels"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
+      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FIREBASE KEY -->
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para la sincronización en la nube. Se guarda <strong>solo en este navegador</strong>.<br><br>Consíguela en <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent);">Google Cloud Console</a> → Credenciales → Claves de API.</p>
+    <label class="modal-label">Firebase API Key</label>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
+    <p style="font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:5px;">Empieza por <code>AIzaSy</code>. Solo tú la ves.</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL API KEY -->
+<div class="modal-overlay" id="modal-apikey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Groq</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Tu clave se guarda <strong>solo en este navegador</strong>. Nunca sale de tu ordenador.<br><br>Consíguela en <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);">console.groq.com</a>.</p>
+    <label class="modal-label">API Key</label>
+    <input class="modal-input" id="modal-key-input" type="password" placeholder="gsk_…" autocomplete="off" spellcheck="false">
+    <p style="font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:5px;">Empieza por <code>gsk_</code>. Solo tú la ves.</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="modal-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="modal-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="modal-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  FIREBASE CONFIG
+// ══════════════════════════════════════════════════════
+// Firebase apiKey se carga desde localStorage (nunca en el código)
+var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
+
+var fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+
+function initFirebase(apiKey) {
+  if(!apiKey) return false;
+  try {
+    // Si ya hay una app inicializada, eliminarla primero
+    if(firebase.apps.length) {
+      firebase.app().delete().then(function(){ startFirebase(apiKey); });
+    } else {
+      startFirebase(apiKey);
+    }
+    return true;
+  } catch(e) { console.error('Firebase init error:', e); return false; }
+}
+
+function startFirebase(apiKey) {
+  var config = {
+    apiKey: apiKey,
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(config);
+  fbAuth     = firebase.auth();
+  fbDb       = firebase.firestore();
+  fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(function(user){
+    fbUser=user;
+    updateSyncUI();
+    if (user && fbDb && sessions.length === 0) autoRestoreFromFirestore();
+  });
+}
+
+function autoRestoreFromFirestore() {
+  var docRef = fbDb.collection('maquetador').doc(fbUser.uid);
+  docRef.get().then(function(snap) {
+    if (snap.exists) {
+      var remote = snap.data();
+      var remoteSessions = remote.sessions || [];
+      var remoteSettings = remote.settings || null;
+      if (remoteSessions.length > 0 && sessions.length === 0) {
+        sessions = remoteSessions;
+        saveSessions();
+        if (remoteSettings) { settings = remoteSettings; saveSettings(); }
+        renderHistoryList();
+        setSyncStatus('ok', '✓ ' + remoteSessions.length + ' sesión' + (remoteSessions.length !== 1 ? 'es restauradas' : ' restaurada') + ' desde la nube');
+      }
+    }
+  }).catch(function(err) { console.warn('Auto-restore error:', err); });
+}
+
+// Inicializar si ya tenemos la clave guardada
+if(FB_API_KEY) initFirebase(FB_API_KEY);
+
+function updateSyncUI() {
+  var icon    = get('sync-icon');
+  var label   = get('sync-label');
+  var btn     = get('btn-sync');
+  var userEl  = get('sync-user-text');
+  var signout = get('btn-signout');
+  if (fbUser) {
+    btn.classList.add('synced');
+    icon.textContent  = '✓';
+    label.textContent = 'Sincronizar';
+    userEl.textContent = fbUser.email;
+    userEl.style.display = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.classList.remove('synced');
+    icon.textContent  = '☁';
+    label.textContent = 'Sincronizar';
+    userEl.style.display = 'none';
+    signout.style.display = 'none';
+  }
+}
+
+function handleSync() {
+  if (!fbAuth) {
+    setSyncStatus('err', 'Introduce primero la clave de Firebase.');
+    setTimeout(openFbKeyModal, 800);
+    return;
+  }
+  if (!fbUser) {
+    setSyncStatus('info', 'Iniciando sesión con Google…');
+    fbAuth.signInWithPopup(fbProvider)
+      .then(function() { return doSync(); })
+      .catch(function(err) { setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
+  } else {
+    doSync();
+  }
+}
+
+function doSync() {
+  if (!fbUser||!fbDb) return;
+  setSyncStatus('info', 'Sincronizando…');
+  get('btn-sync').classList.add('syncing');
+
+  var docRef = fbDb.collection('maquetador').doc(fbUser.uid);
+  docRef.get().then(function(snap) {
+    var localSessions = sessions.slice();
+    var localSettings = JSON.parse(JSON.stringify(settings));
+
+    if (snap.exists) {
+      var remote = snap.data();
+      var remoteSessions = remote.sessions || [];
+      var remoteSettings = remote.settings || null;
+
+      // Merge sessions por id (timestamp)
+      var mergedSessions = mergeSessions(localSessions, remoteSessions);
+
+      // Merge settings: si los remotos son más recientes (tienen settingsUpdatedAt mayor), usar remotos
+      var mergedSettings = localSettings;
+      if (remoteSettings && remote.settingsUpdatedAt) {
+        var localTs = parseInt(localStorage.getItem('castroverde_ana_settings_ts') || '0');
+        var remoteTs = remote.settingsUpdatedAt;
+        if (remoteTs > localTs) {
+          mergedSettings = remoteSettings;
+        }
+      }
+
+      // Guardar merged localmente
+      sessions = mergedSessions;
+      saveSessions();
+      settings = mergedSettings;
+      saveSettings();
+      localStorage.setItem('castroverde_ana_settings_ts', Date.now());
+
+      return docRef.set({
+        sessions: mergedSessions,
+        settings: mergedSettings,
+        settingsUpdatedAt: Date.now(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        renderHistoryList();
+        get('btn-sync').classList.remove('syncing');
+        setSyncStatus('ok', '✓ Sincronizado — ' + mergedSessions.length + ' sesión' + (mergedSessions.length !== 1 ? 'es' : ''));
+      });
+
+    } else {
+      return docRef.set({
+        sessions: localSessions,
+        settings: localSettings,
+        settingsUpdatedAt: Date.now(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        get('btn-sync').classList.remove('syncing');
+        setSyncStatus('ok', '✓ Datos subidos por primera vez — ' + localSessions.length + ' sesión' + (localSessions.length !== 1 ? 'es' : ''));
+      });
+    }
+  }).catch(function(err) {
+    console.error('Sync error:', err);
+    get('btn-sync').classList.remove('syncing');
+    setSyncStatus('err', 'Error al sincronizar: ' + err.message);
+  });
+}
+
+function mergeSessions(local, remote) {
+  var map = {};
+  remote.forEach(function(s) { if (s.id) map[s.id] = s; });
+  local.forEach(function(s)  { if (s.id) map[s.id] = s; }); // local sobreescribe
+  return Object.values(map).sort(function(a, b) { return b.id - a.id; }); // más reciente primero
+}
+
+function setSyncStatus(type, msg) {
+  var el = get('sync-status');
+  get('sync-status-msg').textContent = msg;
+  el.className = 'visible ' + type;
+  if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+}
+
+function closeSyncStatus() {
+  get('sync-status').className = '';
+  updateSyncUI();
+}
+
+function fbSignOut() {
+  if(!fbAuth) return;
+  fbAuth.signOut().then(function() {
+    fbUser = null;
+    updateSyncUI();
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  APP (sin cambios)
+// ══════════════════════════════════════════════════════
+var DEFAULT_SYSTEM='Eres un editor literario especializado en ensayo histórico-divulgativo.\n\nSOBRE EL LIBRO:\nLibro de historia local sobre Castroverde de Cerrato (Valladolid, España). Combina rigor histórico con estilo divulgativo y evocador. Dirigido tanto a vecinos del municipio como a lectores interesados en historia local castellana.\n\nESTRUCTURA DEL LIBRO:\n- Historia cronológica completa: prehistoria, romana, medieval, moderna, contemporánea.\n- Segunda parte temática: cofradías, documentos paleográficos, instituciones históricas.\n- Ámbito geográfico: Cerrato vallisoletano, valle del río Esgueva, tierras fronterizas con Palencia.\n\nVOZ DE REFERENCIA — EL MODELO AL QUE DEBE APROXIMARSE EL TEXTO:\n\n\"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano, a media hora en coche de Valladolid, es tierra de frontera donde su territorio limita con la provincia de Palencia. Es también uno de esos lugares que condensan en sus calles la historia común de la España rural: un esplendor ya pasado; la importancia de la agricultura y el éxodo que vació los pueblos.\nNo era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla. Por sus calles y senderos no solo transitaron pastores, labriegos y soldados; también desfilaron reyes, nobles y las intrigas de una corte itinerante que encontró aquí una parada estratégica donde tomar decisiones e incluso llorar a sus muertos.\"\n\nRASSGOS DE ESA VOZ QUE DEBES USAR COMO GUÍA:\n- Frases declarativas cortas con peso propio: \"No era un lugar cualquiera.\"\n- Movimiento de lo concreto a lo histórico sin solemnidad forzada.\n- Datos precisos (fechas, cifras, nombres) integrados en la narración, no en paréntesis ni apartados.\n- Ritmo alternado: frase corta, frase larga con desarrollo, frase corta de cierre.\n- Cierres de párrafo concretos y visuales. Nunca abstracciones del tipo \"moldean la identidad\" o \"custodian la memoria\".\n- Tono cercano, directo, sin distancia académica ni efectismo literario.\n\nSOBRE LA PUNTUACIÓN Y LOS SIGNOS — NORMAS ESTRICTAS:\n- PUNTO Y COMA (;): evítalo salvo que sea imprescindible para separar elementos de una enumeración compleja. Nunca donde un punto o una coma funcionan mejor. Señala los que aparezcan en el texto analizado que puedan eliminarse sin pérdida.\n- INCISOS CON GUIONES (—texto—): solo cuando el inciso aporte información que no puede integrarse de otro modo. Nunca para añadir una explicación que el lector ya puede inferir. Si es prescindible, señalarlo.\n- PARÉNTESIS EXPLICATIVOS: si la información es relevante, mejor integrarla en la prosa. Si no es relevante, señalar que puede omitirse.\n- EN GENERAL: la prosa fluye mejor con menos signos. Señala siempre los casos donde la puntuación interrumpe el ritmo sin aportar claridad.\n\nCONTEXTO HISTÓRICO:\n- Primer documento: 17 de abril de 916, rey Ordoño II, \"Castro Viride\".\n- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).\n- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización.\n\nNORMAS:\n- Analiza siempre a nivel global (estructura, tono, ritmo), no frase por frase.\n- Evalúa cuánto se acerca o aleja el texto de la voz de referencia descrita arriba.\n- Sé concreto: ejemplos específicos del texto, no generalidades.\n- El autor tiene notas al pie extensas: NUNCA señales falta de fuentes como problema.';
+
+var DEFAULT_PROMPTS=[
+  {name:'P1 · Estructura',label:'Estructura',content:'Actúa como editor especializado en ensayo histórico-divulgativo.\n\nObjetivo de esta sección/capítulo: {{objetivo}}\n\nAnaliza el texto a nivel global. Evalúa:\n- Estructura general\n- Claridad del hilo narrativo\n- Equilibrio entre rigor y divulgación\n- Ritmo general\n- Coherencia interna\n- Eficacia del inicio y del cierre\n\nProporciona:\n1. Resumen de la estructura\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+  {name:'P2 · Tono',label:'Tono',content:'Analiza el tono de esta sección/capítulo (divulgativo + evocador).\n\nEvalúa:\n- Coherencia del tono a lo largo del texto\n- Posibles excesos de lirismo\n- Partes demasiado frías o técnicas\n- Naturalidad del estilo\n\nIndica:\n1. 3 aciertos de tono\n2. 3 problemas de tono\n3. Cómo mejorar el equilibrio'},
+  {name:'P3 · Ritmo',label:'Ritmo',content:'Analiza el ritmo y la densidad de esta sección/capítulo.\n\nIdentifica:\n- Partes lentas o densas\n- Partes ágiles y bien resueltas\n- Bloques que podrían acortarse sin pérdida\n\nPropón mejoras concretas con referencias a fragmentos específicos.'},
+  {name:'P4 · Lector',label:'Lector',content:'Actúa como un lector sin conocimientos previos sobre la historia local de Castroverde.\n\nDesde esa perspectiva, describe:\n- Qué partes te enganchan y por qué\n- Dónde pierdes interés\n- Qué cuesta entender o seguir\n- Qué genera curiosidad o ganas de saber más'},
+  {name:'P5 · Síntesis',label:'Síntesis',content:'Con todo lo analizado hasta ahora (estructura, tono, ritmo, perspectiva del lector), indica:\n\n1. Los 2 cambios que más mejorarían esta sección/capítulo\n2. Qué parte no debería modificarse bajo ningún concepto\n3. Veredicto: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n4. Justificación breve del veredicto (2-3 frases)'},
+  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.'},
+  {name:'P7 · Plan',label:'Plan',content:'Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.'}
+];
+
+var API_KEY=localStorage.getItem('castroverde_ana_key')||'';
+var MODEL='llama-3.3-70b-versatile';
+var MAX_TOKENS=4000;
+var STORAGE_KEY='castroverde_ana_sessions';
+var SETTINGS_KEY='castroverde_ana_settings';
+var TONO_KEY='castroverde_instruc_gen';
+function getTonoProfile(){ return localStorage.getItem(TONO_KEY)||''; }
+function saveTonoProfile(val){ localStorage.setItem(TONO_KEY,val); }
+
+function getParteLabel(){
+  var el=document.getElementById('ana-parte-libro');
+  if(!el) return 'PRIMERA PARTE (narrativa divulgativa)';
+  return el.value==='segunda'?'SEGUNDA PARTE (tematica y formal)':'PRIMERA PARTE (narrativa divulgativa)';
+}
+
+function buildSystemWithTono(){
+  var base=settings.system;
+  var tono=getTonoProfile().trim();
+  var parte=getParteLabel();
+  var extra='\n\nPARTE DEL LIBRO: Esta sección pertenece a la '+parte+' del libro.';
+  if(tono) extra+='\n\nPERFIL TONAL DE REFERENCIA — úsalo para evaluar cuánto se acerca o aleja el texto de la voz buscada:\n'+tono;
+  return base+extra;
+}
+var settings=loadSettings();
+var sessions=loadSessions();
+var currentSession=null;
+
+function loadSettings(){
+  try{var s=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(s&&s.system&&Array.isArray(s.prompts)&&s.prompts.length===DEFAULT_PROMPTS.length)return s;}catch(e){}
+  return{system:DEFAULT_SYSTEM,prompts:DEFAULT_PROMPTS.map(function(p){return{name:p.name,label:p.label,content:p.content};})};
+}
+function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}
+function loadSessions(){try{var s=JSON.parse(localStorage.getItem(STORAGE_KEY));if(Array.isArray(s))return s;}catch(e){}return[];}
+function saveSessions(){localStorage.setItem(STORAGE_KEY,JSON.stringify(sessions));}
+function get(id){return document.getElementById(id);}
+function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function dateStr(d){var p=function(n){return n<10?'0'+n:''+n;};return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+function showError(msg){var e=get('error-box');e.textContent='⚠ '+msg;e.style.display='block';}
+function hideError(){get('error-box').style.display='none';}
+function showLoading(msg){get('loading-text').textContent=msg||'Analizando…';get('loading-msg').classList.add('visible');get('btn-next-prompt').disabled=true;get('btn-start').disabled=true;}
+function hideLoading(){get('loading-msg').classList.remove('visible');get('btn-next-prompt').disabled=false;get('btn-start').disabled=false;}
+function updateCharCount(){var l=get('input-text').value.length;var el=get('char-count');el.textContent=l.toLocaleString()+' / 20.000';el.className='char-count'+(l>18000?' warn':'');}
+function updateKeyStatus(){var ok=API_KEY&&API_KEY.startsWith('gsk_');var el=get('key-status');if(ok){el.textContent='⚿ clave OK';el.className='key-status ok';}else{el.textContent='⚿ sin clave';el.className='key-status missing';}}
+
+function renderProgressBar(activeIndex){
+  var html='';
+  settings.prompts.forEach(function(p,i){
+    var cls=i<activeIndex?'done':i===activeIndex?'active':'';
+    html+='<div class="prompt-step '+cls+'"><div class="prompt-step-bar"></div><div class="prompt-step-lbl">'+esc(p.label)+'</div></div>';
+  });
+  get('prompt-steps').innerHTML=html;
+}
+
+function renderChat(){
+  var area=get('chat-area');
+  area.querySelectorAll('.chat-message').forEach(function(el){el.remove();});
+  if(!currentSession||!currentSession.messages.length){get('chat-empty').style.display='flex';return;}
+  get('chat-empty').style.display='none';
+  var frag=document.createDocumentFragment();
+  currentSession.messages.forEach(function(m){
+    var div=document.createElement('div');div.className='chat-message';
+    var isUser=m.role==='user';
+    var pname=settings.prompts[m.promptIndex]?settings.prompts[m.promptIndex].name:(isUser?'Prompt':'Groq');
+    var body=document.createElement('div');
+    body.className='chat-message-body '+(isUser?'prompt-body':'response-body');
+    body.textContent=m.content;
+    if(isUser){body.addEventListener('click',function(){this.classList.toggle('expanded');});}
+    var header=document.createElement('div');header.className='chat-message-header';
+    header.innerHTML='<span class="chat-message-role '+(isUser?'role-prompt':'role-claude')+'">'+(isUser?'Prompt':'Groq')+'</span><span class="chat-message-lbl">'+esc(pname)+'</span>';
+    div.appendChild(header);div.appendChild(body);frag.appendChild(div);
+  });
+  area.insertBefore(frag,get('loading-msg'));
+  area.scrollTop=area.scrollHeight;
+}
+
+function updateChatActions(){
+  if(!currentSession){get('chat-actions').style.display='none';return;}
+  get('chat-actions').style.display='flex';
+  var idx=currentSession.currentPromptIndex;
+  if(idx>=settings.prompts.length){
+    get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado</span>';
+    get('btn-next-prompt').style.display='none';
+  } else {
+    var np=settings.prompts[idx];
+    get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span>';
+    get('btn-next-prompt').style.display='';
+    get('btn-next-prompt').disabled=false;
+    get('btn-next-prompt').textContent=(idx===0?'Enviar P1 →':'Siguiente prompt →');
+  }
+}
+
+
+function renderPlanInChat(planText){
+  var area=get('chat-area');
+  // Eliminar plan anterior si existe
+  var old=area.querySelector('.plan-container');
+  if(old)old.remove();
+
+  var container=document.createElement('div');
+  container.className='chat-message plan-container';
+
+  var header=document.createElement('div');
+  header.className='chat-message-header';
+  header.innerHTML='<span class="chat-message-role role-claude">Groq</span><span class="chat-message-lbl">Plan de intervención</span>';
+  container.appendChild(header);
+
+  var box=document.createElement('div');
+  box.className='plan-box';
+  box.innerHTML='<div class="plan-box-title">✦ Plan de intervención — '+esc(currentSession.name)+'</div>';
+
+  var lines=planText.split('\n').filter(function(l){return l.trim()&&l.indexOf('|')!==-1;});
+  lines.forEach(function(line){
+    var parts=line.split('|').map(function(p){return p.trim();});
+    if(parts.length<3)return;
+    var loc=parts[0], action=parts[1], prio=parts[2].toUpperCase();
+    var prioClass=prio.indexOf('ALTA')!==-1?'prio-alta':prio.indexOf('MEDIA')!==-1?'prio-media':prio.indexOf('BAJA')!==-1?'prio-baja':'prio-ok';
+    var item=document.createElement('div');
+    item.className='plan-item';
+    item.innerHTML='<span class="plan-item-loc">'+esc(loc)+'</span>'
+      +'<span class="plan-item-action">'+esc(action)+'</span>'
+      +'<span class="plan-prio '+prioClass+'">'+esc(prio)+'</span>';
+    box.appendChild(item);
+  });
+
+  // Si el parsing no dio resultados, mostrar texto plano
+  if(!lines.length){
+    box.innerHTML+='<div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--text);">'+esc(planText)+'</div>';
+  }
+
+  container.appendChild(box);
+  area.insertBefore(container,get('loading-msg'));
+  area.scrollTop=area.scrollHeight;
+}
+
+function callClaude(messages,onOk,onErr){
+  if(!API_KEY||!API_KEY.startsWith('gsk_')){onErr('No hay clave API de Groq. Pulsa "⚙ API Key".');return;}
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST','https://api.groq.com/openai/v1/chat/completions',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+API_KEY);
+  xhr.timeout=120000;
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState!==4)return;
+    try{
+      var data=JSON.parse(xhr.responseText);
+      if(xhr.status>=200&&xhr.status<300){
+        var txt=(data.choices&&data.choices[0]&&data.choices[0].message)?data.choices[0].message.content:'';
+        onOk(txt);
+      }else{onErr((data.error&&data.error.message)?data.error.message:'Error '+xhr.status);}
+    }catch(e){onErr('Error al procesar la respuesta.');}
+  };
+  xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
+  xhr.onerror=function(){onErr('Error de red.');};
+  var groqMessages=[{role:'system',content:buildSystemWithTono()}].concat(messages);
+  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,messages:groqMessages}));
+}
+
+function buildPrompt(template,texto,objetivo){
+  return template.replace(/\{\{texto\}\}/g,texto).replace(/\{\{objetivo\}\}/g,objetivo||'(no especificado)').replace(/\{\{contexto\}\}/g,settings.system);
+}
+
+function startSession(){
+  var text=get('input-text').value.trim();
+  if(!text){showError('Introduce el texto de la sección antes de iniciar.');return;}
+  if(text.length<200){showError('El texto es demasiado corto para un análisis de sección.');return;}
+  hideError();
+  currentSession={
+    id:Date.now(),name:get('section-name').value.trim()||('Sección · '+dateStr(new Date())),
+    goal:get('section-goal').value.trim(),text:text,messages:[],currentPromptIndex:0,
+    waitingForResponse:false,startedAt:dateStr(new Date()),verdict:null
+  };
+  renderProgressBar(0);renderChat();updateChatActions();
+}
+
+function sendNextPrompt(){
+  if(!currentSession)return;
+  var idx=currentSession.currentPromptIndex;
+  if(idx>=settings.prompts.length)return;
+  var tpl=settings.prompts[idx];
+  var built=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
+  currentSession.messages.push({role:'user',content:built,promptIndex:idx});
+  var apiMsgs=currentSession.messages.map(function(m){return{role:m.role,content:m.content};});
+  currentSession.waitingForResponse=true;
+  renderChat();renderProgressBar(idx);updateChatActions();
+  showLoading('Analizando — '+tpl.name+'…');hideError();
+  callClaude(apiMsgs,function(response){
+    hideLoading();
+    currentSession.messages.push({role:'assistant',content:response,promptIndex:idx});
+    currentSession.currentPromptIndex=idx+1;
+    currentSession.waitingForResponse=false;
+    if(idx===4){
+      if(response.indexOf('LISTO PARA PUBLICAR')!==-1)currentSession.verdict='listo';
+      else if(response.indexOf('REVISIÓN MENOR')!==-1)currentSession.verdict='menor';
+      else if(response.indexOf('REVISIÓN MAYOR')!==-1)currentSession.verdict='mayor';
+    }
+    saveCurrentSession();
+    renderProgressBar(currentSession.currentPromptIndex);
+    // Si la respuesta es del P7 (Plan), renderizar con formato visual
+    if(idx===6) renderPlanInChat(response);
+    renderChat();updateChatActions();
+  },function(err){
+    hideLoading();currentSession.messages.pop();currentSession.waitingForResponse=false;
+    showError(err);renderChat();updateChatActions();
+  });
+}
+
+function saveCurrentSession(){
+  if(!currentSession)return;
+  var idx=sessions.findIndex(function(s){return s.id===currentSession.id;});
+  var saved={id:currentSession.id,name:currentSession.name,goal:currentSession.goal,text:currentSession.text,messages:currentSession.messages,currentPromptIndex:currentSession.currentPromptIndex,startedAt:currentSession.startedAt,verdict:currentSession.verdict};
+  if(idx===-1)sessions.unshift(saved);else sessions[idx]=saved;
+  saveSessions();renderHistoryList();
+}
+
+function loadSessionById(id){
+  var s=sessions.find(function(s){return s.id===id;});if(!s)return;
+  currentSession={id:s.id,name:s.name,goal:s.goal,text:s.text,messages:s.messages.slice(),currentPromptIndex:s.currentPromptIndex,waitingForResponse:false,startedAt:s.startedAt,verdict:s.verdict};
+  get('section-name').value=s.name;get('section-goal').value=s.goal||'';
+  get('input-text').value=s.text;updateCharCount();
+  renderProgressBar(currentSession.currentPromptIndex);renderChat();updateChatActions();
+  if(currentSession.plan)renderPlanInChat(currentSession.plan);
+  closeHistory();
+}
+
+function deleteSession(id){sessions=sessions.filter(function(s){return s.id!==id;});saveSessions();renderHistoryList();}
+
+function renderHistoryList(){
+  var list=get('history-list');
+  if(!sessions.length){list.innerHTML='<div class="history-empty">Sin sesiones guardadas.</div>';return;}
+  var html='';
+  sessions.forEach(function(s){
+    var vhtml='';
+    if(s.verdict==='listo')vhtml='<div><span class="session-verdict verdict-listo">✓ Listo para publicar</span></div>';
+    else if(s.verdict==='menor')vhtml='<div><span class="session-verdict verdict-menor">→ Revisión menor</span></div>';
+    else if(s.verdict==='mayor')vhtml='<div><span class="session-verdict verdict-mayor">⚠ Revisión mayor</span></div>';
+    var done=Math.min(s.currentPromptIndex,settings.prompts.length);
+    html+='<div class="session-item"><div class="session-meta"><span class="session-name">'+esc(s.name)+'</span><span class="session-date">'+s.startedAt+'</span></div>'+vhtml+'<div class="session-info">'+done+' / '+settings.prompts.length+' prompts completados</div><div class="session-actions"><button class="btn btn-ghost btn-sm" onclick="loadSessionById('+s.id+')">Retomar</button><button class="btn btn-ghost btn-sm" onclick="exportSession('+s.id+')">⎘ .txt</button><button class="btn btn-danger btn-sm" onclick="deleteSession('+s.id+')">Borrar</button></div></div>';
+  });
+  list.innerHTML=html;
+}
+
+function openHistory(){renderHistoryList();get('history-sidebar').classList.add('open');get('sidebar-overlay').classList.add('visible');}
+function closeHistory(){get('history-sidebar').classList.remove('open');get('sidebar-overlay').classList.remove('visible');}
+
+function exportSession(id){
+  var s=id?sessions.find(function(x){return x.id===id;}):currentSession;if(!s)return;
+  var lines=['ANÁLISIS DE SECCIÓN/CAPÍTULO · CASTROVERDE DE CERRATO','','Sección: '+s.name,'Fecha: '+s.startedAt,'Objetivo: '+(s.goal||'(no especificado)')];
+  if(s.verdict)lines.push('Veredicto P5: '+s.verdict.toUpperCase());
+  lines.push('','═'.repeat(60),'');
+  s.messages.forEach(function(m){
+    var pname=settings.prompts[m.promptIndex]?settings.prompts[m.promptIndex].name:(m.role==='user'?'Prompt':'Respuesta');
+    lines.push('── '+pname+' ('+(m.role==='user'?'ENVIADO':'CLAUDE')+') ──','',m.content,'','─'.repeat(60),'');
+  });
+  if(s.plan){
+    lines.push('','── PLAN DE INTERVENCIÓN ──','',s.plan,'','─'.repeat(60),'');
+  }
+  var blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='analisis-'+s.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.txt';a.click();
+}
+
+function newSession(){
+  if(currentSession&&currentSession.messages.length&&!confirm('¿Iniciar nueva sesión? La actual queda guardada en el historial.'))return;
+  currentSession=null;
+  get('section-name').value='';get('section-goal').value='';get('input-text').value='';updateCharCount();
+  get('chat-area').querySelectorAll('.chat-message').forEach(function(el){el.remove();});
+  get('chat-empty').style.display='flex';get('chat-actions').style.display='none';
+  get('loading-msg').classList.remove('visible');renderProgressBar(-1);hideError();
+}
+
+function openSettings(){
+  get('settings-system').value=settings.system;
+  var tonoEl=document.getElementById('settings-tono');
+  if(tonoEl) tonoEl.value=getTonoProfile();
+  var tabsHtml='',panelsHtml='';
+  settings.prompts.forEach(function(p,i){
+    tabsHtml+='<button class="ptab'+(i===0?' active':'')+'" data-idx="'+i+'">'+esc(p.label)+'</button>';
+    panelsHtml+='<div class="ppanel'+(i===0?' visible':'')+'" id="pp-'+i+'">'
+      +'<label class="modal-label">Nombre</label>'
+      +'<input class="modal-input pp-name" data-idx="'+i+'" value="'+esc(p.name)+'">'
+      +'<label class="modal-label">Contenido del prompt</label>'
+      +'<textarea class="modal-textarea tall pp-content" data-idx="'+i+'" rows="10">'+esc(p.content)+'</textarea>'
+      +'</div>';
+  });
+  get('ptabs').innerHTML=tabsHtml;get('ppanels').innerHTML=panelsHtml;
+  get('ptabs').querySelectorAll('.ptab').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      get('ptabs').querySelectorAll('.ptab').forEach(function(b){b.classList.remove('active');});
+      get('ppanels').querySelectorAll('.ppanel').forEach(function(p){p.classList.remove('visible');});
+      btn.classList.add('active');get('pp-'+btn.getAttribute('data-idx')).classList.add('visible');
+    });
+  });
+  get('modal-settings').classList.add('visible');
+}
+function closeSettings(){get('modal-settings').classList.remove('visible');}
+function saveSettingsFromModal(){
+  settings.system=get('settings-system').value;
+  var tonoSave=document.getElementById('settings-tono');
+  if(tonoSave) saveTonoProfile(tonoSave.value);
+  document.querySelectorAll('.pp-name').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].name=el.value;});
+  document.querySelectorAll('.pp-content').forEach(function(el){settings.prompts[parseInt(el.getAttribute('data-idx'))].content=el.value;});
+  saveSettings();
+  localStorage.setItem('castroverde_ana_settings_ts', Date.now()); // marca de tiempo para sync
+  closeSettings();
+}
+function resetSettings(){
+  if(!confirm('¿Restaurar todos los ajustes por defecto?'))return;
+  settings={system:DEFAULT_SYSTEM,prompts:DEFAULT_PROMPTS.map(function(p){return{name:p.name,label:p.label,content:p.content};})};
+  saveSettings();localStorage.setItem('castroverde_ana_settings_ts', Date.now());openSettings();
+}
+
+function openFbKeyModal(){
+  get('fb-key-input').value = FB_API_KEY||'';
+  get('modal-fbkey').classList.add('visible');
+  setTimeout(function(){get('fb-key-input').focus();},80);
+}
+function closeFbKeyModal(){ get('modal-fbkey').classList.remove('visible'); }
+
+function saveFbKey(val){
+  if(!val||!val.startsWith('AIzaSy')){ alert('La clave debe empezar por AIzaSy'); return false; }
+  FB_API_KEY = val;
+  localStorage.setItem('castroverde_fb_key', val);
+  initFirebase(val);
+  closeFbKeyModal();
+  // Si no hay clave Anthropic, pedirla ahora
+  if(!API_KEY) setTimeout(openApiKeyModal, 400);
+  return true;
+}
+
+function openApiKeyModal(){get('modal-key-input').value=API_KEY||'';get('modal-apikey').classList.add('visible');setTimeout(function(){get('modal-key-input').focus();},80);}
+function closeApiKeyModal(){get('modal-apikey').classList.remove('visible');}
+
+get('btn-start').addEventListener('click',startSession);
+get('btn-next-prompt').addEventListener('click',sendNextPrompt);
+get('btn-new-session').addEventListener('click',newSession);
+get('btn-history').addEventListener('click',openHistory);
+get('btn-close-sidebar').addEventListener('click',closeHistory);
+get('sidebar-overlay').addEventListener('click',closeHistory);
+get('btn-clear-history').addEventListener('click',function(){if(confirm('¿Borrar todo el historial?')){sessions=[];saveSessions();renderHistoryList();}});
+get('btn-export').addEventListener('click',function(){exportSession(null);});
+get('btn-settings').addEventListener('click',openSettings);
+get('settings-save').addEventListener('click',saveSettingsFromModal);
+get('settings-cancel').addEventListener('click',closeSettings);
+get('settings-reset').addEventListener('click',resetSettings);
+get('modal-settings').addEventListener('click',function(e){if(e.target===this)closeSettings();});
+get('btn-api-key').addEventListener('click',openApiKeyModal);
+get('btn-fb-key').addEventListener('click',openFbKeyModal);
+get('fb-btn-save').addEventListener('click',function(){
+  var val=get('fb-key-input').value.trim();
+  saveFbKey(val);
+});
+get('fb-btn-forget').addEventListener('click',function(){
+  if(!confirm('¿Borrar la clave de Firebase?'))return;
+  FB_API_KEY='';localStorage.removeItem('castroverde_fb_key');
+  get('fb-key-input').value='';closeFbKeyModal();
+});
+get('fb-btn-cancel').addEventListener('click',closeFbKeyModal);
+get('modal-fbkey').addEventListener('click',function(e){if(e.target===this)closeFbKeyModal();});
+get('fb-key-input').addEventListener('keydown',function(e){if(e.key==='Enter')get('fb-btn-save').click();if(e.key==='Escape')closeFbKeyModal();});
+get('modal-btn-save').addEventListener('click',function(){
+  var val=get('modal-key-input').value.trim();
+  if(!val){alert('Introduce la clave.');return;}
+  if(!val.startsWith('gsk_')){alert('La clave de Groq debe empezar por gsk_');return;}
+  API_KEY=val;localStorage.setItem('castroverde_ana_key',val);updateKeyStatus();closeApiKeyModal();
+});
+get('modal-btn-forget').addEventListener('click',function(){
+  if(!confirm('¿Borrar la clave guardada?'))return;
+  API_KEY='';localStorage.removeItem('castroverde_ana_key');get('modal-key-input').value='';updateKeyStatus();closeApiKeyModal();
+});
+get('modal-btn-cancel').addEventListener('click',closeApiKeyModal);
+get('modal-apikey').addEventListener('click',function(e){if(e.target===this)closeApiKeyModal();});
+get('modal-key-input').addEventListener('keydown',function(e){if(e.key==='Enter')get('modal-btn-save').click();if(e.key==='Escape')closeApiKeyModal();});
+get('input-text').addEventListener('input',updateCharCount);
+get('file-input').addEventListener('change',function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){get('input-text').value=ev.target.result.substring(0,20000);updateCharCount();if(!get('section-name').value)get('section-name').value=file.name.replace('.txt','');};
+  reader.readAsText(file,'UTF-8');e.target.value='';
+});
+
+renderProgressBar(-1);
+updateCharCount();
+updateKeyStatus();
+renderHistoryList();
+// Cargar perfil tonal por defecto si no hay ninguno guardado
+if(!getTonoProfile()) saveTonoProfile('VOZ Y TONO DE REFERENCIA — Libro de historia de Castroverde de Cerrato\n\nPrimera parte (narrativa divulgativa):\nNarración cronológica con datos precisos y fechas documentadas. El autor no adorna — deja que los hechos hablen, pero elige qué hecho poner en primer plano. Las frases son directas y de longitud variable: alterna oraciones cortas que dan ritmo con frases más largas que desarrollan el contexto. Cuando hay conflicto o personajes, los nombra y los deja actuar sin comentario moral. Cuando el texto entra en territorio técnico o documental, busca un detalle humano o geográfico concreto que ancle al lector. Los cierres de bloque deben dejar algo concreto y visible. Nunca terminar con una generalización.\n\nSegunda parte (temática y formal):\nMismo rigor documental pero con mayor densidad informativa. El tono se vuelve más expositivo sin caer en el academicismo. Se permiten enumeraciones y datos específicos. Se evita el lenguaje institucional o abstracto.\n\nReglas comunes:\n- No añadir frases, adjetivos ni cláusulas que no estén en el original\n- No sustituir palabras por sinónimos neutros ni cambiar el estilo\n- No terminar párrafos con generalizaciones del tipo "moldean la identidad" o "custodian la memoria"\n- Respetar las notas al pie como fuente de autoridad\n- Si una frase funciona, no tocarla');
+if(!FB_API_KEY){ setTimeout(openFbKeyModal,300); }
+else if(!API_KEY){ setTimeout(openApiKeyModal,300); }
+</script>
+</body>
+</html>
