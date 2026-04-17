@@ -23,23 +23,19 @@
       border-radius: 5px; 
       cursor: pointer; 
       font-size: 14px; 
+      text-decoration: none;
+      display: inline-block;
     }
     .pdf-btn:hover { background: #c0392b; }
     .expandible { cursor: pointer; }
-    .contenido { 
-      display: none; 
-      background: #f8f9fa; 
-      padding: 15px; 
-      border-top: 1px solid #ddd; 
-      font-size: 0.95em; 
-      white-space: pre-wrap; 
-    }
+    .contenido-fila { display: none; background: #fdfdfd; }
+    .contenido-celda { padding: 20px; border: 1px solid #ddd; line-height: 1.6; color: #333; }
     .visible { display: table-row; }
   </style>
 </head>
 <body>
   <h1>📜 Castroverde de Cerrato - Buscador de Costumbres</h1>
-  <p style="text-align:center;">Filtra por siglo • Busca cualquier término • Haz clic en la fila para ver texto • Pulsa 📄 para abrir el PDF original</p>
+  <p style="text-align:center;">Filtra por siglo • Busca cualquier término • Haz clic en la fila para ver texto • Pulsa 📄 para abrir el PDF</p>
 
   <div class="controls">
     <select id="sigloSelect">
@@ -56,12 +52,12 @@
       <option value="XX">Siglo XX</option>
     </select>
 
-    <input type="text" id="busqueda" placeholder="Buscar (ej: Álvaro de Bazán, vendimia, oraños...)" style="width: 380px;">
+    <input type="text" id="busqueda" placeholder="Buscar (ej: Álvaro de Bazán, vendimia...)" style="width: 380px;">
     <button onclick="filtrar()">🔍 Buscar</button>
     <button onclick="limpiar()">Limpiar</button>
   </div>
 
-  <table id="resultados">
+  <table id="tablaCostumbres">
     <thead>
       <tr>
         <th>ID</th>
@@ -69,14 +65,104 @@
         <th>Título</th>
         <th>Resumen</th>
         <th>Siglos</th>
-        <th>Tags</th>
         <th>PDF</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="cuerpoTabla"></tbody>
   </table>
 
   <script>
+    // Datos de ejemplo basados en tu estructura
     const dataset = [
-      {"id":"cv_adm_001","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Merindad del Cerrato (págs. 1-6)","resumen":"Inclusión de Castroverde en la Merindad del Cerrato desde 1385 y su papel como centro administrativo intermedio.","contenido_extendido":"Castroverde de Cerrato fue un punto administrativo importante dentro de la Merindad del Cerrato...","siglo":"XIV-XV","siglos":["XIV","XV"],"tags":["Merindad","Cerrato"],"pdf":"01-Situacion-Administrativa-La_Merindad_del_Cerrato-1-6.pdf"},
-      {"id":"cv_adm_002","seccion":"SITUACIÓN ADMINISTRATIVA","titulo":"La Diócesis de Palencia (págs. 7-8)","resumen":"Historia de la pertenencia eclesiástica de Castroverde, desde la restauración de la diócesis palentina en 1059 hasta su paso a la de Valladolid en 1954.","
+      {
+        "id":"cv_adm_001",
+        "seccion":"SITUACIÓN ADMINISTRATIVA",
+        "titulo":"La Merindad del Cerrato (págs. 1-6)",
+        "resumen":"Inclusión de Castroverde en la Merindad del Cerrato desde 1385.",
+        "contenido_extendido":"Castroverde de Cerrato fue un punto administrativo importante dentro de la Merindad del Cerrato. Los registros históricos detallan su organización fiscal y jurídica...",
+        "siglo":"XIV-XV",
+        "siglos":["XIV","XV"],
+        "tags":["Merindad","Cerrato"],
+        "pdf":"01-Situacion-Administrativa-La_Merindad_del_Cerrato-1-6.pdf"
+      },
+      {
+        "id":"cv_adm_002",
+        "seccion":"SITUACIÓN ADMINISTRATIVA",
+        "titulo":"La Diócesis de Palencia (págs. 7-8)",
+        "resumen":"Historia de la pertenencia eclesiástica de Castroverde.",
+        "contenido_extendido":"Desde la restauración de la diócesis palentina en 1059 hasta su paso a la de Valladolid en 1954...",
+        "siglo":"XI-XX",
+        "siglos":["XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"],
+        "tags":["Palencia","Diócesis"],
+        "pdf":"01-Situacion-Administrativa-La_Diocesis_de_Palencia-7-8.pdf"
+      }
+    ];
+
+    function renderizarTabla(datos) {
+      const cuerpo = document.getElementById('cuerpoTabla');
+      cuerpo.innerHTML = '';
+
+      datos.forEach(item => {
+        // Fila principal
+        const fila = document.createElement('tr');
+        fila.className = 'expandible';
+        fila.onclick = () => toggler(item.id);
+        
+        fila.innerHTML = `
+          <td>${item.id}</td>
+          <td class="seccion">${item.seccion}</td>
+          <td><strong>${item.titulo}</strong></td>
+          <td>${item.resumen}</td>
+          <td class="siglos">${item.siglo}</td>
+          <td>
+            <a href="pdfs/${item.pdf}" class="pdf-btn" target="_blank" onclick="event.stopPropagation();">📄 PDF</a>
+          </td>
+        `;
+
+        // Fila oculta de contenido
+        const filaContenido = document.createElement('tr');
+        filaContenido.id = `cont-${item.id}`;
+        filaContenido.className = 'contenido-fila';
+        filaContenido.innerHTML = `
+          <td colspan="6" class="contenido-celda">
+            <strong>Descripción detallada:</strong><br>${item.contenido_extendido}
+          </td>
+        `;
+
+        cuerpo.appendChild(fila);
+        cuerpo.appendChild(filaContenido);
+      });
+    }
+
+    function toggler(id) {
+      const el = document.getElementById(`cont-${id}`);
+      el.style.display = (el.style.display === 'table-row') ? 'none' : 'table-row';
+    }
+
+    function filtrar() {
+      const sSelect = document.getElementById('sigloSelect').value;
+      const bTexto = document.getElementById('busqueda').value.toLowerCase();
+
+      const filtrados = dataset.filter(item => {
+        const cumpleSiglo = sSelect === "" || item.siglos.includes(sSelect);
+        const cumpleTexto = item.titulo.toLowerCase().includes(bTexto) || 
+                            item.resumen.toLowerCase().includes(bTexto) ||
+                            item.seccion.toLowerCase().includes(bTexto) ||
+                            item.tags.some(t => t.toLowerCase().includes(bTexto));
+        return cumpleSiglo && cumpleTexto;
+      });
+
+      renderizarTabla(filtrados);
+    }
+
+    function limpiar() {
+      document.getElementById('sigloSelect').value = "";
+      document.getElementById('busqueda').value = "";
+      renderizarTabla(dataset);
+    }
+
+    // Carga inicial
+    renderizarTabla(dataset);
+  </script>
+</body>
+</html>
