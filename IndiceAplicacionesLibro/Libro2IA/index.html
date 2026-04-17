@@ -5,84 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Castroverde - Buscador de Costumbres</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-    h1 { text-align: center; color: #2c3e50; }
-    .controls { text-align: center; margin: 20px 0; }
-    select, input, button { padding: 10px; margin: 5px; font-size: 16px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }
-    th { background: #34495e; color: white; }
-    tr:nth-child(even) { background: #f2f2f2; }
-    .seccion { font-weight: bold; color: #2980b9; }
-    .siglos { font-size: 0.9em; color: #e67e22; }
-    .pdf-btn { 
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f4f7f6; }
+    h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
+    .instrucciones { text-align: center; color: #7f8c8d; margin-bottom: 20px; font-size: 0.9em; }
+    .controls { text-align: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    select, input, button { padding: 12px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 15px; }
+    input#busqueda { width: 350px; }
+    button { cursor: pointer; background: #3498db; color: white; border: none; transition: 0.3s; }
+    button:hover { background: #2980b9; }
+    button.limpiar { background: #95a5a6; }
+    
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    th { background: #34495e; color: white; padding: 15px; text-align: left; text-transform: uppercase; font-size: 0.85em; }
+    td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    tr.fila-datos:hover { background: #f1f9ff; cursor: pointer; }
+    
+    .seccion-tag { font-weight: bold; color: #2980b9; font-size: 0.8em; display: block; }
+    .siglos-tag { color: #e67e22; font-weight: bold; }
+    
+    .pdf-link { 
       background: #e74c3c; 
       color: white; 
-      border: none; 
-      padding: 8px 14px; 
-      border-radius: 5px; 
-      cursor: pointer; 
-      font-size: 14px; 
-      text-decoration: none;
-      display: inline-block;
+      padding: 8px 12px; 
+      border-radius: 4px; 
+      text-decoration: none; 
+      font-weight: bold;
+      font-size: 0.8em;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
-    .pdf-btn:hover { background: #c0392b; }
-    .expandible { cursor: pointer; }
-    .contenido-fila { display: none; background: #fdfdfd; }
-    .contenido-celda { padding: 20px; border: 1px solid #ddd; line-height: 1.6; color: #333; }
-    .visible { display: table-row; }
+    .pdf-link:hover { background: #c0392b; }
+
+    .detalle-fila { display: none; background: #fafafa; }
+    .detalle-contenido { padding: 20px; border-left: 4px solid #3498db; line-height: 1.6; }
   </style>
 </head>
 <body>
-  <h1>📜 Castroverde de Cerrato - Buscador de Costumbres</h1>
-  <p style="text-align:center;">Filtra por siglo • Busca cualquier término • Haz clic en la fila para ver texto • Pulsa 📄 para abrir el PDF</p>
+
+  <h1>📜 Castroverde de Cerrato</h1>
+  <p class="instrucciones">Buscador de Costumbres y Archivo Histórico. Haz clic en una fila para expandir la información.</p>
 
   <div class="controls">
-    <select id="sigloSelect">
+    <select id="filtroSiglo">
       <option value="">Todos los siglos</option>
-      <option value="XI">Siglo XI</option>
-      <option value="XII">Siglo XII</option>
-      <option value="XIII">Siglo XIII</option>
-      <option value="XIV">Siglo XIV</option>
-      <option value="XV">Siglo XV</option>
-      <option value="XVI">Siglo XVI</option>
-      <option value="XVII">Siglo XVII</option>
-      <option value="XVIII">Siglo XVIII</option>
-      <option value="XIX">Siglo XIX</option>
-      <option value="XX">Siglo XX</option>
+      <option value="XI">Siglo XI</option><option value="XII">Siglo XII</option>
+      <option value="XIII">Siglo XIII</option><option value="XIV">Siglo XIV</option>
+      <option value="XV">Siglo XV</option><option value="XVI">Siglo XVI</option>
+      <option value="XVII">Siglo XVII</option><option value="XVIII">Siglo XVIII</option>
+      <option value="XIX">Siglo XIX</option><option value="XX">Siglo XX</option>
     </select>
-
-    <input type="text" id="busqueda" placeholder="Buscar (ej: Álvaro de Bazán, vendimia...)" style="width: 380px;">
-    <button onclick="filtrar()">🔍 Buscar</button>
-    <button onclick="limpiar()">Limpiar</button>
+    <input type="text" id="busqueda" placeholder="Buscar por palabra clave, título o tema...">
+    <button onclick="ejecutarFiltro()">🔍 Buscar</button>
+    <button class="limpiar" onclick="resetear()">Limpiar</button>
   </div>
 
-  <table id="tablaCostumbres">
+  <table>
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Sección</th>
-        <th>Título</th>
-        <th>Resumen</th>
+        <th>Ref</th>
+        <th>Información</th>
         <th>Siglos</th>
-        <th>PDF</th>
+        <th>Documento</th>
       </tr>
     </thead>
-    <tbody id="cuerpoTabla"></tbody>
+    <tbody id="tablaBody">
+      </tbody>
   </table>
 
   <script>
-    // Datos de ejemplo basados en tu estructura
+    // PEGA AQUÍ TUS 34 ENTRADAS COMPLETAS
     const dataset = [
       {
         "id":"cv_adm_001",
         "seccion":"SITUACIÓN ADMINISTRATIVA",
         "titulo":"La Merindad del Cerrato (págs. 1-6)",
-        "resumen":"Inclusión de Castroverde en la Merindad del Cerrato desde 1385.",
-        "contenido_extendido":"Castroverde de Cerrato fue un punto administrativo importante dentro de la Merindad del Cerrato. Los registros históricos detallan su organización fiscal y jurídica...",
-        "siglo":"XIV-XV",
+        "resumen":"Inclusión de Castroverde en la Merindad del Cerrato desde 1385 y su papel como centro administrativo.",
+        "contenido":"Texto completo sobre la Merindad aquí...",
         "siglos":["XIV","XV"],
-        "tags":["Merindad","Cerrato"],
         "pdf":"01-Situacion-Administrativa-La_Merindad_del_Cerrato-1-6.pdf"
       },
       {
@@ -90,79 +90,81 @@
         "seccion":"SITUACIÓN ADMINISTRATIVA",
         "titulo":"La Diócesis de Palencia (págs. 7-8)",
         "resumen":"Historia de la pertenencia eclesiástica de Castroverde.",
-        "contenido_extendido":"Desde la restauración de la diócesis palentina en 1059 hasta su paso a la de Valladolid en 1954...",
-        "siglo":"XI-XX",
+        "contenido":"Texto sobre la diócesis aquí...",
         "siglos":["XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"],
-        "tags":["Palencia","Diócesis"],
         "pdf":"01-Situacion-Administrativa-La_Diocesis_de_Palencia-7-8.pdf"
       }
+      // ... añade las otras 32 entradas siguiendo este mismo formato
     ];
 
-    function renderizarTabla(datos) {
-      const cuerpo = document.getElementById('cuerpoTabla');
-      cuerpo.innerHTML = '';
+    function mostrarTabla(items) {
+      const tbody = document.getElementById('tablaBody');
+      tbody.innerHTML = '';
 
-      datos.forEach(item => {
-        // Fila principal
-        const fila = document.createElement('tr');
-        fila.className = 'expandible';
-        fila.onclick = () => toggler(item.id);
-        
-        fila.innerHTML = `
-          <td>${item.id}</td>
-          <td class="seccion">${item.seccion}</td>
-          <td><strong>${item.titulo}</strong></td>
-          <td>${item.resumen}</td>
-          <td class="siglos">${item.siglo}</td>
-          <td>
-            <a href="pdfs/${item.pdf}" class="pdf-btn" target="_blank" onclick="event.stopPropagation();">📄 PDF</a>
-          </td>
+      items.forEach(item => {
+        // Asegurar que el nombre del PDF termine en .pdf si no lo tiene
+        let nombrePdf = item.pdf;
+        if (!nombrePdf.toLowerCase().endsWith('.pdf')) {
+            nombrePdf += '.pdf';
+        }
+
+        const filaPrincipal = `
+          <tr class="fila-datos" onclick="toggleDetalle('${item.id}')">
+            <td style="color:#95a5a6; font-size:0.8em;">${item.id}</td>
+            <td>
+              <span class="seccion-tag">${item.seccion}</span>
+              <strong>${item.titulo}</strong><br>
+              <small style="color:#666">${item.resumen}</small>
+            </td>
+            <td class="siglos-tag">${item.siglos.join(', ')}</td>
+            <td>
+              <a href="${nombrePdf}" class="pdf-link" target="_blank" onclick="event.stopPropagation()">
+                📄 PDF
+              </a>
+            </td>
+          </tr>
+          <tr id="extra-${item.id}" class="detalle-fila">
+            <td colspan="4">
+              <div class="detalle-contenido">
+                <strong>Detalles históricos:</strong><br>
+                ${item.contenido}
+              </div>
+            </td>
+          </tr>
         `;
-
-        // Fila oculta de contenido
-        const filaContenido = document.createElement('tr');
-        filaContenido.id = `cont-${item.id}`;
-        filaContenido.className = 'contenido-fila';
-        filaContenido.innerHTML = `
-          <td colspan="6" class="contenido-celda">
-            <strong>Descripción detallada:</strong><br>${item.contenido_extendido}
-          </td>
-        `;
-
-        cuerpo.appendChild(fila);
-        cuerpo.appendChild(filaContenido);
+        tbody.innerHTML += filaPrincipal;
       });
     }
 
-    function toggler(id) {
-      const el = document.getElementById(`cont-${id}`);
-      el.style.display = (el.style.display === 'table-row') ? 'none' : 'table-row';
+    function toggleDetalle(id) {
+      const fila = document.getElementById(`extra-${id}`);
+      fila.style.display = (fila.style.display === 'table-row') ? 'none' : 'table-row';
     }
 
-    function filtrar() {
-      const sSelect = document.getElementById('sigloSelect').value;
-      const bTexto = document.getElementById('busqueda').value.toLowerCase();
+    function ejecutarFiltro() {
+      const texto = document.getElementById('busqueda').value.toLowerCase();
+      const siglo = document.getElementById('filtroSiglo').value;
 
-      const filtrados = dataset.filter(item => {
-        const cumpleSiglo = sSelect === "" || item.siglos.includes(sSelect);
-        const cumpleTexto = item.titulo.toLowerCase().includes(bTexto) || 
-                            item.resumen.toLowerCase().includes(bTexto) ||
-                            item.seccion.toLowerCase().includes(bTexto) ||
-                            item.tags.some(t => t.toLowerCase().includes(bTexto));
-        return cumpleSiglo && cumpleTexto;
+      const resultados = dataset.filter(item => {
+        const coincideTexto = item.titulo.toLowerCase().includes(texto) || 
+                              item.resumen.toLowerCase().includes(texto) ||
+                              item.seccion.toLowerCase().includes(texto);
+        const coincideSiglo = siglo === "" || item.siglos.includes(siglo);
+        return coincideTexto && coincideSiglo;
       });
 
-      renderizarTabla(filtrados);
+      mostrarTabla(resultados);
     }
 
-    function limpiar() {
-      document.getElementById('sigloSelect').value = "";
-      document.getElementById('busqueda').value = "";
-      renderizarTabla(dataset);
+    function resetear() {
+      document.getElementById('busqueda').value = '';
+      document.getElementById('filtroSiglo').value = '';
+      mostrarTabla(dataset);
     }
 
-    // Carga inicial
-    renderizarTabla(dataset);
+    // Carga inicial de todas las entradas (las 34 que pongas en el dataset)
+    mostrarTabla(dataset);
   </script>
+
 </body>
 </html>
