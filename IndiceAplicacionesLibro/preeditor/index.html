@@ -541,6 +541,70 @@
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+
+    /* ── MODAL CLAVE API GROQ ── */
+    .modal-overlay-key {
+      display: none; position: fixed; inset: 0;
+      background: rgba(30,53,50,.6); z-index: 600;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay-key.visible { display: flex; }
+    .modal-box-key {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); width: 100%; max-width: 420px;
+      padding: 28px 28px 22px;
+      box-shadow: 0 12px 40px rgba(30,53,50,.22);
+    }
+    .mk-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .mk-desc  { font-family: var(--font-body); font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+    .mk-desc a { color: var(--accent); }
+    .mk-label { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; display: block; }
+    .mk-input {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); padding: 9px 12px; font-family: var(--font-ui);
+      font-size: 12px; border-radius: var(--radius); outline: none;
+    }
+    .mk-input:focus { border-color: var(--accent); }
+    .mk-hint { font-family: var(--font-ui); font-size: 9px; color: var(--muted); margin-top: 6px; }
+    .mk-actions { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
+
+    /* ── ZONA RESULTADO GROQ ── */
+    .groq-result-zone { display: none; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .groq-result-zone.visible { display: flex; }
+    .groq-result-label {
+      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase;
+      letter-spacing: 2px; color: var(--accent);
+      padding-bottom: 5px; border-bottom: 1px solid var(--border);
+    }
+    #groq-result-text {
+      width: 100%; min-height: 180px; max-height: 320px;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-body);
+      font-size: 13px; line-height: 1.8;
+      padding: 12px 14px; border-radius: var(--radius);
+      resize: vertical; outline: none; overflow-y: auto; white-space: pre-wrap;
+    }
+    .groq-result-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+    .groq-spinner {
+      display: none; width: 16px; height: 16px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spinG .8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spinG { to { transform: rotate(360deg); } }
+    .groq-spinner.visible { display: inline-block; }
+    .groq-status { font-family: var(--font-ui); font-size: 9px; color: var(--muted); flex: 1; letter-spacing: .5px; }
+    .btn-send-groq { background: var(--accent2); color: #eef4f3; }
+    .btn-send-groq:hover:not(:disabled) { background: #2a8a5e; }
+    .btn-send-groq:disabled { opacity: .4; cursor: not-allowed; }
+    .key-indicator {
+      font-family: var(--font-ui); font-size: 8px; letter-spacing: 1px;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+      cursor: pointer; border: 1px solid var(--border); color: var(--muted);
+      background: none; transition: all .15s;
+    }
+    .key-indicator.ok { border-color: var(--accent2); color: var(--accent2); }
+    .key-indicator:hover { border-color: var(--accent); color: var(--accent); }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 680px) {
       .layout { grid-template-columns: 1fr; }
@@ -668,15 +732,44 @@
     <div class="modal-body">
       <textarea id="prompt-output" readonly></textarea>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
+      <button class="key-indicator" id="key-indicator-btn" title="Clave API de Groq">⚿ sin clave</button>
       <span class="copy-ok" id="copy-ok">¡Copiado!</span>
       <button class="btn btn-ghost" id="modal-close-btn">Cerrar</button>
-      <button class="btn btn-primary" id="btn-copy-prompt">⎘ Copiar al portapapeles</button>
+      <button class="btn btn-primary" id="btn-copy-prompt">⎘ Copiar</button>
+      <button class="btn btn-send-groq btn" id="btn-send-groq" title="Enviar a Llama 3.3 via Groq">✦ Enviar a Llama →</button>
+    </div>
+    <!-- Zona resultado Groq -->
+    <div class="groq-result-zone" id="groq-result-zone">
+      <div class="groq-result-label">✦ Resultado — llama-3.3-70b-versatile</div>
+      <div id="groq-result-text"></div>
+      <div class="groq-result-actions">
+        <div class="groq-spinner" id="groq-spinner"></div>
+        <span class="groq-status" id="groq-status"></span>
+        <button class="btn btn-ghost" id="btn-copy-result" style="display:none;">⎘ Copiar resultado</button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- TOAST -->
+
+<!-- MODAL CLAVE API GROQ -->
+<div class="modal-overlay-key" id="modal-apikey">
+  <div class="modal-box-key">
+    <div class="mk-title">Clave API de Groq</div>
+    <div class="mk-desc">Necesaria para enviar el texto a Llama. Se guarda <strong>solo en este navegador</strong>.<br><br>Consíguela en <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>.</div>
+    <label class="mk-label" for="mk-key-input">API Key</label>
+    <input class="mk-input" id="mk-key-input" type="password" placeholder="gsk_…" autocomplete="off" spellcheck="false">
+    <div class="mk-hint">Empieza por <code>gsk_</code>. Solo tú la ves.</div>
+    <div class="mk-actions">
+      <button class="btn btn-ghost" id="mk-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="mk-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="mk-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -970,6 +1063,69 @@ function generatePrompt() {
                   semanticText.includes('<emph>') ||
                   semanticText.includes('<ctx>');
 
+  // System prompt completo del editor de Castroverde
+  const SYSTEM_PROMPT = `Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro de historia de Castroverde de Cerrato y tu objetivo es doble: corregir los errores técnicos del texto Y acercar su prosa a la voz de referencia del autor sin perder su carácter, matices ni intención expresiva.
+
+VOZ DE REFERENCIA — MODELO ESTILÍSTICO:
+Esta es la voz que el autor quiere para su libro. Úsala como guía activa:
+
+"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano, a media hora en coche de Valladolid, es tierra de frontera donde su territorio limita con la provincia de Palencia. Es también uno de esos lugares que condensan en sus calles la historia común de la España rural: un esplendor ya pasado; la importancia de la agricultura y el éxodo que vació los pueblos.
+No era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla. Por sus calles y senderos no solo transitaron pastores, labriegos y soldados; también desfilaron reyes, nobles y las intrigas de una corte itinerante que encontró aquí una parada estratégica donde tomar decisiones e incluso llorar a sus muertos."
+
+RASGOS DE ESA VOZ (OBLIGATORIOS):
+- Frases declarativas cortas con peso propio: "No era un lugar cualquiera."
+- Movimiento de lo concreto a lo histórico sin solemnidad forzada.
+- Datos precisos (fechas, cifras, nombres) integrados en la narración, no aislados en paréntesis ni apartados.
+- Ritmo alternado: frase corta, frase desarrollada, cierre breve.
+- Cierres de párrafo concretos y visuales. Nunca abstracciones del tipo "moldean la identidad" o "custodian la memoria".
+- Tono cercano, directo, sin academicismo ni artificio literario.
+
+QUÉ DEBES HACER:
+1. CORREGIR errores técnicos: ortografía, puntuación, concordancias, repeticiones innecesarias, signos incorrectos o ausentes (¿¡).
+2. MEJORAR la prosa hacia la voz de referencia: reorganizar si mejora el ritmo, simplificar si es confuso, concretar si el cierre es vago, dar viveza si el tono es plano.
+3. RESPETAR estrictamente el contenido histórico: no inventes datos, no cambies fechas, nombres ni hechos.
+4. NO ALARGAR: el texto puede ser igual de largo o ligeramente más corto si se eliminan redundancias, pero nunca más largo salvo que una corrección estructural lo requiera.
+
+RESTRICCIÓN CRÍTICA (MUY IMPORTANTE):
+- NO resumas el contenido.
+- NO elimines información relevante del texto.
+- NO "optimices" eliminando matices, repeticiones expresivas o giros personales del autor.
+- Conserva todas las ideas presentes en el original, aunque reformules su expresión.
+
+PRIORIDAD DE ESTILO (CRÍTICO):
+- Conserva el tono, ritmo y carácter del texto original.
+- No suavices expresiones con fuerza propia.
+- No homogeneices el estilo: no todas las frases deben sonar "perfectas".
+- Si una construcción es ligeramente irregular pero expresiva, consérvala.
+- No conviertas el texto en una prosa genérica o neutral.
+
+IMPERFECCIONES CON SENTIDO:
+- No corrijas una estructura si su leve irregularidad aporta ritmo o personalidad.
+- No busques perfección estilística si se pierde voz.
+
+PUNTUACIÓN Y SIGNOS — NORMAS ESTRICTAS:
+- PUNTO Y COMA (;): evítalo salvo que sea imprescindible. Nunca donde un punto o una coma funcionan mejor.
+- INCISOS CON GUIONES (—texto—): solo cuando el inciso aporte información que no puede integrarse de otro modo.
+- PARÉNTESIS EXPLICATIVOS: no los uses. Si la información es relevante, intégrala en la prosa.
+- EN GENERAL: prioriza siempre la puntuación mínima necesaria para que la frase sea clara.
+
+NOTAS AL PIE:
+- El autor tiene notas al pie extensas. NUNCA señales su ausencia como problema.
+
+CONTEXTO HISTÓRICO:
+- Primer documento: 17 de abril de 916, rey Ordoño II, "Castro Viride".
+- Alfoz leonés, Orden de Santiago, merindad del Cerrato (s.XV).
+- 676 hab. en 1950; hoy 189. Éxodo rural por mecanización agrícola.
+
+EN EL INFORME:
+- Lista cada cambio técnico con su justificación.
+- Lista cada mejora de estilo explicando qué rasgo de la voz de referencia estabas aplicando.
+- Si un párrafo ya estaba bien, dilo.
+- El texto_mejorado DEBE reflejar todas las correcciones identificadas.
+
+Responde SIEMPRE en JSON válido. IMPORTANTE: no uses bloques de código, no escribas \`\`\`json ni \`\`\`, empieza directamente con { y termina con }:
+{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
+
   // Construir el prompt estructurado
   let instrucciones = 'INSTRUCCIONES DE EDICIÓN:\n';
 
@@ -988,7 +1144,9 @@ function generatePrompt() {
 
   instrucciones += '\nEl resto del texto puede editarse libremente según las instrucciones del sistema.\n';
 
-  const prompt = instrucciones + '\nFRAGMENTO:\n\'\'\'\n' + semanticText + '\n\'\'\'';
+  const fullPrompt = 'SYSTEM PROMPT (instrucciones del editor):\n' + SYSTEM_PROMPT
+    + '\n\n' + instrucciones + '\nFRAGMENTO:\n\'\'\'\n' + semanticText + '\n\'\'\'';
+  const prompt = fullPrompt;
 
   get('prompt-output').value = prompt;
   get('modal-result').classList.add('visible');
@@ -1045,6 +1203,153 @@ document.addEventListener('keydown', (e) => {
 
 // Inicializar sidebar
 updateSidebar();
+
+/* ══════════════════════════════════════════════════════
+   CLAVE API GROQ
+══════════════════════════════════════════════════════ */
+let GROQ_API_KEY = localStorage.getItem('castroverde_preeditor_groq_key') || '';
+
+function updateKeyIndicator() {
+  const btn = get('key-indicator-btn');
+  if (!btn) return;
+  if (GROQ_API_KEY && GROQ_API_KEY.startsWith('gsk_')) {
+    btn.textContent = '⚿ clave OK';
+    btn.classList.add('ok');
+  } else {
+    btn.textContent = '⚿ sin clave';
+    btn.classList.remove('ok');
+  }
+}
+
+function openKeyModal() {
+  get('mk-key-input').value = GROQ_API_KEY || '';
+  get('modal-apikey').classList.add('visible');
+  setTimeout(() => get('mk-key-input').focus(), 80);
+}
+function closeKeyModal() { get('modal-apikey').classList.remove('visible'); }
+
+get('key-indicator-btn').addEventListener('click', openKeyModal);
+get('mk-btn-cancel').addEventListener('click', closeKeyModal);
+get('modal-apikey').addEventListener('click', function(e) { if (e.target === this) closeKeyModal(); });
+get('mk-key-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') get('mk-btn-save').click();
+  if (e.key === 'Escape') closeKeyModal();
+});
+get('mk-btn-save').addEventListener('click', function() {
+  const val = get('mk-key-input').value.trim();
+  if (!val) { alert('Introduce la clave antes de guardar.'); return; }
+  if (!val.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return; }
+  GROQ_API_KEY = val;
+  localStorage.setItem('castroverde_preeditor_groq_key', val);
+  updateKeyIndicator();
+  closeKeyModal();
+  toast('Clave guardada.');
+});
+get('mk-btn-forget').addEventListener('click', function() {
+  if (!confirm('¿Borrar la clave de Groq?')) return;
+  GROQ_API_KEY = '';
+  localStorage.removeItem('castroverde_preeditor_groq_key');
+  get('mk-key-input').value = '';
+  updateKeyIndicator();
+  toast('Clave eliminada.');
+});
+
+/* ══════════════════════════════════════════════════════
+   ENVÍO A GROQ LLAMA
+══════════════════════════════════════════════════════ */
+get('btn-send-groq').addEventListener('click', async function() {
+  const promptText = get('prompt-output').value;
+  if (!promptText) { toast('Genera el prompt primero.'); return; }
+
+  if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
+    toast('Introduce primero tu clave API de Groq.');
+    openKeyModal();
+    return;
+  }
+
+  // Separar system prompt del mensaje de usuario
+  // El prompt tiene formato: "SYSTEM PROMPT...
+
+INSTRUCCIONES..."
+  // Enviamos todo como mensaje de usuario para simplicidad y compatibilidad
+  const systemContent = `Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro de historia de Castroverde de Cerrato. Sigue estrictamente las instrucciones de edición que te proporcione el usuario. Responde en JSON válido sin bloques de código.`;
+
+  // El prompt completo va como mensaje de usuario
+  const userContent = promptText;
+
+  get('btn-send-groq').disabled = true;
+  get('groq-spinner').classList.add('visible');
+  get('groq-status').textContent = 'Enviando a Llama 3.3…';
+  get('groq-result-zone').classList.add('visible');
+  get('groq-result-text').textContent = '';
+  get('btn-copy-result').style.display = 'none';
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2048,
+        messages: [
+          { role: 'system', content: systemContent },
+          { role: 'user',   content: userContent }
+        ]
+      })
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      const errMsg = data.error ? data.error.message : ('Error ' + resp.status);
+      get('groq-status').textContent = '⚠ ' + errMsg;
+      get('groq-result-text').textContent = errMsg;
+    } else {
+      const raw = data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content : '';
+
+      // Intentar parsear JSON para mostrar solo texto_mejorado si existe
+      let display = raw;
+      try {
+        const clean = raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim();
+        const parsed = JSON.parse(clean);
+        if (parsed.texto_mejorado) {
+          display = parsed.texto_mejorado;
+          if (parsed.cambios_resumen) display += '\n\n— ' + parsed.cambios_resumen;
+        }
+      } catch(e) { /* mostrar texto tal cual */ }
+
+      get('groq-result-text').textContent = display;
+      get('groq-status').textContent = '✓ Respuesta recibida';
+      get('btn-copy-result').style.display = 'inline-block';
+    }
+  } catch(err) {
+    get('groq-status').textContent = '⚠ Error de red: ' + err.message;
+    get('groq-result-text').textContent = 'Error: ' + err.message;
+  }
+
+  get('btn-send-groq').disabled = false;
+  get('groq-spinner').classList.remove('visible');
+});
+
+// Copiar resultado
+get('btn-copy-result').addEventListener('click', function() {
+  const text = get('groq-result-text').textContent;
+  if (!text) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => toast('Resultado copiado.'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Resultado copiado.');
+  }
+});
+
+updateKeyIndicator();
 </script>
 </body>
 </html>
