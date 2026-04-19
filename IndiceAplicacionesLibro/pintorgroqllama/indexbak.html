@@ -97,7 +97,7 @@
     background: #B89A5A;
   }
 
-  textarea, input.assist-input {
+  textarea {
     width: 100%;
     border: 1px solid #ddd8ce;
     border-radius: 7px;
@@ -112,19 +112,13 @@
     transition: border-color 0.15s, box-shadow 0.15s;
   }
 
-  input.assist-input {
-    min-height: auto;
-    padding: 11px 13px;
-    font-size: 14.5px;
-  }
-
-  textarea:focus, input.assist-input:focus {
+  textarea:focus {
     outline: none;
     border-color: #B89A5A;
     box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
   }
 
-  textarea::placeholder, input.assist-input::placeholder { color: #bbb5a8; font-style: italic; }
+  textarea::placeholder { color: #bbb5a8; font-style: italic; }
 
   .note-tip {
     font-size: 12.5px;
@@ -710,16 +704,6 @@
   }
   .groq-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-  /* NUEVO: Estilo para la sección de Dirección de Escena */
-  .scene-direction-section {
-    margin-top: 1.75rem;
-    margin-bottom: 1.5rem;
-  }
-  .scene-direction-section .required {
-    color: #c0603a;
-    font-size: 11px;
-    margin-left: 4px;
-  }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -753,13 +737,13 @@
     </button>
   </div>
 
-  <!-- NUEVO: Descripción asistida por IA (actualizado para estructurar) -->
+  <!-- NUEVO: Descripción asistida por IA -->
   <div class="ai-assist-block" id="aiAssistBlock">
     <div class="ai-assist-header">
       <div class="section-label" style="margin-bottom:0;">Descripción rápida en español <span class="ai-badge">✦ IA</span></div>
       <button class="btn-collapse" id="btnCollapse" onclick="toggleAssist()" title="Contraer">▲</button>
     </div>
-    <p class="note-tip" style="margin-bottom:6px;">Describe brevemente la escena en español. La IA la estructurará en campos de dirección de escena precisos y generará una descripción completa en inglés lista para usar.</p>
+    <p class="note-tip" style="margin-bottom:6px;">Describe brevemente la escena en español. La IA la expandirá con todo el detalle necesario y la traducirá al inglés lista para usar.</p>
     <span class="proxy-url-indicator" id="proxyIndicator" onclick="showGroqModal()">⚙ Clave Groq: no configurada</span>
 
     <textarea id="sceneRaw" rows="3" placeholder="Ej: Un monje copista trabajando a la luz de una vela en un scriptorium medieval, rodeado de manuscritos..." style="margin-top:10px;"></textarea>
@@ -784,15 +768,15 @@
     </div>
 
     <button class="btn-expand" id="btnExpand" onclick="expandWithAI()">
-      <span id="expandBtnText">✦ Expandir con IA → Dirección estructurada</span>
+      <span id="expandBtnText">✦ Expandir descripción con IA</span>
       <span id="expandSpinner" class="spinner" style="display:none;"></span>
     </button>
 
     <div class="expand-result" id="expandResult" style="display:none;">
       <div class="expand-result-header">
-        <span class="expand-result-label">Descripción completa generada por IA</span>
+        <span class="expand-result-label">Descripción expandida (en inglés)</span>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn-use-expanded" onclick="useExpanded()">Usar en formulario ↓</button>
+          <button class="btn-use-expanded" onclick="useExpanded()">Usar como descripción de escena ↓</button>
           <button class="btn-hist-action" onclick="clearExpanded()" title="Limpiar">✕</button>
         </div>
       </div>
@@ -800,100 +784,14 @@
     </div>
   </div>
 
-  <!-- Escena (mantenida para compatibilidad y narrativa adicional) -->
+  <!-- Escena -->
   <div class="scene-header">
-    <div class="section-label">Descripción narrativa completa (opcional) <span style="color:#aaa496;font-style:italic;font-size:11px;text-transform:none;letter-spacing:0;">(en inglés · se incluirá si se usa)</span></div>
+    <div class="section-label">Descripción de la escena <span style="color:#aaa496;font-style:italic;font-size:11px;text-transform:none;letter-spacing:0;">(en inglés · se incluirá en el prompt final)</span></div>
   </div>
-  <textarea id="scene" rows="6" placeholder="La IA rellenará automáticamente esta descripción completa. Puedes editarla o escribir directamente."></textarea>
-  <p class="note-tip">La IA ahora genera también la Dirección de Escena estructurada (ver abajo). Esta descripción narrativa es opcional y complementaria.</p>
+  <textarea id="scene" rows="6" placeholder="Aquí aparecerá la descripción expandida en inglés, o escribe directamente tu descripción en inglés."></textarea>
+  <p class="note-tip">Puedes usar el asistente de arriba para generar esta descripción automáticamente, o escribirla tú directamente.</p>
 
-  <!-- NUEVO: Dirección de la Escena Estructurada -->
-  <div class="scene-direction-section">
-    <div class="section-label">Dirección de la Escena <span style="color:#aaa496;font-style:italic;font-size:11px;text-transform:none;letter-spacing:0;">(obligatoria · asegura precisión histórica y narrativa)</span></div>
-    
-    <!-- Campos de texto obligatorios (grid responsive) -->
-    <div class="fields-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-      <div class="field-group">
-        <div class="section-label">Acción de la escena <span class="required">*</span></div>
-        <input type="text" id="scene_action" placeholder="Ej: Distribución de grano en un granero municipal durante una hambruna" class="assist-input">
-      </div>
-      <div class="field-group">
-        <div class="section-label">Personajes <span class="required">*</span></div>
-        <input type="text" id="characters" placeholder="Ej: Campesinos locales, autoridad municipal, clérigo" class="assist-input">
-      </div>
-      <div class="field-group">
-        <div class="section-label">Contexto social <span class="required">*</span></div>
-        <input type="text" id="social_context" placeholder="Ej: Autoridad supervisando a la población en un acto comunal" class="assist-input">
-      </div>
-      <div class="field-group">
-        <div class="section-label">Entorno <span class="required">*</span></div>
-        <input type="text" id="environment" placeholder="Ej: Interior de un granero municipal en la plaza del pueblo, Castile" class="assist-input">
-      </div>
-      <div class="field-group">
-        <div class="section-label">Elemento visual central <span class="required">*</span></div>
-        <input type="text" id="central_visual_element" placeholder="Ej: El saco de grano siendo pesado por el funcionario" class="assist-input">
-      </div>
-    </div>
-
-    <!-- Selects (3 columnas como el resto de la app) -->
-    <div class="fields-grid">
-      <div class="field-group">
-        <div class="section-label">Densidad de figuras <span class="required">*</span></div>
-        <select id="density_of_figures">
-          <option value="">Selecciona…</option>
-          <option value="intimate (2–4 figures)">Íntima (2–4 figuras)</option>
-          <option value="medium (5–10 figures)">Media (5–10 figuras)</option>
-          <option value="crowd">Multitud</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="section-label">Tipo de composición (opcional)</div>
-        <select id="composition_type">
-          <option value="">— Ninguno —</option>
-          <option value="centered">Centrada</option>
-          <option value="symmetrical">Simétrica</option>
-          <option value="diagonal">Diagonal</option>
-          <option value="frieze-like">Tipo friso (narrativa horizontal)</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="section-label">Actitud de los personajes (opcional)</div>
-        <select id="character_attitude">
-          <option value="">— Ninguna —</option>
-          <option value="solemn">Solemne</option>
-          <option value="everyday">Cotidiana / natural</option>
-          <option value="tense">Tensa / dramática</option>
-          <option value="ceremonial">Ceremonial</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="section-label">Peso del entorno (opcional)</div>
-        <select id="environmental_weight">
-          <option value="">— Ninguno —</option>
-          <option value="environment dominant">Entorno dominante</option>
-          <option value="balanced">Equilibrado</option>
-          <option value="figure-focused">Centrado en las figuras</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="section-label">Prioridad histórica vs visual (opcional)</div>
-        <select id="historical_visual_priority">
-          <option value="">— Ninguna —</option>
-          <option value="strict historical fidelity">Fidelidad histórica estricta</option>
-          <option value="balanced">Equilibrado</option>
-          <option value="visual clarity">Claridad visual</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Restricciones negativas -->
-    <div class="field-group" style="margin-top: 12px;">
-      <div class="section-label">Restricciones negativas (opcional)</div>
-      <textarea id="negative_constraints" rows="2" placeholder="Ej: Sin gestos teatrales exagerados, sin iluminación cinematográfica moderna, sin anacronismos" class="assist-input" style="min-height:80px;"></textarea>
-    </div>
-  </div>
-
-  <!-- Tres selectores pictóricos (mantenidos sin cambios) -->
+  <!-- Tres selectores pictóricos -->
   <div class="fields-grid">
 
     <div class="field-group">
@@ -935,7 +833,7 @@
 
   <div class="divider"></div>
 
-  <!-- Estilo base fijo (sin cambios) -->
+  <!-- Estilo base fijo -->
   <div class="section-label">Estilo pictórico base (aplicado a todas las ilustraciones)</div>
   <div class="fixed-block">
     <div class="fixed-label">Fijo · Romántico historicista · Gérôme / Alma-Tadema</div>
@@ -1002,7 +900,7 @@
 
 GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a scene set in Castile, Spain (the Cerrato Vallisoletano region). All visual elements must reflect the specific material culture of Castilian Spain for the depicted period. Clothing must follow Castilian and broader Iberian dress conventions — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, monastic habits of Castilian orders, military dress of Castilian nobles or frontier soldiers as appropriate. No English, French, Flemish or Northern European dress. No Anglo-Saxon, Tudor, Victorian or American colonial aesthetic in any detail. Architecture must be Romanesque, Mozarabic, Gothic or Mudéjar as appropriate to the period — stone construction typical of the Castilian meseta. Landscape when visible must suggest the dry plateau of the Castilian interior: ochre earth, limestone outcrops, holm oak, sparse scrubland. Faces and physical types should reflect the Mediterranean and Iberian world. No Northern European physiognomy.`;
 
-  const STORAGE_KEY = 'prompt_historial_v3'; // versión actualizada para campos estructurados
+  const STORAGE_KEY = 'prompt_historial_v2';
 
   function loadHistorial() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -1024,39 +922,18 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
   }
 
   function esc(str) {
-    return String(str || '')
+    return String(str)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function setSelectValue(id, value) {
-    if (!value) return;
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    for (let i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === value) { sel.selectedIndex = i; return; }
-    }
-  }
-
-  /* === NUEVA LÓGICA DE GENERACIÓN DE PROMPT === */
   function buildPrompt() {
-    // Validación de campos obligatorios de Dirección de Escena
-    const sceneAction = document.getElementById('scene_action').value.trim();
-    const characters = document.getElementById('characters').value.trim();
-    const socialContext = document.getElementById('social_context').value.trim();
-    const environment = document.getElementById('environment').value.trim();
-    const centralVisual = document.getElementById('central_visual_element').value.trim();
-    const density = document.getElementById('density_of_figures').value;
-
-    if (!sceneAction || !characters || !socialContext || !environment || !centralVisual || !density) {
-      const firstMissing = document.getElementById('scene_action');
-      if (!sceneAction) firstMissing.focus();
-      else if (!characters) document.getElementById('characters').focus();
-      else if (!socialContext) document.getElementById('social_context').focus();
-      else if (!environment) document.getElementById('environment').focus();
-      else if (!centralVisual) document.getElementById('central_visual_element').focus();
-      else document.getElementById('density_of_figures').focus();
-      
-      alert('❌ Completa todos los campos obligatorios de "Dirección de la Escena" (marcados con *).');
+    const scene = document.getElementById('scene').value.trim();
+    if (!scene) {
+      const ta = document.getElementById('scene');
+      ta.focus();
+      ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
       return;
     }
 
@@ -1064,41 +941,12 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
     const luzKey  = document.getElementById('luz').value;
     const povKey  = document.getElementById('pov').value;
 
-    // Construcción del bloque SCENE DEFINITION
-    let sceneDefinition = `SCENE DEFINITION — REQUIRED:\nThis image must depict a specific historical moment.\n\n`;
-    sceneDefinition += `* Action: ${sceneAction}\n`;
-    sceneDefinition += `* Characters: ${characters}\n`;
-    sceneDefinition += `* Social context: ${socialContext}\n`;
-    sceneDefinition += `* Environment: ${environment}\n`;
-    sceneDefinition += `* Central focus: ${centralVisual}\n`;
-    sceneDefinition += `* Density: ${density}\n`;
-
-    // Opcionales
-    const compositionType = document.getElementById('composition_type').value;
-    if (compositionType) sceneDefinition += `* Composition: ${compositionType}\n`;
-
-    const characterAttitude = document.getElementById('character_attitude').value;
-    if (characterAttitude) sceneDefinition += `* Character attitude: ${characterAttitude}\n`;
-
-    const environmentalWeight = document.getElementById('environmental_weight').value;
-    if (environmentalWeight) sceneDefinition += `* Environment weight: ${environmentalWeight}\n`;
-
-    const historicalVisualPriority = document.getElementById('historical_visual_priority').value;
-    if (historicalVisualPriority) sceneDefinition += `* Priority: ${historicalVisualPriority}\n`;
-
-    const negativeConstraints = document.getElementById('negative_constraints').value.trim();
-    if (negativeConstraints) sceneDefinition += `* Avoid: ${negativeConstraints}\n`;
-
-    sceneDefinition += `\nThe scene must be visually clear, historically plausible, and free of generic or ambiguous representation.`;
-
-    // Prompt final (estructura requerida)
     const prompt =
-      sceneAction + '\n\n' +
+      scene + '\n\n' +
       ESTILO_BASE + '\n\n' +
       LUZ[luzKey].text + '\n' +
       POV[povKey].text + '\n' +
-      TONO[tonoKey].text + '\n\n' +
-      sceneDefinition;
+      TONO[tonoKey].text;
 
     document.getElementById('outputText').textContent = prompt;
     const area = document.getElementById('outputArea');
@@ -1106,31 +954,8 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
     document.getElementById('copyBtn').textContent = 'Copiar';
     document.getElementById('copyBtn').classList.remove('copied');
 
-    // Guardar en historial (incluye todos los nuevos campos)
     const sceneRawVal = document.getElementById('sceneRaw') ? document.getElementById('sceneRaw').value.trim() : '';
-    const sceneVal = document.getElementById('scene').value.trim();
-
-    const entry = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      scene: sceneVal,                    // mantenido por compatibilidad
-      sceneRaw: sceneRawVal,
-      tonoKey, luzKey, povKey,
-      // === NUEVOS CAMPOS ESTRUCTURADOS ===
-      sceneAction,
-      characters,
-      socialContext,
-      environment,
-      centralVisual,
-      densityOfFigures: density,
-      compositionType,
-      characterAttitude,
-      environmentalWeight,
-      historicalVisualPriority,
-      negativeConstraints,
-      prompt
-    };
-
+    const entry = { id: Date.now(), date: new Date().toISOString(), scene, sceneRaw: sceneRawVal, tonoKey, luzKey, povKey, prompt };
     const list = loadHistorial();
     list.unshift(entry);
     saveHistorial(list);
@@ -1172,14 +997,10 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
     }
 
     container.innerHTML = '<div class="historial-list">' + list.map(e => {
-      const preview = e.sceneAction 
-        ? (e.sceneAction.length > 95 ? e.sceneAction.slice(0, 95) + '…' : e.sceneAction)
-        : (e.scene && e.scene.length > 95 ? e.scene.slice(0, 95) + '…' : (e.scene || '—'));
-      
+      const preview   = e.scene.length > 95 ? e.scene.slice(0, 95) + '…' : e.scene;
       const tonoLabel = e.tonoKey && TONO[e.tonoKey] ? TONO[e.tonoKey].label : '—';
       const luzLabel  = e.luzKey  && LUZ[e.luzKey]   ? LUZ[e.luzKey].label  : '—';
       const povLabel  = e.povKey  && POV[e.povKey]    ? POV[e.povKey].label  : '—';
-
       return `
       <div class="hist-item" id="hitem-${e.id}">
         <div class="hist-item-header" onclick="toggleItem(${e.id})">
@@ -1189,7 +1010,6 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
               <span class="hist-tag">${esc(tonoLabel)}</span>
               <span class="hist-tag">${esc(luzLabel)}</span>
               <span class="hist-tag">${esc(povLabel)}</span>
-              ${e.densityOfFigures ? `<span class="hist-tag">${esc(e.densityOfFigures)}</span>` : ''}
             </div>
           </div>
           <div class="hist-right">
@@ -1215,38 +1035,14 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
               <span class="hist-field-val">${esc(povLabel)}</span>
             </div>
           </div>
-
-          <!-- NUEVO: Visualización de Dirección de Escena en historial -->
-          ${e.sceneAction ? `
-          <div class="hist-field" style="margin-bottom:10px;">
-            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Dirección de la Escena (estructurada)</span>
-            <div class="hist-scene-full" style="font-size:13px;line-height:1.55;">
-              • Acción: ${esc(e.sceneAction)}<br>
-              • Personajes: ${esc(e.characters)}<br>
-              • Contexto social: ${esc(e.socialContext)}<br>
-              • Entorno: ${esc(e.environment)}<br>
-              • Foco central: ${esc(e.centralVisual)}<br>
-              • Densidad: ${esc(e.densityOfFigures || '—')}
-              ${e.compositionType ? `<br>• Composición: ${esc(e.compositionType)}` : ''}
-              ${e.characterAttitude ? `<br>• Actitud personajes: ${esc(e.characterAttitude)}` : ''}
-              ${e.environmentalWeight ? `<br>• Peso entorno: ${esc(e.environmentalWeight)}` : ''}
-              ${e.historicalVisualPriority ? `<br>• Prioridad: ${esc(e.historicalVisualPriority)}` : ''}
-              ${e.negativeConstraints ? `<br>• Evitar: ${esc(e.negativeConstraints)}` : ''}
-            </div>
-          </div>` : ''}
-
-          ${e.scene ? `
           <div class="hist-field" style="margin-bottom:6px;">
-            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Descripción narrativa completa</span>
+            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Escena descrita</span>
             <div class="hist-scene-full">${esc(e.scene)}</div>
-          </div>` : ''}
-
-          ${e.sceneRaw ? `
-          <div class="hist-field" style="margin-bottom:6px;">
+          </div>
+          ${e.sceneRaw ? `<div class="hist-field" style="margin-bottom:6px;">
             <span class="hist-field-label" style="margin-bottom:4px;display:block;">Descripción original en español</span>
             <div class="hist-scene-full" style="font-style:italic;color:#6a6258;">${esc(e.sceneRaw)}</div>
           </div>` : ''}
-
           <div class="hist-prompt-full">${esc(e.prompt)}</div>
           <div class="hist-body-actions">
             <button class="btn-hist-action" onclick="copyEntry(${e.id}, this)">Copiar prompt</button>
@@ -1265,35 +1061,26 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
   function restoreEntry(id) {
     const entry = loadHistorial().find(e => e.id === id);
     if (!entry) return;
-
-    // Campos antiguos
-    if (entry.scene) document.getElementById('scene').value = entry.scene;
+    document.getElementById('scene').value = entry.scene;
     if (entry.sceneRaw && document.getElementById('sceneRaw')) {
       document.getElementById('sceneRaw').value = entry.sceneRaw;
     }
     setSelectValue('tono', entry.tonoKey);
     setSelectValue('luz',  entry.luzKey);
     setSelectValue('pov',  entry.povKey);
-
-    // === NUEVOS CAMPOS ESTRUCTURADOS ===
-    if (entry.sceneAction) document.getElementById('scene_action').value = entry.sceneAction;
-    if (entry.characters) document.getElementById('characters').value = entry.characters;
-    if (entry.socialContext) document.getElementById('social_context').value = entry.socialContext;
-    if (entry.environment) document.getElementById('environment').value = entry.environment;
-    if (entry.centralVisual) document.getElementById('central_visual_element').value = entry.centralVisual;
-    if (entry.negativeConstraints) document.getElementById('negative_constraints').value = entry.negativeConstraints;
-
-    setSelectValue('density_of_figures', entry.densityOfFigures);
-    setSelectValue('composition_type', entry.compositionType);
-    setSelectValue('character_attitude', entry.characterAttitude);
-    setSelectValue('environmental_weight', entry.environmentalWeight);
-    setSelectValue('historical_visual_priority', entry.historicalVisualPriority);
-
     document.getElementById('outputText').textContent = entry.prompt;
     document.getElementById('outputArea').classList.add('visible');
     document.getElementById('copyBtn').textContent = 'Copiar';
     document.getElementById('copyBtn').classList.remove('copied');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setSelectValue(id, value) {
+    if (!value) return;
+    const sel = document.getElementById(id);
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === value) { sel.selectedIndex = i; return; }
+    }
   }
 
   function copyEntry(id, btn) {
@@ -1317,7 +1104,7 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
     renderHistorial();
   }
 
-  /* === AI EXPAND (actualizado para generar JSON estructurado) === */
+  /* === AI EXPAND === */
   let expandedText = '';
 
   function toggleAssist() {
@@ -1339,13 +1126,11 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
     const raw = document.getElementById('sceneRaw').value.trim();
     if (!raw) {
       const ta = document.getElementById('sceneRaw');
-      ta.focus(); 
-      ta.style.borderColor = '#B89A5A';
+      ta.focus(); ta.style.borderColor = '#B89A5A';
       ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
       setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
       return;
     }
-
     const groqKey = localStorage.getItem('groq_api_key') || '';
     if (!groqKey) { showGroqModal(); return; }
 
@@ -1356,7 +1141,7 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
 
     const btn = document.getElementById('btnExpand');
     btn.disabled = true;
-    document.getElementById('expandBtnText').textContent = 'Expandiendo con IA…';
+    document.getElementById('expandBtnText').textContent = 'Expandiendo…';
     document.getElementById('expandSpinner').style.display = 'inline-block';
     document.getElementById('expandResult').style.display = 'none';
 
@@ -1367,31 +1152,9 @@ GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a sc
     if (elementos)  contextLines.push('Key elements/objects: ' + elementos);
     const context = contextLines.length ? '\n\nAdditional context provided by the author:\n' + contextLines.join('\n') : '';
 
-    const systemPrompt = `You are an expert art director specializing in 19th-century Romantic historicist illustration for a Spanish local history book about the Cerrato Vallisoletano region (Castile, Spain). 
-Your task is to transform a brief Spanish scene description + context into a precise, structured scene direction in English.
+    const systemPrompt = 'You are an expert art director specializing in 19th-century Romantic historicist illustration, working on a Spanish local history book about the Cerrato Vallisoletano region (Castile, Spain). Your task is to take a brief scene description written in Spanish and expand it into a rich, detailed scene description in English, suitable as the scene-setting portion of an image generation prompt for a painting in the style of Gerôme and Alma-Tadema.\n\nCRITICAL GEOGRAPHIC AND CULTURAL CONSTRAINT: Every scene takes place in Castile, Spain. All details you describe must reflect the specific material culture of Castilian Iberian Spain for the period given. This means:\n- Clothing: Castilian and Iberian dress only — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, Castilian monastic habits, frontier soldiers in Castilian military dress. NEVER describe English, French, Flemish, Tudor, Victorian, Anglo-Saxon or American colonial clothing.\n- Architecture: Romanesque, Mozarabic, Gothic or Mudéjar as appropriate — stone construction of the Castilian meseta. NO half-timbered English buildings, NO Norman French castles, NO Northern European church styles.\n- Landscape: the dry Castilian interior plateau — ochre earth, limestone outcrops, holm oak, sparse scrubland, wide skies. NOT green English countryside, NOT Northern European forests.\n- Faces and physical types: Mediterranean and Iberian — NOT Northern European physiognomy.\n- Objects and tools: consistent with Iberian craft traditions of the period.\n\nRULES:\n- Write ONLY in English.\n- Output ONLY the expanded scene description — no preamble, no commentary, no title.\n- Be specific about: architectural details (Romanesque, Mozarabic, Gothic as appropriate to the period), clothing and materials consistent with Castilian Spain, body language and spatial arrangement of figures, light sources, atmospheric conditions, foreground and background elements, textures of stone / wood / fabric / metal.\n- Keep strict historical accuracy for Castilian medieval and early modern contexts.\n- Length: 80-140 words. Dense, vivid, concrete. No vague adjectives.\n- Do not include style instructions (those are added separately). Only describe the scene itself.';
 
-CRITICAL GEOGRAPHIC AND CULTURAL CONSTRAINT: Every detail must reflect Castilian Spain (Cerrato Vallisoletano). Use only Iberian/Castilian clothing, architecture (Romanesque/Mozarabic/Gothic/Mudéjar), landscape (dry meseta, ochre earth, holm oak), and material culture. Never use Northern European, English, French or colonial aesthetics.
-
-Output ONLY a valid JSON object (no extra text, no markdown). Use exactly these keys:
-
-{
-  "scene_action": "short specific action (max 1 sentence)",
-  "characters": "who is present with brief roles",
-  "social_context": "social/relational dynamic and roles",
-  "environment": "specific place (interior/exterior + architectural details consistent with Castile)",
-  "central_visual_element": "what should draw the viewer's eye first",
-  "density_of_figures": "intimate (2–4 figures) or medium (5–10 figures) or crowd",
-  "composition_type": "centered or symmetrical or diagonal or frieze-like or null",
-  "character_attitude": "solemn or everyday or tense or ceremonial or null",
-  "environmental_weight": "environment dominant or balanced or figure-focused or null",
-  "historical_visual_priority": "strict historical fidelity or balanced or visual clarity or null",
-  "negative_constraints": "things to avoid or empty string",
-  "full_scene_description": "rich, dense English scene description (80-140 words) combining everything above, ready for the scene textarea"
-}
-
-Be concrete, historically accurate, and vivid.`;
-
-    const userPrompt = `Scene description in Spanish (brief):\n"${raw}"${context}\n\nReturn ONLY the JSON object.`;
+    const userPrompt = 'Scene description in Spanish (brief, to be expanded):\n"' + raw + '"' + context + '\n\nWrite the expanded scene description in English.';
 
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -1402,63 +1165,27 @@ Be concrete, historically accurate, and vivid.`;
         },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          max_tokens: 1200,
+          max_tokens: 1000,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
           ]
         })
       });
-
       const data = await response.json();
       if (data.error) throw new Error(data.error.message || 'Error de API');
-
-      let rawText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) 
-        ? data.choices[0].message.content.trim() 
-        : '';
-
-      // Limpiar posibles bloques markdown
-      rawText = rawText.replace(/```json|```/g, '').trim();
-
-      const parsed = JSON.parse(rawText);
-
-      // Rellenar campos estructurados
-      document.getElementById('scene_action').value = parsed.scene_action || '';
-      document.getElementById('characters').value = parsed.characters || '';
-      document.getElementById('social_context').value = parsed.social_context || '';
-      document.getElementById('environment').value = parsed.environment || '';
-      document.getElementById('central_visual_element').value = parsed.central_visual_element || '';
-      document.getElementById('negative_constraints').value = parsed.negative_constraints || '';
-
-      // Selects
-      if (parsed.density_of_figures) setSelectValue('density_of_figures', parsed.density_of_figures);
-      if (parsed.composition_type) setSelectValue('composition_type', parsed.composition_type);
-      if (parsed.character_attitude) setSelectValue('character_attitude', parsed.character_attitude);
-      if (parsed.environmental_weight) setSelectValue('environmental_weight', parsed.environmental_weight);
-      if (parsed.historical_visual_priority) setSelectValue('historical_visual_priority', parsed.historical_visual_priority);
-
-      // Descripción narrativa completa
-      const fullDesc = parsed.full_scene_description || '';
-      document.getElementById('scene').value = fullDesc;
-      expandedText = fullDesc;
-
-      // Mostrar resultado
-      document.getElementById('expandResultText').innerHTML = `
-        <strong>✅ Dirección de escena estructurada por IA</strong><br><br>
-        <strong>Acción:</strong> ${esc(parsed.scene_action || '')}<br>
-        <strong>Descripción completa generada:</strong><br>
-        ${esc(fullDesc)}
-      `;
+      const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : '';
+      expandedText = text;
+      document.getElementById('expandResultText').textContent = text;
       document.getElementById('expandResult').style.display = 'block';
       setTimeout(() => document.getElementById('expandResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
-
     } catch(e) {
       expandedText = '';
-      document.getElementById('expandResultText').innerHTML = `❌ Error al conectar con Groq:<br>${e.message}<br><br>Comprueba tu clave API.`;
+      document.getElementById('expandResultText').textContent = 'Error al conectar con Groq: ' + (e.message || 'Comprueba tu clave API e inténtalo de nuevo.');
       document.getElementById('expandResult').style.display = 'block';
     } finally {
       btn.disabled = false;
-      document.getElementById('expandBtnText').textContent = '✦ Expandir con IA → Dirección estructurada';
+      document.getElementById('expandBtnText').textContent = '✦ Expandir descripción con IA';
       document.getElementById('expandSpinner').style.display = 'none';
     }
   }
@@ -1476,7 +1203,7 @@ Be concrete, historically accurate, and vivid.`;
   function clearExpanded() {
     expandedText = '';
     document.getElementById('expandResult').style.display = 'none';
-    document.getElementById('expandResultText').innerHTML = '';
+    document.getElementById('expandResultText').textContent = '';
   }
 
   function updateProxyIndicator() {
@@ -1511,11 +1238,34 @@ Be concrete, historically accurate, and vivid.`;
   }
 
   updateProxyIndicator();
-  updateCount();
 
+  updateCount();
+</script>
+
+<!-- Groq API key modal -->
+<div class="groq-modal-overlay" id="groqModal" style="display:none;">
+  <div class="groq-modal">
+    <h3>Configurar clave Groq</h3>
+    <p>Introduce tu clave de API de <strong>Groq</strong> para usar el asistente de descripción de escenas. La clave se guarda solo en tu navegador (localStorage) y nunca se envía a ningún servidor externo salvo a la propia API de Groq.<br><br>Puedes obtener tu clave en <em>console.groq.com</em>.</p>
+    <input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+    <div class="groq-modal-actions">
+      <button class="btn-groq-cancel" onclick="closeGroqModal()">Cancelar</button>
+      <button class="btn-groq-save" onclick="saveGroqKey()">Guardar y continuar</button>
+    </div>
+  </div>
+</div>
+
+<script>
   // ══════════════════════════════════════════════════════
-  //  FIREBASE (sin cambios)
+  //  FIREBASE · Sincronización bidireccional
+  //  (debe ir después del modal para que el DOM esté listo)
   // ══════════════════════════════════════════════════════
+
+  // El addEventListener del modal también va aquí por la misma razón
+  document.getElementById('groqModal').addEventListener('click', function(e) {
+    if (e.target === this) closeGroqModal();
+  });
+
   var firebaseConfig = {
     apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs",
     authDomain: "castroverde-apps.firebaseapp.com",
@@ -1634,24 +1384,6 @@ Be concrete, historically accurate, and vivid.`;
   function fbSignOut() {
     fbAuth.signOut().then(function() { fbUser = null; updateSyncUI(); });
   }
-
-  // Evento para cerrar modal al hacer clic fuera
-  document.getElementById('groqModal').addEventListener('click', function(e) {
-    if (e.target === this) closeGroqModal();
-  });
 </script>
-
-<!-- Groq API key modal -->
-<div class="groq-modal-overlay" id="groqModal" style="display:none;">
-  <div class="groq-modal">
-    <h3>Configurar clave Groq</h3>
-    <p>Introduce tu clave de API de <strong>Groq</strong> para usar el asistente de descripción de escenas. La clave se guarda solo en tu navegador (localStorage) y nunca se envía a ningún servidor externo salvo a la propia API de Groq.<br><br>Puedes obtener tu clave en <em>console.groq.com</em>.</p>
-    <input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-    <div class="groq-modal-actions">
-      <button class="btn-groq-cancel" onclick="closeGroqModal()">Cancelar</button>
-      <button class="btn-groq-save" onclick="saveGroqKey()">Guardar y continuar</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
