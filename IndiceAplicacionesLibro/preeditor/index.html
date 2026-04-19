@@ -767,6 +767,7 @@
   <div class="groq-zone" id="groq-zone">
     <div class="groq-zone-label">✦ Resultado — llama-3.3-70b-versatile</div>
     <div class="groq-result" id="groq-result"></div>
+    <div id="groq-resumen" style="display:none; margin-top:8px; padding:8px 12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--font-ui); font-size:10px; color:var(--muted); line-height:1.6;"></div>
     <div class="groq-foot">
       <div class="groq-spinner" id="groq-spinner"></div>
       <span class="groq-status" id="groq-status"></span>
@@ -1235,14 +1236,30 @@ document.getElementById('btn-send-groq').addEventListener('click', async () => {
     } else {
       const raw = data.choices[0].message.content || '';
       let display = raw;
+      let resumen = '';
       try {
         const parsed = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim());
         if (parsed.texto_mejorado) {
-          display = parsed.texto_mejorado;
-          if (parsed.cambios_resumen) display += '\n\n— ' + parsed.cambios_resumen;
+          display = parsed.texto_mejorado
+            .replace(/<keep>([\s\S]*?)<\/keep>/gi, '$1')
+            .replace(/<emph>([\s\S]*?)<\/emph>/gi, '$1')
+            .replace(/<ctx>([\s\S]*?)<\/ctx>/gi, '$1')
+            .trim();
+          resumen = parsed.cambios_resumen || '';
         }
-      } catch(e) {}
+      } catch(e) {
+        display = raw
+          .replace(/<keep>([\s\S]*?)<\/keep>/gi, '$1')
+          .replace(/<emph>([\s\S]*?)<\/emph>/gi, '$1')
+          .replace(/<ctx>([\s\S]*?)<\/ctx>/gi, '$1')
+          .trim();
+      }
       document.getElementById('groq-result').textContent = display;
+      const resumenEl = document.getElementById('groq-resumen');
+      if (resumenEl) {
+        if (resumen) { resumenEl.textContent = '— ' + resumen; resumenEl.style.display = 'block'; }
+        else { resumenEl.style.display = 'none'; }
+      }
       document.getElementById('groq-status').textContent = '✓ Listo';
       document.getElementById('btn-copy-result').style.display = 'inline-block';
     }
