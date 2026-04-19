@@ -34,7 +34,6 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
   }
 
   .app-header-left h1 {
@@ -42,7 +41,6 @@
     font-size: 22px;
     font-weight: 500;
     font-style: italic;
-    color: #1a1814;
   }
 
   .section-label {
@@ -51,18 +49,7 @@
     letter-spacing: 0.12em;
     color: #999080;
     margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
     font-family: 'EB Garamond', serif;
-  }
-
-  .section-label::before {
-    content: '';
-    display: inline-block;
-    width: 14px;
-    height: 1px;
-    background: #B89A5A;
   }
 
   textarea, input.assist-input {
@@ -74,7 +61,6 @@
     font-size: 15px;
     line-height: 1.65;
     color: #1a1814;
-    background: #fff;
   }
 
   textarea:focus, input.assist-input:focus {
@@ -125,6 +111,7 @@
   }
 
   .required { color: #c0603a; }
+
   .spinner {
     width: 14px; height: 14px;
     border: 2px solid rgba(184,154,90,0.3);
@@ -134,6 +121,24 @@
     display: inline-block;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modal Groq */
+  .groq-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,24,20,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .groq-modal {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0d8c8;
+    padding: 24px 26px;
+    max-width: 460px;
+    width: 90%;
+  }
 </style>
 </head>
 <body>
@@ -145,17 +150,14 @@
       <h1>Generador de prompts · Ilustraciones del libro</h1>
       <p>Describe la escena. El estilo pictórico historicista se aplicará automáticamente.</p>
     </div>
-    <button class="btn-historial-toggle" id="btnToggleHistorial" onclick="toggleHistorial()">
-      Historial (<span id="histCount">0</span>)
-    </button>
   </div>
 
-  <!-- Importar Fragmento (el más importante) -->
+  <!-- Importar Fragmento -->
   <div class="import-fragment-block">
     <div class="section-label">Importar Fragmento de Escena del libro <span class="ai-badge">✦ IA</span></div>
     <p class="note-tip">Pega aquí el texto completo del fragmento tal como aparece en el libro.</p>
     
-    <textarea id="sceneFragment" rows="7" placeholder="Scene 1 Fragment: Royal authority and the Merindad (Sources 1–21) Title: The Arrival of the Merino Action: ..."></textarea>
+    <textarea id="sceneFragment" rows="7" placeholder="Scene 1 Fragment: Royal authority and the Merindad (Sources 1–21) Title: The Arrival of the Merino Action: The Royal Merino arrives..."></textarea>
 
     <button class="btn-expand" onclick="parseSceneFragment()">
       <span id="parseBtnText">✦ Analizar Fragmento con IA y rellenar campos</span>
@@ -175,15 +177,15 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; margin-bottom: 20px;">
       <div class="field-group">
         <div class="section-label">Acción de la escena <span class="required">*</span></div>
-        <input type="text" id="scene_action" placeholder="Ej: El Merino llega a la villa para impartir justicia..." class="assist-input">
+        <input type="text" id="scene_action" placeholder="Ej: El Merino llega a la villa para impartir justicia" class="assist-input">
       </div>
       <div class="field-group">
         <div class="section-label">Personajes <span class="required">*</span></div>
-        <input type="text" id="characters" placeholder="Ej: El Merino, oficiales municipales, vecinos observando" class="assist-input">
+        <input type="text" id="characters" placeholder="Ej: El Merino, oficiales municipales, vecinos" class="assist-input">
       </div>
       <div class="field-group">
         <div class="section-label">Contexto social <span class="required">*</span></div>
-        <input type="text" id="social_context" placeholder="Ej: Imposición de la autoridad real en territorio de la Merindad" class="assist-input">
+        <input type="text" id="social_context" placeholder="Ej: Imposición de la autoridad real" class="assist-input">
       </div>
       <div class="field-group">
         <div class="section-label">Entorno <span class="required">*</span></div>
@@ -195,7 +197,6 @@
       </div>
     </div>
 
-    <!-- Selects -->
     <div class="fields-grid">
       <div class="field-group">
         <div class="section-label">Densidad de figuras <span class="required">*</span></div>
@@ -228,65 +229,15 @@
       </div>
     </div>
 
-    <div class="fields-grid">
-      <div class="field-group">
-        <div class="section-label">Peso del entorno (opcional)</div>
-        <select id="environmental_weight">
-          <option value="">— Ninguno —</option>
-          <option value="environment dominant">Entorno dominante</option>
-          <option value="balanced">Equilibrado</option>
-          <option value="figure-focused">Centrado en figuras</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="section-label">Prioridad histórica vs visual (opcional)</div>
-        <select id="historical_visual_priority">
-          <option value="">— Ninguna —</option>
-          <option value="strict historical fidelity">Fidelidad histórica estricta</option>
-          <option value="balanced">Equilibrado</option>
-          <option value="visual clarity">Claridad visual</option>
-        </select>
-      </div>
-    </div>
-
     <div class="field-group">
       <div class="section-label">Restricciones negativas (opcional)</div>
       <textarea id="negative_constraints" rows="2" placeholder="Ej: Sin gestos exagerados, sin iluminación cinematográfica" class="assist-input"></textarea>
     </div>
   </div>
 
-  <!-- Selectores de estilo -->
-  <div class="fields-grid">
-    <div class="field-group">
-      <div class="section-label">Tono dramático</div>
-      <select id="tono">
-        <option value="epic">Épico y monumental</option>
-        <option value="intimate">Íntimo y contenido</option>
-        <option value="solemn">Solemne y ceremonial</option>
-        <option value="tense">Tenso y sombrío</option>
-        <option value="serene">Sereno y contemplativo</option>
-      </select>
-    </div>
-    <div class="field-group">
-      <div class="section-label">Luz y atmósfera</div>
-      <select id="luz">
-        <option value="golden">Luz dorada de mediodía</option>
-        <option value="dusk">Crepúsculo encendido</option>
-        <option value="torch">Noche con antorchas</option>
-      </select>
-    </div>
-    <div class="field-group">
-      <div class="section-label">Punto de vista</div>
-      <select id="pov">
-        <option value="general">Plano general — escena completa</option>
-        <option value="medio">Plano medio — grupo de figuras</option>
-      </select>
-    </div>
-  </div>
-
   <button class="btn-generate" onclick="buildPrompt()">✦ Generar prompt completo</button>
 
-  <div class="output-area" id="outputArea" style="display:none;">
+  <div class="output-area" id="outputArea" style="display:none; margin-top:20px;">
     <div class="output-header">
       <span class="output-title">Prompt generado</span>
       <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
@@ -296,17 +247,52 @@
 
 </div>
 
+<!-- Modal para clave Groq -->
+<div class="groq-modal-overlay" id="groqModal">
+  <div class="groq-modal">
+    <h3>Configurar clave de Groq</h3>
+    <p>Para usar el analizador de fragmentos necesitas una clave de API de Groq.<br><br>
+    Puedes obtenerla gratis en: <strong>console.groq.com/keys</strong></p>
+    <input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%; padding:10px; margin:15px 0;">
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button onclick="closeGroqModal()" style="padding:8px 16px; background:#ddd; border:none; border-radius:6px; cursor:pointer;">Cancelar</button>
+      <button onclick="saveGroqKey()" style="padding:8px 16px; background:#B89A5A; color:white; border:none; border-radius:6px; cursor:pointer;">Guardar clave</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  // Función principal para analizar el fragmento
+  // Mostrar modal automáticamente si no hay clave
+  function checkGroqKey() {
+    if (!localStorage.getItem('groq_api_key')) {
+      document.getElementById('groqModal').style.display = 'flex';
+    }
+  }
+
+  function saveGroqKey() {
+    const key = document.getElementById('groqKeyInput').value.trim();
+    if (!key) {
+      alert("Por favor introduce una clave válida.");
+      return;
+    }
+    localStorage.setItem('groq_api_key', key);
+    document.getElementById('groqModal').style.display = 'none';
+    alert("Clave guardada correctamente. Ya puedes usar el analizador.");
+  }
+
+  function closeGroqModal() {
+    document.getElementById('groqModal').style.display = 'none';
+  }
+
+  // Función principal para analizar fragmento
   async function parseSceneFragment() {
     const text = document.getElementById('sceneFragment').value.trim();
     if (!text) return alert("Por favor pega el fragmento primero.");
 
     let groqKey = localStorage.getItem('groq_api_key');
     if (!groqKey) {
-      groqKey = prompt("Introduce tu clave de API de Groq:\n(La clave se guardará solo en tu navegador)");
-      if (!groqKey) return;
-      localStorage.setItem('groq_api_key', groqKey);
+      document.getElementById('groqModal').style.display = 'flex';
+      return;
     }
 
     const btnText = document.getElementById('parseBtnText');
@@ -323,12 +309,12 @@
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
-          max_tokens: 1200,
+          max_tokens: 1400,
           temperature: 0.1,
           messages: [
             {
               role: "system",
-              content: "Extrae la información del fragmento y devuelve SOLO un JSON válido con estas claves: scene_title, scene_action, characters, social_context, environment, central_visual_element, density_of_figures, composition_type, character_attitude, environmental_weight, historical_visual_priority, negative_constraints, full_scene_description"
+              content: "Extrae la información del fragmento y devuelve SOLO un JSON válido con estas claves exactas: scene_title, scene_action, characters, social_context, environment, central_visual_element, density_of_figures, composition_type, character_attitude, environmental_weight, historical_visual_priority, negative_constraints, full_scene_description"
             },
             { role: "user", content: text }
           ]
@@ -340,7 +326,7 @@
       content = content.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(content);
 
-      // Rellenar campos
+      // Rellenar los campos
       document.getElementById('scene_title').value = parsed.scene_title || '';
       document.getElementById('scene_action').value = parsed.scene_action || '';
       document.getElementById('characters').value = parsed.characters || '';
@@ -352,10 +338,11 @@
       if (parsed.density_of_figures) document.getElementById('density_of_figures').value = parsed.density_of_figures;
       if (parsed.full_scene_description) document.getElementById('scene').value = parsed.full_scene_description;
 
-      alert("✅ ¡Listo! Los campos han sido rellenados automáticamente.");
+      alert("✅ ¡Fragmento analizado correctamente!\nLos campos han sido rellenados.");
+
     } catch (e) {
       console.error(e);
-      alert("Error al analizar. Verifica que tu clave Groq sea correcta.");
+      alert("❌ Error al analizar el fragmento.\nVerifica que tu clave Groq sea correcta.");
     } finally {
       btnText.textContent = "✦ Analizar Fragmento con IA y rellenar campos";
       spinner.style.display = "none";
@@ -364,12 +351,12 @@
 
   function buildPrompt() {
     const action = document.getElementById('scene_action').value.trim();
-    if (!action) return alert("Por favor completa al menos la Acción de la escena.");
+    if (!action) return alert("Completa al menos la Acción de la escena.");
 
     const title = document.getElementById('scene_title').value.trim() || action;
 
     const prompt = `${title}\n\n` +
-      `Oil painting in the style of Jean-Léon Gérôme and Lawrence Alma-Tadema...\n\n` +  // (puedes completar el estilo base aquí)
+      `Oil painting in the 19th-century Romantic historicist tradition of Jean-Léon Gérôme and Lawrence Alma-Tadema. Strict historical accuracy...\n\n` +
       `Action: ${action}\n` +
       `Characters: ${document.getElementById('characters').value}\n` +
       `Social context: ${document.getElementById('social_context').value}\n` +
@@ -382,12 +369,21 @@
 
   function copyPrompt() {
     const text = document.getElementById('outputText').textContent;
-    navigator.clipboard.writeText(text);
-    alert("Prompt copiado al portapapeles");
+    if (text) {
+      navigator.clipboard.writeText(text);
+      alert("Prompt copiado al portapapeles ✓");
+    }
   }
 
-  function toggleHistorial() {
-    alert("Historial no implementado en esta versión simplificada");
+  // Inicialización
+  window.onload = function() {
+    checkGroqKey();
+  };
+
+  function checkGroqKey() {
+    if (!localStorage.getItem('groq_api_key')) {
+      document.getElementById('groqModal').style.display = 'flex';
+    }
   }
 </script>
 
