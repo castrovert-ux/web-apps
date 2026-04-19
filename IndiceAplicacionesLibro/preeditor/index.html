@@ -1203,11 +1203,8 @@ document.getElementById('mk-forget').addEventListener('click', () => {
 
 /* ══════════════════════════════════════════════════════
    ENVÍO A GROQ LLAMA — DOS LLAMADAS SEPARADAS
-   Llamada 1: texto libre → edición completa
-   Llamada 2: bloque <ctx> → solo corrección técnica
 ══════════════════════════════════════════════════════ */
 
-// Función auxiliar: una llamada a Groq
 async function llamarGroq(systemMsg, userMsg) {
   const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -1226,7 +1223,6 @@ async function llamarGroq(systemMsg, userMsg) {
   return data.choices[0].message.content || '';
 }
 
-// Extraer el texto limpio de una respuesta JSON de Groq
 function extraerTexto(raw) {
   try {
     const parsed = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim());
@@ -1235,7 +1231,6 @@ function extraerTexto(raw) {
   return { texto: raw.trim(), resumen: '' };
 }
 
-// Limpiar etiquetas semánticas del texto final
 function limpiarEtiquetas(t) {
   return t
     .replace(/<keep>([\s\S]*?)<\/keep>/gi, '$1')
@@ -1244,8 +1239,8 @@ function limpiarEtiquetas(t) {
     .trim();
 }
 
-document.getElementById('btn-send-groq').addEventListener('click', async () => {
-  const promptText = document.getElementById('prompt-output').value;
+document.getElementById('btn-send-groq').addEventListener('click', async function() {
+  var promptText = document.getElementById('prompt-output').value;
   if (!promptText) { toast('Genera el prompt primero.'); return; }
   if (!GROQ_KEY.startsWith('gsk_')) { toast('Introduce tu clave de Groq primero.'); openKeyModal(); return; }
 
@@ -1254,80 +1249,53 @@ document.getElementById('btn-send-groq').addEventListener('click', async () => {
   document.getElementById('groq-zone').classList.add('visible');
   document.getElementById('groq-result').textContent = '';
   document.getElementById('btn-copy-result').style.display = 'none';
-  const resumenEl = document.getElementById('groq-resumen');
+  var resumenEl = document.getElementById('groq-resumen');
   if (resumenEl) resumenEl.style.display = 'none';
 
   try {
-    // ── Separar el bloque <ctx> del resto del prompt ──────────────────────
-    // El promptText tiene formato: SYSTEM PROMPT:
-...
+    var fragMatch = promptText.match(/FRAGMENTO:[\s\S]*?'''([\s\S]*?)'''/);
+    var fragmento = fragMatch ? fragMatch[1].trim() : '';
 
-INSTRUCCIONES...
-FRAGMENTO:
-'''...'''
-    // Extraemos solo el FRAGMENTO para manipularlo
-    const fragMatch = promptText.match(/FRAGMENTO:\n'''([\s\S]*?)'''/);
-    const fragmento = fragMatch ? fragMatch[1].trim() : '';
+    var ctxBlocks = [];
+    var ctxRegex = /<ctx>([\s\S]*?)<\/ctx>/gi;
+    var m;
+    while ((m = ctxRegex.exec(fragmento)) !== null) { ctxBlocks.push(m[1].trim()); }
 
-    // Extraer bloques <ctx> del fragmento
-    const ctxBlocks = [];
-    const ctxRegex = /<ctx>([\s\S]*?)<\/ctx>/gi;
-    let match;
-    while ((match = ctxRegex.exec(fragmento)) !== null) {
-      ctxBlocks.push(match[1].trim());
-    }
+    var fragmentoSinCtx = fragmento.replace(/<ctx>[\s\S]*?<\/ctx>/gi, '').trim();
+    var hayCtx = ctxBlocks.length > 0;
+    var hayLibre = fragmentoSinCtx.replace(/<[^>]+>/g,'').trim().length > 0;
 
-    // Texto sin los bloques ctx (para la llamada de edición libre)
-    const fragmentoSinCtx = fragmento.replace(/<ctx>[\s\S]*?<\/ctx>/gi, '').trim();
-    const hayCtx = ctxBlocks.length > 0;
-    const hayTextoLibre = fragmentoSinCtx.replace(/<[^>]+>/g,'').trim().length > 0;
+    var textoEditado = '';
+    var textoCtx = '';
+    var resumenFinal = '';
 
-    let textoEditado = '';
-    let textoCtxCorregido = '';
-    let resumenFinal = '';
-
-    // ── LLAMADA 1: edición del texto libre (sin <ctx>) ────────────────────
-    if (hayTextoLibre) {
-      document.getElementById('groq-status').textContent = 'Llamada 1/2: editando texto libre…';
-      const promptLibre = promptText.replace(
-        /FRAGMENTO:\n'''[\s\S]*?'''/,
-        "FRAGMENTO:\n'''\n" + fragmentoSinCtx + "\n'''"
-      );
-      const raw1 = await llamarGroq(EDITOR_SYSTEM_PROMPT, promptLibre);
-      const r1 = extraerTexto(raw1);
+    if (hayLibre) {
+      document.getElementById('groq-status').textContent = 'Llamada 1/2: editando texto libre...';
+      var promptLibre = promptText.replace(/FRAGMENTO:[\s\S]*?'''[\s\S]*?'''/, "FRAGMENTO:\n'''\n" + fragmentoSinCtx + "\n'''");
+      var raw1 = await llamarGroq(EDITOR_SYSTEM_PROMPT, promptLibre);
+      var r1 = extraerTexto(raw1);
       textoEditado = limpiarEtiquetas(r1.texto);
       resumenFinal = r1.resumen;
     }
 
-    // ── LLAMADA 2: corrección técnica del <ctx> ───────────────────────────
     if (hayCtx) {
-      document.getElementById('groq-status').textContent = 'Llamada 2/2: corrigiendo bloque ctx…';
-
-      const systemCtx = 'Eres un corrector técnico. Tu única tarea es corregir errores de ortografía, puntuación, concordancias y signos incorrectos en el texto que te doy. PROHIBIDO: no resumas, no elimines información, no cambies el orden, no añadas nada. Devuelve el texto corregido tal cual, sin explicaciones ni formato JSON.';
-
-      const ctxCorregidos = [];
-      for (const bloque of ctxBlocks) {
-        const raw2 = await llamarGroq(systemCtx, 'Corrige solo los errores técnicos de este texto:\n\n' + bloque);
+      document.getElementById('groq-status').textContent = hayLibre ? 'Llamada 2/2: corrigiendo bloque ctx...' : 'Corrigiendo bloque ctx...';
+      var systemCtx = 'Eres un corrector de textos. Solo corriges errores de ortografia, puntuacion, concordancias y signos incorrectos. PROHIBIDO: no resumas, no elimines informacion, no cambies el orden, no añadas nada nuevo. Devuelve el texto corregido sin explicaciones ni formato JSON.';
+      var ctxCorregidos = [];
+      for (var i = 0; i < ctxBlocks.length; i++) {
+        var raw2 = await llamarGroq(systemCtx, 'Corrige solo los errores tecnicos de este texto:\n\n' + ctxBlocks[i]);
         ctxCorregidos.push(raw2.trim());
       }
-      textoCtxCorregido = ctxCorregidos.join('\n\n');
+      textoCtx = ctxCorregidos.join('\n\n');
     }
 
-    // ── Combinar los dos resultados ───────────────────────────────────────
-    let resultado = '';
-    if (textoEditado && textoCtxCorregido) {
-      resultado = textoEditado + '\n\n' + textoCtxCorregido;
-    } else if (textoEditado) {
-      resultado = textoEditado;
-    } else {
-      resultado = textoCtxCorregido;
-    }
+    var resultado = '';
+    if (textoEditado && textoCtx) { resultado = textoEditado + '\n\n' + textoCtx; }
+    else if (textoEditado) { resultado = textoEditado; }
+    else { resultado = textoCtx; }
 
     document.getElementById('groq-result').textContent = resultado;
-    if (resumenEl && resumenFinal) {
-      resumenEl.textContent = '— ' + resumenFinal;
-      resumenEl.style.display = 'block';
-    }
+    if (resumenEl && resumenFinal) { resumenEl.textContent = '— ' + resumenFinal; resumenEl.style.display = 'block'; }
     document.getElementById('groq-status').textContent = '✓ Listo';
     document.getElementById('btn-copy-result').style.display = 'inline-block';
 
