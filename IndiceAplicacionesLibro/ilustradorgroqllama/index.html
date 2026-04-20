@@ -517,6 +517,37 @@
   }
   .btn-expand:hover { background: rgba(184,154,90,0.16); }
   .btn-expand:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-reformulate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px;
+    font-family: 'EB Garamond', serif;
+    font-size: 13.5px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #a09888;
+    background: rgba(160,152,136,0.07);
+    color: #5a5248;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    letter-spacing: 0.02em;
+    margin-top: 6px;
+  }
+  .btn-reformulate:hover { background: rgba(160,152,136,0.15); border-color: #7a7268; }
+  .btn-reformulate:disabled { opacity: 0.6; cursor: not-allowed; }
+  .spinner-muted {
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(90,82,72,0.2);
+    border-top-color: #7a7268;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
   .spinner {
     width: 14px;
     height: 14px;
@@ -878,6 +909,22 @@
         <div class="section-label">Elementos destacados</div>
         <input type="text" id="elementos" placeholder="Ej: Velas, pergaminos, plumas de ave, tinteros…" class="assist-input">
       </div>
+    </div>
+
+    <button class="btn-reformulate" id="btnReformulate" onclick="reformulateWithAI()">
+      <span id="reformulateBtnText">↺ Reformular (quitar épica)</span>
+      <span id="reformulateSpinner" class="spinner-muted" style="display:none;"></span>
+    </button>
+
+    <div id="reformulateResult" style="display:none;margin-top:10px;background:#f7f5f0;border:1px solid #ddd8ce;border-left:3px solid #a09888;border-radius:0 7px 7px 0;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 13px;background:#f2efe9;border-bottom:1px solid #e8e2d8;gap:10px;">
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#999080;font-family:'EB Garamond',serif;">Descripción reformulada</span>
+        <div style="display:flex;gap:7px;align-items:center;">
+          <button class="btn-use-expanded" onclick="useReformulated()" style="font-size:12px;padding:3px 10px;">Usar esta versión ↑</button>
+          <button class="btn-hist-action" onclick="clearReformulated()" title="Limpiar">✕</button>
+        </div>
+      </div>
+      <div id="reformulateResultText" style="padding:12px 14px;font-size:13.5px;line-height:1.75;color:#3a3530;font-family:'EB Garamond',Georgia,serif;white-space:pre-wrap;word-break:break-word;font-style:italic;"></div>
     </div>
 
     <button class="btn-expand" id="btnExpand" onclick="expandWithAI()">
@@ -1500,6 +1547,85 @@ Be concrete and historically accurate for Castilian medieval/early modern contex
       document.getElementById('autofillBtnText').textContent = '✦ Rellenar dirección con IA (desde la descripción de arriba)';
       document.getElementById('autofillSpinner').style.display = 'none';
     }
+  }
+
+  /* === AI REFORMULATE (de-épica) === */
+  async function reformulateWithAI() {
+    const raw = document.getElementById('sceneRaw').value.trim();
+    if (!raw) {
+      const ta = document.getElementById('sceneRaw');
+      ta.focus();
+      ta.style.borderColor = '#a09888';
+      ta.style.boxShadow = '0 0 0 3px rgba(160,152,136,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+      return;
+    }
+    const groqKey = localStorage.getItem('groq_api_key') || '';
+    if (!groqKey) { showProxyModal(); return; }
+
+    const btn = document.getElementById('btnReformulate');
+    btn.disabled = true;
+    document.getElementById('reformulateBtnText').textContent = 'Reformulando…';
+    document.getElementById('reformulateSpinner').style.display = 'inline-block';
+    document.getElementById('reformulateResult').style.display = 'none';
+
+    const systemPrompt = `You are an editorial assistant helping calibrate scene descriptions for a Spanish local history book about Castroverde de Cerrato, a modest rural municipality in the Cerrato Vallisoletano region of Castile. The book uses 19th-century Romantic historicist painting style (Gérôme, Alma-Tadema) for its illustrations.
+
+Your task: rewrite the given scene description to remove any language that pushes toward epic, heroic, propagandistic or monumentalizing framing. The result must feel like a witnessed local event, not a painted allegory of power.
+
+RULES FOR REWRITING:
+- Replace symbolic/abstract language ("embodiment of justice", "imposition of authority", "in the name of the Crown") with concrete actions ("arrives to conduct inspections", "reads the tax roll aloud", "dismounts in the square")
+- Replace heroic vocabulary ("heroic figures", "grandiose", "powerful", "majestic") with functional descriptions of people doing specific things
+- Reduce props of power to practical objects: no "royal banners" → "a travel-worn document case", no "ceremonial robes" → "a wool riding cloak"
+- Keep: period, location, characters by role (not by symbolic weight), the specific action being performed
+- The scene should be: local in scale, administrative or communal in nature, observed rather than staged
+- Output language: the same language as the input (Spanish if Spanish, English if English)
+- Output ONLY the rewritten description — no preamble, no commentary, no explanation.`;
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 400,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: raw }
+          ]
+        })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message || 'Error de API');
+      const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : '';
+      document.getElementById('reformulateResultText').textContent = text;
+      document.getElementById('reformulateResult').style.display = 'block';
+      setTimeout(() => document.getElementById('reformulateResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    } catch(e) {
+      document.getElementById('reformulateResultText').textContent = 'Error: ' + (e.message || 'Comprueba tu clave API.');
+      document.getElementById('reformulateResult').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      document.getElementById('reformulateBtnText').textContent = '↺ Reformular (quitar épica)';
+      document.getElementById('reformulateSpinner').style.display = 'none';
+    }
+  }
+
+  function useReformulated() {
+    const text = document.getElementById('reformulateResultText').textContent;
+    if (!text) return;
+    document.getElementById('sceneRaw').value = text;
+    document.getElementById('reformulateResult').style.display = 'none';
+    const ta = document.getElementById('sceneRaw');
+    ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ta.style.borderColor = '#a09888';
+    ta.style.boxShadow = '0 0 0 3px rgba(160,152,136,0.18)';
+    setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1400);
+  }
+
+  function clearReformulated() {
+    document.getElementById('reformulateResult').style.display = 'none';
+    document.getElementById('reformulateResultText').textContent = '';
   }
 
   /* === AI EXPAND === */
