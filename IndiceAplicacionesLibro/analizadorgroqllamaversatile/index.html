@@ -722,7 +722,9 @@ function startCountdown(seconds, baseMsg, onDone){
 }
 
 // ── LLAMADA A LA API con reintento automático en 429 ────────────────────────
-function callClaude(messages, onOk, onErr, _retryLabel){
+// onRetry (opcional): se llama cuando detecta 429, para que el llamador sepa
+// que NO debe limpiar el estado ni mostrar error (la espera es automática).
+function callClaude(messages, onOk, onErr, _retryLabel, onRetry){
   if(!API_KEY||!API_KEY.startsWith('gsk_')){onErr('No hay clave API de Groq. Pulsa "⚙ API Key".');return;}
   var xhr=new XMLHttpRequest();
   xhr.open('POST','https://api.groq.com/openai/v1/chat/completions',true);
@@ -731,24 +733,38 @@ function callClaude(messages, onOk, onErr, _retryLabel){
   xhr.timeout=120000;
   xhr.onreadystatechange=function(){
     if(xhr.readyState!==4)return;
+    // ── Detectar 429 ANTES de parsear JSON (Groq a veces devuelve body no-JSON en rate limit)
+    if(xhr.status===429){
+      var rawText=xhr.responseText||'';
+      var match=rawText.match(/try again in ([0-9.]+)s/i);
+      var waitSec=match ? (parseFloat(match[1])+2) : 45;
+      var label=_retryLabel||'Límite de tokens alcanzado';
+      if(typeof onRetry==='function') onRetry();
+      startCountdown(waitSec, label, function(){
+        callClaude(messages, onOk, onErr, label, onRetry);
+      });
+      return;
+    }
     try{
       var data=JSON.parse(xhr.responseText);
-      if(xhr.status===429){
-        // Extraer segundos de espera del mensaje de error
-        var errMsg=(data.error&&data.error.message)||'';
-        var match=errMsg.match(/try again in ([0-9.]+)s/i);
-        var waitSec=match ? (parseFloat(match[1])+1) : 40;
-        var label=_retryLabel||'Límite de tokens alcanzado';
-        startCountdown(waitSec, label, function(){
-          callClaude(messages, onOk, onErr, label);
+      var errMsg=(data.error&&data.error.message)||'';
+      // Detección adicional por contenido (por si el status no llega correctamente)
+      var is429text=errMsg.toLowerCase().indexOf('rate limit')!==-1&&errMsg.toLowerCase().indexOf('try again')!==-1;
+      if(is429text){
+        var match2=errMsg.match(/try again in ([0-9.]+)s/i);
+        var waitSec2=match2 ? (parseFloat(match2[1])+2) : 45;
+        var label2=_retryLabel||'Límite de tokens alcanzado';
+        if(typeof onRetry==='function') onRetry();
+        startCountdown(waitSec2, label2, function(){
+          callClaude(messages, onOk, onErr, label2, onRetry);
         });
         return;
       }
       if(xhr.status>=200&&xhr.status<300){
         var txt=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'';
         onOk(txt);
-      }else{onErr((data.error&&data.error.message)?data.error.message:'Error '+xhr.status);}
-    }catch(e){onErr('Error al procesar la respuesta.');}
+      }else{onErr(errMsg||'Error '+xhr.status);}
+    }catch(e){onErr('Error al procesar la respuesta: '+e.message);}
   };
   xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
   xhr.onerror=function(){onErr('Error de red.');};
@@ -810,6 +826,7 @@ function sendNextPrompt(){
   currentSession.waitingForResponse=true;
   renderChat();renderProgressBar(idx);updateChatActions();
   showLoading('Analizando — '+tpl.name+'…');hideError();
+  var retryLabel='Límite de tokens — '+tpl.name;
   callClaude(apiMsgs,function(response){
     hideLoading();
     currentSession.messages.push({role:'assistant',content:response,promptIndex:idx});
@@ -826,8 +843,12 @@ function sendNextPrompt(){
     if(idx===6) renderPlanInChat(response);
     renderChat();updateChatActions();
   },function(err){
+    // Solo limpiar si es un error definitivo (no un 429 que ya tiene reintento)
     hideLoading();currentSession.messages.pop();currentSession.waitingForResponse=false;
     showError(err);renderChat();updateChatActions();
+  }, retryLabel, function(){
+    // onRetry: el 429 está en curso — mantener estado, solo ocultar el error si hubiera
+    hideError();
   });
 }
 
