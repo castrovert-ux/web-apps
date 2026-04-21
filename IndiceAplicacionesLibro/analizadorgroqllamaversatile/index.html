@@ -596,7 +596,7 @@ function dateStr(d){var p=function(n){return n<10?'0'+n:''+n;};return p(d.getDat
 function showError(msg){var e=get('error-box');e.textContent='⚠ '+msg;e.style.display='block';}
 function hideError(){get('error-box').style.display='none';}
 function showLoading(msg){get('loading-text').textContent=msg||'Analizando…';get('loading-msg').classList.add('visible');get('btn-next-prompt').disabled=true;get('btn-start').disabled=true;}
-function hideLoading(){get('loading-msg').classList.remove('visible');get('btn-next-prompt').disabled=false;get('btn-start').disabled=false;}
+function hideLoading(){clearInterval(_countdownTimer);get('loading-msg').classList.remove('visible');get('btn-next-prompt').disabled=false;get('btn-start').disabled=false;}
 function updateCharCount(){var l=get('input-text').value.length;var el=get('char-count');el.textContent=l.toLocaleString()+' / 20.000';el.className='char-count'+(l>18000?' warn':'');}
 function updateKeyStatus(){var ok=API_KEY&&API_KEY.startsWith('gsk_');var el=get('key-status');if(ok){el.textContent='⚿ clave OK';el.className='key-status ok';}else{el.textContent='⚿ sin clave';el.className='key-status missing';}}
 
@@ -690,7 +690,39 @@ function renderPlanInChat(planText){
   area.scrollTop=area.scrollHeight;
 }
 
-function callClaude(messages,onOk,onErr){
+// ── LÍMITE DE TOKENS: caracteres máximos del texto según el prompt ──────────
+// P6 (índice 5) necesita el texto completo para citar fragmentos exactos.
+// El resto recibe un extracto para no superar los 12.000 TPM de Groq free.
+var MAX_CHARS_TEXTO_REDUCIDO = 6000; // ~1.500 tokens aprox.
+var PROMPTS_TEXTO_COMPLETO   = [5];  // solo P6 · Cirugía
+
+function textoParaAPI(texto, promptIdx){
+  if(PROMPTS_TEXTO_COMPLETO.indexOf(promptIdx) !== -1) return texto;
+  if(texto.length <= MAX_CHARS_TEXTO_REDUCIDO) return texto;
+  return texto.substring(0, MAX_CHARS_TEXTO_REDUCIDO)
+    + '\n\n[… texto truncado para análisis. El original completo tiene '
+    + texto.length.toLocaleString() + ' caracteres …]';
+}
+
+// ── CUENTA ATRÁS en el mensaje de carga ─────────────────────────────────────
+var _countdownTimer = null;
+function startCountdown(seconds, baseMsg, onDone){
+  clearInterval(_countdownTimer);
+  var remaining = Math.ceil(seconds);
+  showLoading(baseMsg + ' · esperando ' + remaining + 's…');
+  _countdownTimer = setInterval(function(){
+    remaining--;
+    if(remaining <= 0){
+      clearInterval(_countdownTimer);
+      onDone();
+    } else {
+      showLoading(baseMsg + ' · esperando ' + remaining + 's…');
+    }
+  }, 1000);
+}
+
+// ── LLAMADA A LA API con reintento automático en 429 ────────────────────────
+function callClaude(messages, onOk, onErr, _retryLabel){
   if(!API_KEY||!API_KEY.startsWith('gsk_')){onErr('No hay clave API de Groq. Pulsa "⚙ API Key".');return;}
   var xhr=new XMLHttpRequest();
   xhr.open('POST','https://api.groq.com/openai/v1/chat/completions',true);
@@ -701,6 +733,17 @@ function callClaude(messages,onOk,onErr){
     if(xhr.readyState!==4)return;
     try{
       var data=JSON.parse(xhr.responseText);
+      if(xhr.status===429){
+        // Extraer segundos de espera del mensaje de error
+        var errMsg=(data.error&&data.error.message)||'';
+        var match=errMsg.match(/try again in ([0-9.]+)s/i);
+        var waitSec=match ? (parseFloat(match[1])+1) : 40;
+        var label=_retryLabel||'Límite de tokens alcanzado';
+        startCountdown(waitSec, label, function(){
+          callClaude(messages, onOk, onErr, label);
+        });
+        return;
+      }
       if(xhr.status>=200&&xhr.status<300){
         var txt=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'';
         onOk(txt);
@@ -753,7 +796,9 @@ function sendNextPrompt(){
   var idx=currentSession.currentPromptIndex;
   if(idx>=settings.prompts.length)return;
   var tpl=settings.prompts[idx];
-  var textoPrompt=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
+  // Solución A: texto truncado para prompts que no necesitan fragmentos exactos
+  var textoAPI=textoParaAPI(currentSession.text, idx);
+  var textoPrompt=buildPrompt(tpl.content,textoAPI,currentSession.goal);
   // Para P5 y P7, inyectar resumen compacto de respuestas anteriores
   if(PROMPTS_CON_RESUMEN.indexOf(idx)!==-1){
     var resumen=buildResumenPrevio(currentSession.messages);
