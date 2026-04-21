@@ -716,6 +716,25 @@ function buildPrompt(template,texto,objetivo){
   return template.replace(/\{\{texto\}\}/g,texto).replace(/\{\{objetivo\}\}/g,objetivo||'(no especificado)').replace(/\{\{contexto\}\}/g,settings.system);
 }
 
+// Construye un resumen compacto de las respuestas anteriores para P5 y P7
+function buildResumenPrevio(messages){
+  var nombres=['P1 · Estructura','P2 · Tono','P3 · Ritmo','P4 · Lector','P5 · Síntesis','P6 · Cirugía'];
+  var resumen='';
+  messages.forEach(function(m){
+    if(m.role==='assistant' && typeof m.promptIndex==='number'){
+      var nombre=nombres[m.promptIndex]||('P'+(m.promptIndex+1));
+      // Primeros 350 caracteres de cada respuesta
+      var extracto=m.content.trim().substring(0,350).replace(/\n+/g,' ');
+      if(m.content.trim().length>350) extracto+='…';
+      resumen+='['+nombre+']: '+extracto+'\n\n';
+    }
+  });
+  return resumen.trim();
+}
+
+// Prompts que necesitan resumen de análisis previos (índices 4=P5 y 6=P7)
+var PROMPTS_CON_RESUMEN=[4,6];
+
 function startSession(){
   var text=get('input-text').value.trim();
   if(!text){showError('Introduce el texto de la sección antes de iniciar.');return;}
@@ -734,9 +753,15 @@ function sendNextPrompt(){
   var idx=currentSession.currentPromptIndex;
   if(idx>=settings.prompts.length)return;
   var tpl=settings.prompts[idx];
-  var built=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
-  currentSession.messages.push({role:'user',content:built,promptIndex:idx});
-  var apiMsgs=currentSession.messages.map(function(m){return{role:m.role,content:m.content};});
+  var textoPrompt=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
+  // Para P5 y P7, inyectar resumen compacto de respuestas anteriores
+  if(PROMPTS_CON_RESUMEN.indexOf(idx)!==-1){
+    var resumen=buildResumenPrevio(currentSession.messages);
+    if(resumen) textoPrompt='RESUMEN DE LOS ANÁLISIS ANTERIORES (extractos):\n\n'+resumen+'\n\n---\n\n'+textoPrompt;
+  }
+  currentSession.messages.push({role:'user',content:textoPrompt,promptIndex:idx});
+  // Enviar SOLO el mensaje actual (sin historial acumulado)
+  var apiMsgs=[{role:'user',content:textoPrompt}];
   currentSession.waitingForResponse=true;
   renderChat();renderProgressBar(idx);updateChatActions();
   showLoading('Analizando — '+tpl.name+'…');hideError();
