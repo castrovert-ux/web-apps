@@ -219,6 +219,23 @@
       color:var(--text);white-space:pre-wrap;max-height:55vh;overflow-y:auto;
     }
     .prompt-copy-row{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
+
+    /* ── TOGGLE API ── */
+    .api-toggle{
+      display:flex;align-items:center;gap:7px;
+      font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;
+      color:var(--muted);cursor:pointer;user-select:none;
+    }
+    .api-toggle-track{
+      width:34px;height:18px;border-radius:9px;background:var(--border);
+      position:relative;transition:background .2s;flex-shrink:0;
+    }
+    .api-toggle-track.on{background:var(--accent);}
+    .api-toggle-thumb{
+      width:14px;height:14px;border-radius:50%;background:#fff;
+      position:absolute;top:2px;left:2px;transition:left .2s;
+    }
+    .api-toggle-track.on .api-toggle-thumb{left:18px;}
   </style>
 </head>
 <body>
@@ -241,8 +258,14 @@
 <header>
   <div class="logo">Análisis <span>Castroverde</span><small>Editor de secciones · Historia de un municipio</small></div>
   <div class="header-actions">
-    <span class="key-status" id="key-status">⚿ clave</span>
-    <button class="btn btn-ghost" id="btn-api-key">⚙ API Key</button>
+    <label class="api-toggle" id="api-toggle" title="ON: ejecuta prompts automáticamente · OFF: solo muestra el prompt para copiar">
+      <div class="api-toggle-track" id="api-toggle-track">
+        <div class="api-toggle-thumb"></div>
+      </div>
+      <span id="api-toggle-label">API off</span>
+    </label>
+    <span class="key-status" id="key-status" style="display:none">⚿ clave</span>
+    <button class="btn btn-ghost" id="btn-api-key" style="display:none">⚙ API Key</button>
     <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
     <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
     <button class="btn btn-ghost" id="btn-new-session">✕ Nueva sesión</button>
@@ -296,7 +319,7 @@
     <div class="chat-actions" id="chat-actions" style="display:none;">
       <span class="next-prompt-label" id="next-prompt-label">—</span>
       <button class="btn btn-ghost btn-sm" id="btn-export">⎘ Exportar .txt</button>
-      <button class="btn btn-primary" id="btn-next-prompt">Enviar →</button>
+      <button class="btn btn-primary" id="btn-next-prompt">Ver prompt →</button>
     </div>
   </div>
 </div>
@@ -617,6 +640,31 @@ function buildSystemWithTono(){
   if(tono) extra+='\n\nPERFIL TONAL DE REFERENCIA — úsalo para evaluar cuánto se acerca o aleja el texto de la voz buscada:\n'+tono;
   return base+extra;
 }
+// ── MODO API: false = solo Ver/Copiar prompt · true = ejecutar con API ──
+var apiModeOn = false;
+
+function setApiMode(on){
+  apiModeOn = on;
+  var track = document.getElementById('api-toggle-track');
+  var label = document.getElementById('api-toggle-label');
+  var keyStatus = document.getElementById('key-status');
+  var btnApiKey = document.getElementById('btn-api-key');
+  if(on){
+    track.classList.add('on');
+    label.textContent = 'API on';
+    keyStatus.style.display = '';
+    btnApiKey.style.display = '';
+  } else {
+    track.classList.remove('on');
+    label.textContent = 'API off';
+    keyStatus.style.display = 'none';
+    btnApiKey.style.display = 'none';
+  }
+  // Actualizar texto del botón Siguiente
+  updateChatActions();
+  localStorage.setItem('castroverde_api_mode', on ? '1' : '0');
+}
+
 var settings=loadSettings();
 var sessions=loadSessions();
 var currentSession=null;
@@ -695,7 +743,7 @@ function updateChatActions(){
     get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span> <span style="color:var(--border);font-size:8px;">· o pulsa cualquier paso</span>';
     get('btn-next-prompt').style.display='';
     get('btn-next-prompt').disabled=false;
-    get('btn-next-prompt').textContent=(idx===0?'Enviar P1 →':'Siguiente →');
+    get('btn-next-prompt').textContent=apiModeOn?(idx===0?'Enviar P1 →':'Siguiente →'):(idx===0?'Ver P1 →':'Ver prompt →');
   }
 }
 
@@ -793,6 +841,12 @@ function sendNextPrompt(forceIdx){
   if(!tpl){showError('Prompt '+idx+' no encontrado. Restaura los ajustes por defecto.');return;}
 
   var built=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
+
+  // Modo OFF: solo mostrar el prompt para copiar, sin llamar a la API
+  if(!apiModeOn){
+    openPromptModal(idx);
+    return;
+  }
 
   // Guardar el prompt enviado (o actualizar si ya existía para este índice)
   var existingUserIdx=currentSession.messages.findIndex(function(m){return m.role==='user'&&m.promptIndex===idx;});
@@ -926,7 +980,17 @@ function newSession(){
   get('section-name').value='';get('section-goal').value='';get('input-text').value='';updateCharCount();
   get('chat-area').querySelectorAll('.chat-message').forEach(function(el){el.remove();});
   get('chat-empty').style.display='flex';get('chat-actions').style.display='none';
-  get('loading-msg').classList.remove('visible');// Pasos de la barra de progreso — event delegation
+  get('loading-msg').classList.remove('visible');// Toggle API mode
+document.getElementById('api-toggle').addEventListener('click', function(){
+  setApiMode(!apiModeOn);
+});
+// Restaurar modo guardado
+(function(){
+  var saved = localStorage.getItem('castroverde_api_mode');
+  if(saved === '1') setApiMode(true);
+})();
+
+// Pasos de la barra de progreso — event delegation
 get('prompt-steps').addEventListener('click',function(e){
   var step=e.target.closest('[data-step]');
   if(!step)return;
