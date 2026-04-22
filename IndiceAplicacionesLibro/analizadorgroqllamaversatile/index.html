@@ -735,54 +735,54 @@ var MAX_REINTENTOS = 3;
 function callClaude(messages, onOk, onErr, _retryLabel, onRetry, _intento){
   if(!API_KEY||!API_KEY.startsWith('gsk_')){onErr('No hay clave API de Groq. Pulsa "⚙ API Key".');return;}
   var intento = _intento || 1;
-  var body=JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,messages:[{role:'system',content:buildSystemWithTono()}].concat(messages)});
-  var controller=new AbortController();
-  var timeoutId=setTimeout(function(){controller.abort();},120000);
-  fetch('https://api.groq.com/openai/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-    body:body,
-    signal:controller.signal
-  })
-  .then(function(res){
-    clearTimeout(timeoutId);
-    return res.text().then(function(rawText){ return {status:res.status, rawText:rawText}; });
-  })
-  .then(function(r){
-    if(r.status===429){
+  var payload = {model:MODEL, max_tokens:MAX_TOKENS, messages:[{role:'system',content:buildSystemWithTono()}].concat(messages)};
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST','https://api.groq.com/openai/v1/chat/completions',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+API_KEY);
+  xhr.timeout = 120000;
+
+  xhr.ontimeout = function(){ onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.'); };
+  xhr.onerror   = function(){ onErr('Error de red.'); };
+
+  xhr.onload = function(){
+    var rawText = xhr.responseText || '';
+    var status  = xhr.status;
+
+    // 429: rate limit — backoff exponencial
+    if(status === 429){
       if(intento > MAX_REINTENTOS){
         onErr('Límite de Groq alcanzado tras '+MAX_REINTENTOS+' intentos. Espera unos minutos y vuelve a intentarlo.');
         return;
       }
-      // Backoff: usar el tiempo sugerido por Groq, pero multiplicarlo por el número de intento
-      var match=r.rawText.match(/try again in ([0-9.]+)s/i);
-      var baseWait=match?(parseFloat(match[1])+2):45;
-      var waitSec=Math.min(Math.round(baseWait * intento), 180); // máx 3 min
-      var label=(_retryLabel||'Límite de tokens')+' · intento '+intento+'/'+MAX_REINTENTOS;
-      if(typeof onRetry==='function') onRetry();
+      var match    = rawText.match(/try again in ([0-9.]+)s/i);
+      var baseWait = match ? (parseFloat(match[1]) + 2) : 45;
+      var waitSec  = Math.min(Math.round(baseWait * intento), 180);
+      var label    = (_retryLabel||'Límite de tokens') + ' · intento ' + intento + '/' + MAX_REINTENTOS;
+      if(typeof onRetry === 'function') onRetry();
       startCountdown(waitSec, label, function(){
-        callClaude(messages, onOk, onErr, _retryLabel, onRetry, intento+1);
+        callClaude(messages, onOk, onErr, _retryLabel, onRetry, intento + 1);
       });
       return;
     }
+
+    // Respuesta normal
     var data;
-    try{ data=JSON.parse(r.rawText); }
+    try{ data = JSON.parse(rawText); }
     catch(e){ onErr('Respuesta no válida del servidor.'); return; }
-    if(r.status>=200&&r.status<300){
-      var txt=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content
-              ?data.choices[0].message.content:'';
+
+    if(status >= 200 && status < 300){
+      var txt = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+                ? data.choices[0].message.content : '';
       if(!txt){ onErr('Respuesta vacía del modelo.'); return; }
       onOk(txt);
     } else {
-      var errMsg=(data.error&&data.error.message)||('Error '+r.status);
+      var errMsg = (data.error && data.error.message) || ('Error ' + status);
       onErr(errMsg);
     }
-  })
-  .catch(function(e){
-    clearTimeout(timeoutId);
-    if(e.name==='AbortError'){ onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.'); }
-    else { onErr('Error de red.'); }
-  });
+  };
+
+  xhr.send(JSON.stringify(payload));
 }
 
 function buildPrompt(template,texto,objetivo){
