@@ -761,10 +761,22 @@ function callClaude(messages, onOk, onErr, _retryLabel, onRetry){
         return;
       }
       if(xhr.status>=200&&xhr.status<300){
-        var txt=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'';
+        var txt=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content?data.choices[0].message.content:'';
+        if(!txt){ onErr('Respuesta vacía del modelo.'); return; }
         onOk(txt);
       }else{onErr(errMsg||'Error '+xhr.status);}
-    }catch(e){onErr('Error al procesar la respuesta: '+e.message);}
+    }catch(e){
+      // Si el JSON no parsea bien pero es un 429, tratarlo como rate limit
+      if(xhr.status===429){
+        var rawMatch=(xhr.responseText||'').match(/try again in ([0-9.]+)s/i);
+        var ws=rawMatch?(parseFloat(rawMatch[1])+2):45;
+        var lb=_retryLabel||'Límite de tokens alcanzado';
+        if(typeof onRetry==='function') onRetry();
+        startCountdown(ws,lb,function(){ callClaude(messages,onOk,onErr,lb,onRetry); });
+      } else {
+        onErr('Error al procesar la respuesta.');
+      }
+    }
   };
   xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
   xhr.onerror=function(){onErr('Error de red.');};
