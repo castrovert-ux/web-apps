@@ -729,9 +729,12 @@ function startCountdown(seconds, baseMsg, onDone){
   }, 1000);
 }
 
-// ── LLAMADA A LA API con reintento automático en 429 (usando fetch) ──────────
-function callClaude(messages, onOk, onErr, _retryLabel, onRetry){
+// ── LLAMADA A LA API con reintento automático en 429 + backoff exponencial ───
+var MAX_REINTENTOS = 3;
+
+function callClaude(messages, onOk, onErr, _retryLabel, onRetry, _intento){
   if(!API_KEY||!API_KEY.startsWith('gsk_')){onErr('No hay clave API de Groq. Pulsa "⚙ API Key".');return;}
+  var intento = _intento || 1;
   var body=JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,messages:[{role:'system',content:buildSystemWithTono()}].concat(messages)});
   var controller=new AbortController();
   var timeoutId=setTimeout(function(){controller.abort();},120000);
@@ -743,18 +746,23 @@ function callClaude(messages, onOk, onErr, _retryLabel, onRetry){
   })
   .then(function(res){
     clearTimeout(timeoutId);
-    return res.text().then(function(rawText){
-      return {status:res.status, rawText:rawText};
-    });
+    return res.text().then(function(rawText){ return {status:res.status, rawText:rawText}; });
   })
   .then(function(r){
-    // Detectar 429 con fiabilidad total (fetch siempre expone el status real)
     if(r.status===429){
+      if(intento > MAX_REINTENTOS){
+        onErr('Límite de Groq alcanzado tras '+MAX_REINTENTOS+' intentos. Espera unos minutos y vuelve a intentarlo.');
+        return;
+      }
+      // Backoff: usar el tiempo sugerido por Groq, pero multiplicarlo por el número de intento
       var match=r.rawText.match(/try again in ([0-9.]+)s/i);
-      var waitSec=match?(parseFloat(match[1])+2):45;
-      var label=_retryLabel||'Límite de tokens alcanzado';
+      var baseWait=match?(parseFloat(match[1])+2):45;
+      var waitSec=Math.min(Math.round(baseWait * intento), 180); // máx 3 min
+      var label=(_retryLabel||'Límite de tokens')+' · intento '+intento+'/'+MAX_REINTENTOS;
       if(typeof onRetry==='function') onRetry();
-      startCountdown(waitSec,label,function(){ callClaude(messages,onOk,onErr,label,onRetry); });
+      startCountdown(waitSec, label, function(){
+        callClaude(messages, onOk, onErr, _retryLabel, onRetry, intento+1);
+      });
       return;
     }
     var data;
