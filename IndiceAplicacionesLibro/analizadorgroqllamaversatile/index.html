@@ -721,66 +721,52 @@ function startCountdown(seconds, baseMsg, onDone){
   }, 1000);
 }
 
-// ── LLAMADA A LA API con reintento automático en 429 ────────────────────────
-// onRetry (opcional): se llama cuando detecta 429, para que el llamador sepa
-// que NO debe limpiar el estado ni mostrar error (la espera es automática).
+// ── LLAMADA A LA API con reintento automático en 429 (usando fetch) ──────────
 function callClaude(messages, onOk, onErr, _retryLabel, onRetry){
   if(!API_KEY||!API_KEY.startsWith('gsk_')){onErr('No hay clave API de Groq. Pulsa "⚙ API Key".');return;}
-  var xhr=new XMLHttpRequest();
-  xhr.open('POST','https://api.groq.com/openai/v1/chat/completions',true);
-  xhr.setRequestHeader('Content-Type','application/json');
-  xhr.setRequestHeader('Authorization','Bearer '+API_KEY);
-  xhr.timeout=120000;
-  xhr.onreadystatechange=function(){
-    if(xhr.readyState!==4)return;
-    // ── Detectar 429 ANTES de parsear JSON (Groq a veces devuelve body no-JSON en rate limit)
-    if(xhr.status===429){
-      var rawText=xhr.responseText||'';
-      var match=rawText.match(/try again in ([0-9.]+)s/i);
-      var waitSec=match ? (parseFloat(match[1])+2) : 45;
+  var body=JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,messages:[{role:'system',content:buildSystemWithTono()}].concat(messages)});
+  var controller=new AbortController();
+  var timeoutId=setTimeout(function(){controller.abort();},120000);
+  fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
+    body:body,
+    signal:controller.signal
+  })
+  .then(function(res){
+    clearTimeout(timeoutId);
+    return res.text().then(function(rawText){
+      return {status:res.status, rawText:rawText};
+    });
+  })
+  .then(function(r){
+    // Detectar 429 con fiabilidad total (fetch siempre expone el status real)
+    if(r.status===429){
+      var match=r.rawText.match(/try again in ([0-9.]+)s/i);
+      var waitSec=match?(parseFloat(match[1])+2):45;
       var label=_retryLabel||'Límite de tokens alcanzado';
       if(typeof onRetry==='function') onRetry();
-      startCountdown(waitSec, label, function(){
-        callClaude(messages, onOk, onErr, label, onRetry);
-      });
+      startCountdown(waitSec,label,function(){ callClaude(messages,onOk,onErr,label,onRetry); });
       return;
     }
-    try{
-      var data=JSON.parse(xhr.responseText);
-      var errMsg=(data.error&&data.error.message)||'';
-      // Detección adicional por contenido (por si el status no llega correctamente)
-      var is429text=errMsg.toLowerCase().indexOf('rate limit')!==-1&&errMsg.toLowerCase().indexOf('try again')!==-1;
-      if(is429text){
-        var match2=errMsg.match(/try again in ([0-9.]+)s/i);
-        var waitSec2=match2 ? (parseFloat(match2[1])+2) : 45;
-        var label2=_retryLabel||'Límite de tokens alcanzado';
-        if(typeof onRetry==='function') onRetry();
-        startCountdown(waitSec2, label2, function(){
-          callClaude(messages, onOk, onErr, label2, onRetry);
-        });
-        return;
-      }
-      if(xhr.status>=200&&xhr.status<300){
-        var txt=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content?data.choices[0].message.content:'';
-        if(!txt){ onErr('Respuesta vacía del modelo.'); return; }
-        onOk(txt);
-      }else{onErr(errMsg||'Error '+xhr.status);}
-    }catch(e){
-      // Si el JSON no parsea bien pero es un 429, tratarlo como rate limit
-      if(xhr.status===429){
-        var rawMatch=(xhr.responseText||'').match(/try again in ([0-9.]+)s/i);
-        var ws=rawMatch?(parseFloat(rawMatch[1])+2):45;
-        var lb=_retryLabel||'Límite de tokens alcanzado';
-        if(typeof onRetry==='function') onRetry();
-        startCountdown(ws,lb,function(){ callClaude(messages,onOk,onErr,lb,onRetry); });
-      } else {
-        onErr('Error al procesar la respuesta.');
-      }
+    var data;
+    try{ data=JSON.parse(r.rawText); }
+    catch(e){ onErr('Respuesta no válida del servidor.'); return; }
+    if(r.status>=200&&r.status<300){
+      var txt=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content
+              ?data.choices[0].message.content:'';
+      if(!txt){ onErr('Respuesta vacía del modelo.'); return; }
+      onOk(txt);
+    } else {
+      var errMsg=(data.error&&data.error.message)||('Error '+r.status);
+      onErr(errMsg);
     }
-  };
-  xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
-  xhr.onerror=function(){onErr('Error de red.');};
-  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,messages:[{role:'system',content:buildSystemWithTono()}].concat(messages)}));
+  })
+  .catch(function(e){
+    clearTimeout(timeoutId);
+    if(e.name==='AbortError'){ onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.'); }
+    else { onErr('Error de red.'); }
+  });
 }
 
 function buildPrompt(template,texto,objetivo){
