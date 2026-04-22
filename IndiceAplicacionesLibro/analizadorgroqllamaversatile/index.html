@@ -584,7 +584,14 @@ var sessions=loadSessions();
 var currentSession=null;
 
 function loadSettings(){
-  try{var s=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(s&&s.system&&Array.isArray(s.prompts)&&s.prompts.length===DEFAULT_PROMPTS.length)return s;}catch(e){}
+  try{
+    var s=JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    // Validar que todos los prompts tienen content (no solo que el número coincide)
+    if(s&&s.system&&Array.isArray(s.prompts)&&s.prompts.length===DEFAULT_PROMPTS.length){
+      var valido=s.prompts.every(function(p){return p&&p.content&&p.name;});
+      if(valido) return s;
+    }
+  }catch(e){}
   return{system:DEFAULT_SYSTEM,prompts:DEFAULT_PROMPTS.map(function(p){return{name:p.name,label:p.label,content:p.content};})};
 }
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}
@@ -640,6 +647,7 @@ function updateChatActions(){
     get('btn-next-prompt').style.display='none';
   } else {
     var np=settings.prompts[idx];
+    if(!np){get('chat-actions').style.display='none';return;}
     get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span>';
     get('btn-next-prompt').style.display='';
     get('btn-next-prompt').disabled=false;
@@ -810,6 +818,7 @@ function sendNextPrompt(){
   var idx=currentSession.currentPromptIndex;
   if(idx>=settings.prompts.length)return;
   var tpl=settings.prompts[idx];
+  if(!tpl){showError('Error de configuración: prompt '+idx+' no encontrado. Restaura los ajustes por defecto.');return;}
   // Solución A: texto truncado para prompts que no necesitan fragmentos exactos
   var textoAPI=textoParaAPI(currentSession.text, idx);
   var textoPrompt=buildPrompt(tpl.content,textoAPI,currentSession.goal);
