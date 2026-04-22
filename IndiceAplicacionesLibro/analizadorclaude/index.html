@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Análisis · Castroverde</title>
+  <title>Análisis · Castroverde · Claude</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
 
   <!-- Firebase SDK -->
@@ -194,6 +194,31 @@
     ::-webkit-scrollbar-track{background:var(--bg);}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
     ::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+    /* ── PASOS CLICABLES ── */
+    .prompt-step{cursor:pointer;}
+    .prompt-step:hover .prompt-step-bar{background:var(--accent2);opacity:0.7;}
+    .prompt-step.pending:hover .prompt-step-lbl{color:var(--accent2);}
+    .prompt-step.running{pointer-events:none;opacity:0.6;}
+
+    /* ── BOTÓN VER PROMPT ── */
+    .btn-ver-prompt{
+      background:none;border:1px solid var(--border);color:var(--muted);
+      padding:2px 7px;border-radius:var(--radius);cursor:pointer;
+      font-family:var(--font-ui);font-size:8px;letter-spacing:1px;text-transform:uppercase;
+      transition:all .15s;margin-left:6px;
+    }
+    .btn-ver-prompt:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* ── MODAL PROMPT COMPLETO ── */
+    #modal-prompt-view{z-index:600;}
+    #modal-prompt-view .modal-box{width:780px;}
+    .prompt-view-content{
+      background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);
+      padding:14px;font-family:var(--font-ui);font-size:11px;line-height:1.7;
+      color:var(--text);white-space:pre-wrap;max-height:55vh;overflow-y:auto;
+    }
+    .prompt-copy-row{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
   </style>
 </head>
 <body>
@@ -345,6 +370,19 @@
       <button class="btn btn-danger" id="modal-btn-forget">Olvidar</button>
       <button class="btn btn-ghost" id="modal-btn-cancel">Cancelar</button>
       <button class="btn btn-primary" id="modal-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER PROMPT COMPLETO -->
+<div class="modal-overlay" id="modal-prompt-view">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-prompt-title">Prompt completo</div>
+    <div class="modal-subtitle">Cópialo para usarlo en Claude, ChatGPT u otra IA</div>
+    <div class="prompt-view-content" id="modal-prompt-content"></div>
+    <div class="prompt-copy-row">
+      <button class="btn btn-ghost" onclick="closePromptModal()">Cerrar</button>
+      <button class="btn btn-primary" id="btn-copy-prompt" onclick="copyPromptToClipboard()">⎘ Copiar al portapapeles</button>
     </div>
   </div>
 </div>
@@ -548,12 +586,12 @@ var DEFAULT_SYSTEM='Eres un editor literario especializado en ensayo histórico-
 
 var DEFAULT_PROMPTS=[
   {name:'P1 · Estructura',label:'Estructura',content:'Actúa como editor especializado en ensayo histórico-divulgativo.\n\nObjetivo de esta sección/capítulo: {{objetivo}}\n\nAnaliza el texto a nivel global. Evalúa:\n- Estructura general\n- Claridad del hilo narrativo\n- Equilibrio entre rigor y divulgación\n- Ritmo general\n- Coherencia interna\n- Eficacia del inicio y del cierre\n\nProporciona:\n1. Resumen de la estructura\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-  {name:'P2 · Tono',label:'Tono',content:'Analiza el tono de esta sección/capítulo (divulgativo + evocador).\n\nEvalúa:\n- Coherencia del tono a lo largo del texto\n- Posibles excesos de lirismo\n- Partes demasiado frías o técnicas\n- Naturalidad del estilo\n\nIndica:\n1. 3 aciertos de tono\n2. 3 problemas de tono\n3. Cómo mejorar el equilibrio'},
-  {name:'P3 · Ritmo',label:'Ritmo',content:'Analiza el ritmo y la densidad de esta sección/capítulo.\n\nIdentifica:\n- Partes lentas o densas\n- Partes ágiles y bien resueltas\n- Bloques que podrían acortarse sin pérdida\n\nPropón mejoras concretas con referencias a fragmentos específicos.'},
-  {name:'P4 · Lector',label:'Lector',content:'Actúa como un lector sin conocimientos previos sobre la historia local de Castroverde.\n\nDesde esa perspectiva, describe:\n- Qué partes te enganchan y por qué\n- Dónde pierdes interés\n- Qué cuesta entender o seguir\n- Qué genera curiosidad o ganas de saber más'},
-  {name:'P5 · Síntesis',label:'Síntesis',content:'Con todo lo analizado hasta ahora (estructura, tono, ritmo, perspectiva del lector), indica:\n\n1. Los 2 cambios que más mejorarían esta sección/capítulo\n2. Qué parte no debería modificarse bajo ningún concepto\n3. Veredicto: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n4. Justificación breve del veredicto (2-3 frases)'},
-  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.'},
-  {name:'P7 · Plan',label:'Plan',content:'Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.'}
+  {name:'P2 · Tono',label:'Tono',content:'Analiza el tono de esta sección/capítulo (divulgativo + evocador).\n\nEvalúa:\n- Coherencia del tono a lo largo del texto\n- Posibles excesos de lirismo\n- Partes demasiado frías o técnicas\n- Naturalidad del estilo\n\nIndica:\n1. 3 aciertos de tono\n2. 3 problemas de tono\n3. Cómo mejorar el equilibrio\\n\\nTEXTO:\\n"""\\n{{texto}}\\n"""'},,
+  {name:'P3 · Ritmo',label:'Ritmo',content:'Analiza el ritmo y la densidad de esta sección/capítulo.\n\nIdentifica:\n- Partes lentas o densas\n- Partes ágiles y bien resueltas\n- Bloques que podrían acortarse sin pérdida\n\nPropón mejoras concretas con referencias a fragmentos específicos.\\n\\nTEXTO:\\n"""\\n{{texto}}\\n"""'},,
+  {name:'P4 · Lector',label:'Lector',content:'Actúa como un lector sin conocimientos previos sobre la historia local de Castroverde.\n\nDesde esa perspectiva, describe:\n- Qué partes te enganchan y por qué\n- Dónde pierdes interés\n- Qué cuesta entender o seguir\n- Qué genera curiosidad o ganas de saber más\\n\\nTEXTO:\\n"""\\n{{texto}}\\n"""'},,
+  {name:'P5 · Síntesis',label:'Síntesis',content:'Con todo lo analizado hasta ahora (estructura, tono, ritmo, perspectiva del lector), indica:\n\n1. Los 2 cambios que más mejorarían esta sección/capítulo\n2. Qué parte no debería modificarse bajo ningún concepto\n3. Veredicto: LISTO PARA PUBLICAR / NECESITA REVISIÓN MENOR / NECESITA REVISIÓN MAYOR\n4. Justificación breve del veredicto (2-3 frases)\\n\\nTEXTO:\\n"""\\n{{texto}}\\n"""'},,
+  {name:'P6 · Cirugía',label:'Cirugía',content:'Cirugía de texto — solo si el texto necesita pulido.\n\nSeñala 3 fragmentos concretos que deberían reescribirse.\nPara cada uno:\n- Cita el fragmento original\n- Explica por qué no funciona\n- Propón una alternativa concreta\n\nSi el texto no necesita cirugía, indícalo claramente y explica por qué.\\n\\nTEXTO:\\n"""\\n{{texto}}\\n"""'},,
+  {name:'P7 · Plan',label:'Plan',content:'Con todo el análisis realizado hasta ahora, genera un PLAN DE INTERVENCIÓN para mejorar el texto.\n\nEl plan debe ser SECUENCIAL, siguiendo el orden real del texto de principio a fin.\n\nPara cada punto indica:\n- La ubicación exacta (número de párrafo o título del bloque)\n- La acción concreta a realizar\n- La prioridad: ALTA / MEDIA / BAJA / NO TOCAR\n\nUsa este formato estricto para cada entrada (una por línea, separadas por línea en blanco):\n[ubicación] | [acción concreta] | [PRIORIDAD]\n\nEjemplo:\nPárrafo 1 | No intervenir. Apertura sólida. | NO TOCAR\nPárrafo 3 | Suavizar tono. La segunda frase es demasiado lírica. | ALTA\nBloque "Marco geográfico" | Revisar densidad técnica. Valorar mover parte a Parte 2. | MEDIA\n\nSolo el formato indicado, sin introducción ni conclusión. Una entrada por punto del texto.\\n\\nTEXTO:\\n"""\\n{{texto}}\\n"""'}
 ];
 
 var API_KEY=localStorage.getItem('castroverde_ana_key')||'';
@@ -584,7 +622,12 @@ var sessions=loadSessions();
 var currentSession=null;
 
 function loadSettings(){
-  try{var s=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(s&&s.system&&Array.isArray(s.prompts)&&s.prompts.length===DEFAULT_PROMPTS.length)return s;}catch(e){}
+  try{
+    var s=JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if(s&&s.system&&Array.isArray(s.prompts)&&s.prompts.length===DEFAULT_PROMPTS.length){
+      if(s.prompts.every(function(p){return p&&p.content&&p.name;})) return s;
+    }
+  }catch(e){}
   return{system:DEFAULT_SYSTEM,prompts:DEFAULT_PROMPTS.map(function(p){return{name:p.name,label:p.label,content:p.content};})};
 }
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}
@@ -603,10 +646,20 @@ function updateKeyStatus(){var ok=API_KEY&&API_KEY.startsWith('sk-ant-');var el=
 function renderProgressBar(activeIndex){
   var html='';
   settings.prompts.forEach(function(p,i){
-    var cls=i<activeIndex?'done':i===activeIndex?'active':'';
-    html+='<div class="prompt-step '+cls+'"><div class="prompt-step-bar"></div><div class="prompt-step-lbl">'+esc(p.label)+'</div></div>';
+    var cls=i<activeIndex?'done':i===activeIndex?'active':'pending';
+    var running=currentSession&&currentSession.waitingForResponse?'running':'';
+    html+='<div class="prompt-step '+cls+' '+running+'" onclick="onStepClick('+i+')" title="'+esc(p.name)+'">'
+      +'<div class="prompt-step-bar"></div>'
+      +'<div class="prompt-step-lbl">'+esc(p.label)+'</div>'
+      +'</div>';
   });
   get('prompt-steps').innerHTML=html;
+}
+
+function onStepClick(idx){
+  if(!currentSession){showError('Inicia primero una sesión con "Iniciar análisis →".');return;}
+  if(currentSession.waitingForResponse)return; // en curso, ignorar
+  sendNextPrompt(idx);
 }
 
 function renderChat(){
@@ -624,7 +677,8 @@ function renderChat(){
     body.textContent=m.content;
     if(isUser){body.addEventListener('click',function(){this.classList.toggle('expanded');});}
     var header=document.createElement('div');header.className='chat-message-header';
-    header.innerHTML='<span class="chat-message-role '+(isUser?'role-prompt':'role-claude')+'">'+(isUser?'Prompt':'Claude')+'</span><span class="chat-message-lbl">'+esc(pname)+'</span>';
+    var verBtn=isUser?'<button class="btn-ver-prompt" onclick="openPromptModal('+m.promptIndex+')">Ver / Copiar</button>':'';
+    header.innerHTML='<span class="chat-message-role '+(isUser?'role-prompt':'role-claude')+'">'+(isUser?'Prompt':'Claude')+'</span><span class="chat-message-lbl">'+esc(pname)+'</span>'+verBtn;
     div.appendChild(header);div.appendChild(body);frag.appendChild(div);
   });
   area.insertBefore(frag,get('loading-msg'));
@@ -636,14 +690,15 @@ function updateChatActions(){
   get('chat-actions').style.display='flex';
   var idx=currentSession.currentPromptIndex;
   if(idx>=settings.prompts.length){
-    get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado</span>';
+    get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado — pulsa cualquier paso para re-ejecutarlo</span>';
     get('btn-next-prompt').style.display='none';
   } else {
     var np=settings.prompts[idx];
-    get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span>';
+    if(!np){get('chat-actions').style.display='none';return;}
+    get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span> <span style="color:var(--border);font-size:8px;">· o pulsa cualquier paso</span>';
     get('btn-next-prompt').style.display='';
     get('btn-next-prompt').disabled=false;
-    get('btn-next-prompt').textContent=(idx===0?'Enviar P1 →':'Siguiente prompt →');
+    get('btn-next-prompt').textContent=(idx===0?'Enviar P1 →':'Siguiente →');
   }
 }
 
@@ -731,21 +786,45 @@ function startSession(){
   renderProgressBar(0);renderChat();updateChatActions();
 }
 
-function sendNextPrompt(){
+// Ejecutar el prompt del índice indicado (por defecto el siguiente pendiente)
+// Cada prompt es INDEPENDIENTE: solo se envía su propio contenido, sin histórico.
+function sendNextPrompt(forceIdx){
   if(!currentSession)return;
-  var idx=currentSession.currentPromptIndex;
-  if(idx>=settings.prompts.length)return;
+  var idx=(forceIdx!==undefined)?forceIdx:currentSession.currentPromptIndex;
+  if(idx<0||idx>=settings.prompts.length)return;
   var tpl=settings.prompts[idx];
+  if(!tpl){showError('Prompt '+idx+' no encontrado. Restaura los ajustes por defecto.');return;}
+
   var built=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
-  currentSession.messages.push({role:'user',content:built,promptIndex:idx});
-  var apiMsgs=currentSession.messages.map(function(m){return{role:m.role,content:m.content};});
+
+  // Guardar el prompt enviado (o actualizar si ya existía para este índice)
+  var existingUserIdx=currentSession.messages.findIndex(function(m){return m.role==='user'&&m.promptIndex===idx;});
+  if(existingUserIdx!==-1){
+    currentSession.messages[existingUserIdx].content=built;
+  } else {
+    currentSession.messages.push({role:'user',content:built,promptIndex:idx});
+  }
+
   currentSession.waitingForResponse=true;
   renderChat();renderProgressBar(idx);updateChatActions();
   showLoading('Analizando — '+tpl.name+'…');hideError();
+
+  // Llamada INDEPENDIENTE: solo el mensaje actual, sin histórico acumulado
+  var apiMsgs=[{role:'user',content:built}];
+
   callClaude(apiMsgs,function(response){
     hideLoading();
-    currentSession.messages.push({role:'assistant',content:response,promptIndex:idx});
-    currentSession.currentPromptIndex=idx+1;
+    // Guardar o actualizar la respuesta para este índice
+    var existingAssIdx=currentSession.messages.findIndex(function(m){return m.role==='assistant'&&m.promptIndex===idx;});
+    if(existingAssIdx!==-1){
+      currentSession.messages[existingAssIdx].content=response;
+    } else {
+      currentSession.messages.push({role:'assistant',content:response,promptIndex:idx});
+    }
+    // Avanzar el índice solo si es el siguiente en la secuencia
+    if(idx===currentSession.currentPromptIndex){
+      currentSession.currentPromptIndex=idx+1;
+    }
     currentSession.waitingForResponse=false;
     if(idx===4){
       if(response.indexOf('LISTO PARA PUBLICAR')!==-1)currentSession.verdict='listo';
@@ -754,12 +833,38 @@ function sendNextPrompt(){
     }
     saveCurrentSession();
     renderProgressBar(currentSession.currentPromptIndex);
-    // Si la respuesta es del P7 (Plan), renderizar con formato visual
     if(idx===6) renderPlanInChat(response);
     renderChat();updateChatActions();
   },function(err){
-    hideLoading();currentSession.messages.pop();currentSession.waitingForResponse=false;
+    hideLoading();
+    // Solo eliminar el mensaje si era nuevo (no una re-ejecución)
+    var lastMsg=currentSession.messages[currentSession.messages.length-1];
+    if(lastMsg&&lastMsg.role==='user'&&lastMsg.promptIndex===idx){
+      var hasResponse=currentSession.messages.some(function(m){return m.role==='assistant'&&m.promptIndex===idx;});
+      if(!hasResponse) currentSession.messages.pop();
+    }
+    currentSession.waitingForResponse=false;
     showError(err);renderChat();updateChatActions();
+  });
+}
+
+// Modal para ver y copiar el prompt completo
+function openPromptModal(idx){
+  if(!currentSession)return;
+  var tpl=settings.prompts[idx];
+  if(!tpl)return;
+  var built=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
+  get('modal-prompt-title').textContent='Prompt completo — '+tpl.name;
+  get('modal-prompt-content').textContent=built;
+  get('modal-prompt-view').classList.add('visible');
+}
+function closePromptModal(){get('modal-prompt-view').classList.remove('visible');}
+function copyPromptToClipboard(){
+  var txt=get('modal-prompt-content').textContent;
+  navigator.clipboard.writeText(txt).then(function(){
+    var btn=get('btn-copy-prompt');
+    btn.textContent='✓ Copiado';
+    setTimeout(function(){btn.textContent='⎘ Copiar al portapapeles';},2000);
   });
 }
 
@@ -902,6 +1007,7 @@ get('settings-save').addEventListener('click',saveSettingsFromModal);
 get('settings-cancel').addEventListener('click',closeSettings);
 get('settings-reset').addEventListener('click',resetSettings);
 get('modal-settings').addEventListener('click',function(e){if(e.target===this)closeSettings();});
+get('modal-prompt-view').addEventListener('click',function(e){if(e.target===this)closePromptModal();});
 get('btn-api-key').addEventListener('click',openApiKeyModal);
 get('btn-fb-key').addEventListener('click',openFbKeyModal);
 get('fb-btn-save').addEventListener('click',function(){
