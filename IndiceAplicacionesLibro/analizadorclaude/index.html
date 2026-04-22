@@ -645,10 +645,11 @@ function updateKeyStatus(){var ok=API_KEY&&API_KEY.startsWith('sk-ant-');var el=
 
 function renderProgressBar(activeIndex){
   var html='';
+  var isRunning=currentSession&&currentSession.waitingForResponse;
   settings.prompts.forEach(function(p,i){
     var cls=i<activeIndex?'done':i===activeIndex?'active':'pending';
-    var running=currentSession&&currentSession.waitingForResponse?'running':'';
-    html+='<div class="prompt-step '+cls+' '+running+'" onclick="onStepClick('+i+')" title="'+esc(p.name)+'">'
+    var runCls=isRunning?'running':'';
+    html+='<div class="prompt-step '+cls+' '+runCls+'" data-step="'+i+'" title="'+esc(p.name)+'">'
       +'<div class="prompt-step-bar"></div>'
       +'<div class="prompt-step-lbl">'+esc(p.label)+'</div>'
       +'</div>';
@@ -656,11 +657,7 @@ function renderProgressBar(activeIndex){
   get('prompt-steps').innerHTML=html;
 }
 
-function onStepClick(idx){
-  if(!currentSession){showError('Inicia primero una sesión con "Iniciar análisis →".');return;}
-  if(currentSession.waitingForResponse)return; // en curso, ignorar
-  sendNextPrompt(idx);
-}
+// (listener de pasos → al final del script)
 
 function renderChat(){
   var area=get('chat-area');
@@ -929,7 +926,18 @@ function newSession(){
   get('section-name').value='';get('section-goal').value='';get('input-text').value='';updateCharCount();
   get('chat-area').querySelectorAll('.chat-message').forEach(function(el){el.remove();});
   get('chat-empty').style.display='flex';get('chat-actions').style.display='none';
-  get('loading-msg').classList.remove('visible');renderProgressBar(-1);hideError();
+  get('loading-msg').classList.remove('visible');// Pasos de la barra de progreso — event delegation
+get('prompt-steps').addEventListener('click',function(e){
+  var step=e.target.closest('[data-step]');
+  if(!step)return;
+  var idx=parseInt(step.getAttribute('data-step'),10);
+  if(isNaN(idx))return;
+  if(!currentSession){showError('Inicia primero una sesión con "Iniciar análisis →".');return;}
+  if(currentSession.waitingForResponse)return;
+  sendNextPrompt(idx);
+});
+
+renderProgressBar(-1);hideError();
 }
 
 function openSettings(){
