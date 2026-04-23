@@ -5,67 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Análisis · Castroverde · Claude</title>
   <style>
-    /* ... (Mantén aquí todos tus estilos originales) ... */
-    /* Añadimos este estilo para asegurar que el interruptor se vea bien */
-    .api-control-box { display:flex; align-items:center; gap:10px; margin-right: 15px; }
+    /* ... mantén tus estilos aquí ... */
+    /* Estilo esencial para el interruptor */
+    .api-toggle-container { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .api-track { width: 32px; height: 16px; background: #ccc; border-radius: 8px; position: relative; transition: 0.3s; }
+    .api-track.on { background: #8a2a2a; }
+    .api-thumb { width: 12px; height: 12px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: 0.3s; }
+    .api-track.on .api-thumb { left: 18px; }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">Castroverde<span>Analítica</span></div>
-  <div class="header-actions">
-    <div class="api-control-box">
-      <span style="font-family:var(--font-ui); font-size:8px; text-transform:uppercase;">API CLAUDE:</span>
-      <div id="api-toggle" style="cursor:pointer; display:flex; align-items:center;">
-        <div id="api-toggle-track" style="width:30px; height:15px; background:#ccc; border-radius:10px; position:relative;">
-          <div id="api-toggle-thumb" style="width:13px; height:13px; background:white; border-radius:50%; position:absolute; top:1px; left:1px; transition:0.2s;"></div>
-        </div>
-      </div>
-    </div>
-    </div>
-</header>
+<div id="api-toggle" class="api-toggle-container">
+  <div id="api-track" class="api-track"><div class="api-thumb"></div></div>
+  <span id="api-label" style="font-family:monospace; font-size:9px; text-transform:uppercase;">API OFF</span>
+</div>
 
 <script>
-// 1. Lógica del interruptor
-var apiToggle = document.getElementById('api-toggle');
-var apiTrack = document.getElementById('api-toggle-track');
-var apiThumb = document.getElementById('api-toggle-thumb');
-var isApiEnabled = localStorage.getItem('api_claude_enabled') !== 'false'; // Por defecto ON
+// --- NUEVA LÓGICA DE INTERRUPTOR ---
+var isApiEnabled = localStorage.getItem('api_claude_enabled') === 'true';
+var track = document.getElementById('api-track');
+var label = document.getElementById('api-label');
 
-function updateUI() {
+function updateToggleState() {
   if (isApiEnabled) {
-    apiTrack.style.background = '#8a2a2a'; // Color accent
-    apiThumb.style.left = '16px';
+    track.classList.add('on');
+    label.textContent = 'API ON';
   } else {
-    apiTrack.style.background = '#ccc';
-    apiThumb.style.left = '1px';
+    track.classList.remove('on');
+    label.textContent = 'API OFF';
   }
 }
 
-apiToggle.addEventListener('click', function() {
+document.getElementById('api-toggle').addEventListener('click', function() {
   isApiEnabled = !isApiEnabled;
   localStorage.setItem('api_claude_enabled', isApiEnabled);
-  updateUI();
+  updateToggleState();
 });
 
-// 2. INTERCEPCIÓN (Aquí está el secreto)
-// Buscamos tu función original de llamada a la API y la protegemos
-// Si no sabes cuál es, busca en tu código la función que empieza con fetch('https://api.anthropic.com...')
-const originalFetch = window.fetch;
-window.fetch = function(...args) {
-  if (args[0].toString().includes('api.anthropic.com') && !isApiEnabled) {
-    console.warn("API desactivada por el usuario.");
-    alert("La API de Claude está desactivada. Actívala en el interruptor superior.");
-    return Promise.reject("API deshabilitada");
+// Inicialización
+updateToggleState();
+
+// --- INTEGRACIÓN CON EL RESTO DE TU CÓDIGO ---
+// Busca en tu archivo original dónde haces la llamada a la API (fetch)
+// Y asegúrate de envolverla así:
+/*
+  if (isApiEnabled) {
+      // tu llamada fetch original a Anthropic
+  } else {
+      alert("La API está apagada. Por favor, actívala para analizar.");
   }
-  return originalFetch(...args);
-};
-
-// Inicializar estado
-updateUI();
-
-// ... (El resto de tus scripts originales: Firebase, Auth, etc.) ...
+*/
 </script>
+
 </body>
 </html>
