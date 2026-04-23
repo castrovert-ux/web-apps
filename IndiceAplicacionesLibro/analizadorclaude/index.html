@@ -842,8 +842,20 @@ function sendNextPrompt(forceIdx){
 
   var built=buildPrompt(tpl.content,currentSession.text,currentSession.goal);
 
-  // Modo OFF: solo mostrar el prompt para copiar, sin llamar a la API
+  // Modo OFF: mostrar el prompt para copiar y avanzar el índice de sesión
   if(!apiModeOn){
+    // Registrar el prompt como "visto" en el historial de la sesión
+    var existingUserIdxOff=currentSession.messages.findIndex(function(m){return m.role==='user'&&m.promptIndex===idx;});
+    if(existingUserIdxOff===-1){
+      currentSession.messages.push({role:'user',content:built,promptIndex:idx});
+    }
+    // Avanzar el índice secuencial para que el siguiente paso esté disponible
+    if(idx===currentSession.currentPromptIndex){
+      currentSession.currentPromptIndex=idx+1;
+    }
+    saveCurrentSession();
+    renderProgressBar(currentSession.currentPromptIndex);
+    updateChatActions();
     openPromptModal(idx);
     return;
   }
