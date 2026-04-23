@@ -264,6 +264,10 @@
       </div>
       <span id="api-toggle-label">API off</span>
     </label>
+    <select id="model-select" style="display:none;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-ui);font-size:9px;letter-spacing:1px;padding:3px 7px;border-radius:var(--radius);cursor:pointer;outline:none;" title="Modelo a usar con la API">
+      <option value="claude-sonnet-4-6">Sonnet</option>
+      <option value="claude-haiku-4-5-20251001">Haiku</option>
+    </select>
     <span class="key-status" id="key-status" style="display:none">⚿ clave</span>
     <button class="btn btn-ghost" id="btn-api-key" style="display:none">⚙ API Key</button>
     <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
@@ -654,11 +658,13 @@ function setApiMode(on){
     label.textContent = 'API on';
     keyStatus.style.display = '';
     btnApiKey.style.display = '';
+    document.getElementById('model-select').style.display = '';
   } else {
     track.classList.remove('on');
     label.textContent = 'API off';
     keyStatus.style.display = 'none';
     btnApiKey.style.display = 'none';
+    document.getElementById('model-select').style.display = 'none';
   }
   // Actualizar texto del botón Siguiente
   updateChatActions();
@@ -822,11 +828,15 @@ function callClaude(messages,onOk,onErr){
   };
   xhr.ontimeout=function(){onErr('Timeout. El texto puede ser demasiado largo o la conexión lenta.');};
   xhr.onerror=function(){onErr('Error de red.');};
-  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,system:buildSystemWithTono(),messages:messages}));
+  var activeModel=(document.getElementById('model-select')||{value:MODEL}).value||MODEL;xhr.send(JSON.stringify({model:activeModel,max_tokens:MAX_TOKENS,system:buildSystemWithTono(),messages:messages}));
 }
 
 function buildPrompt(template,texto,objetivo){
-  return template.replace(/\{\{texto\}\}/g,texto).replace(/\{\{objetivo\}\}/g,objetivo||'(no especificado)').replace(/\{\{contexto\}\}/g,settings.system);
+  return template
+    .replace(/\\n/g,'\n')
+    .replace(/\{\{texto\}\}/g,texto)
+    .replace(/\{\{objetivo\}\}/g,objetivo||'(no especificado)')
+    .replace(/\{\{contexto\}\}/g,settings.system);
 }
 
 function startSession(){
