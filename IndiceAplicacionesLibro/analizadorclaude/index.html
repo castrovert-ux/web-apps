@@ -734,17 +734,27 @@ function updateChatActions(){
   if(!currentSession){get('chat-actions').style.display='none';return;}
   get('chat-actions').style.display='flex';
   var idx=currentSession.currentPromptIndex;
-  if(idx>=settings.prompts.length){
+  var total=settings.prompts.length;
+  // Clamp: si idx está fuera de rango, tratarlo como completado
+  if(idx>=total||idx<0){
     get('next-prompt-label').innerHTML='<span style="color:var(--green);">✓ Análisis completado — pulsa cualquier paso para re-ejecutarlo</span>';
     get('btn-next-prompt').style.display='none';
-  } else {
-    var np=settings.prompts[idx];
-    if(!np){get('chat-actions').style.display='none';return;}
-    get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span> <span style="color:var(--border);font-size:8px;">· o pulsa cualquier paso</span>';
-    get('btn-next-prompt').style.display='';
-    get('btn-next-prompt').disabled=false;
-    get('btn-next-prompt').textContent=apiModeOn?(idx===0?'Enviar P1 →':'Siguiente →'):(idx===0?'Ver P1 →':'Ver prompt →');
+    return;
   }
+  var np=settings.prompts[idx];
+  if(!np){
+    // Prompt no encontrado: mostrar aviso pero no ocultar el panel
+    get('next-prompt-label').innerHTML='<span style="color:var(--red);">⚠ Restaura los ajustes por defecto</span>';
+    get('btn-next-prompt').style.display='none';
+    return;
+  }
+  get('next-prompt-label').innerHTML='Siguiente: <span>'+esc(np.name)+'</span>'
+    +' <span style="font-family:var(--font-ui);font-size:8px;color:var(--border);">('+idx+'/'+total+')</span>';
+  get('btn-next-prompt').style.display='';
+  get('btn-next-prompt').disabled=false;
+  get('btn-next-prompt').textContent=apiModeOn
+    ?(idx===0?'Enviar P1 →':'Siguiente →')
+    :(idx===0?'Ver P1 →':'Ver prompt →');
 }
 
 
@@ -855,6 +865,7 @@ function sendNextPrompt(forceIdx){
     }
     saveCurrentSession();
     renderProgressBar(currentSession.currentPromptIndex);
+    renderChat();
     updateChatActions();
     openPromptModal(idx);
     return;
