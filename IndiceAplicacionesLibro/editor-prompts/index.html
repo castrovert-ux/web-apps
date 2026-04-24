@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!-- ... (todo el <head> se mantiene igual, incluyendo estilos) ... -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor · Castroverde</title>
+  <!-- Mantengo todos tus estilos y links exactamente igual -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+  <style>
+    /* === Tus estilos originales se mantienen intactos === */
+    :root {
+      --bg:        #eef4f3;
+      --surface:   #e2edeb;
+      --card:      #d6e8e5;
+      --border:    #b4d0cc;
+      --text:      #1e3532;
+      --muted:     #5a8a84;
+      --accent:    #2a7a6e;
+      --accent2:   #3a9e6e;
+      --red:       #c45a3a;
+      --blue:      #3a7ab0;
+      --cloud:     #4A90D9;
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    3px;
+    }
+    /* ... (todos tus estilos anteriores se mantienen sin cambios) ... */
+    /* Añado estilos nuevos para el modal de prompt */
+    .prompt-modal .modal-box {
+      width: 820px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .prompt-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--card);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .prompt-section-title {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin: 18px 0 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- === Todo tu HTML anterior se mantiene igual hasta el final del body === -->
+
+  <!-- Nuevo modal para mostrar el prompt -->
+  <div class="modal-overlay" id="modal-prompt" style="align-items:flex-start; padding:20px;">
+    <div class="modal-box prompt-modal" style="margin:auto;">
+      <div class="modal-title" style="display:flex; justify-content:space-between; align-items:center;">
+        Prompt completo para Claude
+        <button class="btn btn-danger" onclick="closePromptModal()" style="padding:4px 10px; font-size:11px;">Cerrar</button>
+      </div>
+      <div class="modal-desc" style="margin-bottom:12px;">
+        Copia este prompt y pégalo directamente en <strong>claude.ai</strong> (o en la consola de Anthropic).
+      </div>
+
+      <div class="prompt-section-title">SYSTEM PROMPT</div>
+      <div class="prompt-content" id="prompt-system"></div>
+
+      <div class="prompt-section-title">USER MESSAGE</div>
+      <div class="prompt-content" id="prompt-user"></div>
+
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="copyFullPrompt()" style="flex:1;">
+          📋 Copiar prompt completo (System + User)
+        </button>
+      </div>
+      <div id="prompt-copied-feedback" style="text-align:center; margin-top:8px; font-family:var(--font-ui); font-size:9px; color:var(--accent2); display:none;">
+        ¡Prompt copiado al portapapeles!
+      </div>
+    </div>
+  </div>
+
+  <!-- El resto de tu HTML (sidebar, modales de ajustes, api key, etc.) se mantiene igual -->
+
+  <script>
+    // === MANTENEMOS TODAS TUS VARIABLES Y FUNCIONES EXISTENTES ===
+
+    var API_KEY    = localStorage.getItem('castroverde_api_key') || '';
+    // ... (todas tus demás variables: MODEL, DEFAULT_SYSTEM_PROMPT, etc.)
+
+    // === NUEVA FUNCIÓN PRINCIPAL: Mostrar prompt en lugar de llamar a la API ===
+    function showPromptForClaude() {
+      var text = get('input-text').value.trim();
+      var notes = get('notes-text').value.trim();
+      if (!text) {
+        showError('Introduce un texto para generar el prompt.');
+        return;
+      }
+      if (text.length < 50) {
+        showError('El fragmento es demasiado corto.');
+        return;
+      }
+
+      var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value.trim() : '';
+      var tipo = get('analysis-type').value;
+
+      var systemPrompt = buildSystem();
+      var userMessage = buildMsg(text, notes, tipo, instrucFrag);
+
+      // Mostrar en el modal
+      get('prompt-system').textContent = systemPrompt;
+      get('prompt-user').textContent = userMessage;
+
+      get('modal-prompt').classList.add('visible');
+    }
+
+    function closePromptModal() {
+      get('modal-prompt').classList.remove('visible');
+    }
+
+    function copyFullPrompt() {
+      var system = get('prompt-system').textContent;
+      var user = get('prompt-user').textContent;
+
+      // Formato limpio para pegar en Claude
+      var fullPrompt = `=== SYSTEM PROMPT ===\n\n${system}\n\n=== USER MESSAGE ===\n\n${user}`;
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(fullPrompt).then(() => {
+          const feedback = get('prompt-copied-feedback');
+          feedback.style.display = 'block';
+          setTimeout(() => { feedback.style.display = 'none'; }, 2500);
+        });
+      } else {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = fullPrompt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const feedback = get('prompt-copied-feedback');
+        feedback.style.display = 'block';
+        setTimeout(() => { feedback.style.display = 'none'; }, 2500);
+      }
+    }
+
+    // === MODIFICACIÓN DEL BOTÓN ANALIZAR ===
+    // Cambiamos el botón "Analizar →" para que muestre el prompt en vez de llamar a la API
+
+    // Reemplaza la línea que tenías:
+    // get('btn-analyze').addEventListener('click', analyzeText);
+
+    // Por esta nueva:
+    get('btn-analyze').addEventListener('click', showPromptForClaude);
+
+    // Opcional: también puedes cambiar el texto del botón para que quede más claro
+    // get('btn-analyze').textContent = "Mostrar prompt para Claude";
+
+    // === Mantenemos el resto de tu código JavaScript tal cual (ajustes, historial, firebase, etc.) ===
+
+    // ... (todo el código que ya tenías después de esto se mantiene sin cambios)
+
+    // INIT
+    loadVersions();
+    updateCharCount();
+    updateKeyStatus();
+    var _ig = getInstrucGen(); 
+    if (_ig && get('instruc-generales')) get('instruc-generales').value = _ig;
+
+    // Si quieres, puedes eliminar o comentar las partes de llamada a API (callClaude, requestVerdict, etc.)
+    // pero las puedes dejar por si en el futuro quieres volver a activarlas.
+
+  </script>
+</body>
+</html>
