@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preeditor · Castroverde</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── VARIABLES ── */
+    :root {
+      --bg:       #eef4f3;
+      --surface:  #e2edeb;
+      --card:     #d6e8e5;
+      --border:   #b4d0cc;
+      --text:     #1e3532;
+      --muted:    #5a8a84;
+      --accent:   #2a7a6e;
+      --accent2:  #3a9e6e;
+      --red:      #c45a3a;
+
+      /* Colores de marca */
+      --keep-bg:      #fff3b0;
+      --keep-border:  #c8a800;
+      --emph-bg:      #d4edff;
+      --emph-border:  #3a7ab0;
+      --ctx-bg:       #ede8ff;
+      --ctx-border:   #7a5abf;
+
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    3px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── CABECERA ── */
+    header {
+      flex-shrink: 0;
+      background: var(--text);
+      padding: 11px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .logo {
+      font-family: var(--font-h);
+      font-size: 17px;
+      font-weight: 700;
+      color: #eef4f3;
+    }
+    .logo span { color: #8ecfc8; font-style: italic; }
+    .logo small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 7px;
+      color: rgba(255,255,255,.35);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .header-tag {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.3);
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    /* ── LAYOUT ── */
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── PANEL EDITOR ── */
+    .panel-editor {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+
+    /* Barra de herramientas */
+    .toolbar {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar-label {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+    .tool-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    /* Botones de marca */
+    .btn-mark {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 13px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .5px;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-keep {
+      background: var(--keep-bg);
+      color: #5a4000;
+      border: 1px solid var(--keep-border);
+    }
+    .btn-keep:hover { background: #ffe87a; }
+
+    .btn-emph {
+      background: var(--emph-bg);
+      color: #1a3c5a;
+      border: 1px solid var(--emph-border);
+    }
+    .btn-emph:hover { background: #b8ddff; }
+
+    .btn-ctx {
+      background: var(--ctx-bg);
+      color: #3a2670;
+      border: 1px solid var(--ctx-border);
+    }
+    .btn-ctx:hover { background: #d8d0ff; }
+
+    .btn-clear {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+    }
+    .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+    .btn-undo {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+    }
+    .btn-undo:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-reset {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+    }
+    .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── LEYENDA ── */
+    .legend {
+      flex-shrink: 0;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 16px;
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: .5px;
+    }
+    .legend-swatch {
+      width: 28px;
+      height: 11px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .swatch-keep { background: var(--keep-bg); border: 1px solid var(--keep-border); }
+    .swatch-emph { background: var(--emph-bg); border: 1px solid var(--emph-border); }
+    .swatch-ctx  { background: var(--ctx-bg);  border: 1px solid var(--ctx-border);  }
+
+    /* ── ÁREA EDITABLE ── */
+    .editor-wrap {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+    }
+    #editor {
+      min-height: 100%;
+      padding: 24px 28px;
+      outline: none;
+      font-family: var(--font-body);
+      font-size: 15.5px;
+      line-height: 1.9;
+      color: var(--text);
+      caret-color: var(--accent);
+    }
+    #editor:empty::before {
+      content: 'Pega o escribe aquí tu fragmento del libro…';
+      color: var(--muted);
+      font-style: italic;
+      pointer-events: none;
+    }
+
+    /* ── MARCAS VISUALES ── */
+    #editor .keep {
+      background: var(--keep-bg);
+      border-bottom: 2.5px solid var(--keep-border);
+      border-radius: 2px;
+      padding: 0 1px;
+      cursor: pointer;
+    }
+    #editor .emph {
+      background: var(--emph-bg);
+      border-bottom: 2px solid var(--emph-border);
+      border-radius: 2px;
+      padding: 0 1px;
+      cursor: pointer;
+    }
+    #editor .ctx {
+      background: var(--ctx-bg);
+      border-bottom: 2px dashed var(--ctx-border);
+      border-radius: 2px;
+      padding: 0 1px;
+      cursor: pointer;
+    }
+
+    /* Tooltip al hacer hover sobre una marca */
+    #editor .keep::after  { content: '🔒'; font-size: 9px; vertical-align: super; margin-left: 1px; }
+    #editor .emph::after  { content: '⭐'; font-size: 9px; vertical-align: super; margin-left: 1px; }
+    #editor .ctx::after   { content: '⚖️'; font-size: 9px; vertical-align: super; margin-left: 1px; }
+
+    /* ── PANEL LATERAL ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    /* Resumen de marcas */
+    .marks-header {
+      flex-shrink: 0;
+      padding: 12px 16px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .marks-title {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .marks-stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .stat-badge {
+      flex: 1;
+      min-width: 70px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 10px;
+      text-align: center;
+    }
+    .stat-badge-n {
+      font-family: var(--font-h);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1;
+      display: block;
+    }
+    .stat-badge-l {
+      font-family: var(--font-ui);
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      display: block;
+      margin-top: 3px;
+    }
+    .n-keep { color: #8a6800; }
+    .n-emph { color: #1a3c8a; }
+    .n-ctx  { color: #4a2a9a; }
+
+    /* Lista de marcas */
+    .marks-list-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+    }
+    .mark-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .mark-item:hover { border-color: var(--accent); }
+    .mark-item-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+    .mark-item-text {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .mark-item-del {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 0 2px;
+      flex-shrink: 0;
+      line-height: 1;
+      opacity: .5;
+    }
+    .mark-item-del:hover { color: var(--red); opacity: 1; }
+    .marks-empty {
+      text-align: center;
+      padding: 24px 10px;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      line-height: 2;
+    }
+
+    /* ── BOTÓN GENERAR ── */
+    .generate-zone {
+      flex-shrink: 0;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .btn-generate {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: #eef4f3;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      transition: background .2s;
+    }
+    .btn-generate:hover { background: #1f5e54; }
+    .btn-generate:disabled { opacity: .35; cursor: not-allowed; }
+    .gen-hint {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: .5px;
+    }
+
+    /* ── MODAL RESULTADO ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(30,53,50,.6);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 680px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(30,53,50,.22);
+    }
+    .modal-head {
+      flex-shrink: 0;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .modal-title {
+      font-family: var(--font-h);
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .modal-subtitle {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 2px;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--muted);
+      padding: 2px 6px;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+    #prompt-output {
+      width: 100%;
+      height: 320px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      line-height: 1.7;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      resize: vertical;
+      outline: none;
+    }
+    #prompt-output:focus { border-color: var(--accent); }
+    .modal-actions {
+      flex-shrink: 0;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .btn {
+      padding: 7px 14px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); color: #eef4f3; }
+    .btn-primary:hover { background: #1f5e54; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-ok {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: none;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--text);
+      color: #eef4f3;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 8px 18px;
+      border-radius: 20px;
+      opacity: 0;
+      transition: opacity .25s, transform .25s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 680px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel-right { display: none; }
+      .toolbar { gap: 5px; }
+      .btn-mark { padding: 6px 9px; font-size: 9px; }
+    }
+
+    /* ── GROQ: botón, zona resultado, modal clave ── */
+    .btn-send-groq {
+      padding: 7px 14px; border: none; border-radius: var(--radius);
+      cursor: pointer; font-family: var(--font-ui); font-size: 10px;
+      font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px;
+      background: var(--accent2); color: #eef4f3; transition: all .15s;
+    }
+    .btn-send-groq:hover:not(:disabled) { background: #2a8a5e; }
+    .btn-send-groq:disabled { opacity: .4; cursor: not-allowed; }
+
+    .key-pill {
+      font-family: var(--font-ui); font-size: 8px; letter-spacing: 1px;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 20px;
+      cursor: pointer; border: 1px solid var(--border); color: var(--muted);
+      background: none; transition: all .15s;
+    }
+    .key-pill.ok { border-color: var(--accent2); color: var(--accent2); }
+    .key-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+    .groq-zone {
+      margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: none; flex-direction: column; gap: 8px;
+    }
+    .groq-zone.visible { display: flex; }
+    .groq-zone-label {
+      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase;
+      letter-spacing: 2px; color: var(--accent);
+    }
+    .groq-result {
+      width: 100%; min-height: 120px; max-height: 260px;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-body);
+      font-size: 13px; line-height: 1.8; padding: 10px 12px;
+      border-radius: var(--radius); overflow-y: auto;
+      white-space: pre-wrap; resize: vertical;
+    }
+    .groq-foot {
+      display: flex; gap: 8px; align-items: center; justify-content: flex-end;
+    }
+    .groq-spinner {
+      width: 14px; height: 14px; display: none;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: gspin .8s linear infinite;
+    }
+    .groq-spinner.on { display: inline-block; }
+    @keyframes gspin { to { transform: rotate(360deg); } }
+    .groq-status { font-family: var(--font-ui); font-size: 9px; color: var(--muted); flex:1; }
+
+    /* Modal clave Groq — sobrepuesto encima del modal principal */
+    .modal-key-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(30,53,50,.7); z-index: 600;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-key-overlay.visible { display: flex; }
+    .modal-key-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); width: 100%; max-width: 400px;
+      padding: 26px 26px 20px;
+      box-shadow: 0 8px 32px rgba(30,53,50,.2);
+    }
+    .mkt { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .mkd { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+    .mkd a { color: var(--accent); }
+    .mki {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); padding: 9px 12px; font-family: var(--font-ui);
+      font-size: 12px; border-radius: var(--radius); outline: none;
+    }
+    .mki:focus { border-color: var(--accent); }
+    .mkh { font-family: var(--font-ui); font-size: 9px; color: var(--muted); margin-top: 5px; }
+    .mka { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .btn-sm-ghost {
+      padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+      background: transparent; color: var(--muted); cursor: pointer;
+      font-family: var(--font-ui); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1px; transition: all .15s;
+    }
+    .btn-sm-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm-primary {
+      padding: 6px 12px; border: none; border-radius: var(--radius);
+      background: var(--accent); color: #eef4f3; cursor: pointer;
+      font-family: var(--font-ui); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1px; transition: background .15s;
+    }
+    .btn-sm-primary:hover { background: #1f5e54; }
+  </style>
+</head>
+<body>
+
+<!-- CABECERA -->
+<header>
+  <div class="logo">
+    <div>Castroverde <span>de Cerrato</span></div>
+    <small>Pre-editor de marcado semántico</small>
+  </div>
+  <span class="header-tag">Paso 1 de 2</span>
+</header>
+
+<!-- LAYOUT PRINCIPAL -->
+<div class="layout">
+
+  <!-- PANEL EDITOR -->
+  <div class="panel-editor">
+
+    <!-- Barra de herramientas -->
+    <div class="toolbar">
+      <span class="toolbar-label">Marcar</span>
+
+      <button class="btn-mark btn-keep" id="btn-keep" title="El texto seleccionado debe copiarse literalmente">
+        🔒 Proteger
+      </button>
+      <button class="btn-mark btn-emph" id="btn-emph" title="El texto seleccionado debe destacarse en el resultado">
+        ⭐ Destacar
+      </button>
+      <button class="btn-mark btn-ctx" id="btn-ctx" title="El texto seleccionado debe conservarse aunque pueda resumirse">
+        ⚖️ Contexto
+      </button>
+
+      <div class="tool-sep"></div>
+
+      <button class="btn-mark btn-clear" id="btn-clear" title="Quitar la marca del texto seleccionado">
+        ✕ Quitar marca
+      </button>
+      <button class="btn-mark btn-undo" id="btn-undo" title="Deshacer la última acción">
+        ↩ Deshacer
+      </button>
+      <button class="btn-mark btn-reset" id="btn-reset" title="Eliminar todas las marcas">
+        ⊘ Resetear todo
+      </button>
+    </div>
+
+    <!-- Leyenda -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch swatch-keep"></div>
+        <span>🔒 Proteger — copiar literalmente</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch swatch-emph"></div>
+        <span>⭐ Destacar — dar énfasis</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch swatch-ctx"></div>
+        <span>⚖️ Contexto — no eliminar</span>
+      </div>
+    </div>
+
+    <!-- Área editable -->
+    <div class="editor-wrap">
+      <div id="editor" contenteditable="true" spellcheck="true"></div>
+    </div>
+
+  </div><!-- /panel-editor -->
+
+  <!-- PANEL LATERAL -->
+  <div class="panel-right">
+
+    <div class="marks-header">
+      <div class="marks-title">Marcas aplicadas</div>
+      <div class="marks-stats">
+        <div class="stat-badge">
+          <span class="stat-badge-n n-keep" id="count-keep">0</span>
+          <span class="stat-badge-l">🔒 Proteger</span>
+        </div>
+        <div class="stat-badge">
+          <span class="stat-badge-n n-emph" id="count-emph">0</span>
+          <span class="stat-badge-l">⭐ Destacar</span>
+        </div>
+        <div class="stat-badge">
+          <span class="stat-badge-n n-ctx" id="count-ctx">0</span>
+          <span class="stat-badge-l">⚖️ Contexto</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="marks-list-wrap" id="marks-list">
+      <div class="marks-empty" id="marks-empty">
+        Selecciona texto en el editor<br>y aplica una marca.
+      </div>
+    </div>
+
+    <div class="generate-zone">
+      <button class="btn-generate" id="btn-generate">
+        Generar prompt →
+      </button>
+      <div class="gen-hint">El prompt incluye el system prompt completo del editor</div>
+    </div>
+
+  </div><!-- /panel-right -->
+
+</div><!-- /layout -->
+
+<!-- MODAL RESULTADO -->
+<div class="modal-overlay" id="modal-result">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Prompt generado</div>
+        <div class="modal-subtitle">Listo para pegar en el editor de Castroverde</div>
+      </div>
+      <button class="modal-close" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="prompt-output" readonly></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="key-pill" id="key-pill">⚿ sin clave</button>
+      <span class="copy-ok" id="copy-ok">¡Copiado!</span>
+      <button class="btn btn-ghost" id="modal-close-btn">Cerrar</button>
+      <button class="btn btn-primary" id="btn-copy-prompt">⎘ Copiar</button>
+      <button class="btn-send-groq" id="btn-send-groq">✦ Enviar a Llama →</button>
+    </div>
+  <!-- Zona resultado Groq -->
+  <div class="groq-zone" id="groq-zone">
+    <div class="groq-zone-label">✦ Resultado — llama-3.3-70b-versatile</div>
+    <div class="groq-result" id="groq-result"></div>
+    <div id="groq-resumen" style="display:none; margin-top:8px; padding:8px 12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--font-ui); font-size:10px; color:var(--muted); line-height:1.6;"></div>
+    <div class="groq-foot">
+      <div class="groq-spinner" id="groq-spinner"></div>
+      <span class="groq-status" id="groq-status"></span>
+      <button class="btn-sm-ghost" id="btn-copy-result" style="display:none;">⎘ Copiar resultado</button>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- Modal clave Groq -->
+<div class="modal-key-overlay" id="modal-key">
+  <div class="modal-key-box">
+    <div class="mkt">Clave API de Groq</div>
+    <div class="mkd">Necesaria para enviar a Llama. Se guarda solo en este navegador.<br><br>Consíguela en <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>.</div>
+    <input class="mki" id="mki" type="password" placeholder="gsk_…" autocomplete="off">
+    <div class="mkh">Empieza por <code>gsk_</code>. Solo tú la ves.</div>
+    <div class="mka">
+      <button class="btn-sm-ghost" id="mk-forget">Olvidar</button>
+      <button class="btn-sm-ghost" id="mk-cancel">Cancelar</button>
+      <button class="btn-sm-primary" id="mk-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   ESTADO Y UTILIDADES
+══════════════════════════════════════════════════════ */
+
+const editor   = document.getElementById('editor');
+const marksList = document.getElementById('marks-list');
+
+// Pila de deshacer: guardamos snapshots del innerHTML
+let undoStack  = [];
+const MAX_UNDO = 30;
+
+function saveUndo() {
+  undoStack.push(editor.innerHTML);
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function get(id) { return document.getElementById(id); }
+
+function toast(msg, dur = 1800) {
+  const t = get('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+/* ══════════════════════════════════════════════════════
+   MARCADO DE SELECCIONES
+══════════════════════════════════════════════════════ */
+
+/**
+ * Aplica una clase de marca ('keep' | 'emph' | 'ctx') al texto seleccionado.
+ * Usa execCommand('insertHTML') para mantener el cursor y evitar romper el DOM.
+ */
+function applyMark(cls) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    toast('Selecciona primero el texto que quieres marcar.');
+    return;
+  }
+
+  // Verificar que la selección está dentro del editor
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) {
+    toast('La selección debe estar dentro del área de texto.');
+    return;
+  }
+
+  saveUndo();
+
+  const icons = { keep: '🔒', emph: '⭐', ctx: '⚖️' };
+  const labels = { keep: 'Proteger', emph: 'Destacar', ctx: 'Contexto' };
+
+  // Extraer el contenido seleccionado
+  const fragment = range.extractContents();
+
+  // Crear el span de marca
+  const span = document.createElement('span');
+  span.className = cls;
+  span.dataset.mark = cls;
+
+  // Aplanar marcas anidadas del mismo tipo (evitar doble marcado)
+  // e insertar el fragmento dentro del span
+  span.appendChild(fragment);
+
+  // Limpiar anidamientos innecesarios del mismo tipo dentro del span
+  span.querySelectorAll('.' + cls).forEach(inner => {
+    while (inner.firstChild) inner.parentNode.insertBefore(inner.firstChild, inner);
+    inner.parentNode.removeChild(inner);
+  });
+
+  range.insertNode(span);
+
+  // Mover el cursor después del span
+  range.setStartAfter(span);
+  range.setEndAfter(span);
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  updateSidebar();
+  toast(icons[cls] + ' ' + labels[cls] + ' aplicado.');
+}
+
+/**
+ * Quita la marca del texto seleccionado.
+ */
+function clearMark() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    // Si no hay selección, intentar quitar la marca del span más cercano al cursor
+    toast('Selecciona el texto cuya marca quieres quitar.');
+    return;
+  }
+
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) return;
+
+  saveUndo();
+
+  // Encontrar spans marcados que intersecten con la selección
+  const spans = editor.querySelectorAll('.keep, .emph, .ctx');
+  let removed = 0;
+
+  spans.forEach(span => {
+    if (sel.containsNode(span, true)) {
+      // Desenvuelve el span: mueve sus hijos al padre
+      const parent = span.parentNode;
+      while (span.firstChild) parent.insertBefore(span.firstChild, span);
+      parent.removeChild(span);
+      removed++;
+    }
+  });
+
+  // Normalizar el DOM para fusionar text nodes adyacentes
+  editor.normalize();
+
+  if (removed > 0) {
+    updateSidebar();
+    toast('Marca eliminada.');
+  } else {
+    toast('No hay marcas en la selección actual.');
+  }
+}
+
+/**
+ * Elimina una marca específica por referencia al span.
+ */
+function removeMark(span) {
+  saveUndo();
+  const parent = span.parentNode;
+  while (span.firstChild) parent.insertBefore(span.firstChild, span);
+  parent.removeChild(span);
+  editor.normalize();
+  updateSidebar();
+  toast('Marca eliminada.');
+}
+
+/**
+ * Resetea todas las marcas del editor.
+ */
+function resetAll() {
+  if (!confirm('¿Eliminar todas las marcas del texto?')) return;
+  saveUndo();
+  editor.querySelectorAll('.keep, .emph, .ctx').forEach(span => {
+    const parent = span.parentNode;
+    while (span.firstChild) parent.insertBefore(span.firstChild, span);
+    parent.removeChild(span);
+  });
+  editor.normalize();
+  updateSidebar();
+  toast('Todas las marcas eliminadas.');
+}
+
+/**
+ * Deshace la última acción.
+ */
+function undo() {
+  if (undoStack.length === 0) {
+    toast('No hay acciones que deshacer.');
+    return;
+  }
+  editor.innerHTML = undoStack.pop();
+  updateSidebar();
+  toast('Acción deshecha.');
+}
+
+/* ══════════════════════════════════════════════════════
+   PANEL LATERAL — LISTA DE MARCAS
+══════════════════════════════════════════════════════ */
+
+function updateSidebar() {
+  const spans = editor.querySelectorAll('.keep, .emph, .ctx');
+  const keeps = editor.querySelectorAll('.keep');
+  const emphs = editor.querySelectorAll('.emph');
+  const ctxs  = editor.querySelectorAll('.ctx');
+
+  get('count-keep').textContent = keeps.length;
+  get('count-emph').textContent = emphs.length;
+  get('count-ctx').textContent  = ctxs.length;
+
+  const icons  = { keep: '🔒', emph: '⭐', ctx: '⚖️' };
+  const labels = { keep: 'Proteger', emph: 'Destacar', ctx: 'Contexto' };
+
+  if (spans.length === 0) {
+    marksList.innerHTML = '<div class="marks-empty" id="marks-empty">Selecciona texto en el editor<br>y aplica una marca.</div>';
+    return;
+  }
+
+  let html = '';
+  spans.forEach((span, i) => {
+    const cls  = span.className.split(' ')[0]; // 'keep' | 'emph' | 'ctx'
+    const text = span.textContent.trim().substring(0, 80);
+    html += `
+      <div class="mark-item" data-idx="${i}">
+        <span class="mark-item-icon">${icons[cls] || '?'}</span>
+        <span class="mark-item-text" title="${text}">${text}${span.textContent.length > 80 ? '…' : ''}</span>
+        <button class="mark-item-del" data-idx="${i}" title="Quitar esta marca">✕</button>
+      </div>`;
+  });
+
+  marksList.innerHTML = html;
+
+  // Eventos: clic en ítem → resaltar span en editor
+  marksList.querySelectorAll('.mark-item').forEach((item, i) => {
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('mark-item-del')) return;
+      const span = spans[i];
+      if (span) {
+        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Seleccionar el span visualmente
+        const sel = window.getSelection();
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    });
+  });
+
+  // Eventos: botón eliminar marca desde la lista
+  marksList.querySelectorAll('.mark-item-del').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      removeMark(spans[i]);
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   GENERADOR DE PROMPT
+══════════════════════════════════════════════════════ */
+
+function generatePrompt() {
+  const rawHTML = editor.innerHTML.trim();
+
+  if (!rawHTML || editor.textContent.trim() === '') {
+    toast('El editor está vacío. Pega un texto antes de generar el prompt.');
+    return;
+  }
+
+  // Transformar el HTML en texto con etiquetas semánticas para IA
+  // Creamos un clon para no tocar el DOM real
+  const clone = editor.cloneNode(true);
+
+  // Reemplazar spans marcados por etiquetas semánticas
+  clone.querySelectorAll('.keep').forEach(s => {
+    const tag = document.createElement('keep');
+    tag.textContent = s.textContent;
+    s.replaceWith(tag);
+  });
+  clone.querySelectorAll('.emph').forEach(s => {
+    const tag = document.createElement('emph');
+    tag.textContent = s.textContent;
+    s.replaceWith(tag);
+  });
+  clone.querySelectorAll('.ctx').forEach(s => {
+    const tag = document.createElement('ctx');
+    tag.textContent = s.textContent;
+    s.replaceWith(tag);
+  });
+
+  // Extraer el texto con las etiquetas
+  // Usamos innerHTML del clon y limpiamos tags HTML sobrantes
+  let semanticText = clone.innerHTML
+    // Preservar etiquetas semánticas personalizadas
+    .replace(/<keep>/g,  '<keep>')
+    .replace(/<\/keep>/g, '</keep>')
+    .replace(/<emph>/g,  '<emph>')
+    .replace(/<\/emph>/g, '</emph>')
+    .replace(/<ctx>/g,   '<ctx>')
+    .replace(/<\/ctx>/g, '</ctx>')
+    // Convertir saltos de párrafo en saltos de línea
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<div>/gi, '\n')
+    .replace(/<\/div>/gi, '')
+    // Eliminar cualquier otro tag HTML
+    .replace(/<(?!\/?(keep|emph|ctx)\b)[^>]+>/gi, '')
+    // Decodificar entidades HTML básicas
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    // Limpiar líneas vacías múltiples
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const hasMark = semanticText.includes('<keep>') ||
+                  semanticText.includes('<emph>') ||
+                  semanticText.includes('<ctx>');
+
+  // Construir el prompt estructurado
+  let instrucciones = 'INSTRUCCIONES DE EDICIÓN — OBLIGATORIAS:\n';
+
+  if (semanticText.includes('<keep>')) {
+    instrucciones += '- <keep>…</keep>: COPIA LITERAL, sin cambiar ni una letra.\n';
+  }
+  if (semanticText.includes('<emph>')) {
+    instrucciones += '- <emph>…</emph>: CONSERVA ÍNTEGRO y dale prominencia. No elimines ni resumas.\n';
+  }
+  if (semanticText.includes('<ctx>')) {
+    instrucciones += '- <ctx>…</ctx>: CONSERVA TODA LA INFORMACIÓN. Mejora la prosa si quieres pero no suprimas ningún dato.\n';
+  }
+  if (!hasMark) {
+    instrucciones += '(No se han aplicado marcas. Edita el texto según las instrucciones generales.)\n';
+  }
+
+  instrucciones += '\nEl texto sin etiquetas puede editarse libremente. PROHIBIDO añadir frases o datos que no estuvieran en el original.\n';
+
+  const prompt = 'SYSTEM PROMPT:\n' + EDITOR_SYSTEM_PROMPT + '\n\n' + instrucciones + '\nFRAGMENTO:\n\'\'\'\n' + semanticText + '\n\'\'\'';
+
+  get('prompt-output').value = prompt;
+  get('modal-result').classList.add('visible');
+  get('copy-ok').style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════════════
+   EVENTOS
+══════════════════════════════════════════════════════ */
+
+get('btn-keep').addEventListener('click', () => applyMark('keep'));
+get('btn-emph').addEventListener('click', () => applyMark('emph'));
+get('btn-ctx').addEventListener('click',  () => applyMark('ctx'));
+get('btn-clear').addEventListener('click', clearMark);
+get('btn-undo').addEventListener('click', undo);
+get('btn-reset').addEventListener('click', resetAll);
+get('btn-generate').addEventListener('click', generatePrompt);
+
+// Cerrar modal
+get('modal-close').addEventListener('click',     () => get('modal-result').classList.remove('visible'));
+get('modal-close-btn').addEventListener('click', () => get('modal-result').classList.remove('visible'));
+get('modal-result').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('visible');
+});
+
+// Copiar prompt
+get('btn-copy-prompt').addEventListener('click', () => {
+  const text = get('prompt-output').value;
+  if (!text) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      get('copy-ok').style.display = 'inline';
+      setTimeout(() => get('copy-ok').style.display = 'none', 2200);
+    });
+  } else {
+    get('prompt-output').select();
+    document.execCommand('copy');
+    get('copy-ok').style.display = 'inline';
+    setTimeout(() => get('copy-ok').style.display = 'none', 2200);
+  }
+});
+
+// Actualizar sidebar cuando el editor cambia (por escritura directa)
+editor.addEventListener('input', () => updateSidebar());
+
+// Atajo de teclado: Ctrl+Z → deshacer
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && document.activeElement === editor) {
+    // Permitir el Ctrl+Z nativo del contenteditable para texto,
+    // solo interceptar si hay marcas en la pila
+    // (dejamos que el browser maneje el undo de texto normal)
+  }
+});
+
+// Inicializar sidebar
+updateSidebar();
+
+/* ══════════════════════════════════════════════════════
+   SYSTEM PROMPT DEL EDITOR
+══════════════════════════════════════════════════════ */
+const EDITOR_SYSTEM_PROMPT = 'Eres un editor literario especializado en historia local castellana. Editas borradores del libro de historia de Castroverde de Cerrato.\n\nREGLAS ABSOLUTAS — DEBES SEGUIRLAS SIN EXCEPCIÓN:\n\n1. ETIQUETAS DE CONTROL — las más importantes:\n   - <keep>texto</keep>: copia ese texto EXACTAMENTE como aparece, sin cambiar ni una letra.\n   - <emph>texto</emph>: conserva ese texto íntegro y dale protagonismo en la frase. No lo elimines ni lo resumas.\n   - <ctx>texto</ctx>: conserva TODO el contenido de ese bloque sin eliminar nada. Puedes mejorar la prosa pero NO puedes suprimir información.\n\n2. NO INVENTES: no añadas frases, juicios ni información que no estén en el original. Prohibido añadir frases como "fue un rey decisivo" o similares si no estaban en el texto.\n\n3. NO RESUMAS el contenido de <ctx>. Debes conservar todos los datos.\n\n4. NO ALARGAR: el texto final debe ser igual de largo o más corto, nunca más largo.\n\nVOZ DE REFERENCIA — aproxima el texto a esta voz:\n"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. No era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla."\n\nRASGOS DE ESA VOZ:\n- Frases declarativas cortas con peso propio.\n- Datos precisos integrados en la narración, nunca aislados.\n- Ritmo alternado: frase corta, frase desarrollada, cierre breve.\n- Tono cercano, directo, sin academicismo ni artificios.\n\nCORRECCIONES TÉCNICAS permitidas:\n- Ortografía, puntuación, concordancias, signos incorrectos.\n- Eliminar redundancias y mejorar el ritmo de frases sin marcas.\n- Puntuación mínima necesaria. Evitar punto y coma e incisos innecesarios.\n\nNOTAS AL PIE: el autor las tiene extensas. NUNCA señales su ausencia.\n\nCONTEXTO HISTÓRICO: primer documento 916, Ordoño II, Castro Viride. 676 hab. en 1950, hoy 189.\n\nFORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de código, empezando con {:\n{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}';
+
+
+/* ══════════════════════════════════════════════════════
+   CLAVE GROQ
+══════════════════════════════════════════════════════ */
+let GROQ_KEY = localStorage.getItem('cv_preeditor_groq') || '';
+
+function updateKeyPill() {
+  const p = document.getElementById('key-pill');
+  if (!p) return;
+  if (GROQ_KEY.startsWith('gsk_')) { p.textContent = '⚿ clave OK'; p.classList.add('ok'); }
+  else                              { p.textContent = '⚿ sin clave'; p.classList.remove('ok'); }
+}
+
+function openKeyModal()  { document.getElementById('mki').value = GROQ_KEY; document.getElementById('modal-key').classList.add('visible'); setTimeout(() => document.getElementById('mki').focus(), 80); }
+function closeKeyModal() { document.getElementById('modal-key').classList.remove('visible'); }
+
+document.getElementById('key-pill').addEventListener('click', openKeyModal);
+document.getElementById('mk-cancel').addEventListener('click', closeKeyModal);
+document.getElementById('modal-key').addEventListener('click', e => { if (e.target === document.getElementById('modal-key')) closeKeyModal(); });
+document.getElementById('mki').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('mk-save').click(); if (e.key === 'Escape') closeKeyModal(); });
+document.getElementById('mk-save').addEventListener('click', () => {
+  const v = document.getElementById('mki').value.trim();
+  if (!v) { alert('Introduce la clave.'); return; }
+  if (!v.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return; }
+  GROQ_KEY = v; localStorage.setItem('cv_preeditor_groq', v); updateKeyPill(); closeKeyModal();
+  toast('Clave guardada.');
+});
+document.getElementById('mk-forget').addEventListener('click', () => {
+  if (!confirm('¿Borrar la clave?')) return;
+  GROQ_KEY = ''; localStorage.removeItem('cv_preeditor_groq');
+  document.getElementById('mki').value = ''; updateKeyPill();
+  toast('Clave eliminada.');
+});
+
+/* ══════════════════════════════════════════════════════
+   ENVÍO A GROQ LLAMA — DOS LLAMADAS SEPARADAS
+══════════════════════════════════════════════════════ */
+
+async function llamarGroq(systemMsg, userMsg) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_KEY },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 2048,
+      messages: [
+        { role: 'system', content: systemMsg },
+        { role: 'user',   content: userMsg }
+      ]
+    })
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error((data.error && data.error.message) || 'Error ' + resp.status);
+  return data.choices[0].message.content || '';
+}
+
+function extraerTexto(raw) {
+  try {
+    const parsed = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim());
+    if (parsed.texto_mejorado) return { texto: parsed.texto_mejorado.trim(), resumen: parsed.cambios_resumen || '' };
+  } catch(e) {}
+  return { texto: raw.trim(), resumen: '' };
+}
+
+function limpiarEtiquetas(t) {
+  return t
+    .replace(/<keep>([\s\S]*?)<\/keep>/gi, '$1')
+    .replace(/<emph>([\s\S]*?)<\/emph>/gi, '$1')
+    .replace(/<ctx>([\s\S]*?)<\/ctx>/gi, '$1')
+    .trim();
+}
+
+document.getElementById('btn-send-groq').addEventListener('click', async function() {
+  var promptText = document.getElementById('prompt-output').value;
+  if (!promptText) { toast('Genera el prompt primero.'); return; }
+  if (!GROQ_KEY.startsWith('gsk_')) { toast('Introduce tu clave de Groq primero.'); openKeyModal(); return; }
+
+  document.getElementById('btn-send-groq').disabled = true;
+  document.getElementById('groq-spinner').classList.add('on');
+  document.getElementById('groq-zone').classList.add('visible');
+  document.getElementById('groq-result').textContent = '';
+  document.getElementById('btn-copy-result').style.display = 'none';
+  var resumenEl = document.getElementById('groq-resumen');
+  if (resumenEl) resumenEl.style.display = 'none';
+
+  try {
+    var fragMatch = promptText.match(/FRAGMENTO:[\s\S]*?'''([\s\S]*?)'''/);
+    var fragmento = fragMatch ? fragMatch[1].trim() : '';
+
+    var ctxBlocks = [];
+    var ctxRegex = /<ctx>([\s\S]*?)<\/ctx>/gi;
+    var m;
+    while ((m = ctxRegex.exec(fragmento)) !== null) { ctxBlocks.push(m[1].trim()); }
+
+    var fragmentoSinCtx = fragmento.replace(/<ctx>[\s\S]*?<\/ctx>/gi, '').trim();
+    var hayCtx = ctxBlocks.length > 0;
+    var hayLibre = fragmentoSinCtx.replace(/<[^>]+>/g,'').trim().length > 0;
+
+    var textoEditado = '';
+    var textoCtx = '';
+    var resumenFinal = '';
+
+    if (hayLibre) {
+      document.getElementById('groq-status').textContent = 'Llamada 1/2: editando texto libre...';
+      var promptLibre = promptText.replace(/FRAGMENTO:[\s\S]*?'''[\s\S]*?'''/, "FRAGMENTO:\n'''\n" + fragmentoSinCtx + "\n'''");
+      var raw1 = await llamarGroq(EDITOR_SYSTEM_PROMPT, promptLibre);
+      var r1 = extraerTexto(raw1);
+      textoEditado = limpiarEtiquetas(r1.texto);
+      resumenFinal = r1.resumen;
+    }
+
+    if (hayCtx) {
+      document.getElementById('groq-status').textContent = hayLibre ? 'Llamada 2/2: corrigiendo bloque ctx...' : 'Corrigiendo bloque ctx...';
+      var systemCtx = 'Eres un corrector de textos. Solo corriges errores de ortografia, puntuacion, concordancias y signos incorrectos. PROHIBIDO: no resumas, no elimines informacion, no cambies el orden, no añadas nada nuevo. Devuelve el texto corregido sin explicaciones ni formato JSON.';
+      var ctxCorregidos = [];
+      for (var i = 0; i < ctxBlocks.length; i++) {
+        var raw2 = await llamarGroq(systemCtx, 'Corrige solo los errores tecnicos de este texto:\n\n' + ctxBlocks[i]);
+        ctxCorregidos.push(raw2.trim());
+      }
+      textoCtx = ctxCorregidos.join('\n\n');
+    }
+
+    var resultado = '';
+    if (textoEditado && textoCtx) { resultado = textoEditado + '\n\n' + textoCtx; }
+    else if (textoEditado) { resultado = textoEditado; }
+    else { resultado = textoCtx; }
+
+    document.getElementById('groq-result').textContent = resultado;
+    if (resumenEl && resumenFinal) { resumenEl.textContent = '— ' + resumenFinal; resumenEl.style.display = 'block'; }
+    document.getElementById('groq-status').textContent = '✓ Listo';
+    document.getElementById('btn-copy-result').style.display = 'inline-block';
+
+  } catch(err) {
+    document.getElementById('groq-status').textContent = '⚠ ' + err.message;
+    document.getElementById('groq-result').textContent = err.message;
+  }
+
+  document.getElementById('btn-send-groq').disabled = false;
+  document.getElementById('groq-spinner').classList.remove('on');
+});
+
+document.getElementById('btn-copy-result').addEventListener('click', () => {
+  const t = document.getElementById('groq-result').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('Resultado copiado.'));
+  else { const ta = document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Resultado copiado.'); }
+});
+
+updateKeyPill();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de prompts · Imágenes del libro</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-1.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-2.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2">
+  <link rel="manifest" href="manifest.json?v=2">
+  <meta name="theme-color" content="#0f0c29">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: #faf8f4;
+    color: #1a1814;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e8e2d8;
+    padding: 2.5rem 2.25rem 2.5rem;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+  }
+
+  .app-header {
+    border-bottom: 1px solid #e8e2d8;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .app-header-left h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+    color: #1a1814;
+    margin-bottom: 4px;
+  }
+
+  .app-header-left p {
+    font-size: 15px;
+    color: #777060;
+    font-style: italic;
+  }
+
+  .btn-historial-toggle {
+    font-family: 'EB Garamond', serif;
+    font-size: 13px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd8ce;
+    background: #faf7f2;
+    color: #6a6258;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .btn-historial-toggle:hover { border-color: #B89A5A; color: #B89A5A; background: #fff; }
+  .btn-historial-toggle.active { border-color: #B89A5A; color: #B89A5A; background: rgba(184,154,90,0.06); }
+
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #999080;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 1px;
+    background: #B89A5A;
+  }
+
+  textarea {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 13px 15px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #1a1814;
+    background: #fff;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+
+  textarea::placeholder { color: #bbb5a8; font-style: italic; }
+
+  .note-tip {
+    font-size: 12.5px;
+    color: #aaa496;
+    font-style: italic;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 540px) {
+    .fields-grid { grid-template-columns: 1fr; }
+    .app-header { flex-direction: column; }
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+  select {
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 32px 9px 12px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14.5px;
+    color: #1a1814;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23999' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  select:focus { outline: none; border-color: #B89A5A; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #eee8df;
+    margin: 1.5rem 0;
+  }
+
+  .fixed-block {
+    background: #faf7f2;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 7px 7px 0;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #6a6258;
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  .fixed-block .fixed-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #B89A5A;
+    font-style: normal;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-generate {
+    width: 100%;
+    padding: 13px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.07);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-generate:hover { background: rgba(184,154,90,0.14); }
+  .btn-generate:active { transform: scale(0.99); }
+
+  .ornament {
+    text-align: center;
+    color: #B89A5A;
+    font-size: 20px;
+    opacity: 0.4;
+    letter-spacing: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  /* OUTPUT */
+  .output-area {
+    border: 1px solid #ddd8ce;
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+  }
+  .output-area.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #f7f4ef;
+    border-bottom: 1px solid #e8e2d8;
+  }
+
+  .output-title {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999080;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-copy {
+    font-family: 'EB Garamond', serif;
+    font-size: 13.5px;
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: transparent;
+    color: #B89A5A;
+    cursor: pointer;
+    transition: background 0.12s;
+    letter-spacing: 0.02em;
+  }
+  .btn-copy:hover { background: rgba(184,154,90,0.1); }
+  .btn-copy.copied { background: rgba(184,154,90,0.18); color: #8a6e2f; border-color: #8a6e2f; }
+
+  .output-text {
+    padding: 16px 18px;
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: #1a1814;
+    font-family: 'EB Garamond', Georgia, serif;
+    white-space: pre-wrap;
+    background: #fff;
+    word-break: break-word;
+  }
+
+  /* HISTORIAL */
+  .historial-panel {
+    margin-top: 2rem;
+    display: none;
+  }
+  .historial-panel.visible { display: block; }
+
+  .historial-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border-top: 1px solid #eee8df;
+    padding-top: 1.5rem;
+  }
+
+  .historial-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .historial-count {
+    font-size: 11px;
+    background: rgba(184,154,90,0.12);
+    color: #8a6e2f;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-clear-all {
+    font-family: 'EB Garamond', serif;
+    font-size: 12.5px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #e0cfc0;
+    background: transparent;
+    color: #b09070;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-clear-all:hover { background: #fff0e8; color: #c0603a; border-color: #c0603a; }
+
+  .historial-empty {
+    text-align: center;
+    font-style: italic;
+    color: #bbb5a8;
+    font-size: 14px;
+    padding: 2rem 0;
+  }
+
+  .historial-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hist-item {
+    border: 1px solid #e8e2d8;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .hist-item:hover { border-color: #c8b898; }
+
+  .hist-item-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #faf7f2;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .hist-item-header:hover { background: #f5f0e8; }
+
+  .hist-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hist-scene-preview {
+    font-size: 14px;
+    color: #3a3530;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hist-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .hist-tag {
+    font-size: 10.5px;
+    background: rgba(184,154,90,0.1);
+    color: #8a6e2f;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-family: 'EB Garamond', serif;
+    white-space: nowrap;
+  }
+
+  .hist-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .hist-date {
+    font-size: 11px;
+    color: #b0a898;
+    font-style: italic;
+    white-space: nowrap;
+  }
+
+  .hist-actions {
+    display: flex;
+    gap: 5px;
+  }
+
+  .btn-hist-action {
+    font-family: 'EB Garamond', serif;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd8ce;
+    background: #fff;
+    color: #6a6258;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-hist-action:hover { border-color: #B89A5A; color: #B89A5A; }
+  .btn-hist-action.danger:hover { border-color: #c0603a; color: #c0603a; }
+
+  .hist-item-body {
+    display: none;
+    padding: 14px 16px;
+    background: #fff;
+    border-top: 1px solid #eee8df;
+  }
+  .hist-item-body.open { display: block; }
+
+  .hist-body-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 540px) { .hist-body-fields { grid-template-columns: 1fr; } }
+
+  .hist-field { display: flex; flex-direction: column; gap: 2px; }
+  .hist-field-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #B89A5A;
+  }
+  .hist-field-val {
+    font-size: 13.5px;
+    color: #3a3530;
+    line-height: 1.45;
+  }
+
+  .hist-scene-full {
+    font-size: 13.5px;
+    color: #3a3530;
+    line-height: 1.65;
+    margin-bottom: 10px;
+    padding: 10px 13px;
+    background: #faf8f4;
+    border-radius: 6px;
+    border: 1px solid #e8e2d8;
+  }
+
+  .hist-prompt-full {
+    background: #faf8f4;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 13px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #5a5248;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-style: italic;
+    margin-top: 10px;
+  }
+
+  .hist-body-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .scene-header {
+    margin-bottom: 8px;
+  }
+
+  .style-selector-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #B89A5A;
+    font-style: normal;
+    font-weight: 500;
+    margin-bottom: 4px;
+    font-family: 'EB Garamond', serif;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="app-header">
+    <div class="app-header-left">
+      <h1>Generador de prompts para imágenes</h1>
+      <p>Describe la escena con el máximo detalle. El estilo fotográfico se aplicará automáticamente.</p>
+    </div>
+    <button class="btn-historial-toggle" id="btnToggleHistorial" onclick="toggleHistorial()">
+      Historial (<span id="histCount">0</span>)
+    </button>
+  </div>
+
+  <!-- Escena -->
+  <div class="scene-header">
+    <div class="section-label">Descripción de la escena</div>
+  </div>
+  <textarea id="scene" rows="6" placeholder="Describe la escena con todo el detalle posible: elementos arquitectónicos, personajes, objetos, acción, época, lugar, atmósfera... Cuanto más específico, mejor resultado."></textarea>
+  <p class="note-tip">Ej: Una puerta de entrada a una fortaleza medieval del siglo X, con dos guardias armados con lanzas a ambos lados, iluminados por antorchas de piedra incrustadas en el muro...</p>
+
+  <!-- Selectores -->
+  <div class="fields-grid">
+
+    <div class="field-group">
+      <div class="section-label">Momento del día / luz</div>
+      <select id="lighting">
+        <option value="dramatic golden hour sunlight entering from a low angle, casting long, soft shadows, emphasizing the rough stone texture and age">Hora dorada (amanecer/atardecer)</option>
+        <option value="harsh midday sun casting short, sharp shadows, bleaching stone surfaces with intense light">Mediodía despejado</option>
+        <option value="deep twilight with fading blue light on the horizon, torchlight becoming dominant, warm glow against cool sky">Crepúsculo</option>
+        <option value="full night lit by torchlight and moonlight, deep shadows with warm flickering amber glow from the flames">Noche con antorchas</option>
+        <option value="soft overcast diffuse light, flat and cold, emphasizing texture without harsh shadows, muted tones">Día nublado</option>
+        <option value="dramatic storm light, dark turbulent clouds with shafts of pale light breaking through, tense atmosphere">Luz de tormenta</option>
+        <option value="soft pre-dawn blue light, cold and quiet, first light barely touching the horizon, deep shadows still dominant">Madrugada / alba</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <div class="section-label">Paleta de color</div>
+      <select id="palette">
+        <option value="earthy, warm, natural tones — ochres, siennas, aged stone grays">Tierra y cálido (por defecto)</option>
+        <option value="cool stone grays, muted blues, silver morning haze, cold and austere">Piedra fría y azul</option>
+        <option value="rich ochres, burnt sienna, deep chestnut shadows — Rembrandt-like tonal depth">Ocre y sombras profundas</option>
+        <option value="desaturated, almost monochromatic with subtle warm highlights, documentary restraint">Casi monocromático</option>
+        <option value="vivid autumn colors — russet, gold, deep olive green, amber foliage">Otoño vívido</option>
+        <option value="cold winter palette — frost whites, pale grey stone, bleached winter sky, blue shadows">Invierno frío</option>
+        <option value="deep jewel-like tones at night — dark navy sky, amber torch glow, rich shadow blacks">Noche profunda y gemas</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <div class="section-label">Encuadre / composición</div>
+      <select id="composition">
+        <option value="cinematic, symmetrical framing, strong depth perspective leading the eye into the scene, balanced and monumental">Simétrico y cinematográfico</option>
+        <option value="low angle shot looking up, emphasizing height, power and scale of the architecture, wide angle lens distortion">Ángulo bajo (contrapicado)</option>
+        <option value="high angle bird's eye view looking down onto the scene, revealing spatial layout and patterns from above">Ángulo alto (picado)</option>
+        <option value="extreme close-up detail shot, macro focus on surface texture and material, very shallow depth of field, background dissolved">Primer plano de detalle</option>
+        <option value="wide establishing shot showing full context of location, human figures small and dwarfed by architecture and landscape">Plano general</option>
+        <option value="rule of thirds composition, subject off-center, strong foreground elements framing the main subject in depth">Regla de tercios</option>
+        <option value="over-the-shoulder perspective, intimate point of view, viewer feels present inside the scene">Perspectiva subjetiva / hombro</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <div class="section-label">Cámara / óptica</div>
+      <select id="camera">
+        <option value="medium format camera with natural film grain, deep focus, and extremely sharp textures across the full frame">Formato medio (general, por defecto)</option>
+        <option value="35mm film camera with slight vignetting, natural perspective, authentic documentary feel, slight halation in highlights">35mm — estética documental</option>
+        <option value="large format view camera, extreme corner-to-corner sharpness, maximum tonal and textural detail">Gran formato — máximo detalle</option>
+        <option value="telephoto 200mm compression, background elements drawn close, very shallow depth of field, subject isolated">Teleobjetivo 200mm</option>
+        <option value="wide angle 24mm lens, expansive environmental view, slight barrel distortion, full spatial context">Gran angular 24mm</option>
+        <option value="tilt-shift lens, selective focus plane, miniature-like depth control, parts of the image soft while center is razor sharp">Tilt-shift — plano de foco selectivo</option>
+      </select>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Selector de estilo -->
+  <div class="section-label">Modo de estilo</div>
+  <div class="field-group" style="margin-bottom: 12px;">
+    <select id="styleMode" onchange="updateStylePreview()">
+      <option value="photo">Fotografía documental histórica (por defecto)</option>
+      <option value="romantic">Pintura romántica · Estilo Delacroix (s. XIX)</option>
+      <option value="renaissance">Pintura renacentista · Estilo Raphael / Da Vinci</option>
+      <option value="baroque">Pintura barroca · Estilo Caravaggio / Rembrandt</option>
+      <option value="watercolor">Acuarela histórica · Ilustración de manuscrito</option>
+      <option value="engraving">Grabado en acero · Ilustración enciclopédica</option>
+    </select>
+  </div>
+  <div class="fixed-block" id="stylePreview">
+    <div class="fixed-label" id="stylePreviewLabel">Estilo activo</div>
+    <span id="stylePreviewText"></span>
+  </div>
+
+  <!-- Botón generar -->
+  <button class="btn-generate" onclick="buildPrompt()">✦ Generar prompt completo</button>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- Output -->
+  <div class="output-area" id="outputArea">
+    <div class="output-header">
+      <span class="output-title">Prompt generado</span>
+      <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
+    </div>
+    <div class="output-text" id="outputText"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="historial-panel" id="historialPanel">
+    <div class="historial-header">
+      <div class="historial-header-left">
+        <div class="section-label" style="margin-bottom:0;">Historial de prompts</div>
+        <span class="historial-count" id="historialCount">0 entradas</span>
+      </div>
+      <button class="btn-clear-all" onclick="clearAll()">Borrar todo</button>
+    </div>
+    <div id="historialList"></div>
+  </div>
+
+</div>
+
+<script>
+  /* Etiquetas legibles por campo */
+  const LABELS = {
+    lighting: {
+      "dramatic golden hour sunlight entering from a low angle, casting long, soft shadows, emphasizing the rough stone texture and age": "Hora dorada",
+      "harsh midday sun casting short, sharp shadows, bleaching stone surfaces with intense light": "Mediodía despejado",
+      "deep twilight with fading blue light on the horizon, torchlight becoming dominant, warm glow against cool sky": "Crepúsculo",
+      "full night lit by torchlight and moonlight, deep shadows with warm flickering amber glow from the flames": "Noche con antorchas",
+      "soft overcast diffuse light, flat and cold, emphasizing texture without harsh shadows, muted tones": "Día nublado",
+      "dramatic storm light, dark turbulent clouds with shafts of pale light breaking through, tense atmosphere": "Luz de tormenta",
+      "soft pre-dawn blue light, cold and quiet, first light barely touching the horizon, deep shadows still dominant": "Madrugada / alba"
+    },
+    palette: {
+      "earthy, warm, natural tones — ochres, siennas, aged stone grays": "Tierra y cálido",
+      "cool stone grays, muted blues, silver morning haze, cold and austere": "Piedra fría y azul",
+      "rich ochres, burnt sienna, deep chestnut shadows — Rembrandt-like tonal depth": "Ocre y sombras profundas",
+      "desaturated, almost monochromatic with subtle warm highlights, documentary restraint": "Casi monocromático",
+      "vivid autumn colors — russet, gold, deep olive green, amber foliage": "Otoño vívido",
+      "cold winter palette — frost whites, pale grey stone, bleached winter sky, blue shadows": "Invierno frío",
+      "deep jewel-like tones at night — dark navy sky, amber torch glow, rich shadow blacks": "Noche profunda y gemas"
+    },
+    composition: {
+      "cinematic, symmetrical framing, strong depth perspective leading the eye into the scene, balanced and monumental": "Simétrico cinematográfico",
+      "low angle shot looking up, emphasizing height, power and scale of the architecture, wide angle lens distortion": "Contrapicado",
+      "high angle bird's eye view looking down onto the scene, revealing spatial layout and patterns from above": "Picado",
+      "extreme close-up detail shot, macro focus on surface texture and material, very shallow depth of field, background dissolved": "Primer plano detalle",
+      "wide establishing shot showing full context of location, human figures small and dwarfed by architecture and landscape": "Plano general",
+      "rule of thirds composition, subject off-center, strong foreground elements framing the main subject in depth": "Regla de tercios",
+      "over-the-shoulder perspective, intimate point of view, viewer feels present inside the scene": "Perspectiva subjetiva"
+    },
+    camera: {
+      "medium format camera with natural film grain, deep focus, and extremely sharp textures across the full frame": "Formato medio",
+      "35mm film camera with slight vignetting, natural perspective, authentic documentary feel, slight halation in highlights": "35mm documental",
+      "large format view camera, extreme corner-to-corner sharpness, maximum tonal and textural detail": "Gran formato",
+      "telephoto 200mm compression, background elements drawn close, very shallow depth of field, subject isolated": "Teleobjetivo 200mm",
+      "wide angle 24mm lens, expansive environmental view, slight barrel distortion, full spatial context": "Gran angular 24mm",
+      "tilt-shift lens, selective focus plane, miniature-like depth control, parts of the image soft while center is razor sharp": "Tilt-shift"
+    }
+  };
+
+  const STYLES = {
+    photo: {
+      label: "Fotografía documental histórica",
+      text: "Captured in an ultra-realistic historical documentary film aesthetic. 8k, highly detailed, photorealistic, no fantasy elements. Extremely sharp textures.",
+      suffix: "8k, highly detailed, photorealistic, no fantasy elements."
+    },
+    romantic: {
+      label: "Pintura romántica · Delacroix (s. XIX)",
+      text: "Pintura al óleo de estilo romántico del siglo XIX, inspirada en Eugène Delacroix. Escena dramática con gran dinamismo, figuras en movimiento, composición con diagonales marcadas. Iluminación dramática con alto contraste, paleta rica y vibrante con predominio de tonos cálidos. Pincelada suelta y expresiva, textura de óleo con impasto visible, atmósfera con ligera neblina. Composición narrativa y cargada de emoción.",
+      suffix: "Oil painting, Romanticism, Delacroix style, dramatic composition, impasto texture, emotional narrative."
+    },
+    renaissance: {
+      label: "Pintura renacentista · Raphael / Da Vinci",
+      text: "Pintura al óleo de estilo renacentista italiano del siglo XV-XVI, inspirada en Raphael y Leonardo da Vinci. Composición equilibrada y armónica con uso del sfumato. Figuras idealizadas con anatomía precisa, fondos con perspectiva aérea y paisajes lejanos. Paleta serena de verdes, azules y ocres dorados. Pincelada invisible y acabado suave, luz difusa y envolvente que modela los volúmenes con delicadeza.",
+      suffix: "Renaissance oil painting, sfumato technique, balanced composition, idealized figures, Italian cinquecento."
+    },
+    baroque: {
+      label: "Pintura barroca · Caravaggio / Rembrandt",
+      text: "Pintura al óleo de estilo barroco del siglo XVII, inspirada en Caravaggio y Rembrandt. Técnica de claroscuro extremo con tenebrismo pronunciado: figuras emergiendo de la oscuridad en un foco de luz dramática. Paleta de negros profundos, ocres cálidos y blancos luminosos. Pincelada rica y pastosa, textura de óleo densa. Composición teatral, psicología de los personajes muy marcada, realismo físico sin idealizaciones.",
+      suffix: "Baroque oil painting, chiaroscuro, tenebrism, Caravaggio style, dramatic lighting, rich impasto."
+    },
+    watercolor: {
+      label: "Acuarela histórica · Ilustración de manuscrito",
+      text: "Ilustración en acuarela de estilo histórico, evocando los manuscritos iluminados y los atlas geográficos del siglo XVIII. Trazos a pluma con línea fina y precisa, lavados de color transparentes y luminosos. Paleta de azules cobalto, rojos carmín, ocres dorados y verdes esmeralda. Papel envejecido como fondo, con ligeras manchas de tiempo. Estética de ilustración científica naturalista, delicada y erudita.",
+      suffix: "Historical watercolor illustration, manuscript style, ink linework, transparent washes, antique paper texture."
+    },
+    engraving: {
+      label: "Grabado en acero · Ilustración enciclopédica",
+      text: "Grabado en acero de estilo enciclopédico, inspirado en las ilustraciones de la Encyclopédie de Diderot y D'Alembert (siglo XVIII). Líneas muy finas y precisas, sombreado mediante tramas de líneas paralelas y cruzadas (hatching y cross-hatching). Escala de grises pura sin color. Detalle arquitectónico y técnico extremo. Composición informativa y rigurosa, fondo neutro o ligeramente veteado como papel antiguo.",
+      suffix: "Steel engraving, encyclopedic illustration, hatching technique, grayscale, 18th century style, highly detailed linework."
+    }
+  };
+
+  function updateStylePreview() {
+    const mode = document.getElementById('styleMode').value;
+    const s = STYLES[mode];
+    document.getElementById('stylePreviewLabel').textContent = s.label;
+    document.getElementById('stylePreviewText').textContent = s.text;
+  }
+
+  const STORAGE_KEY = 'prompt_historial_v1';
+
+  function loadHistorial() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch(e) { return []; }
+  }
+
+  function saveHistorial(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function updateCount() {
+    const n = loadHistorial().length;
+    document.getElementById('histCount').textContent = n;
+    document.getElementById('historialCount').textContent = n + (n === 1 ? ' entrada' : ' entradas');
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+           + ' · ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function label(field, value) {
+    return LABELS[field][value] || value;
+  }
+
+  /* ── Generar ── */
+  function buildPrompt() {
+    const scene = document.getElementById('scene').value.trim();
+    if (!scene) {
+      const ta = document.getElementById('scene');
+      ta.focus();
+      ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+      return;
+    }
+
+    const lighting    = document.getElementById('lighting').value;
+    const palette     = document.getElementById('palette').value;
+    const composition = document.getElementById('composition').value;
+    const camera      = document.getElementById('camera').value;
+    const styleMode   = document.getElementById('styleMode').value;
+    const style       = STYLES[styleMode];
+
+    const isPhoto = styleMode === 'photo';
+
+    const prompt = isPhoto
+      ? scene + '\n\n' +
+        'Captured in an ultra-realistic historical documentary film aesthetic. ' +
+        'Shot on a ' + camera + '.\n' +
+        'Lighting: ' + lighting + '.\n' +
+        'Color palette: ' + palette + '.\n' +
+        'Composition: ' + composition + '.\n' +
+        '8k, highly detailed, photorealistic, no fantasy elements.'
+      : scene + '\n\n' +
+        style.text + '\n' +
+        'Lighting: ' + lighting + '.\n' +
+        'Color palette / mood: ' + palette + '.\n' +
+        'Composition: ' + composition + '.\n' +
+        style.suffix;
+
+    document.getElementById('outputText').textContent = prompt;
+    const area = document.getElementById('outputArea');
+    area.classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
+
+    /* Guardar en historial */
+    const entry = { id: Date.now(), date: new Date().toISOString(), scene, lighting, palette, composition, camera, styleMode, prompt };
+    const list = loadHistorial();
+    list.unshift(entry);
+    saveHistorial(list);
+    updateCount();
+    if (document.getElementById('historialPanel').classList.contains('visible')) renderHistorial();
+
+    setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+  }
+
+  function copyPrompt() {
+    const text = document.getElementById('outputText').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2200);
+    });
+  }
+
+  /* ── Historial panel ── */
+  function toggleHistorial() {
+    const panel = document.getElementById('historialPanel');
+    const btn   = document.getElementById('btnToggleHistorial');
+    const open  = panel.classList.toggle('visible');
+    btn.classList.toggle('active', open);
+    if (open) {
+      renderHistorial();
+      setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    }
+  }
+
+  function renderHistorial() {
+    const list = loadHistorial();
+    const container = document.getElementById('historialList');
+    updateCount();
+
+    if (!list.length) {
+      container.innerHTML = '<p class="historial-empty">Todavía no hay prompts guardados.<br>Genera el primero arriba.</p>';
+      return;
+    }
+
+    container.innerHTML = '<div class="historial-list">' + list.map(e => {
+      const preview  = e.scene.length > 95 ? e.scene.slice(0, 95) + '…' : e.scene;
+      const lLabel   = label('lighting', e.lighting);
+      const pLabel   = label('palette', e.palette);
+      const cLabel   = label('composition', e.composition);
+      const camLabel = label('camera', e.camera);
+      const styleLabel = e.styleMode ? (STYLES[e.styleMode] ? STYLES[e.styleMode].label : e.styleMode) : 'Foto documental';
+      return `
+      <div class="hist-item" id="hitem-${e.id}">
+        <div class="hist-item-header" onclick="toggleItem(${e.id})">
+          <div class="hist-meta">
+            <div class="hist-scene-preview">${esc(preview)}</div>
+            <div class="hist-tags">
+              <span class="hist-tag">${esc(styleLabel)}</span>
+              <span class="hist-tag">${esc(lLabel)}</span>
+              <span class="hist-tag">${esc(pLabel)}</span>
+              <span class="hist-tag">${esc(cLabel)}</span>
+              <span class="hist-tag">${esc(camLabel)}</span>
+            </div>
+          </div>
+          <div class="hist-right">
+            <span class="hist-date">${formatDate(e.date)}</span>
+            <div class="hist-actions" onclick="event.stopPropagation()">
+              <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar</button>
+              <button class="btn-hist-action danger" onclick="deleteEntry(${e.id})">Borrar</button>
+            </div>
+          </div>
+        </div>
+        <div class="hist-item-body" id="hbody-${e.id}">
+          <div class="hist-body-fields">
+            <div class="hist-field">
+              <span class="hist-field-label">Momento del día</span>
+              <span class="hist-field-val">${esc(lLabel)}</span>
+            </div>
+            <div class="hist-field">
+              <span class="hist-field-label">Paleta de color</span>
+              <span class="hist-field-val">${esc(pLabel)}</span>
+            </div>
+            <div class="hist-field">
+              <span class="hist-field-label">Encuadre</span>
+              <span class="hist-field-val">${esc(cLabel)}</span>
+            </div>
+            <div class="hist-field">
+              <span class="hist-field-label">Cámara / óptica</span>
+              <span class="hist-field-val">${esc(camLabel)}</span>
+            </div>
+          </div>
+          <div class="hist-field" style="margin-bottom:6px;">
+            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Escena completa</span>
+            <div class="hist-scene-full">${esc(e.scene)}</div>
+          </div>
+          <div class="hist-prompt-full">${esc(e.prompt)}</div>
+          <div class="hist-body-actions">
+            <button class="btn-hist-action" onclick="copyEntry(${e.id}, this)">Copiar prompt</button>
+            <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar en el formulario ↑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  function toggleItem(id) {
+    const body = document.getElementById('hbody-' + id);
+    if (body) body.classList.toggle('open');
+  }
+
+  function restoreEntry(id) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    document.getElementById('scene').value = entry.scene;
+    setSelectValue('lighting',    entry.lighting);
+    setSelectValue('palette',     entry.palette);
+    setSelectValue('composition', entry.composition);
+    setSelectValue('camera',      entry.camera);
+    setSelectValue('styleMode',   entry.styleMode || 'photo');
+    updateStylePreview();
+    document.getElementById('outputText').textContent = entry.prompt;
+    document.getElementById('outputArea').classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setSelectValue(id, value) {
+    const sel = document.getElementById(id);
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === value) { sel.selectedIndex = i; return; }
+    }
+  }
+
+  function copyEntry(id, btn) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    navigator.clipboard.writeText(entry.prompt).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+  }
+
+  function deleteEntry(id) {
+    saveHistorial(loadHistorial().filter(e => e.id !== id));
+    renderHistorial();
+  }
+
+  function clearAll() {
+    if (!confirm('¿Borrar todo el historial? Esta acción no se puede deshacer.')) return;
+    saveHistorial([]);
+    renderHistorial();
+  }
+
+  /* Inicializar */
+  updateStylePreview();
+  updateCount();
+</script>
+
+</body>
+</html>

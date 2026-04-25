@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2a7a6e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Castroverde">
+  <title>Editor · Castroverde (prompts totalmente editables)</title>
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    :root {
+      --bg:        #eef4f3;
+      --surface:   #e2edeb;
+      --card:      #d6e8e5;
+      --border:    #b4d0cc;
+      --text:      #1e3532;
+      --muted:     #5a8a84;
+      --accent:    #2a7a6e;
+      --accent2:   #3a9e6e;
+      --red:       #c45a3a;
+      --blue:      #3a7ab0;
+      --cloud:     #4A90D9;
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    3px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+      display: flex; flex-direction: column;
+    }
+
+    /* CABECERA */
+    header {
+      flex-shrink: 0; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 22px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+      flex-wrap: wrap;
+    }
+    .logo { font-family: var(--font-h); font-size: 19px; font-weight: 700; }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small { display: block; font-family: var(--font-ui); font-size: 8px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 1px; }
+    .header-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+
+    .profile-selector {
+      display: flex;
+      gap: 6px;
+      background: var(--card);
+      padding: 3px;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+    }
+    .profile-btn {
+      background: transparent;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 30px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .profile-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    .profile-btn:hover:not(.active) {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .btn {
+      padding: 7px 13px; border: none; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-ui); font-size: 10px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #eef4f3; }
+    .btn-primary:hover:not(:disabled) { background: #d4a23a; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-success { background: var(--accent2); color: #eef4f3; }
+    .btn-success:hover { background: #8ab87e; }
+
+    /* LAYOUT */
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; min-height: 0; position: relative; }
+
+    /* PANEL IZQUIERDO */
+    .panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header {
+      flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border);
+      background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .panel-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+    .panel-title span { color: var(--accent); }
+    .analysis-select {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 4px 8px; font-family: var(--font-ui); font-size: 10px;
+      border-radius: var(--radius); cursor: pointer; outline: none;
+    }
+
+    .text-area-wrap { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+    #input-text {
+      width: 100%; height: 100%; background: transparent; border: none;
+      color: var(--text); font-family: var(--font-body); font-size: 15px;
+      line-height: 1.8; padding: 16px 22px; resize: none; outline: none;
+    }
+    #input-text::placeholder { color: var(--muted); font-style: italic; }
+    .char-count { position: absolute; bottom: 5px; right: 10px; font-family: var(--font-ui); font-size: 9px; color: var(--muted); pointer-events: none; }
+    .char-count.warn { color: var(--red); }
+
+    .notes-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+    .notes-toggle {
+      width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between;
+      background: transparent; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .notes-toggle:hover { color: var(--accent); }
+    .notes-body { display: none; padding: 0 15px 10px; }
+    .notes-body.open { display: block; }
+    #notes-text {
+      width: 100%; height: 76px; background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-body); font-size: 12px;
+      line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius);
+    }
+    .notes-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+
+    .instrucciones-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+    .instrucciones-toggle {
+      width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between;
+      background: transparent; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .instrucciones-toggle:hover { color: var(--accent); }
+    .instrucciones-body { display: none; padding: 0 15px 10px; }
+    .instrucciones-body.open { display: block; }
+    .instruc-label { font-family: var(--font-ui); font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; display: block; }
+    .instruc-label:first-child { margin-top: 0; }
+    .parte-select { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 9px; font-family: var(--font-ui); font-size: 10px; border-radius: var(--radius); outline: none; cursor: pointer; }
+    #instruc-fragmento, #instruc-generales {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-body); font-size: 12px;
+      line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius);
+    }
+    #instruc-fragmento { height: 60px; }
+    #instruc-generales { height: 72px; }
+    .instruc-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+
+    .panel-actions {
+      flex-shrink: 0; padding: 9px 15px; border-top: 1px solid var(--border);
+      background: var(--surface); display: flex; gap: 7px; align-items: center;
+      flex-wrap: wrap;
+    }
+    .fragment-name-input {
+      flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 10px; font-family: var(--font-ui); font-size: 10px;
+      border-radius: var(--radius); outline: none;
+    }
+
+    .panel-right { display: flex; flex-direction: column; overflow: hidden; }
+    .result-tabs { flex-shrink: 0; display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .result-tab {
+      padding: 10px 15px; border: none; background: transparent;
+      font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+      color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color 0.2s;
+    }
+    .result-tab:hover { color: var(--text); }
+    .result-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .result-content { flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }
+
+    .empty-result { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; text-align: center; color: var(--muted); gap: 10px; }
+    .empty-result .big-char { font-family: var(--font-h); font-size: 52px; color: var(--border); line-height: 1; }
+    .improved-text { font-family: var(--font-body); font-size: 15px; line-height: 1.85; white-space: pre-wrap; }
+    .error-box { display: none; background: rgba(196,90,58,0.1); border: 1px solid var(--red); border-left: 3px solid var(--red); padding: 10px 14px; border-radius: var(--radius); color: var(--red); font-size: 13px; margin-bottom: 10px; }
+    .report-section { margin-bottom: 18px; }
+    .report-section-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+
+    .copy-bar { display: none; flex-shrink: 0; padding: 8px 15px; border-top: 1px solid var(--border); background: var(--surface); gap: 7px; align-items: center; }
+    .copy-bar.visible { display: flex; }
+    .copy-feedback { font-family: var(--font-ui); font-size: 9px; color: var(--accent2); text-transform: uppercase; letter-spacing: 2px; display: none; }
+
+    .loading-overlay { display: none; position: absolute; inset: 0; background: rgba(238,244,243,0.88); z-index: 50; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+    .loading-overlay.visible { display: flex; }
+    .spinner { width: 26px; height: 26px; border: 1px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+
+    .history-sidebar { position: fixed; top: 0; right: 0; width: 310px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 200; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s ease; }
+    .history-sidebar.open { transform: translateX(0); }
+    .history-sidebar-header { padding: 13px 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .history-sidebar-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+    .btn-close { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 18px; }
+    .history-list { flex: 1; overflow-y: auto; padding: 12px; }
+    .history-empty { text-align: center; padding: 28px 14px; color: var(--muted); font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; }
+    .version-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; margin-bottom: 7px; cursor: pointer; }
+    .version-item:hover { border-color: var(--accent); }
+    .version-meta { display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px; }
+    .version-name { font-family: var(--font-h); font-size: 13px; font-weight: 700; }
+    .version-date { font-family: var(--font-ui); font-size: 9px; color: var(--muted); }
+    .version-preview { font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .version-actions { display: flex; gap: 5px; margin-top: 6px; }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.35); z-index: 199; }
+    .sidebar-overlay.visible { display: block; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.55); z-index: 500; align-items: center; justify-content: center; }
+    .modal-overlay.visible { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 28px 22px; width: 760px; max-width: 95vw; box-shadow: 0 8px 32px rgba(30,53,50,0.18); }
+    .modal-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal-subtitle { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 22px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+    .modal-textarea { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; font-family: var(--font-body); font-size: 13px; border-radius: var(--radius); outline: none; resize: vertical; line-height: 1.6; min-height: 80px; }
+    .modal-textarea.tall { min-height: 150px; }
+    .modal-hint-inline { font-family: var(--font-ui); font-size: 8px; color: var(--muted); margin-top: 4px; line-height: 1.6; margin-bottom: 10px; }
+    .ptabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ptab { padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; font-family: var(--font-ui); font-size: 9px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .ptab.active { background: var(--accent); color: #eef4f3; border-color: var(--accent); }
+    .ppanel { display: none; }
+    .ppanel.visible { display: block; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Editor <span>Castroverde</span><small>Prompts 100% editables</small></div>
+  <div class="header-actions">
+    <div class="profile-selector" id="profile-selector">
+      <button class="profile-btn" data-profile="narrativo">📖 Narrativo</button>
+      <button class="profile-btn" data-profile="principal">⚙ Principal</button>
+    </div>
+    <button class="btn btn-ghost" id="btn-settings">✎ Ajustes de prompts</button>
+    <button class="btn btn-ghost" id="btn-verdict">⚖ Veredicto</button>
+    <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
+    <button class="btn btn-ghost" id="btn-clear-all">✕ Limpiar</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Generando prompt…</div>
+  </div>
+
+  <div class="panel-left">
+    <div class="panel-header">
+      <span class="panel-title">✍ Tu texto · <span id="fragment-label">nuevo fragmento</span></span>
+      <select class="analysis-select" id="analysis-type">
+        <option value="completo">Revisión completa</option>
+        <option value="estilo">Solo estilo y voz</option>
+        <option value="ortografia">Solo ortografía y gramática</option>
+        <option value="historico">Coherencia histórica</option>
+        <option value="claridad">Claridad y estructura</option>
+      </select>
+    </div>
+    <div class="text-area-wrap">
+      <textarea id="input-text" maxlength="4000" placeholder="Pega aquí tu fragmento del libro de Castroverde…&#10;Ctrl+Enter para generar prompt."></textarea>
+      <div class="char-count" id="char-count">0 / 4000</div>
+      <button id="btn-clear-text" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:var(--border);cursor:pointer;">✕</button>
+    </div>
+
+    <div class="notes-section">
+      <button class="notes-toggle" id="btn-toggle-notes"><span>📎 Notas al pie — contexto para la IA</span><span id="notes-arrow">▾ mostrar</span></button>
+      <div class="notes-body" id="notes-body">
+        <textarea id="notes-text" maxlength="2000" placeholder="Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
+        <div class="notes-hint">Contenido crudo. Se insertará donde pongas {{notas}} en la plantilla.</div>
+      </div>
+    </div>
+
+    <div class="instrucciones-section">
+      <button class="instrucciones-toggle" id="btn-toggle-instruc"><span>✦ Instrucciones para la IA</span><span id="instruc-arrow">▾ mostrar</span></button>
+      <div class="instrucciones-body" id="instruc-body">
+        <label class="instruc-label">Parte del libro</label>
+        <select class="parte-select" id="parte-libro">
+          <option value="primera">Primera parte — narrativa divulgativa</option>
+          <option value="segunda">Segunda parte — temática y formal</option>
+        </select>
+        <label class="instruc-label">Instrucciones específicas (opcional)</label>
+        <textarea id="instruc-fragmento" maxlength="800" placeholder="Ej: 'Acorta frases largas', 'Convierte pasivas a activas'…"></textarea>
+        <label class="instruc-label">Instrucciones generales (se guardan)</label>
+        <textarea id="instruc-generales" maxlength="3000" placeholder="Perfil tonal y reglas permanentes del libro. Se guarda automáticamente."></textarea>
+        <div class="instruc-hint">Se insertan donde pongas {{instrucciones_generales}} en el system prompt.</div>
+      </div>
+    </div>
+
+    <div class="panel-actions">
+      <input type="text" class="fragment-name-input" id="fragment-name" placeholder="Nombre del fragmento (ej: Cap.2 · Prehistoria)" maxlength="60">
+      <label class="btn btn-ghost" style="cursor:pointer;">📄 Cargar .txt/.docx<input type="file" id="file-input" accept=".txt,.docx" style="display:none;"></label>
+      <button class="btn btn-primary" id="btn-analyze">Generar prompt →</button>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="result-tabs">
+      <button class="result-tab active" data-tab="improved">📋 Prompt generado</button>
+      <button class="result-tab" data-tab="report">📄 Informe del prompt</button>
+      <button class="result-tab" data-tab="compare">🔍 Comparar versiones</button>
+    </div>
+    <div class="result-content">
+      <div class="empty-result" id="empty-result">
+        <div class="big-char">❧</div>
+        <p>Introduce tu texto y pulsa "Generar prompt"</p>
+        <p>Perfil activo: <span id="active-profile-name">Narrativo</span></p>
+      </div>
+      <div class="error-box" id="error-box"></div>
+      <div id="pane-improved" style="display:none;"></div>
+      <div id="pane-report"   style="display:none;"></div>
+      <div id="pane-compare"  style="display:none;"></div>
+    </div>
+    <div class="copy-bar" id="copy-bar">
+      <button class="btn btn-success" id="btn-copy">⎘ Copiar prompt</button>
+      <span class="copy-feedback" id="copy-feedback">¡Copiado!</span>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="history-sidebar" id="history-sidebar">
+  <div class="history-sidebar-header">
+    <span class="history-sidebar-title">Prompts guardados</span>
+    <button class="btn-close" id="btn-close-sidebar">×</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty">Sin prompts guardados.<br>Genera y guárdalos automáticamente.</div>
+  </div>
+  <div style="padding:10px 13px;border-top:1px solid var(--border);">
+    <button class="btn btn-danger" style="width:100%;" id="btn-clear-history">Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- MODAL AJUSTES: DOS PERFILES CON PLANTILLAS COMPLETAS -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal-box modal-box-lg">
+    <div class="modal-title">Ajustes de prompts por perfil</div>
+    <div class="modal-subtitle">Edita libremente el system prompt y las plantillas. Usa las variables que necesites.</div>
+    <div class="ptabs" id="settings-ptabs">
+      <button class="ptab active" data-profile="narrativo">📖 Narrativo</button>
+      <button class="ptab" data-profile="principal">⚙ Principal</button>
+    </div>
+    <div id="settings-panels">
+      <div class="ppanel visible" data-profile="narrativo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Narrativo)</div>
+          <div class="modal-hint-inline">Variables disponibles: <code>{{parte_libro}}</code> · <code>{{instrucciones_generales}}</code></div>
+          <textarea class="modal-textarea tall" id="system-narrativo" rows="8"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Plantilla de análisis</div>
+          <div class="modal-hint-inline">Variables: <code>{{tipo}}</code> · <code>{{instruc_frag}}</code> · <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea" id="analisis-narrativo" rows="6"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Plantilla de veredicto</div>
+          <div class="modal-hint-inline">Variables: <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea" id="veredicto-narrativo" rows="6"></textarea>
+        </div>
+      </div>
+      <div class="ppanel" data-profile="principal">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Principal)</div>
+          <div class="modal-hint-inline">Variables: <code>{{parte_libro}}</code> · <code>{{instrucciones_generales}}</code></div>
+          <textarea class="modal-textarea tall" id="system-principal" rows="8"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Plantilla de análisis</div>
+          <div class="modal-hint-inline">Variables: <code>{{tipo}}</code> · <code>{{instruc_frag}}</code> · <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea" id="analisis-principal" rows="6"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Plantilla de veredicto</div>
+          <div class="modal-hint-inline">Variables: <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea" id="veredicto-principal" rows="6"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
+      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ----------------------------- PERFILES Y VALORES POR DEFECTO (AHORA CON ETIQUETAS EDITABLES) -------------------------
+  const DEFAULT_NARRATIVO = {
+    system: `Eres un editor literario con voz cálida y narrativa. Te especializas en historia local con un tono cercano, casi de cuentacuentos. Buscas frases fluidas, ritmo amable y un lenguaje que invite a seguir leyendo.
+
+VOZ DE REFERENCIA (Narrativo):
+"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano es tierra de frontera... No era un lugar cualquiera."
+
+REGLAS:
+- Prioriza la claridad y el flujo narrativo.
+- No elimines datos históricos, pero intégralos de forma natural.
+- Permite un tono ligeramente literario sin exageraciones.
+- Cuida la ortografía y gramática.
+- No uses punto y coma; prefiere puntos seguidos.
+- Extensión similar al original.
+
+PARTE DEL LIBRO: {{parte_libro}}
+
+INSTRUCCIONES GENERALES DEL AUTOR:
+{{instrucciones_generales}}`,
+    promptAnalisis: `TIPO DE ANÁLISIS: {{tipo}}
+
+INSTRUCCIONES ESPECÍFICAS:
+{{instruc_frag}}
+
+NOTAS AL PIE (contexto, no modificar):
+{{notas}}
+
+FRAGMENTO A REVISAR (estilo narrativo):
+'''
+{{texto}}
+'''
+
+Por favor, entrega el texto mejorado con un tono narrativo fluido. Después, escribe "---" y un breve informe de cambios.`,
+    promptVeredicto: `VEREDICTO EDITORIAL (Perfil Narrativo)
+
+NOTAS AL PIE:
+{{notas}}
+
+Evalúa el fragmento desde una perspectiva narrativa. Devuelve:
+
+1. El texto mejorado.
+2. "---"
+3. VEREDICTO: LISTO / REVISIÓN MENOR / REVISIÓN MAYOR
+4. Comentarios sobre ritmo, voz y coherencia.
+5. Puntuaciones 1-10: Ritmo, Voz narrativa, Rigor histórico, Claridad.
+
+Fragmento:
+'''
+{{texto}}
+'''`
+  };
+
+  const DEFAULT_PRINCIPAL = {
+    system: `Eres un editor literario riguroso, especializado en historia local castellana. Tu objetivo es pulir el texto manteniendo toda la precisión factual, mejorando la estructura y eliminando ambigüedades.
+
+VOZ DE REFERENCIA (Principal):
+"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano, a media hora de coche de Valladolid, es tierra de frontera... No era un lugar cualquiera."
+
+REGLAS ESTRICTAS:
+- Frases declarativas cortas con peso propio.
+- Datos precisos integrados sin interrupciones.
+- Ritmo alternado: frase corta, frase desarrollada, cierre breve.
+- Cierres visuales y concretos.
+- Sin academicismo, pero sin concesiones a la ambigüedad.
+- Corrige errores técnicos. No resumas ni añadas relleno.
+- Extensión similar al original (±10%).
+
+PARTE DEL LIBRO: {{parte_libro}}
+
+INSTRUCCIONES GENERALES DEL AUTOR:
+{{instrucciones_generales}}`,
+    promptAnalisis: `TIPO DE ANÁLISIS: {{tipo}}
+
+INSTRUCCIONES ESPECÍFICAS:
+{{instruc_frag}}
+
+NOTAS AL PIE:
+{{notas}}
+
+FRAGMENTO (revisión principal):
+'''
+{{texto}}
+'''
+
+Proporciona el texto mejorado siguiendo las normas estrictas. Luego "---" y un informe técnico de cambios (sin JSON).`,
+    promptVeredicto: `VEREDICTO FINAL (Perfil Principal)
+
+NOTAS AL PIE:
+{{notas}}
+
+Evalúa el fragmento como si fuera una corrección de estilo definitiva. Devuelve:
+
+1. Texto mejorado.
+2. "---"
+3. VEREDICTO: LISTO / REVISIÓN MENOR / REVISIÓN MAYOR
+4. Detalle de aspectos a mejorar.
+5. Puntuaciones 1-10: Estructura, Ritmo, Rigor histórico, Cohesión, Voz.
+
+Fragmento:
+'''
+{{texto}}
+'''`
+  };
+
+  let activeProfile = 'narrativo';
+  let settings = {
+    narrativo: { ...DEFAULT_NARRATIVO },
+    principal: { ...DEFAULT_PRINCIPAL }
+  };
+  let versions = [];
+  let currentResult = null;
+  let activeTab = 'improved';
+
+  function loadSettings() {
+    try {
+      const saved = localStorage.getItem('castroverde_profiles');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.narrativo) settings.narrativo = parsed.narrativo;
+        if (parsed.principal) settings.principal = parsed.principal;
+      }
+    } catch(e) {}
+    // Asegurar campos
+    if (!settings.narrativo.promptAnalisis) settings.narrativo.promptAnalisis = DEFAULT_NARRATIVO.promptAnalisis;
+    if (!settings.narrativo.promptVeredicto) settings.narrativo.promptVeredicto = DEFAULT_NARRATIVO.promptVeredicto;
+    if (!settings.principal.promptAnalisis) settings.principal.promptAnalisis = DEFAULT_PRINCIPAL.promptAnalisis;
+    if (!settings.principal.promptVeredicto) settings.principal.promptVeredicto = DEFAULT_PRINCIPAL.promptVeredicto;
+  }
+  function saveSettings() {
+    localStorage.setItem('castroverde_profiles', JSON.stringify(settings));
+  }
+
+  function getInstrucGen() { return localStorage.getItem('castroverde_instruc_gen') || ''; }
+  function saveInstrucGen() { localStorage.setItem('castroverde_instruc_gen', get('instruc-generales').value); }
+
+  // Obtener el valor de "parte del libro" formateado
+  function getParteLibroTexto() {
+    const parte = get('parte-libro').value;
+    return parte === 'segunda' ? 'SEGUNDA PARTE (temática y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
+  }
+
+  // Renderiza el system prompt reemplazando las variables
+  function getActiveSystem() {
+    let template = settings[activeProfile].system;
+    const parte = getParteLibroTexto();
+    const instrucGen = getInstrucGen();
+    return template
+      .replace(/\{\{parte_libro\}\}/g, parte)
+      .replace(/\{\{instrucciones_generales\}\}/g, instrucGen);
+  }
+
+  // Renderiza la plantilla de análisis o veredicto reemplazando variables (incluyendo instruc_frag y notas crudas)
+  function renderTemplate(template, type, text, notes, instrucFrag) {
+    let result = template;
+    // Tipo de análisis
+    const tipoLabel = {
+      completo: 'Revisión completa',
+      estilo: 'Solo estilo y voz',
+      ortografia: 'Solo ortografía y gramática',
+      historico: 'Coherencia histórica',
+      claridad: 'Claridad y estructura'
+    }[type] || 'Revisión completa';
+    result = result.replace(/\{\{tipo\}\}/g, tipoLabel);
+    // Contenido crudo de instrucciones específicas
+    result = result.replace(/\{\{instruc_frag\}\}/g, instrucFrag || '');
+    // Contenido crudo de notas al pie
+    result = result.replace(/\{\{notas\}\}/g, notes || '');
+    // Texto del usuario
+    result = result.replace(/\{\{texto\}\}/g, text);
+    return result;
+  }
+
+  function buildUserMessage(text, notes, tipo, instrucFrag) {
+    const template = settings[activeProfile].promptAnalisis;
+    return renderTemplate(template, tipo, text, notes, instrucFrag);
+  }
+
+  function buildVeredictoMessage(text, notes) {
+    const template = settings[activeProfile].promptVeredicto;
+    return renderTemplate(template, 'veredicto', text, notes, '');
+  }
+
+  function generatePrompt() {
+    const text = get('input-text').value.trim();
+    const notes = get('notes-text').value.trim();
+    if (!text) { showError('Introduce un texto.'); return; }
+    if (text.length < 20) { showError('El texto es demasiado corto.'); return; }
+    const instrucFrag = get('instruc-fragmento').value.trim();
+    const userMsg = buildUserMessage(text, notes, get('analysis-type').value, instrucFrag);
+    const systemMsg = getActiveSystem();
+    const fullPrompt = `=== SYSTEM PROMPT (${activeProfile === 'narrativo' ? 'Narrativo' : 'Principal'}) ===\n${systemMsg}\n\n=== USER MESSAGE ===\n${userMsg}`;
+    
+    currentResult = {
+      improved: fullPrompt,
+      report: {
+        debug_info: `Prompt generado para perfil ${activeProfile}. Todo el contenido es editable desde Ajustes.`,
+        system_prompt: systemMsg,
+        user_message: userMsg
+      },
+      original: text,
+      name: get('fragment-name').value.trim() || (`${activeProfile === 'narrativo' ? '📖' : '⚙'} Prompt · ${new Date().toLocaleString()}`),
+      profile: activeProfile
+    };
+    renderResult(currentResult);
+    autoSaveVersion();
+    hideLoading();
+  }
+
+  function requestVerdict() {
+    const text = get('input-text').value.trim();
+    const notes = get('notes-text').value.trim();
+    if (!text) { showError('Introduce el texto para el veredicto.'); return; }
+    const userMsg = buildVeredictoMessage(text, notes);
+    const systemMsg = getActiveSystem();
+    const fullPrompt = `=== SYSTEM PROMPT (${activeProfile === 'narrativo' ? 'Narrativo' : 'Principal'}) ===\n${systemMsg}\n\n=== USER MESSAGE ===\n${userMsg}`;
+    
+    currentResult = {
+      improved: fullPrompt,
+      report: {
+        debug_info: `Prompt de veredicto (perfil ${activeProfile}). Personalizable desde Ajustes.`,
+        system_prompt: systemMsg,
+        user_message: userMsg
+      },
+      original: text,
+      name: get('fragment-name').value.trim() || (`Veredicto ${activeProfile === 'narrativo' ? '📖' : '⚙'} · ${new Date().toLocaleString()}`),
+      profile: activeProfile
+    };
+    renderResult(currentResult);
+    autoSaveVersion();
+  }
+
+  function renderResult(res) {
+    get('empty-result').style.display = 'none';
+    get('copy-bar').classList.add('visible');
+    get('pane-improved').innerHTML = `<div style="margin-bottom:12px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">${esc(res.name)} (Perfil ${res.profile === 'narrativo' ? 'Narrativo' : 'Principal'})</div><div class="improved-text" style="font-family:var(--font-mono);white-space:pre-wrap;background:var(--card);padding:12px;border-radius:var(--radius);">${esc(res.improved)}</div>`;
+    let html = '';
+    if (res.report) {
+      html += `<div class="report-section"><div class="report-section-title">ℹ️ Modo demostración</div><div class="report-item">${esc(res.report.debug_info || 'Prompt generado sin llamada a API.')}</div></div>`;
+      if (res.report.system_prompt) html += `<div class="report-section"><div class="report-section-title">🧠 System prompt (${res.profile === 'narrativo' ? 'Narrativo' : 'Principal'})</div><div class="improved-text" style="font-family:monospace;font-size:12px;white-space:pre-wrap;background:var(--card);padding:8px;">${esc(res.report.system_prompt)}</div></div>`;
+      if (res.report.user_message) html += `<div class="report-section"><div class="report-section-title">💬 Mensaje de usuario</div><div class="improved-text" style="font-family:monospace;font-size:12px;white-space:pre-wrap;background:var(--card);padding:8px;">${esc(res.report.user_message)}</div></div>`;
+    }
+    get('pane-report').innerHTML = html;
+    get('pane-compare').innerHTML = `<div class="report-section"><div class="report-section-title">Original (texto del usuario)</div><div class="improved-text" style="white-space:pre-wrap;">${esc(res.original)}</div></div>`;
+    switchTab(activeTab);
+  }
+
+  function autoSaveVersion() {
+    if (!currentResult) return;
+    const instrucFrag = get('instruc-fragmento').value;
+    versions.push({
+      name: currentResult.name,
+      original: currentResult.original,
+      improved: currentResult.improved,
+      report: currentResult.report,
+      instrucFragmento: instrucFrag,
+      date: new Date().toLocaleString(),
+      ts: Date.now(),
+      profile: activeProfile
+    });
+    saveVersions();
+    renderHistoryList();
+  }
+
+  function saveVersions() { localStorage.setItem('castroverde_versions', JSON.stringify(versions)); }
+  function loadVersions() { try { const v = localStorage.getItem('castroverde_versions'); if (v) versions = JSON.parse(v); } catch(e) {} }
+
+  function renderHistoryList() {
+    const list = get('history-list');
+    if (!versions.length) { list.innerHTML = '<div class="history-empty">Sin prompts guardados.<br>Genera prompts y se guardan solos.</div>'; return; }
+    let html = '';
+    for (let i = versions.length-1; i >= 0; i--) {
+      const v = versions[i];
+      html += `<div class="version-item"><div class="version-meta"><span class="version-name">${esc(v.name)}</span><span class="version-date">${v.date}</span></div><div class="version-preview">${esc(v.original.substring(0,70))}…</div><div class="version-actions"><button class="btn btn-ghost" style="font-size:9px;padding:3px 9px;" onclick="loadVersion(${i})">Cargar texto</button><button class="btn btn-danger" style="font-size:9px;padding:3px 9px;" onclick="deleteVersion(${i})">Borrar</button></div></div>`;
+    }
+    list.innerHTML = html;
+  }
+  window.loadVersion = function(idx) {
+    const v = versions[idx];
+    if (!v) return;
+    get('input-text').value = v.original;
+    get('fragment-name').value = v.name;
+    if (get('instruc-fragmento')) get('instruc-fragmento').value = v.instrucFragmento || '';
+    updateCharCount();
+    currentResult = { improved: v.improved, report: v.report, original: v.original, name: v.name, isPrompt: true, profile: v.profile };
+    renderResult(currentResult);
+    closeHistory();
+  };
+  window.deleteVersion = function(idx) { versions.splice(idx,1); saveVersions(); renderHistoryList(); };
+
+  function get(id) { return document.getElementById(id); }
+  function esc(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function showError(msg) { const e = get('error-box'); e.textContent = '⚠ ' + msg; e.style.display = 'block'; }
+  function hideError() { get('error-box').style.display = 'none'; }
+  function showLoading(msg) { get('loading-text').textContent = msg; get('loading-overlay').classList.add('visible'); get('btn-analyze').disabled = true; }
+  function hideLoading() { get('loading-overlay').classList.remove('visible'); get('btn-analyze').disabled = false; }
+  function updateCharCount() { const l = get('input-text').value.length; const el = get('char-count'); el.textContent = l + ' / 4000'; el.className = 'char-count' + (l > 3500 ? ' warn' : ''); }
+  function switchTab(tab) { activeTab = tab; document.querySelectorAll('.result-tab').forEach(btn => { const t = btn.getAttribute('data-tab'); btn.className = 'result-tab' + (t === tab ? ' active' : ''); get('pane-'+t).style.display = t === tab ? 'block' : 'none'; }); }
+  function openHistory() { renderHistoryList(); get('history-sidebar').classList.add('open'); get('sidebar-overlay').classList.add('visible'); }
+  function closeHistory() { get('history-sidebar').classList.remove('open'); get('sidebar-overlay').classList.remove('visible'); }
+
+  function setActiveProfile(profile) {
+    activeProfile = profile;
+    document.querySelectorAll('.profile-btn').forEach(btn => {
+      if (btn.getAttribute('data-profile') === profile) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    get('active-profile-name').innerText = profile === 'narrativo' ? 'Narrativo' : 'Principal';
+  }
+
+  function openSettings() {
+    get('system-narrativo').value = settings.narrativo.system;
+    get('analisis-narrativo').value = settings.narrativo.promptAnalisis;
+    get('veredicto-narrativo').value = settings.narrativo.promptVeredicto;
+    get('system-principal').value = settings.principal.system;
+    get('analisis-principal').value = settings.principal.promptAnalisis;
+    get('veredicto-principal').value = settings.principal.promptVeredicto;
+    get('modal-settings').classList.add('visible');
+  }
+  function closeSettings() { get('modal-settings').classList.remove('visible'); }
+  function saveSettingsFromModal() {
+    settings.narrativo.system = get('system-narrativo').value;
+    settings.narrativo.promptAnalisis = get('analisis-narrativo').value;
+    settings.narrativo.promptVeredicto = get('veredicto-narrativo').value;
+    settings.principal.system = get('system-principal').value;
+    settings.principal.promptAnalisis = get('analisis-principal').value;
+    settings.principal.promptVeredicto = get('veredicto-principal').value;
+    saveSettings();
+    closeSettings();
+  }
+  function resetSettings() {
+    if (!confirm('Restaurar valores por defecto para ambos perfiles?')) return;
+    settings.narrativo = JSON.parse(JSON.stringify(DEFAULT_NARRATIVO));
+    settings.principal = JSON.parse(JSON.stringify(DEFAULT_PRINCIPAL));
+    saveSettings();
+    openSettings();
+  }
+
+  window.onload = () => {
+    loadSettings();
+    loadVersions();
+    const savedProfile = localStorage.getItem('castroverde_active_profile');
+    if (savedProfile === 'narrativo' || savedProfile === 'principal') setActiveProfile(savedProfile);
+    else setActiveProfile('narrativo');
+    get('instruc-generales').value = getInstrucGen();
+    get('instruc-generales').addEventListener('input', saveInstrucGen);
+    updateCharCount();
+    get('input-text').addEventListener('input', updateCharCount);
+    get('btn-analyze').addEventListener('click', () => { showLoading('Generando prompt...'); setTimeout(() => { generatePrompt(); hideLoading(); }, 30); });
+    get('btn-verdict').addEventListener('click', () => { showLoading('Generando veredicto...'); setTimeout(() => { requestVerdict(); hideLoading(); }, 30); });
+    get('btn-settings').addEventListener('click', openSettings);
+    get('settings-save').addEventListener('click', saveSettingsFromModal);
+    get('settings-cancel').addEventListener('click', closeSettings);
+    get('settings-reset').addEventListener('click', resetSettings);
+    get('modal-settings').addEventListener('click', (e) => { if (e.target === get('modal-settings')) closeSettings(); });
+    get('btn-history').addEventListener('click', openHistory);
+    get('btn-close-sidebar').addEventListener('click', closeHistory);
+    get('sidebar-overlay').addEventListener('click', closeHistory);
+    get('btn-clear-all').addEventListener('click', () => { get('input-text').value = ''; get('fragment-name').value = ''; get('notes-text').value = ''; updateCharCount(); currentResult = null; get('empty-result').style.display = 'flex'; get('copy-bar').classList.remove('visible'); hideError(); });
+    get('btn-copy').addEventListener('click', () => { if (currentResult) navigator.clipboard.writeText(currentResult.improved).then(() => { const fb = get('copy-feedback'); fb.style.display = 'inline'; setTimeout(() => fb.style.display = 'none', 2000); }); });
+    get('btn-clear-text').addEventListener('click', () => { get('input-text').value = ''; updateCharCount(); });
+    get('btn-toggle-notes').addEventListener('click', () => { const b = get('notes-body'); const a = get('notes-arrow'); b.classList.toggle('open'); a.textContent = b.classList.contains('open') ? '▴ ocultar' : '▾ mostrar'; });
+    get('btn-toggle-instruc').addEventListener('click', () => { const b = get('instruc-body'); const a = get('instruc-arrow'); b.classList.toggle('open'); a.textContent = b.classList.contains('open') ? '▴ ocultar' : '▾ mostrar'; });
+    get('btn-clear-history').addEventListener('click', () => { if(confirm('Borrar todo el historial?')) { versions = []; saveVersions(); renderHistoryList(); } });
+    document.querySelectorAll('.result-tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'))));
+    get('file-input').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      if (file.name.endsWith('.txt')) reader.onload = ev => { get('input-text').value = ev.target.result.slice(0,4000); updateCharCount(); };
+      else if (file.name.endsWith('.docx') && typeof mammoth !== 'undefined') reader.onload = ev => mammoth.extractRawText({ arrayBuffer: ev.target.result }).then(res => { get('input-text').value = res.value.slice(0,4000); updateCharCount(); });
+      else { showError('Solo .txt o .docx'); return; }
+      if (file.name.endsWith('.txt') || file.name.endsWith('.docx')) reader.readAsArrayBuffer(file);
+      e.target.value = '';
+    });
+    document.querySelectorAll('.profile-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const profile = btn.getAttribute('data-profile');
+        setActiveProfile(profile);
+        localStorage.setItem('castroverde_active_profile', profile);
+      });
+    });
+    document.querySelectorAll('#settings-ptabs .ptab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const prof = tab.getAttribute('data-profile');
+        document.querySelectorAll('#settings-ptabs .ptab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('#settings-panels .ppanel').forEach(panel => panel.classList.remove('visible'));
+        document.querySelector(`#settings-panels .ppanel[data-profile="${prof}"]`).classList.add('visible');
+      });
+    });
+  };
+</script>
+</body>
+</html>
