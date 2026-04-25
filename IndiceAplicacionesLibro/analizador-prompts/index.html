@@ -12,7 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Estilos (iguales que antes, solo ajusto colores y selectores) */
+    /* ESTILOS (igual que antes, solo asegurar que los modales se vean bien) */
     :root {
       --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
       --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
@@ -146,10 +146,10 @@
     .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
     .btn-sm{padding:4px 9px;font-size:9px;}
 
-    /* Modales (iguales) */
+    /* Modales */
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.55);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
     .modal-overlay.visible{display:flex;}
-    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:740px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:760px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
     .modal-box-sm{width:430px;}
     .modal-title{font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;}
     .modal-subtitle{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:22px;}
@@ -225,7 +225,7 @@
 
   <div class="panel-right">
     <div class="prompt-buttons-bar">
-      <span class="prompt-buttons-label">Selecciona el análisis · el prompt se adaptará al modo activo (Narrativo / Descriptivo)</span>
+      <span class="prompt-buttons-label">Selecciona el análisis · el prompt se adaptará al modo activo</span>
       <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
     </div>
     <div class="result-area">
@@ -248,11 +248,11 @@
   </div>
 </div>
 
-<!-- MODAL AJUSTES (con dos pestañas) -->
+<!-- MODAL AJUSTES (con dos pestañas principales) -->
 <div class="modal-overlay" id="modal-settings">
   <div class="modal-box">
     <div class="modal-title">Ajustes de perfiles</div>
-    <div class="modal-subtitle">Personaliza el system prompt y los análisis para cada modo (Narrativo / Descriptivo)</div>
+    <div class="modal-subtitle">Personaliza el system prompt y los análisis para cada modo</div>
     <div class="ptabs" id="settings-ptabs">
       <button class="ptab active" data-profile="narrativo">📖 Narrativo</button>
       <button class="ptab" data-profile="descriptivo">📐 Descriptivo</button>
@@ -264,8 +264,8 @@
           <textarea class="modal-textarea tall" id="system-narrativo" rows="10"></textarea>
         </div>
         <div class="modal-section">
-          <div class="modal-section-title">Perfil tonal (común a ambos, pero puedes modificarlo aquí; se sincroniza entre pestañas)</div>
-          <textarea class="modal-textarea tall" id="tono-narrativo" rows="6"></textarea>
+          <div class="modal-section-title">Perfil tonal (común a ambos modos)</div>
+          <textarea class="modal-textarea tall" id="tono-comun" rows="6"></textarea>
         </div>
         <div class="modal-section">
           <div class="modal-section-title">Prompts de análisis (Narrativo)</div>
@@ -281,7 +281,7 @@
         </div>
         <div class="modal-section">
           <div class="modal-section-title">Perfil tonal (común)</div>
-          <textarea class="modal-textarea tall" id="tono-descriptivo" rows="6"></textarea>
+          <div class="modal-hint">El mismo texto que en Narrativo se guarda automáticamente.</div>
         </div>
         <div class="modal-section">
           <div class="modal-section-title">Prompts de análisis (Descriptivo)</div>
@@ -299,7 +299,7 @@
   </div>
 </div>
 
-<!-- MODAL FIREBASE KEY (igual) -->
+<!-- MODAL FIREBASE KEY -->
 <div class="modal-overlay" id="modal-fbkey">
   <div class="modal-box modal-box-sm">
     <div class="modal-title">Clave API de Firebase</div>
@@ -316,10 +316,9 @@
 
 <script>
 // ══════════════════════════════════════════════════════
-//  PERFILES NARRATIVO / DESCRIPTIVO (cada uno con su system y prompts)
+//  PERFILES NARRATIVO / DESCRIPTIVO
 // ══════════════════════════════════════════════════════
 
-// ----- Valores por defecto para Narrativo -----
 const DEFAULT_NARRATIVO = {
   system: `Eres un editor literario con voz cálida y narrativa. Te especializas en historia local con un tono cercano, casi de cuentacuentos. Buscas frases fluidas, ritmo amable y un lenguaje que invite a seguir leyendo.
 
@@ -335,11 +334,11 @@ REGLAS NARRATIVAS:
 - Extensión similar al original.
 - Cierres de párrafo concretos y visuales.
 
-CONTEXTO HISTÓRICO (común): Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
+CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
 
 PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   prompts: [
-    {name:'Estructura (Narrativo)', label:'Estructura', content:'Actúa como editor narrativo. Evalúa la estructura global del texto, pero con énfasis en el ritmo, la progresión emocional y la capacidad de enganchar. Objetivo: {{objetivo}}\n\nAnaliza:\n- Cohesión narrativa\n- Puntos de tensión y calma\n- Eficacia del inicio y el cierre\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Estructura (Narrativo)', label:'Estructura', content:'Actúa como editor narrativo. Evalúa la estructura global del texto, pero con énfasis en el ritmo, la progresión emocional y la capacidad de enganchar. Objetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
     {name:'Tono (Narrativo)', label:'Tono', content:'Evalúa el tono desde una perspectiva narrativa. ¿Es evocador? ¿Hay pasajes fríos? Objetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
     {name:'Ritmo (Narrativo)', label:'Ritmo', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y partes ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
     {name:'Lector (Narrativo)', label:'Lector', content:'Como lector sin conocimientos previos: ¿qué te engancha? ¿Dónde pierdes interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
@@ -349,7 +348,6 @@ PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   ]
 };
 
-// ----- Valores por defecto para Descriptivo -----
 const DEFAULT_DESCRIPTIVO = {
   system: `Eres un editor técnico especializado en claridad expositiva y precisión. Tu objetivo es evaluar y mejorar la estructura lógica, la coherencia interna y la comprensibilidad del texto, eliminando ambigüedades y redundancias.
 
@@ -363,7 +361,7 @@ REGLAS DESCRIPTIVAS:
 - La extensión puede ajustarse para mayor claridad, pero sin omitir información.
 - Evita el lirismo y las metáforas que oscurezcan el significado.
 
-CONTEXTO HISTÓRICO (común): Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
+CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
 
 PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   prompts: [
@@ -377,46 +375,37 @@ PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   ]
 };
 
-// Estado de la aplicación
-let activeProfile = 'narrativo'; // 'narrativo' o 'descriptivo'
+let activeProfile = 'narrativo';
 let settings = {
-  narrativo: { ...DEFAULT_NARRATIVO },
-  descriptivo: { ...DEFAULT_DESCRIPTIVO }
+  narrativo: JSON.parse(JSON.stringify(DEFAULT_NARRATIVO)),
+  descriptivo: JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO))
 };
-let currentSettingsTs = Date.now();
 
-// Funciones de persistencia
 function loadSettings() {
   try {
     const saved = localStorage.getItem('castroverde_profiles_ana');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.narrativo && parsed.descriptivo) {
-        settings = parsed;
-      }
+      if (parsed.narrativo && parsed.descriptivo) settings = parsed;
     }
   } catch(e) {}
-  // Asegurar estructura
   if (!settings.narrativo.prompts) settings.narrativo.prompts = DEFAULT_NARRATIVO.prompts.map(p=>({...p}));
   if (!settings.descriptivo.prompts) settings.descriptivo.prompts = DEFAULT_DESCRIPTIVO.prompts.map(p=>({...p}));
 }
 function saveSettings() {
   localStorage.setItem('castroverde_profiles_ana', JSON.stringify(settings));
-  localStorage.setItem('castroverde_ana_settings_ts', currentSettingsTs);
+  localStorage.setItem('castroverde_ana_settings_ts', Date.now());
 }
 
-// Tono común (lo guardamos aparte, aunque en el modal se mostrará igual para ambos perfiles)
 const TONO_KEY = 'castroverde_ana_tono';
 function getTonoProfile() { return localStorage.getItem(TONO_KEY) || ''; }
 function saveTonoProfile(val) { localStorage.setItem(TONO_KEY, val); }
 
-// Helper: obtener el texto de "parte del libro"
 function getParteLabel() {
   const el = document.getElementById('ana-parte-libro');
   return el.value === 'segunda' ? 'SEGUNDA PARTE (temática y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
 }
 
-// Construir system prompt del perfil activo, añadiendo parte del libro y tono
 function buildSystemWithTono() {
   const base = settings[activeProfile].system;
   const parte = getParteLabel();
@@ -426,7 +415,6 @@ function buildSystemWithTono() {
   return result;
 }
 
-// Construir prompt de usuario reemplazando variables
 function buildUserPrompt(template, texto, objetivo) {
   return template
     .replace(/\{\{texto\}\}/g, texto)
@@ -443,17 +431,16 @@ function generatePrompt(idx, btnEl) {
   const userMsg = buildUserPrompt(p.content, texto, objetivo);
   const fullPrompt = `=== SYSTEM PROMPT (${activeProfile === 'narrativo' ? 'Narrativo' : 'Descriptivo'}) ===\n\n${systemMsg}\n\n${'─'.repeat(60)}\n\n=== PROMPT DE USUARIO ===\n\n${userMsg}`;
   mostrarResultado(p.label, p.name, fullPrompt);
-  // Marcar botón activo
   document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
 }
 
-function mostrarResultado(label, name, promptText) {
+function mostrarResultado(label, name, text) {
   document.getElementById('result-empty').style.display = 'none';
   document.getElementById('result-content').classList.add('visible');
   document.getElementById('result-badge').textContent = label;
   document.getElementById('result-label-text').textContent = name;
-  document.getElementById('result-box').value = promptText;
+  document.getElementById('result-box').value = text;
   document.getElementById('result-box').scrollTop = 0;
 }
 
@@ -474,7 +461,6 @@ function actualizarContador() {
   el.className = 'char-count' + (l > 18000 ? ' warn' : '');
 }
 
-// Renderizar botones según el perfil activo
 function renderPromptButtons() {
   const grid = document.getElementById('prompt-buttons-grid');
   grid.innerHTML = '';
@@ -489,7 +475,6 @@ function renderPromptButtons() {
   });
 }
 
-// Cambiar perfil activo
 function setActiveProfile(profile) {
   activeProfile = profile;
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -502,22 +487,8 @@ function setActiveProfile(profile) {
 }
 
 // ══════════════════════════════════════════════════════
-//  MODAL DE AJUSTES (dos pestañas, carga cada perfil)
+//  MODAL DE AJUSTES (con pestañas principales funcionales)
 // ══════════════════════════════════════════════════════
-function openSettings() {
-  // Cargar valores actuales en los textareas
-  document.getElementById('system-narrativo').value = settings.narrativo.system;
-  document.getElementById('system-descriptivo').value = settings.descriptivo.system;
-  const tono = getTonoProfile();
-  document.getElementById('tono-narrativo').value = tono;
-  document.getElementById('tono-descriptivo').value = tono;
-
-  // Generar pestañas y paneles para Narrativo
-  generarPanelesPrompts('narrativo', settings.narrativo.prompts);
-  generarPanelesPrompts('descriptivo', settings.descriptivo.prompts);
-
-  document.getElementById('modal-settings').classList.add('visible');
-}
 
 function generarPanelesPrompts(perfil, promptsArray) {
   const tabsContainer = document.getElementById(`ptabs-${perfil}`);
@@ -557,43 +528,77 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function openSettings() {
+  // Cargar valores actuales
+  document.getElementById('system-narrativo').value = settings.narrativo.system;
+  document.getElementById('system-descriptivo').value = settings.descriptivo.system;
+  const tono = getTonoProfile();
+  document.getElementById('tono-comun').value = tono;
+
+  generarPanelesPrompts('narrativo', settings.narrativo.prompts);
+  generarPanelesPrompts('descriptivo', settings.descriptivo.prompts);
+
+  // Mostrar la pestaña correspondiente al perfil activo por defecto
+  const activeTabProfile = activeProfile; // 'narrativo' o 'descriptivo'
+  const mainTabs = document.querySelectorAll('#settings-ptabs .ptab');
+  const mainPanels = document.querySelectorAll('#settings-panels .ppanel');
+  mainTabs.forEach(tab => {
+    if (tab.getAttribute('data-profile') === activeTabProfile) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+  mainPanels.forEach(panel => {
+    if (panel.getAttribute('data-profile') === activeTabProfile) {
+      panel.classList.add('visible');
+    } else {
+      panel.classList.remove('visible');
+    }
+  });
+
+  document.getElementById('modal-settings').classList.add('visible');
+}
+
+function closeSettings() {
+  document.getElementById('modal-settings').classList.remove('visible');
+}
+
 function saveSettingsFromModal() {
-  // Guardar system prompts
   settings.narrativo.system = document.getElementById('system-narrativo').value;
   settings.descriptivo.system = document.getElementById('system-descriptivo').value;
-  // Guardar tono común (cojo de cualquiera de los dos)
-  const tonoVal = document.getElementById('tono-narrativo').value;
+  const tonoVal = document.getElementById('tono-comun').value;
   saveTonoProfile(tonoVal);
+
   // Guardar prompts de Narrativo
-  document.querySelectorAll('#ppanels-narrativo .pp-name').forEach(input => {
-    const idx = parseInt(input.getAttribute('data-idx'));
-    settings.narrativo.prompts[idx].name = input.value;
+  document.querySelectorAll('#ppanels-narrativo .pp-name').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].name = inp.value;
   });
-  document.querySelectorAll('#ppanels-narrativo .pp-label').forEach(input => {
-    const idx = parseInt(input.getAttribute('data-idx'));
-    settings.narrativo.prompts[idx].label = input.value;
+  document.querySelectorAll('#ppanels-narrativo .pp-label').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].label = inp.value;
   });
-  document.querySelectorAll('#ppanels-narrativo .pp-content').forEach(textarea => {
-    const idx = parseInt(textarea.getAttribute('data-idx'));
-    settings.narrativo.prompts[idx].content = textarea.value;
+  document.querySelectorAll('#ppanels-narrativo .pp-content').forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].content = ta.value;
   });
   // Guardar prompts de Descriptivo
-  document.querySelectorAll('#ppanels-descriptivo .pp-name').forEach(input => {
-    const idx = parseInt(input.getAttribute('data-idx'));
-    settings.descriptivo.prompts[idx].name = input.value;
+  document.querySelectorAll('#ppanels-descriptivo .pp-name').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].name = inp.value;
   });
-  document.querySelectorAll('#ppanels-descriptivo .pp-label').forEach(input => {
-    const idx = parseInt(input.getAttribute('data-idx'));
-    settings.descriptivo.prompts[idx].label = input.value;
+  document.querySelectorAll('#ppanels-descriptivo .pp-label').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].label = inp.value;
   });
-  document.querySelectorAll('#ppanels-descriptivo .pp-content').forEach(textarea => {
-    const idx = parseInt(textarea.getAttribute('data-idx'));
-    settings.descriptivo.prompts[idx].content = textarea.value;
+  document.querySelectorAll('#ppanels-descriptivo .pp-content').forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].content = ta.value;
   });
+
   saveSettings();
-  currentSettingsTs = Date.now();
-  localStorage.setItem('castroverde_ana_settings_ts', currentSettingsTs);
-  renderPromptButtons();  // refrescar botones con nuevos nombres/etiquetas
+  renderPromptButtons();
   closeSettings();
 }
 
@@ -602,18 +607,12 @@ function resetSettings() {
   settings.narrativo = JSON.parse(JSON.stringify(DEFAULT_NARRATIVO));
   settings.descriptivo = JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO));
   saveSettings();
-  currentSettingsTs = Date.now();
-  localStorage.setItem('castroverde_ana_settings_ts', currentSettingsTs);
   renderPromptButtons();
-  openSettings(); // recargar modal con valores por defecto
-}
-
-function closeSettings() {
-  document.getElementById('modal-settings').classList.remove('visible');
+  openSettings(); // refrescar modal
 }
 
 // ══════════════════════════════════════════════════════
-//  FIREBASE (misma lógica, sincroniza los settings completos)
+//  FIREBASE (misma lógica, simplificada)
 // ══════════════════════════════════════════════════════
 let FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
 let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
@@ -706,7 +705,7 @@ function setSyncStatus(type, msg) {
 function closeSyncStatus() { document.getElementById('sync-status').className = ''; updateSyncUI(); }
 function fbSignOut() { if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
 
-// MODALES Firebase y API Key
+// MODALES Firebase
 function openFbKeyModal() {
   document.getElementById('fb-key-input').value = FB_API_KEY || '';
   document.getElementById('modal-fbkey').classList.add('visible');
@@ -765,15 +764,28 @@ document.getElementById('file-input').addEventListener('change', e => {
   e.target.value = '';
 });
 
-// Selector de modo
+// Selección de modo principal
 document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', () => setActiveProfile(btn.getAttribute('data-mode')));
 });
 
-// Inicializar
+// Pestañas principales del modal de ajustes (para cambiar entre Narrativo/Descriptivo)
+document.querySelectorAll('#settings-ptabs .ptab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const profile = tab.getAttribute('data-profile');
+    document.querySelectorAll('#settings-ptabs .ptab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('#settings-panels .ppanel').forEach(panel => {
+      if (panel.getAttribute('data-profile') === profile) panel.classList.add('visible');
+      else panel.classList.remove('visible');
+    });
+  });
+});
+
+// Inicialización
 loadSettings();
 if (!getTonoProfile()) {
-  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías.');
+  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo.');
 }
 const savedProfile = localStorage.getItem('castroverde_active_profile_ana');
 if (savedProfile === 'narrativo' || savedProfile === 'descriptivo') setActiveProfile(savedProfile);
