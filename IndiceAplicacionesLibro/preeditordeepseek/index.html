@@ -6,7 +6,7 @@
   <title>Preeditor · Castroverde</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
   <style>
-    /* ── VARIABLES ── */
+    /* ── VARIABLES (igual que antes) ── */
     :root {
       --bg:       #eef4f3;
       --surface:  #e2edeb;
@@ -154,6 +154,36 @@
     .btn-undo:hover { border-color: var(--accent); color: var(--accent); }
     .btn-reset { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 11px; }
     .btn-reset:hover { border-color: var(--red); color: var(--red); }
+    /* Selector de modo */
+    .mode-selector {
+      display: flex;
+      gap: 6px;
+      background: var(--card);
+      padding: 4px 8px;
+      border-radius: 24px;
+      margin-left: 8px;
+    }
+    .mode-btn {
+      background: none;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .15s;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: #eef4f3;
+    }
+    .mode-btn:not(.active):hover {
+      background: rgba(42,122,110,0.15);
+      color: var(--accent);
+    }
     .legend {
       flex-shrink: 0;
       background: var(--bg);
@@ -491,7 +521,7 @@
     .groq-status { font-family: var(--font-ui); font-size: 9px; color: var(--muted); flex:1; }
     .modal-key-box, .modal-settings-box {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); width: 100%; max-width: 550px;
+      border-radius: var(--radius); width: 100%; max-width: 650px;
       padding: 26px 26px 20px;
       box-shadow: 0 8px 32px rgba(30,53,50,.2);
     }
@@ -529,6 +559,7 @@
     @media (max-width: 680px) {
       .layout { grid-template-columns: 1fr; }
       .panel-right { display: none; }
+      .mode-selector { margin-left: 0; }
     }
   </style>
 </head>
@@ -555,6 +586,10 @@
       <button class="btn-mark btn-clear" id="btn-clear">✕ Quitar marca</button>
       <button class="btn-mark btn-undo" id="btn-undo">↩ Deshacer</button>
       <button class="btn-mark btn-reset" id="btn-reset">⊘ Resetear todo</button>
+      <div class="mode-selector" id="mode-selector">
+        <button class="mode-btn" data-mode="narrative">📖 Narrativo</button>
+        <button class="mode-btn" data-mode="descriptive">📋 Descriptivo</button>
+      </div>
     </div>
     <div class="legend">
       <div class="legend-item"><div class="legend-swatch swatch-keep"></div><span>🔒 Proteger — copiar literalmente</span></div>
@@ -575,7 +610,7 @@
     <div class="marks-list-wrap" id="marks-list"><div class="marks-empty">Selecciona texto en el editor<br>y aplica una marca.</div></div>
     <div class="generate-zone">
       <button class="btn-generate" id="btn-generate">Generar prompt →</button>
-      <div class="gen-hint">El prompt incluye el system prompt completo del editor</div>
+      <div class="gen-hint">El prompt incluye el system prompt del modo seleccionado</div>
     </div>
   </div>
 </div>
@@ -590,10 +625,10 @@
       <span class="copy-ok" id="copy-ok">¡Copiado!</span>
       <button class="btn btn-ghost" id="modal-close-btn">Cerrar</button>
       <button class="btn btn-primary" id="btn-copy-prompt">⎘ Copiar</button>
-      <button class="btn-send-groq" id="btn-send-groq">✦ Enviar a DeepSeek →</button>
+      <button class="btn-send-groq" id="btn-send-groq">✦ Enviar a Llama →</button>
     </div>
     <div class="groq-zone" id="groq-zone">
-      <div class="groq-zone-label">✦ Resultado — DeepSeek</div>
+      <div class="groq-zone-label">✦ Resultado — llama-3.3-70b-versatile</div>
       <div class="groq-result" id="groq-result"></div>
       <div id="groq-resumen" style="display:none;"></div>
       <div class="groq-foot"><div class="groq-spinner" id="groq-spinner"></div><span class="groq-status" id="groq-status"></span><button class="btn-sm-ghost" id="btn-copy-result" style="display:none;">⎘ Copiar resultado</button></div>
@@ -616,11 +651,11 @@
 <div class="modal-settings-overlay" id="modal-settings">
   <div class="modal-settings-box">
     <div class="stt">✎ Editar prompts del sistema</div>
-    <div class="std">Estos textos se usan al generar el prompt y al enviar a DeepSeek. Se guardan automáticamente en tu navegador.</div>
-    <label style="font-family: var(--font-ui); font-size: 10px; letter-spacing: 1px; margin-top: 4px;">System Prompt principal (editor literario)</label>
-    <textarea id="settings-system-prompt" rows="8" class="starea" placeholder="System prompt del editor..."></textarea>
-    <label style="font-family: var(--font-ui); font-size: 10px; letter-spacing: 1px;">Prompt de corrección técnica para bloque &lt;ctx&gt;</label>
-    <textarea id="settings-ctx-prompt" rows="4" class="starea" placeholder="System prompt para corregir solo errores técnicos..."></textarea>
+    <div class="std">Cada modo tiene su propio system prompt. Selecciona el modo activo en la barra de herramientas.</div>
+    <label style="font-family: var(--font-ui); font-size: 10px; letter-spacing: 1px;">📖 Modo Narrativo</label>
+    <textarea id="settings-prompt-narrative" rows="10" class="starea"></textarea>
+    <label style="font-family: var(--font-ui); font-size: 10px; letter-spacing: 1px;">📋 Modo Descriptivo</label>
+    <textarea id="settings-prompt-descriptive" rows="10" class="starea"></textarea>
     <div class="sta">
       <button class="btn-sm-ghost" id="settings-reset-default">Restaurar valores originales</button>
       <button class="btn-sm-ghost" id="settings-cancel">Cancelar</button>
@@ -632,49 +667,92 @@
 <div id="toast"></div>
 
 <script>
-  /* ----- VARIABLES GLOBALES DE PROMPT ----- */
-  const DEFAULT_SYSTEM_PROMPT = `Eres un editor literario especializado en historia local castellana. Editas borradores del libro de historia de Castroverde de Cerrato.
+  /***** PROMPTS POR DEFECTO *****/
+  const DEFAULT_NARRATIVE = `ROL
+Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato".
 
-REGLAS ABSOLUTAS — DEBES SEGUIRLAS SIN EXCEPCIÓN:
+PRIORIDAD (en caso de conflicto):
+1. Voz de referencia
+2. Claridad del texto
+3. Fluidez narrativa
 
-1. ETIQUETAS DE CONTROL — las más importantes:
-   - <keep>texto</keep>: copia ese texto EXACTAMENTE como aparece, sin cambiar ni una letra.
-   - <emph>texto</emph>: conserva ese texto íntegro y dale protagonismo en la frase. No lo elimines ni lo resumas.
-   - <ctx>texto</ctx>: conserva TODO el contenido de ese bloque sin eliminar nada. Puedes mejorar la prosa pero NO puedes suprimir información.
+RESTRICCIÓN CLAVE
+No añadir información histórica nueva. Prohibido inventar datos.
 
-2. NO INVENTES: no añadas frases, juicios ni información que no estén en el original. Prohibido añadir frases como "fue un rey decisivo" o similares si no estaban en el texto.
+VOZ DE REFERENCIA
+"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano es tierra de frontera... No era un lugar cualquiera."
 
-3. NO RESUMAS el contenido de <ctx>. Debes conservar todos los datos.
+Modelo: cercano, con ritmo, apoyado en imágenes concretas, sin exceso literario.
 
-4. NO ALARGAR: el texto final debe ser igual de largo o más corto, nunca más largo.
+OBJETIVO
+Reescribir manteniendo:
+- Estilo narrativo y vivo
+- Tono cercano y directo
+- Ritmo natural
+- Fidelidad histórica total
 
-VOZ DE REFERENCIA — aproxima el texto a esta voz:
-"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. No era un lugar cualquiera. Su loma fortificada, vigilante entre el Cerrato y el valle del río Esgueva, convirtió a Castroverde en una encrucijada de caminos y en un protagonista silencioso de la gran historia de Castilla."
-
-RASGOS DE ESA VOZ:
-- Frases declarativas cortas con peso propio.
-- Datos precisos integrados en la narración, nunca aislados.
-- Ritmo alternado: frase corta, frase desarrollada, cierre breve.
-- Tono cercano, directo, sin academicismo ni artificios.
-
-CORRECCIONES TÉCNICAS permitidas:
-- Ortografía, puntuación, concordancias, signos incorrectos.
-- Eliminar redundancias y mejorar el ritmo de frases sin marcas.
-- Puntuación mínima necesaria. Evitar punto y coma e incisos innecesarios.
-
-NOTAS AL PIE: el autor las tiene extensas. NUNCA señales su ausencia.
-
-CONTEXTO HISTÓRICO: primer documento 916, Ordoño II, Castro Viride. 676 hab. en 1950, hoy 189.
+REGLAS DE EDICIÓN
+- Claridad y flujo narrativo > todo
+- Integra datos históricos de forma natural en la narración
+- Corrige ortografía, puntuación, gramática
+- Elimina solo redundancias obvias
+- Evita punto y coma e incisos innecesarios
+- Evita lenguaje abstracto o grandilocuente
+- Mantén extensión similar al original
+- Si una frase es clara y funciona, no la toques innecesariamente.
 
 FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de código, empezando con {:
 {"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
 
-  const DEFAULT_CTX_PROMPT = `Eres un corrector de textos. Solo corriges errores de ortografia, puntuacion, concordancias y signos incorrectos. PROHIBIDO: no resumas, no elimines informacion, no cambies el orden, no añadas nada nuevo. Devuelve el texto corregido sin explicaciones ni formato JSON.`;
+  const DEFAULT_DESCRIPTIVE = `ROL
+Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato".
 
-  let currentSystemPrompt = localStorage.getItem('cv_preeditor_system_prompt') || DEFAULT_SYSTEM_PROMPT;
-  let currentCtxPrompt = localStorage.getItem('cv_preeditor_ctx_prompt') || DEFAULT_CTX_PROMPT;
+PRIORIDAD (en caso de conflicto):
+1. Claridad absoluta
+2. Fidelidad histórica
+3. Fluidez narrativa
+4. Voz de referencia
 
-  /* ----- ELEMENTOS ----- */
+RESTRICCIÓN CLAVE
+No añadir información histórica nueva. Prohibido inventar datos.
+
+VOZ DE REFERENCIA
+"Esa imagen de un «castro verde» no tardaría en modificarse en los registros escritos. Poco más de un siglo después, el 29 de diciembre de 1059, con motivo de la restauración de la diócesis de Palencia, la villa figuraba ya como «Castrouert» dentro de los alfoces que la componían..."
+
+Modelo: claro, continuo, explicativo, bien estructurado.
+
+OBJETIVO
+Reescribir manteniendo:
+- Estilo claro y fácil de seguir
+- Narrativa sobria, sin carga literaria
+- Fluidez continua sin fragmentación
+- Precisión histórica absoluta
+
+REGLAS DE EDICIÓN
+- Claridad > todo lo demás
+- Integra fechas, nombres, datos de forma natural
+- Explica conceptos históricos solo si son nuevos o necesarios para el lector
+- Transiciones suaves entre ideas
+- Corrige ortografía, puntuación, gramática
+- Elimina solo redundancias obvias
+- Mantén coherencia interna
+- Si una frase es clara y funciona, no la toques innecesariamente
+- NO convertir a estilo narrativo-literario
+- NO caer en tono académico rígido
+
+FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de código, empezando con {:
+{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
+
+  // Cargar o inicializar prompts
+  let narrativePrompt = localStorage.getItem('cv_preeditor_narrative') || DEFAULT_NARRATIVE;
+  let descriptivePrompt = localStorage.getItem('cv_preeditor_descriptive') || DEFAULT_DESCRIPTIVE;
+  let activeMode = localStorage.getItem('cv_preeditor_active_mode') || 'narrative'; // 'narrative' o 'descriptive'
+
+  function getActivePrompt() {
+    return activeMode === 'narrative' ? narrativePrompt : descriptivePrompt;
+  }
+
+  /* ----- ELEMENTOS UI ----- */
   const editor = document.getElementById('editor');
   const marksList = document.getElementById('marks-list');
   let undoStack = [];
@@ -683,7 +761,7 @@ FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de có
   function get(id) { return document.getElementById(id); }
   function toast(msg, dur = 1800) { const t = get('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), dur); }
 
-  /* ----- MARCADO (igual que antes) ----- */
+  /* ----- MARCADO (igual) ----- */
   function applyMark(cls) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { toast('Selecciona primero el texto que quieres marcar.'); return; }
@@ -733,7 +811,7 @@ FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de có
     marksList.querySelectorAll('.mark-item-del').forEach((btn, i) => { btn.addEventListener('click', () => { removeMark(spans[i]); }); });
   }
 
-  /* ----- GENERAR PROMPT (usa currentSystemPrompt) ----- */
+  /* ----- GENERAR PROMPT (usa modo activo) ----- */
   function generatePrompt() {
     const rawHTML = editor.innerHTML.trim();
     if (!rawHTML || editor.textContent.trim() === '') { toast('El editor está vacío. Pega un texto antes de generar el prompt.'); return; }
@@ -749,13 +827,14 @@ FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de có
     if (semanticText.includes('<ctx>')) instrucciones += '- <ctx>…</ctx>: CONSERVA TODA LA INFORMACIÓN. Mejora la prosa si quieres pero no suprimas ningún dato.\n';
     if (!hasMark) instrucciones += '(No se han aplicado marcas. Edita el texto según las instrucciones generales.)\n';
     instrucciones += '\nEl texto sin etiquetas puede editarse libremente. PROHIBIDO añadir frases o datos que no estuvieran en el original.\n';
-    const prompt = `SYSTEM PROMPT:\n${currentSystemPrompt}\n\n${instrucciones}\nFRAGMENTO:\n\'\'\'\n${semanticText}\n\'\'\'`;
+    const activePrompt = getActivePrompt();
+    const prompt = `SYSTEM PROMPT:\n${activePrompt}\n\n${instrucciones}\nFRAGMENTO:\n\'\'\'\n${semanticText}\n\'\'\'`;
     get('prompt-output').value = prompt;
     get('modal-result').classList.add('visible');
     get('copy-ok').style.display = 'none';
   }
 
-  /* ----- DEEPSEEK (usa currentSystemPrompt y currentCtxPrompt) ----- */
+  /* ----- DEEPSEEK (usa modo activo) ----- */
   let DEEPSEEK_KEY = localStorage.getItem('cv_preeditor_deepseek') || '';
   function updateKeyPill() { const p = document.getElementById('key-pill'); if (!p) return; if (DEEPSEEK_KEY.startsWith('sk-')) { p.textContent = '🔑 clave OK'; p.classList.add('ok'); } else { p.textContent = '🔑 sin clave'; p.classList.remove('ok'); } }
   async function llamarDeepSeek(systemMsg, userMsg) {
@@ -786,16 +865,17 @@ FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de có
       if (hayLibre) {
         get('groq-status').textContent = 'Llamada 1/2: editando texto libre...';
         const promptLibre = promptText.replace(/FRAGMENTO:[\s\S]*?'''[\s\S]*?'''/, "FRAGMENTO:\n'''\n" + fragmentoSinCtx + "\n'''");
-        const raw1 = await llamarDeepSeek(currentSystemPrompt, promptLibre);
+        const raw1 = await llamarDeepSeek(getActivePrompt(), promptLibre);
         const r1 = extraerTexto(raw1);
         textoEditado = limpiarEtiquetas(r1.texto);
         resumenFinal = r1.resumen;
       }
       if (hayCtx) {
         get('groq-status').textContent = hayLibre ? 'Llamada 2/2: corrigiendo bloque ctx...' : 'Corrigiendo bloque ctx...';
+        const ctxSystem = localStorage.getItem('cv_preeditor_ctx_prompt') || "Eres un corrector de textos. Solo corriges errores de ortografia, puntuacion, concordancias y signos incorrectos. PROHIBIDO: no resumas, no elimines informacion, no cambies el orden, no añadas nada nuevo. Devuelve el texto corregido sin explicaciones ni formato JSON.";
         let ctxCorregidos = [];
         for (let i = 0; i < ctxBlocks.length; i++) {
-          const raw2 = await llamarDeepSeek(currentCtxPrompt, 'Corrige solo los errores tecnicos de este texto:\n\n' + ctxBlocks[i]);
+          const raw2 = await llamarDeepSeek(ctxSystem, 'Corrige solo los errores tecnicos de este texto:\n\n' + ctxBlocks[i]);
           ctxCorregidos.push(raw2.trim());
         }
         textoCtx = ctxCorregidos.join('\n\n');
@@ -823,32 +903,32 @@ FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de có
   const mkSave = get('mk-save'); if (mkSave) mkSave.addEventListener('click', () => { const v = get('mki').value.trim(); if (!v) { alert('Introduce la clave.'); return; } if (!v.startsWith('sk-')) { alert('La clave de DeepSeek debe empezar por sk-'); return; } DEEPSEEK_KEY = v; localStorage.setItem('cv_preeditor_deepseek', v); updateKeyPill(); closeKeyModal(); toast('Clave guardada.'); });
   const mkForget = get('mk-forget'); if (mkForget) mkForget.addEventListener('click', () => { if (!confirm('¿Borrar la clave?')) return; DEEPSEEK_KEY = ''; localStorage.removeItem('cv_preeditor_deepseek'); const inp = get('mki'); if (inp) inp.value = ''; updateKeyPill(); toast('Clave eliminada.'); });
 
-  /* ----- MODAL AJUSTES (prompts) ----- */
+  /* ----- MODAL AJUSTES (dos prompts) ----- */
   function openSettingsModal() {
-    get('settings-system-prompt').value = currentSystemPrompt;
-    get('settings-ctx-prompt').value = currentCtxPrompt;
+    get('settings-prompt-narrative').value = narrativePrompt;
+    get('settings-prompt-descriptive').value = descriptivePrompt;
     get('modal-settings').classList.add('visible');
   }
   function closeSettingsModal() { get('modal-settings').classList.remove('visible'); }
   function saveSettings() {
-    const newSys = get('settings-system-prompt').value.trim();
-    const newCtx = get('settings-ctx-prompt').value.trim();
-    if (!newSys || !newCtx) { toast('Los prompts no pueden estar vacíos.'); return; }
-    currentSystemPrompt = newSys;
-    currentCtxPrompt = newCtx;
-    localStorage.setItem('cv_preeditor_system_prompt', currentSystemPrompt);
-    localStorage.setItem('cv_preeditor_ctx_prompt', currentCtxPrompt);
+    const newNarr = get('settings-prompt-narrative').value.trim();
+    const newDesc = get('settings-prompt-descriptive').value.trim();
+    if (!newNarr || !newDesc) { toast('Los prompts no pueden estar vacíos.'); return; }
+    narrativePrompt = newNarr;
+    descriptivePrompt = newDesc;
+    localStorage.setItem('cv_preeditor_narrative', narrativePrompt);
+    localStorage.setItem('cv_preeditor_descriptive', descriptivePrompt);
     toast('Prompts guardados correctamente');
     closeSettingsModal();
   }
   function resetToDefaultPrompts() {
     if (!confirm('¿Restaurar los prompts originales? Se perderán los cambios personalizados.')) return;
-    currentSystemPrompt = DEFAULT_SYSTEM_PROMPT;
-    currentCtxPrompt = DEFAULT_CTX_PROMPT;
-    localStorage.setItem('cv_preeditor_system_prompt', currentSystemPrompt);
-    localStorage.setItem('cv_preeditor_ctx_prompt', currentCtxPrompt);
-    get('settings-system-prompt').value = currentSystemPrompt;
-    get('settings-ctx-prompt').value = currentCtxPrompt;
+    narrativePrompt = DEFAULT_NARRATIVE;
+    descriptivePrompt = DEFAULT_DESCRIPTIVE;
+    localStorage.setItem('cv_preeditor_narrative', narrativePrompt);
+    localStorage.setItem('cv_preeditor_descriptive', descriptivePrompt);
+    get('settings-prompt-narrative').value = narrativePrompt;
+    get('settings-prompt-descriptive').value = descriptivePrompt;
     toast('Prompts restaurados a valores originales');
   }
   get('btn-open-settings').addEventListener('click', openSettingsModal);
@@ -856,6 +936,22 @@ FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de có
   get('settings-save').addEventListener('click', saveSettings);
   get('settings-reset-default').addEventListener('click', resetToDefaultPrompts);
   get('modal-settings').addEventListener('click', e => { if (e.target === get('modal-settings')) closeSettingsModal(); });
+
+  /* ----- SELECCIÓN DE MODO ----- */
+  function setActiveMode(mode) {
+    activeMode = mode;
+    localStorage.setItem('cv_preeditor_active_mode', activeMode);
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      if (btn.dataset.mode === mode) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    toast(`Modo ${mode === 'narrative' ? 'Narrativo' : 'Descriptivo'} activado`);
+  }
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setActiveMode(btn.dataset.mode));
+  });
+  // Inicializar el botón activo
+  setActiveMode(activeMode);
 
   /* ----- OTROS EVENTOS UI ----- */
   get('btn-keep').addEventListener('click', () => applyMark('keep'));
