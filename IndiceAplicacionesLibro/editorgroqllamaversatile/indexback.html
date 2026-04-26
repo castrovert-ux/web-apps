@@ -16,7 +16,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <style>
-    /* ── VARIABLES (igual que antes) ── */
     :root {
       --bg:        #eef4f3;
       --surface:   #e2edeb;
@@ -116,7 +115,7 @@
     .logo small { display: block; font-family: var(--font-ui); font-size: 8px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 1px; }
     .header-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 
-    /* SELECTOR NARRATIVO / DESCRIPTIVO */
+    /* SELECTOR DE PERFIL NARRATIVO / DESCRIPTIVO */
     .profile-selector {
       display: flex;
       gap: 6px;
@@ -474,7 +473,7 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
   </div>
 </div>
 
-<!-- MODAL AJUSTES (NARRATIVO/DESCRIPTIVO) -->
+<!-- MODAL AJUSTES (DOS PERFILES: NARRATIVO / DESCRIPTIVO) -->
 <div class="modal-overlay" id="modal-settings" style="align-items:flex-start;padding:20px;overflow-y:auto;">
   <div class="modal-box modal-box-lg" style="margin:auto;">
     <div class="modal-title">Ajustes de prompts por perfil</div>
@@ -561,7 +560,7 @@ Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
 
 <script>
 // ══════════════════════════════════════════════════════
-//  FIREBASE CONFIG
+//  FIREBASE CONFIG (sin cambios)
 // ══════════════════════════════════════════════════════
 var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
 var fbAuth = null, fbDb = null, fbProvider = null;
@@ -723,7 +722,9 @@ var MODEL      = 'llama-3.3-70b-versatile';
 var MAX_TOKENS = 2048;
 var STORAGE_KEY = 'castroverde_v2';
 
-// PROMPTS POR DEFECTO (actualizados según lo solicitado)
+// ----------------------------------------------
+// PROMPTS POR DEFECTO (COPIADOS DE LA PRIMERA APLICACIÓN)
+// ----------------------------------------------
 const DEFAULT_NARRATIVE = `ROL
 Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato".
 
@@ -764,37 +765,34 @@ const DEFAULT_DESCRIPTIVE = `ROL
 Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato".
 
 PRIORIDAD (en caso de conflicto):
-1. Claridad absoluta
-2. Fidelidad histórica
+1. Voz de referencia
+2. Claridad del texto
 3. Fluidez narrativa
-4. Voz de referencia
 
 RESTRICCIÓN CLAVE
 No añadir información histórica nueva. Prohibido inventar datos.
 
 VOZ DE REFERENCIA
-"Esa imagen de un «castro verde» no tardaría en modificarse en los registros escritos. Poco más de un siglo después, el 29 de diciembre de 1059, con motivo de la restauración de la diócesis de Palencia, la villa figuraba ya como «Castrouert» dentro de los alfoces que la componían..."
+"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano es tierra de frontera... No era un lugar cualquiera."
 
-Modelo: claro, continuo, explicativo, bien estructurado.
+Modelo: cercano, con ritmo, apoyado en imágenes concretas, sin exceso literario.
 
 OBJETIVO
 Reescribir manteniendo:
-- Estilo claro y fácil de seguir
-- Narrativa sobria, sin carga literaria
-- Fluidez continua sin fragmentación
-- Precisión histórica absoluta
+- Estilo narrativo y vivo
+- Tono cercano y directo
+- Ritmo natural
+- Fidelidad histórica total
 
 REGLAS DE EDICIÓN
-- Claridad > todo lo demás
-- Integra fechas, nombres, datos de forma natural
-- Explica conceptos históricos solo si son nuevos o necesarios para el lector
-- Transiciones suaves entre ideas
+- Claridad y flujo narrativo > todo
+- Integra datos históricos de forma natural en la narración
 - Corrige ortografía, puntuación, gramática
 - Elimina solo redundancias obvias
-- Mantén coherencia interna
+- Evita punto y coma e incisos innecesarios
+- Evita lenguaje abstracto o grandilocuente
+- Mantén extensión similar al original
 - Si una frase es clara y funciona, no la toques innecesariamente
-- NO convertir a estilo narrativo-literario
-- NO caer en tono académico rígido
 
 FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de código, empezando con {:
 {"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
@@ -1124,7 +1122,6 @@ function loadVersion(idx){
 
 function deleteVersion(idx){ versions.splice(idx,1); saveVersions(); renderHistoryList(); }
 
-// Funciones auxiliares
 function get(id){ return document.getElementById(id); }
 function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function dateStr(d){ var p=function(n){return n<10?'0'+n:''+n;}; return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
@@ -1155,7 +1152,7 @@ function saveSettingsFromModal(){
 function resetSettings(){
   if(!confirm('¿Restaurar los valores por defecto para ambos perfiles?')) return;
   settings.narrativo.system = DEFAULT_NARRATIVE;
-  settings.narrativo.promptAnalisis = settings.narrativo.promptAnalisis;
+  settings.narrativo.promptAnalisis = settings.narrativo.promptAnalisis; // se mantiene el de arriba
   settings.narrativo.promptVeredicto = settings.narrativo.promptVeredicto;
   settings.descriptivo.system = DEFAULT_DESCRIPTIVE;
   settings.descriptivo.promptAnalisis = settings.descriptivo.promptAnalisis;
@@ -1174,7 +1171,7 @@ function setActiveProfile(profile) {
   localStorage.setItem('castroverde_active_profile', profile);
 }
 
-// ── MODALES FIREBASE Y API KEY ──
+// MODALES FIREBASE Y API KEY (sin cambios)
 function openFbKeyModal(){ get('fb-key-input').value=FB_API_KEY||''; get('modal-fbkey').classList.add('visible'); setTimeout(function(){ get('fb-key-input').focus(); },80); }
 function closeFbKeyModal(){ get('modal-fbkey').classList.remove('visible'); }
 function openApiKeyModal(){ get('modal-key-input').value=API_KEY||''; get('modal-apikey').classList.add('visible'); setTimeout(function(){ get('modal-key-input').focus(); },80); }
@@ -1186,7 +1183,7 @@ function updateKeyStatus(){
   else  { el.textContent='⚿ sin clave'; el.className='key-status missing'; }
 }
 
-// ── EVENTOS ──
+// EVENTOS
 window.onload = function(){
   loadSettings();
   loadVersions();
