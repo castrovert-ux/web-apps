@@ -26,7 +26,7 @@
     .btn-cerrar:hover{color:var(--rojo)}
     .separador{border:none;border-top:1px solid var(--borde);margin:4px 0 18px}
     .lista-items{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;max-height:260px;overflow-y:auto;padding-right:6px}
-    .item-actual{display:flex;align-items:center;justify-content:space-between;background:#0f2040;border:1px solid var(--borde);border-radius:12px;padding:8px 14px;font-size:.95rem;font-weight:700;gap:12px}
+    .item-actual{display:flex;align-items:center;justify-content:space-between;background:#0f2040;border:1px solid var(--borde);border-radius:12px;padding:8px 14px;gap:12px}
     .item-info{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1}
     .item-info span:first-child{font-size:1.3rem}
     .item-info .item-titulo{font-weight:800;color:var(--amarillo)}
@@ -45,7 +45,7 @@
     .fila-dos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .btn-guardar{width:100%;background:linear-gradient(135deg,var(--verde),#35c470);color:#fff;border:none;padding:14px 20px;border-radius:50px;font-family:'Fredoka One',cursive;font-size:1.15rem;cursor:pointer;box-shadow:0 6px 20px rgba(42,157,92,.4);transition:transform .15s;margin-top:10px}
     .btn-guardar:hover{transform:translateY(-3px)}
-    .btn-cancel-edicion{background:linear-gradient(135deg,#4a6e8f,#2a4c6e);margin-top:6px;font-size:.95rem;padding:8px}
+    .btn-cancel-edicion{background:linear-gradient(135deg,#4a6e8f,#2a4c6e);margin-top:6px;font-size:.95rem}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;max-width:900px;margin:0 auto}
     .tarjeta{background:var(--panel);border:2px solid var(--borde);border-radius:20px;padding:30px 24px 26px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.3);transition:transform .18s}
     .tarjeta:hover{transform:translateY(-6px);border-color:var(--azul)}
@@ -114,8 +114,7 @@ let cuestionarios = [
   {icono:"📊", carpeta:"excelgraficos", titulo:"Gráficos en Excel", desc:"Tipos de gráficos y buenas prácticas", preguntas:6}
 ];
 
-// Variables de estado para edición
-let editandoIndex = null;
+let editandoIndex = null;   // índice que se está editando, null si es nuevo
 
 function renderGrid(){
     const contenedor = document.getElementById('grid');
@@ -126,10 +125,10 @@ function renderGrid(){
             <span class="nombre">${escapeHtml(c.titulo)}</span>
             <span class="desc">${escapeHtml(c.desc)}</span>
             <span class="badge">${c.preguntas} preguntas</span>
-        </a>`).join('');
+        </a>
+    `).join('');
 }
 
-// Helper para evitar XSS en textos
 function escapeHtml(str){
     if(!str) return '';
     return str.replace(/[&<>]/g, function(m){
@@ -154,12 +153,13 @@ function renderLista(){
                 <button class="btn-accion btn-editar" onclick="iniciarEdicion(${idx})" title="Editar cuestionario">✏️</button>
                 <button class="btn-accion btn-eliminar" onclick="eliminar(${idx})" title="Eliminar">🗑️</button>
             </div>
-        </div>`).join('');
+        </div>
+    `).join('');
 }
 
 function abrirModal(){ 
     document.getElementById('overlay').classList.add('abierto');
-    cancelarEdicion();  // resetea modo edición, limpia formulario para nuevo
+    cancelarEdicion();  // reinicia formulario y modo nuevo
     renderLista();
 }
 
@@ -177,7 +177,6 @@ function actualizarPreview(){
     document.getElementById('rutaPreview').textContent = carpeta ? `Ruta: ${carpeta}/index.html` : '—';
 }
 
-// Iniciar edición: cargar datos del cuestionario en el formulario
 function iniciarEdicion(index){
     editandoIndex = index;
     const item = cuestionarios[index];
@@ -193,4 +192,96 @@ function iniciarEdicion(index){
     const btnGuardar = document.getElementById('btnGuardar');
     btnGuardar.textContent = '✅ Actualizar cuestionario';
     btnGuardar.style.background = "linear-gradient(135deg, #f5a623, #f39c12)";
-    document.getElementById('btnCancelarEd
+    const btnCancelar = document.getElementById('btnCancelarEdicion');
+    btnCancelar.style.display = 'block';
+}
+
+function cancelarEdicion(){
+    editandoIndex = null;
+    // Limpiar formulario
+    document.getElementById('nuevoIcono').value = '📄';
+    document.getElementById('nuevoCarpeta').value = '';
+    document.getElementById('nuevoTitulo').value = '';
+    document.getElementById('nuevoDesc').value = '';
+    document.getElementById('nuevoPreguntas').value = '10';
+    actualizarPreview();
+    
+    // Restaurar botón guardar a modo "nuevo"
+    document.getElementById('modalTitulo').textContent = '⚙️ Administrar';
+    const btnGuardar = document.getElementById('btnGuardar');
+    btnGuardar.textContent = '💾 Guardar nuevo';
+    btnGuardar.style.background = "linear-gradient(135deg, #2a9d5c, #35c470)";
+    document.getElementById('btnCancelarEdicion').style.display = 'none';
+}
+
+function eliminar(index){
+    if(confirm('¿Desea eliminar este cuestionario?')){
+        cuestionarios.splice(index, 1);
+        renderGrid();
+        renderLista();
+        if(editandoIndex !== null){
+            // si estábamos editando justo el que se borró, cancelamos edición
+            cancelarEdicion();
+        }
+    }
+}
+
+function guardarCambios(){
+    const carpeta = document.getElementById('nuevoCarpeta').value.trim();
+    const titulo = document.getElementById('nuevoTitulo').value.trim();
+    if(!carpeta || !titulo){
+        alert('La carpeta y el título son obligatorios');
+        return;
+    }
+    const nuevoItem = {
+        icono: document.getElementById('nuevoIcono').value.trim() || '📄',
+        carpeta: carpeta,
+        titulo: titulo,
+        desc: document.getElementById('nuevoDesc').value.trim(),
+        preguntas: parseInt(document.getElementById('nuevoPreguntas').value) || 10
+    };
+    
+    if(editandoIndex !== null){
+        // Modo edición: actualizar el existente
+        cuestionarios[editandoIndex] = nuevoItem;
+    } else {
+        // Modo nuevo: agregar al final
+        cuestionarios.push(nuevoItem);
+    }
+    
+    // Cerrar modal visualmente ANTES de capturar el HTML
+    cerrarModal();
+    
+    // Generar el nuevo HTML completo con la variable cuestionarios actualizada
+    const htmlCompleto = generarHTMLCompleto();
+    const blob = new Blob([htmlCompleto], {type: 'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'index.html';
+    a.click();
+    
+    // Actualizar grids
+    renderGrid();
+    renderLista();
+    cancelarEdicion(); // por si acaso
+}
+
+// Función que reconstruye el HTML completo de esta misma página con los datos actualizados
+function generarHTMLCompleto(){
+    // Obtenemos el contenido actual del documento (sin modificar variables en el DOM)
+    let htmlActual = document.documentElement.outerHTML;
+    // Reemplazar la declaración let cuestionarios = [...] por la nueva versión
+    const cuestionariosStr = JSON.stringify(cuestionarios);
+    const regex = /let cuestionarios = \[[\s\S]*?\];/;
+    const nuevaDeclaracion = `let cuestionarios = ${cuestionariosStr};`;
+    // Asegurar que se reemplaza correctamente
+    let nuevoHtml = htmlActual.replace(regex, nuevaDeclaracion);
+    // También hay que escapar correctamente si hay caracteres especiales, pero JSON.stringify ya lo hace.
+    return nuevoHtml;
+}
+
+// Inicializar la página
+renderGrid();
+</script>
+</body>
+</html>
