@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ilustraciones del libro · Prompt unificado (corregido)</title>
+<title>Ilustraciones del libro · Generador unificado</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
@@ -252,7 +252,7 @@
     </div>
   </div>
 
-  <!-- ========== SCENE INPUT ========== -->
+  <!-- ========== SCENE INPUT (minimal) ========== -->
   <div class="section-label">📖 Datos básicos de la ilustración</div>
   <div class="input-group">
     <textarea id="shortDesc" rows="2" placeholder="Describe brevemente la escena en español (ejemplo: El escribano municipal lee una provisión real en la plaza frente a los labradores)." style="resize: vertical;"></textarea>
@@ -323,18 +323,10 @@
   </div>
 </div>
 
-<!-- MODAL API KEY - CORREGIDO: password field dentro de <form> para evitar advertencia DOM -->
+<!-- Modal API key -->
 <div id="proxyModal" class="modal-overlay" style="display:none;">
-  <div class="modal-card">
-    <h3>Clave API de Groq</h3>
-    <p>Introduce tu clave (empieza por gsk_). Se guarda localmente.</p>
-    <form id="proxyKeyForm" onsubmit="saveProxyKey(); return false;">
-      <input type="password" id="proxyUrlInput" placeholder="gsk_..." autocomplete="off" style="margin-bottom:12px; width:100%;">
-      <div class="flex-btns">
-        <button type="button" class="btn-outline" onclick="closeProxyModal()">Cancelar</button>
-        <button type="submit" class="btn-primary">Guardar</button>
-      </div>
-    </form>
+  <div class="modal-card"><h3>Clave API de Groq</h3><p>Introduce tu clave (empieza por gsk_). Se guarda localmente.</p>
+    <input type="password" id="proxyUrlInput" placeholder="gsk_..." style="margin-bottom:12px;"><div class="flex-btns"><button onclick="closeProxyModal()">Cancelar</button><button onclick="saveProxyKey()" class="btn-primary">Guardar</button></div>
   </div>
 </div>
 
@@ -375,22 +367,19 @@
   function closeGlobalConfig() { document.getElementById('globalConfigModal').style.display = 'none'; }
 
   // --------------------------- GROQ & HELPERS ---------------------------
+  let currentExpandedStruct = {};
+
   function getGroqKey() { return localStorage.getItem('groq_api_key') || ''; }
   function updateProxyIndicator() { 
     const key = getGroqKey();
-    const icon = document.getElementById('groq-key-icon');
+    const icon= document.getElementById('groq-key-icon');
     const lbl = document.getElementById('groq-key-label');
     if(key) { icon.textContent='✓'; lbl.textContent='Groq API'; } 
     else { icon.textContent='⚙'; lbl.textContent='Groq API · sin clave'; }
   }
   function showProxyModal(){ document.getElementById('proxyModal').style.display='flex'; }
   function closeProxyModal(){ document.getElementById('proxyModal').style.display='none'; }
-  function saveProxyKey(){ 
-    const val = document.getElementById('proxyUrlInput').value.trim(); 
-    if(val) localStorage.setItem('groq_api_key', val); 
-    closeProxyModal(); 
-    updateProxyIndicator();
-  }
+  function saveProxyKey(){ const val=document.getElementById('proxyUrlInput').value.trim(); if(val) localStorage.setItem('groq_api_key',val); closeProxyModal(); updateProxyIndicator();}
   updateProxyIndicator();
 
   // --------------------------- GENERAR ESTRUCTURA (IA) -------------------
@@ -440,7 +429,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     else{ spinner.style.display='none'; btn.querySelector('span:first-child').textContent='✨ Generar estructura de escena (IA)'; btn.disabled=false; }
   }
 
-  // --------------------------- PROMPT FINAL ----------------
+  // --------------------------- PROMPT FINAL (separación global/local) ----------------
   function buildFinalPrompt() {
     const neutralDesc = document.getElementById('neutralDesc').value.trim();
     const action = document.getElementById('genAction').value.trim();
@@ -450,7 +439,9 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     const centralElem = document.getElementById('centralElem').value.trim();
     if(!neutralDesc && !action) { alert('Primero genera la estructura con IA o completa los campos.'); return; }
     const globalCfg = loadGlobalConfig();
+    // 1. Clean scene description (neutral)
     let final = neutralDesc ? neutralDesc + '\n\n' : '';
+    // 2. Scene definition block
     final += `SCENE DEFINITION:\n`;
     if(action) final += `• Action: ${action}\n`;
     if(characters) final += `• Characters: ${characters}\n`;
@@ -458,6 +449,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     if(environment) final += `• Environment: ${environment}\n`;
     if(centralElem) final += `• Central focus: ${centralElem}\n`;
     final += `\n`;
+    // 3. Global blocks
     final += `${globalCfg.artStyle}\n\n`;
     final += `${globalCfg.geoAnchor}\n\n`;
     final += `${globalCfg.lighting}\n\n`;
@@ -495,12 +487,11 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     setTimeout(()=>btn.textContent='Copiar',2000);
   }
 
-  // --------------------------- HISTORIAL -------------------
+  // --------------------------- HISTORIAL (nuevo formato) -------------------
   const STORAGE_KEY = 'prompt_historial_v3';
   function loadHistorial() { try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){return [];} }
   function saveHistorial(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
   function updateCountDisplay(){ const n=loadHistorial().length; document.getElementById('histCount').innerText=n; }
-  function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
   function renderHistorial(){
     const list = loadHistorial();
     const container = document.getElementById('historialList');
@@ -514,7 +505,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
         <div class="hist-item-body" id="hbody-${e.id}">
           <div><strong>Año:</strong> ${escapeHtml(e.year||'—')} | <strong>Lugar:</strong> ${escapeHtml(e.location||'—')}</div>
           <div style="margin:6px 0;"><strong>Acción:</strong> ${escapeHtml(e.action||'')}</div>
-          <div class="hist-prompt-full" style="background:#faf7f2; padding:8px; border-left:2px solid #B89A5A; margin-top:8px; font-size:12px;">${escapeHtml((e.finalPrompt||'').substring(0,300))}…</div>
+          <div class="hist-prompt-full" style="background:#faf7f2; padding:8px; border-left:2px solid #B89A5A; margin-top:8px; font-size:12px;">${escapeHtml(e.finalPrompt?.substring(0,300))}…</div>
           <div style="margin-top:8px; display:flex; gap:8px;">
             <button class="btn-outline" style="font-size:11px;" onclick="restoreEntry(${e.id})">Restaurar escena</button>
             <button class="btn-outline" style="font-size:11px;" onclick="copyEntryPrompt(${e.id})">Copiar prompt</button>
@@ -545,9 +536,10 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
   function clearAllHistory(){ if(confirm('Borrar todo el historial?')){ saveHistorial([]); renderHistorial(); updateCountDisplay(); } }
   function copyEntryPrompt(id){ const e = loadHistorial().find(e=>e.id===id); if(e && e.finalPrompt){ navigator.clipboard.writeText(e.finalPrompt); alert('Prompt copiado'); } }
   function toggleHistorial(){ const panel=document.getElementById('historialPanel'); panel.classList.toggle('visible'); if(panel.classList.contains('visible')) renderHistorial(); }
+  function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
   updateCountDisplay();
 
-  // --------------------------- FIRESTORE SYNC --------------------------
+  // ---------------------------  FIRESTORE SYNC (existente adaptado) ----------
   var firebaseConfig = { apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs", authDomain: "castroverde-apps.firebaseapp.com", projectId: "castroverde-apps", storageBucket: "castroverde-apps.firebasestorage.app", messagingSenderId: "371026533141", appId: "1:371026533141:web:315767f60cbf8d6f47671c" };
   firebase.initializeApp(firebaseConfig);
   var fbAuth = firebase.auth(), fbDb = firebase.firestore(), fbProvider = new firebase.auth.GoogleAuthProvider(), fbUser = null;
@@ -557,20 +549,18 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     if(fbUser){ btn.style.borderColor='rgba(184,154,90,0.8)'; document.getElementById('sync-icon').textContent='✓'; userSpan.textContent=fbUser.email; userSpan.style.display='inline'; signout.style.display='inline'; }
     else{ document.getElementById('sync-icon').textContent='☁'; userSpan.style.display='none'; signout.style.display='none'; }
   }
-  function handleSync(){ if(!fbUser) fbAuth.signInWithPopup(fbProvider).then(()=>sincronizarBidireccional()).catch(e=>setSyncStatus('err','Error al iniciar sesión')); else sincronizarBidireccional(); }
+  function handleSync(){ if(!fbUser) fbAuth.signInWithPopup(fbProvider).then(()=>sincronizarBidireccional()); else sincronizarBidireccional(); }
   function sincronizarBidireccional(){ if(!fbUser) return; 
     const docRef = fbDb.collection('promptsIlustraciones').doc(fbUser.uid);
     docRef.get().then(snap=>{ if(!snap.exists||!snap.data().historial?.length) return subirANube(docRef);
       const tsNube=snap.data().lastUpdate||0; const tsLocal=parseInt(localStorage.getItem('promptsUltimaSubida'))||0;
       if(tsNube>tsLocal){ saveHistorial(snap.data().historial||[]); localStorage.setItem('promptsUltimaSubida',tsNube); updateCountDisplay(); renderHistorial(); setSyncStatus('ok','Sincronizado desde la nube'); } else subirANube(docRef);
-    }).catch(e=>setSyncStatus('err','Error sync: '+ (e.message||'desconocido')));
+    }).catch(e=>setSyncStatus('err','Error sync'));
   }
-  function subirANube(docRef){ let historial=loadHistorial(); let ts=Date.now(); return docRef.set({ historial, lastUpdate:ts, updatedAt:firebase.firestore.FieldValue.serverTimestamp() }).then(()=>{ localStorage.setItem('promptsUltimaSubida',ts); setSyncStatus('ok','Historial guardado en la nube'); }); }
-  function setSyncStatus(type,msg){ let el=document.getElementById('sync-status'); if(!el) return; el.style.display='flex'; el.innerText=msg; setTimeout(()=>el.style.display='none',3500); }
-  function fbSignOut(){ fbAuth.signOut().then(()=>{fbUser=null; updateSyncUI();}).catch(e=>console.warn); }
-  window.closeSyncStatus=()=>{ let el=document.getElementById('sync-status'); if(el) el.style.display='none'; };
-  
-  // cierre de modales con click en overlay
+  function subirANube(docRef){ let historial=loadHistorial(); let ts=Date.now(); return docRef.set({ historial, lastUpdate:ts, updatedAt:firebase.firestore.FieldValue.serverTimestamp() }).then(()=>{ localStorage.setItem('promptsUltimaSubida',ts); setSyncStatus('ok','Historial guardado'); }); }
+  function setSyncStatus(type,msg){ let el=document.getElementById('sync-status'); el.style.display='flex'; el.innerText=msg; setTimeout(()=>el.style.display='none',3500); }
+  function fbSignOut(){ fbAuth.signOut().then(()=>{fbUser=null; updateSyncUI();}); }
+  window.closeSyncStatus=()=>document.getElementById('sync-status').style.display='none';
   document.getElementById('proxyModal').addEventListener('click',(e)=>e.target===document.getElementById('proxyModal')&&closeProxyModal());
   document.getElementById('globalConfigModal').addEventListener('click',(e)=>e.target===document.getElementById('globalConfigModal')&&closeGlobalConfig());
 </script>
