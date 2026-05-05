@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ilustraciones del libro · Prompt unificado</title>
+<title>Ilustraciones del libro · Prompt unificado</title> <!-- corregido: eliminado "(corregido)" -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
@@ -150,10 +150,6 @@
     border-color: #7a9a60;
   }
   .btn-secondary:hover { background: rgba(122,154,96,0.18); }
-  .btn-accent {
-    background: rgba(184,154,90,0.2);
-    border-color: #b88a3a;
-  }
   .spinner {
     width: 14px;
     height: 14px;
@@ -227,6 +223,7 @@
   .note-tip { font-size: 12px; color: #7a7265; margin-top: 4px; font-style: italic; }
   hr { margin: 1rem 0; border: none; border-top: 1px solid #e8e2d8; }
   
+  /* nuevos estilos para toast y validaciones */
   .toast-message {
     position: fixed;
     bottom: 24px;
@@ -252,6 +249,11 @@
     display: flex;
     align-items: center;
     gap: 5px;
+  }
+  .field-highlight {
+    transition: box-shadow 0.2s, border-color 0.2s;
+    box-shadow: 0 0 0 2px rgba(192,96,58,0.2);
+    border-color: #c0603a !important;
   }
   .restore-feedback {
     transition: background 0.3s;
@@ -320,20 +322,14 @@
     </div>
   </div>
 
-  <!-- Botón NUEVO: generación automática completa -->
-  <button class="btn-primary btn-accent" id="btnAutoFull" onclick="autoGenerateFull()">
-    <span>⚡ Generar todo automático (IA completa)</span>
-    <span id="autoSpinner" class="spinner" style="display:none;"></span>
-  </button>
-
-  <!-- AI structure generation (opcional manual) -->
+  <!-- AI structure generation -->
   <button class="btn-primary btn-secondary" id="btnGenStructure" onclick="generateSceneStructure()">
     <span>✨ Generar estructura de escena (IA)</span>
     <span id="structSpinner" class="spinner" style="display:none;"></span>
   </button>
 
   <div class="ai-struct-grid" id="structPanel">
-    <div class="struct-field"><label>🎭 Acción principal (en inglés)</label><input type="text" id="genAction" placeholder="Action will appear here"></div>
+    <div class="struct-field"><label>🎭 Acción principal (en inglés)</label><input type="text" id="genAction" placeholder="Action will appear here"></div> <!-- etiqueta corregida: más clara -->
     <div class="struct-field"><label>👥 Personajes / roles (en inglés)</label><input type="text" id="genCharacters" placeholder="Characters, roles"></div>
     <div class="struct-field"><label>🏛️ Contexto social (en inglés)</label><input type="text" id="genSocialContext" placeholder="Social context"></div>
     <div class="struct-field"><label>🌿 Entorno / espacio (en inglés)</label><input type="text" id="genEnvironment" placeholder="Environment details"></div>
@@ -402,6 +398,7 @@
     mood: `The scene must be historically plausible, visually clear, restrained and grounded. Avoid theatrical exaggeration, heroic or epic dramatization, cinematic staging.`
   };
 
+  // ---------- Toast no bloqueante ----------
   function showToast(message, isError = false) {
     let existing = document.querySelector('.toast-message');
     if(existing) existing.remove();
@@ -457,6 +454,7 @@
   function getGroqKey() { return localStorage.getItem('groq_api_key') || ''; }
   
   async function validateGroqKey(key) {
+    // ping rápido: intentar listar modelos (endpoint liviano)
     try {
       const res = await fetch('https://api.groq.com/openai/v1/models', {
         method: 'GET',
@@ -517,155 +515,7 @@
   
   updateProxyIndicator();
 
-  // --------------------------- NUEVA FUNCIÓN: autoGenerateFull -------------------
-  async function autoGenerateFull() {
-    const desc = document.getElementById('shortDesc').value.trim();
-    if(!desc) { 
-      setInlineWarning('shortDescWarning', 'La descripción breve es necesaria para generar la escena automáticamente');
-      document.getElementById('shortDesc').focus();
-      return; 
-    }
-    setInlineWarning('shortDescWarning', '');
-    
-    const apiKey = getGroqKey();
-    if(!apiKey) { showProxyModal(); showToast('Se necesita clave de Groq API', true); return; }
-
-    const year = document.getElementById('yearInput').value.trim() || "no especificado";
-    const place = document.getElementById('placeInput').value.trim() || "no especificado";
-    const centralElem = document.getElementById('centralElem').value.trim() || "no especificado";
-    const sceneType = document.getElementById('sceneType').value;
-
-    toggleAutoFullLoading(true);
-    
-    const systemPrompt = `You are a historian and visual scene designer for an AI illustration system focused on historical accuracy.
-
-Your task is to generate a complete, structured scene from minimal input.
-
-RULES:
-- Do not invent specific historical events.
-- Stay generic but plausible.
-- Avoid dramatic or cinematic language.
-- Keep the scene grounded and neutral.
-- Ensure one main action.
-- Ensure a clear central focus.
-- Respect the historical period implied by the year.
-
-OUTPUT FORMAT (exactly as below, with the same punctuation and line breaks):
-
-Neutral description (in English, 1–2 sentences)
-
-SCENE DEFINITION:
-• Action:
-• Characters:
-• Social context:
-• Environment:
-• Central focus:
-
-STYLE:
-Neutral, precise language. No epic tone. No embellishment. Clear and structured.
-
-Now based on the input, generate the scene. Return ONLY the neutral description and the SCENE DEFINITION block. Do not include any extra text, explanations or markdown.`;
-
-    const userInput = `Short description (Spanish): ${desc}
-Approximate year: ${year}
-Location: ${place}
-Central visual element: ${centralElem}
-Scene type reference: ${sceneType}`;
-
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body: JSON.stringify({
-          model:'llama-3.3-70b-versatile',
-          max_tokens:900,
-          temperature:0.4,
-          messages:[
-            {role:'system', content:systemPrompt},
-            {role:'user', content:userInput}
-          ]
-        })
-      });
-      const data = await res.json();
-      if(data.error) throw new Error(data.error.message);
-      let rawText = data.choices[0].message.content;
-      
-      // Parsear la respuesta
-      const parsed = parseAutoResponse(rawText);
-      if(parsed) {
-        document.getElementById('neutralDesc').value = parsed.neutralDesc || '';
-        document.getElementById('genAction').value = parsed.action || '';
-        document.getElementById('genCharacters').value = parsed.characters || '';
-        document.getElementById('genSocialContext').value = parsed.socialContext || '';
-        document.getElementById('genEnvironment').value = parsed.environment || '';
-        // El campo central focus se puede asignar también si se desea, pero ya existe centralElem
-        if(parsed.centralFocus) {
-          document.getElementById('centralElem').value = parsed.centralFocus;
-        }
-        showToast('Estructura generada automáticamente');
-        
-        // Opcional: generar el prompt final directamente después? Lo dejamos a elección del usuario, pero por comodidad llamamos a buildFinalPrompt()
-        buildFinalPrompt();
-      } else {
-        throw new Error('No se pudo interpretar la respuesta de la IA');
-      }
-    } catch(e) {
-      showToast('Error auto-generación: '+e.message, true);
-    }
-    finally {
-      toggleAutoFullLoading(false);
-    }
-  }
-  
-  function parseAutoResponse(text) {
-    // Extraer neutral description (primera línea o hasta SCENE DEFINITION)
-    let neutralDesc = '';
-    let action = '', characters = '', socialContext = '', environment = '', centralFocus = '';
-    
-    // Buscar "Neutral description" o asumir que lo primero hasta dos saltos es la descripción
-    const neutralMatch = text.match(/Neutral description[:\s]*(.*?)(?=\n\s*\n|\nSCENE DEFINITION)/is);
-    if(neutralMatch) {
-      neutralDesc = neutralMatch[1].trim();
-    } else {
-      // Si no encuentra, tomar desde inicio hasta "SCENE DEFINITION"
-      const upToDef = text.split(/SCENE DEFINITION:/i)[0];
-      neutralDesc = upToDef.replace(/neutral description/gi, '').trim();
-    }
-    
-    const defBlock = text.match(/SCENE DEFINITION:\s*([\s\S]*?)(?=\n\s*\n|$)/i);
-    if(defBlock) {
-      const block = defBlock[1];
-      const actionMatch = block.match(/•\s*Action:\s*(.*)/i);
-      if(actionMatch) action = actionMatch[1].trim();
-      const charMatch = block.match(/•\s*Characters:\s*(.*)/i);
-      if(charMatch) characters = charMatch[1].trim();
-      const socialMatch = block.match(/•\s*Social context:\s*(.*)/i);
-      if(socialMatch) socialContext = socialMatch[1].trim();
-      const envMatch = block.match(/•\s*Environment:\s*(.*)/i);
-      if(envMatch) environment = envMatch[1].trim();
-      const focusMatch = block.match(/•\s*Central focus:\s*(.*)/i);
-      if(focusMatch) centralFocus = focusMatch[1].trim();
-    }
-    
-    if(!neutralDesc && !action && !characters) return null;
-    return { neutralDesc, action, characters, socialContext, environment, centralFocus };
-  }
-  
-  function toggleAutoFullLoading(loading) {
-    const btn = document.getElementById('btnAutoFull');
-    const spinner = document.getElementById('autoSpinner');
-    btn.disabled = loading;
-    if(loading) {
-      spinner.style.display = 'inline-block';
-      btn.querySelector('span:first-child').textContent = '⏳ Generando automático...';
-    } else {
-      spinner.style.display = 'none';
-      btn.querySelector('span:first-child').textContent = '⚡ Generar todo automático (IA completa)';
-      btn.disabled = false;
-    }
-  }
-
-  // --------------------------- GENERAR ESTRUCTURA (IA) manual -------------------
+  // --------------------------- GENERAR ESTRUCTURA (IA) -------------------
   async function generateSceneStructure() {
     const desc = document.getElementById('shortDesc').value.trim();
     const year = document.getElementById('yearInput').value.trim();
@@ -720,7 +570,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     else{ spinner.style.display='none'; btn.querySelector('span:first-child').textContent='✨ Generar estructura de escena (IA)'; btn.disabled=false; }
   }
 
-  // --------------------------- PROMPT FINAL -------------------
+  // --------------------------- PROMPT FINAL con filtrado----------------
   function buildFinalPrompt() {
     const neutralDesc = document.getElementById('neutralDesc').value.trim();
     const action = document.getElementById('genAction').value.trim();
@@ -729,6 +579,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     const environment = document.getElementById('genEnvironment').value.trim();
     const centralElem = document.getElementById('centralElem').value.trim();
     
+    // Advertencia no bloqueante si falta neutralDesc
     if(!neutralDesc) {
       setInlineWarning('neutralDescWarning', 'No hay descripción neutral. El prompt puede ser impreciso. Genera estructura con IA o escribe manualmente.');
     } else setInlineWarning('neutralDescWarning', '');
@@ -737,6 +588,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     let final = '';
     if(neutralDesc) final += neutralDesc + '\n\n';
     final += `SCENE DEFINITION:\n`;
+    // Solo añadir líneas con contenido no vacío
     const parts = [];
     if(action) parts.push(`• Action: ${action}`);
     if(characters) parts.push(`• Characters: ${characters}`);
@@ -750,11 +602,12 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     final += `${globalCfg.mood}\n`;
     final += `\nNo fantasy, no modern elements. The illustration must be faithful to Castilian material culture.`;
     
+    // Limpiar posibles líneas vacías dobles
     final = final.replace(/\n{3,}/g, '\n\n').trim();
     
     document.getElementById('finalPromptText').innerText = final;
     document.getElementById('outputArea').classList.add('visible');
-    
+    // Guardar en historial
     const entry = {
       id: Date.now(),
       date: new Date().toISOString(),
@@ -833,6 +686,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
     document.getElementById('genEnvironment').value = entry.environment||'';
     document.getElementById('neutralDesc').value = entry.neutralDesc||'';
     if(entry.finalPrompt) { document.getElementById('finalPromptText').innerText = entry.finalPrompt; document.getElementById('outputArea').classList.add('visible'); }
+    // feedback visual: resaltar campos principales
     const fields = ['shortDesc', 'yearInput', 'placeInput', 'centralElem', 'neutralDesc'];
     fields.forEach(f => {
       const el = document.getElementById(f);
@@ -851,7 +705,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
   function toggleHistorial(){ const panel=document.getElementById('historialPanel'); panel.classList.toggle('visible'); if(panel.classList.contains('visible')) renderHistorial(); }
   updateCountDisplay();
 
-  // --------------------------- FIRESTORE SYNC --------------------------
+  // --------------------------- FIRESTORE SYNC (sin cambios relevantes) --------------------------
   var firebaseConfig = { apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs", authDomain: "castroverde-apps.firebaseapp.com", projectId: "castroverde-apps", storageBucket: "castroverde-apps.firebasestorage.app", messagingSenderId: "371026533141", appId: "1:371026533141:web:315767f60cbf8d6f47671c" };
   firebase.initializeApp(firebaseConfig);
   var fbAuth = firebase.auth(), fbDb = firebase.firestore(), fbProvider = new firebase.auth.GoogleAuthProvider(), fbUser = null;
@@ -873,6 +727,7 @@ Keep language concrete, avoid heroic or epic tone. The scene is local, not royal
   function setSyncStatus(type,msg){ let el=document.getElementById('sync-status'); if(!el) return; el.style.display='flex'; el.innerText=msg; setTimeout(()=>el.style.display='none',3500); }
   function fbSignOut(){ fbAuth.signOut().then(()=>{fbUser=null; updateSyncUI();}).catch(e=>console.warn); }
   
+  // Cierre de modales
   document.getElementById('proxyModal').addEventListener('click',(e)=>e.target===document.getElementById('proxyModal')&&closeProxyModal());
   document.getElementById('globalConfigModal').addEventListener('click',(e)=>e.target===document.getElementById('globalConfigModal')&&closeGlobalConfig());
 </script>
