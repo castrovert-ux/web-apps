@@ -6,7 +6,7 @@
   <title>Preeditor · Castroverde</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
   <style>
-    /* ── VARIABLES (igual que antes) ── */
+    /* ── VARIABLES ── */
     :root {
       --bg:       #eef4f3;
       --surface:  #e2edeb;
@@ -23,6 +23,8 @@
       --emph-border:  #3a7ab0;
       --ctx-bg:       #ede8ff;
       --ctx-border:   #7a5abf;
+      --rewrite-bg:   #e0f0e8;
+      --rewrite-border: #5a9e8a;
       --font-h:    'Playfair Display', Georgia, serif;
       --font-body: 'Source Serif 4', Georgia, serif;
       --font-ui:   'DM Mono', monospace;
@@ -154,14 +156,14 @@
     .btn-undo:hover { border-color: var(--accent); color: var(--accent); }
     .btn-reset { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 11px; }
     .btn-reset:hover { border-color: var(--red); color: var(--red); }
-    /* Nuevos botones de resumen y eliminación */
     .btn-delete { background: #ffeeee; color: #a03322; border: 1px solid #d99; }
     .btn-delete:hover { background: #ffc0c0; border-color: #a44; }
     .btn-summary { background: #e8f0e8; color: #2a6e3a; border: 1px solid #a9c5a9; }
     .btn-summary:hover { background: #c8dfc8; }
     .btn-summary-much { background: #e0efe0; color: #1c5a2c; border: 1px solid #92b892; }
     .btn-summary-much:hover { background: #b8d8b8; }
-    /* Selector de modo */
+    .btn-rewrite { background: var(--rewrite-bg); color: #1a5e4a; border: 1px solid var(--rewrite-border); }
+    .btn-rewrite:hover { background: #c8e6dc; }
     .mode-selector {
       display: flex;
       gap: 6px;
@@ -400,7 +402,7 @@
       letter-spacing: .5px;
     }
     /* MODALES */
-    .modal-overlay, .modal-key-overlay, .modal-settings-overlay, .modal-summary-overlay {
+    .modal-overlay, .modal-key-overlay, .modal-settings-overlay, .modal-rewrite-overlay {
       display: none;
       position: fixed;
       inset: 0;
@@ -410,7 +412,7 @@
       justify-content: center;
       padding: 20px;
     }
-    .modal-overlay.visible, .modal-key-overlay.visible, .modal-settings-overlay.visible, .modal-summary-overlay.visible { display: flex; }
+    .modal-overlay.visible, .modal-key-overlay.visible, .modal-settings-overlay.visible, .modal-rewrite-overlay.visible { display: flex; }
     .modal-box {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -526,23 +528,23 @@
     .groq-spinner.on { display: inline-block; }
     @keyframes gspin { to { transform: rotate(360deg); } }
     .groq-status { font-family: var(--font-ui); font-size: 9px; color: var(--muted); flex:1; }
-    .modal-key-box, .modal-settings-box {
+    .modal-key-box, .modal-settings-box, .modal-rewrite-box {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); width: 100%; max-width: 650px;
       padding: 26px 26px 20px;
       box-shadow: 0 8px 32px rgba(30,53,50,.2);
     }
-    .mkt, .stt { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .mkd, .std { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
-    .starea {
+    .mkt, .stt, .rwt { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .mkd, .std, .rwd { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+    .starea, .rwtextarea {
       width: 100%; background: var(--card); border: 1px solid var(--border);
       color: var(--text); padding: 9px 12px; font-family: var(--font-ui);
       font-size: 12px; border-radius: var(--radius); outline: none; resize: vertical;
       margin-bottom: 16px;
     }
-    .starea:focus { border-color: var(--accent); }
+    .starea:focus, .rwtextarea:focus { border-color: var(--accent); }
     .mkh { font-family: var(--font-ui); font-size: 9px; color: var(--muted); margin-top: 5px; }
-    .mka, .sta { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .mka, .sta, .rwa { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
     .btn-sm-ghost, .btn-sm-primary {
       padding: 6px 12px; border-radius: var(--radius);
       font-family: var(--font-ui); font-size: 10px; text-transform: uppercase;
@@ -594,10 +596,10 @@
       <button class="btn-mark btn-undo" id="btn-undo">↩ Deshacer</button>
       <button class="btn-mark btn-reset" id="btn-reset">⊘ Resetear todo</button>
       <div class="tool-sep"></div>
-      <!-- NUEVAS FUNCIONES -->
       <button class="btn-mark btn-delete" id="btn-delete">🗑️ Eliminar</button>
       <button class="btn-mark btn-summary" id="btn-summary-light">📝 Resumir poco</button>
       <button class="btn-mark btn-summary-much" id="btn-summary-heavy">✂️ Resumir mucho</button>
+      <button class="btn-mark btn-rewrite" id="btn-rewrite">🔄 Sinónimos</button>
       <div class="mode-selector" id="mode-selector">
         <button class="mode-btn" data-mode="narrative">📖 Narrativo</button>
         <button class="mode-btn" data-mode="descriptive">📋 Descriptivo</button>
@@ -676,10 +678,30 @@
   </div>
 </div>
 
+<!-- MODAL REFORMULAR (SINÓNIMOS) -->
+<div class="modal-rewrite-overlay" id="modal-rewrite">
+  <div class="modal-rewrite-box">
+    <div class="rwt">🔄 Reformular con sinónimos</div>
+    <div class="rwd">Selecciona el estilo de reformulación para el texto elegido.</div>
+    <label style="font-family: var(--font-ui); font-size: 10px; letter-spacing: 1px;">Estilo de reformulación</label>
+    <select id="rewrite-style" style="width:100%; padding:8px; margin-bottom:16px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--font-ui); font-size:11px;">
+      <option value="sinonimos">🔤 Solo cambiar palabras por sinónimos</option>
+      <option value="conservador">📖 Reformulación conservadora (mismo significado exacto)</option>
+      <option value="creativo">✨ Reformulación creativa (más natural y fluida)</option>
+      <option value="formal">🎩 Tono más formal</option>
+      <option value="coloquial">💬 Tono más cercano y coloquial</option>
+    </select>
+    <div class="rwa">
+      <button class="btn-sm-ghost" id="rewrite-cancel">Cancelar</button>
+      <button class="btn-sm-primary" id="rewrite-apply">Aplicar reformulación</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
-  /***** PROMPTS POR DEFECTO (ACTUALIZADOS SEGÚN SOLICITUD) *****/
+  /***** PROMPTS POR DEFECTO *****/
   const DEFAULT_NARRATIVE = `ROL
 Eres un editor literario especializado en historia local castellana. Editas borradores del libro de historia de Castroverde de Cerrato.
 
@@ -785,7 +807,7 @@ FORMATO DE RESPUESTA
   // Cargar o inicializar prompts
   let narrativePrompt = localStorage.getItem('cv_preeditor_narrative') || DEFAULT_NARRATIVE;
   let descriptivePrompt = localStorage.getItem('cv_preeditor_descriptive') || DEFAULT_DESCRIPTIVE;
-  let activeMode = localStorage.getItem('cv_preeditor_active_mode') || 'narrative'; // 'narrative' o 'descriptive'
+  let activeMode = localStorage.getItem('cv_preeditor_active_mode') || 'narrative';
 
   function getActivePrompt() {
     return activeMode === 'narrative' ? narrativePrompt : descriptivePrompt;
@@ -800,7 +822,7 @@ FORMATO DE RESPUESTA
   function get(id) { return document.getElementById(id); }
   function toast(msg, dur = 1800) { const t = get('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), dur); }
 
-  /* ----- MARCADO (igual) ----- */
+  /* ----- MARCADO ----- */
   function applyMark(cls) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { toast('Selecciona primero el texto que quieres marcar.'); return; }
@@ -850,7 +872,7 @@ FORMATO DE RESPUESTA
     marksList.querySelectorAll('.mark-item-del').forEach((btn, i) => { btn.addEventListener('click', () => { removeMark(spans[i]); }); });
   }
 
-  /* ----- GENERAR PROMPT (usa modo activo) ----- */
+  /* ----- GENERAR PROMPT ----- */
   function generatePrompt() {
     const rawHTML = editor.innerHTML.trim();
     if (!rawHTML || editor.textContent.trim() === '') { toast('El editor está vacío. Pega un texto antes de generar el prompt.'); return; }
@@ -873,7 +895,7 @@ FORMATO DE RESPUESTA
     get('copy-ok').style.display = 'none';
   }
 
-  /* ----- GROQ (usa modo activo) ----- */
+  /* ----- GROQ ----- */
   let GROQ_KEY = localStorage.getItem('cv_preeditor_groq') || '';
   function updateKeyPill() { const p = document.getElementById('key-pill'); if (!p) return; if (GROQ_KEY.startsWith('gsk_')) { p.textContent = '⚿ clave OK'; p.classList.add('ok'); } else { p.textContent = '⚿ sin clave'; p.classList.remove('ok'); } }
   async function llamarGroq(systemMsg, userMsg) {
@@ -888,9 +910,9 @@ FORMATO DE RESPUESTA
   function extraerTexto(raw) { try { const parsed = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim()); if (parsed.texto_mejorado) return { texto: parsed.texto_mejorado.trim(), resumen: parsed.cambios_resumen || '' }; } catch(e) {} return { texto: raw.trim(), resumen: '' }; }
   function limpiarEtiquetas(t) { return t.replace(/<keep>([\s\S]*?)<\/keep>/gi,'$1').replace(/<emph>([\s\S]*?)<\/emph>/gi,'$1').replace(/<ctx>([\s\S]*?)<\/ctx>/gi,'$1').trim(); }
 
-  /* ----- NUEVAS FUNCIONES: ELIMINAR Y RESUMIR ----- */
-  async function aplicarAccionTexto(accion, textoSeleccionado, esSeleccion) {
-    if (!GROQ_KEY.startsWith('gsk_')) { toast('Necesitas clave de Groq para esta acción.'); openKeyModal(); return false; }
+  /* ----- FUNCIONES DE TEXTO ----- */
+  async function aplicarAccionTexto(accion, textoSeleccionado, esSeleccion, estilo = 'sinonimos') {
+    if (!GROQ_KEY.startsWith('gsk_')) { toast('Necesitas clave de Groq para esta acción.'); openKeyModal(); return null; }
     
     let promptSistema = '';
     let promptUsuario = '';
@@ -904,6 +926,16 @@ FORMATO DE RESPUESTA
     } else if (accion === 'resumir_mucho') {
       promptSistema = 'Eres un asistente que extrae la esencia de un texto en muy pocas palabras. Devuelve SOLO el resumen extremadamente conciso.';
       promptUsuario = `Haz un resumen MUY CORTO (máximo 2-3 frases) de este texto, capturando solo la idea principal:\n\n${textoSeleccionado}`;
+    } else if (accion === 'reformular') {
+      const estilos = {
+        'sinonimos': 'Reescribe el texto reemplazando palabras por sinónimos adecuados, manteniendo exactamente el mismo significado y la misma estructura. No cambies el orden de las frases.',
+        'conservador': 'Reformula el texto de manera conservadora, cambiando ligeramente la redacción pero manteniendo el significado exacto y el tono original.',
+        'creativo': 'Reescribe el texto de forma más natural y fluida, mejorando la redacción pero conservando el mensaje original.',
+        'formal': 'Reescribe el texto con un tono más formal y elegante, adecuado para escritos académicos o institucionales.',
+        'coloquial': 'Reescribe el texto con un tono más cercano, natural y coloquial, como si se lo contaras a un amigo.'
+      };
+      promptSistema = `Eres un asistente experto en reformulación de textos. ${estilos[estilo] || estilos['sinonimos']} Devuelve SOLO el texto reformulado, sin añadir explicaciones ni comentarios.`;
+      promptUsuario = `Reformula el siguiente texto según el estilo indicado. Texto original:\n\n${textoSeleccionado}`;
     }
     
     try {
@@ -915,7 +947,7 @@ FORMATO DE RESPUESTA
     }
   }
   
-  async function procesarTexto(accion) {
+  async function procesarTexto(accion, estilo = null) {
     const sel = window.getSelection();
     let textoAProcesar = '';
     let rango = null;
@@ -928,19 +960,29 @@ FORMATO DE RESPUESTA
     }
     
     if (!textoAProcesar) {
-      textoAProcesar = editor.textContent.trim();
-      if (!textoAProcesar) { toast('No hay texto en el editor.'); return; }
-      esSeleccion = false;
+      if (accion !== 'reformular') {
+        textoAProcesar = editor.textContent.trim();
+        if (!textoAProcesar) { toast('No hay texto en el editor.'); return; }
+        esSeleccion = false;
+      } else {
+        toast('Selecciona la palabra o frase que quieres reformular.');
+        return;
+      }
     }
     
-    if (accion === 'eliminar' && esSeleccion && !confirm(`¿Eliminar definitivamente el texto seleccionado (${textoAProcesar.length} caracteres)?`)) return;
-    if (accion !== 'eliminar' && esSeleccion && !confirm(`¿Aplicar ${accion === 'resumir_poco' ? 'resumen ligero' : 'resumen intensivo'} a la selección actual?`)) return;
+    let confirmMsg = '';
+    if (accion === 'eliminar') confirmMsg = `¿Eliminar definitivamente el texto seleccionado (${textoAProcesar.length} caracteres)?`;
+    else if (accion === 'resumir_poco') confirmMsg = `¿Aplicar resumen ligero a ${esSeleccion ? 'la selección' : 'todo el texto'}?`;
+    else if (accion === 'resumir_mucho') confirmMsg = `¿Aplicar resumen intensivo a ${esSeleccion ? 'la selección' : 'todo el texto'}?`;
+    else if (accion === 'reformular') confirmMsg = `¿Reformular "${textoAProcesar.substring(0, 50)}${textoAProcesar.length > 50 ? '…' : ''}" con el estilo seleccionado?`;
     
-    toast(`Procesando... ${accion === 'eliminar' ? 'Eliminando' : (accion === 'resumir_poco' ? 'Resumiendo (poco)' : 'Resumiendo (mucho)')}`);
+    if (confirmMsg && !confirm(confirmMsg)) return;
     
+    toast(`Procesando...`);
     saveUndo();
-    const resultado = await aplicarAccionTexto(accion, textoAProcesar, esSeleccion);
-    if (!resultado.exito) return;
+    
+    const resultado = await aplicarAccionTexto(accion, textoAProcesar, esSeleccion, estilo);
+    if (!resultado || !resultado.exito) return;
     
     if (accion === 'eliminar') {
       if (esSeleccion && rango) {
@@ -963,12 +1005,60 @@ FORMATO DE RESPUESTA
         editor.innerHTML = resultado.resultado;
         nuevoHTML = editor.innerHTML;
       }
-      toast(`${accion === 'resumir_poco' ? 'Resumen ligero' : 'Resumen intensivo'} completado.`);
+      toast(`${accion === 'resumir_poco' ? 'Resumen ligero' : (accion === 'resumir_mucho' ? 'Resumen intensivo' : 'Reformulación')} completado.`);
     }
     
     updateSidebar();
   }
   
+  /* ----- REFORMULACIÓN CON MODAL ----- */
+  let pendingRewrite = null;
+  get('btn-rewrite').addEventListener('click', () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !editor.contains(sel.anchorNode)) {
+      toast('Selecciona primero la palabra o frase que quieres reformular.');
+      return;
+    }
+    const texto = sel.toString().trim();
+    if (!texto) { toast('Selecciona texto válido.'); return; }
+    pendingRewrite = texto;
+    get('modal-rewrite').classList.add('visible');
+  });
+  
+  get('rewrite-apply').addEventListener('click', async () => {
+    const estilo = get('rewrite-style').value;
+    get('modal-rewrite').classList.remove('visible');
+    if (!pendingRewrite) return;
+    
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) { toast('La selección ya no está disponible.'); pendingRewrite = null; return; }
+    const rango = sel.getRangeAt(0);
+    const textoActual = rango.toString().trim();
+    if (textoActual !== pendingRewrite) { toast('El texto seleccionado ha cambiado. Vuelve a seleccionarlo.'); pendingRewrite = null; return; }
+    
+    saveUndo();
+    toast('Reformulando...');
+    
+    const resultado = await aplicarAccionTexto('reformular', textoActual, true, estilo);
+    if (resultado && resultado.exito) {
+      const span = document.createElement('span');
+      span.textContent = resultado.resultado;
+      rango.deleteContents();
+      rango.insertNode(span);
+      sel.removeAllRanges();
+      updateSidebar();
+      toast('Reformulación completada.');
+    }
+    pendingRewrite = null;
+  });
+  
+  get('rewrite-cancel').addEventListener('click', () => {
+    get('modal-rewrite').classList.remove('visible');
+    pendingRewrite = null;
+  });
+  get('modal-rewrite').addEventListener('click', (e) => { if (e.target === get('modal-rewrite')) { get('modal-rewrite').classList.remove('visible'); pendingRewrite = null; } });
+
+  /* ----- EVENTOS DE BOTONES ----- */
   get('btn-delete').addEventListener('click', () => procesarTexto('eliminar'));
   get('btn-summary-light').addEventListener('click', () => procesarTexto('resumir_poco'));
   get('btn-summary-heavy').addEventListener('click', () => procesarTexto('resumir_mucho'));
@@ -1027,7 +1117,7 @@ FORMATO DE RESPUESTA
   get('mk-save').addEventListener('click', () => { const v = get('mki').value.trim(); if (!v) { alert('Introduce la clave.'); return; } if (!v.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return; } GROQ_KEY = v; localStorage.setItem('cv_preeditor_groq', v); updateKeyPill(); closeKeyModal(); toast('Clave guardada.'); });
   get('mk-forget').addEventListener('click', () => { if (!confirm('¿Borrar la clave?')) return; GROQ_KEY = ''; localStorage.removeItem('cv_preeditor_groq'); get('mki').value = ''; updateKeyPill(); toast('Clave eliminada.'); });
 
-  /* ----- MODAL AJUSTES (dos prompts) ----- */
+  /* ----- MODAL AJUSTES ----- */
   function openSettingsModal() {
     get('settings-prompt-narrative').value = narrativePrompt;
     get('settings-prompt-descriptive').value = descriptivePrompt;
@@ -1074,10 +1164,9 @@ FORMATO DE RESPUESTA
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => setActiveMode(btn.dataset.mode));
   });
-  // Inicializar el botón activo
   setActiveMode(activeMode);
 
-  /* ----- OTROS EVENTOS UI ----- */
+  /* ----- EVENTOS INICIALES ----- */
   get('btn-keep').addEventListener('click', () => applyMark('keep'));
   get('btn-emph').addEventListener('click', () => applyMark('emph'));
   get('btn-ctx').addEventListener('click', () => applyMark('ctx'));
@@ -1088,10 +1177,4 @@ FORMATO DE RESPUESTA
   get('modal-close').addEventListener('click', () => get('modal-result').classList.remove('visible'));
   get('modal-close-btn').addEventListener('click', () => get('modal-result').classList.remove('visible'));
   get('modal-result').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('visible'); });
-  get('btn-copy-prompt').addEventListener('click', () => { const text = get('prompt-output').value; if (!text) return; if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { get('copy-ok').style.display = 'inline'; setTimeout(() => get('copy-ok').style.display = 'none', 2200); }); } else { get('prompt-output').select(); document.execCommand('copy'); get('copy-ok').style.display = 'inline'; setTimeout(() => get('copy-ok').style.display = 'none', 2200); } });
-  editor.addEventListener('input', () => updateSidebar());
-  updateSidebar();
-  updateKeyPill();
-</script>
-</body>
-</html>
+  get('btn-copy-prompt').addEventListener('click', () => { const text = get('prompt-output').value; if (!text) return; if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { get('copy-ok').style.display = 'inline'; setTimeout(() => get('copy-ok').style
