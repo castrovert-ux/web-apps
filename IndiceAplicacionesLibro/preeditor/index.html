@@ -465,8 +465,13 @@
       border: 1px solid var(--border);
       color: var(--muted);
       background: none;
+      transition: all .15s;
     }
-    .key-pill.ok { border-color: var(--accent2); color: var(--accent2); }
+    .key-pill.ok { 
+      border-color: var(--accent2); 
+      color: var(--accent2); 
+      background: rgba(58,158,110,0.1);
+    }
     .btn-send-groq {
       padding: 7px 14px;
       border: none;
@@ -729,13 +734,15 @@
 PRIORIDAD: Voz de referencia > Claridad > Fidelidad histórica.
 REGLAS: No inventar datos. Respetar <keep>, <emph>, <ctx>. No alargar.
 VOZ: "Castroverde lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos..."
-FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
+FORMATO DE RESPUESTA: Debes responder ÚNICAMENTE con un objeto JSON válido, sin texto adicional fuera del JSON. El JSON debe tener esta estructura exacta:
+{"texto_mejorado":"texto aquí","puntuacion":{"estilo":0-10,"claridad":0-10,"rigor":0-10},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
 
   const DEFAULT_DESCRIPTIVE = `ROL: Editor literario de historia de Castroverde de Cerrato.
 PRIORIDAD: Claridad > Fidelidad histórica > Fluidez.
 REGLAS: No inventar datos. Respetar etiquetas de control.
 VOZ: Clara, fácil de seguir, con transiciones suaves.
-FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
+FORMATO DE RESPUESTA: Debes responder ÚNICAMENTE con un objeto JSON válido, sin texto adicional fuera del JSON. El JSON debe tener esta estructura exacta:
+{"texto_mejorado":"texto aquí","puntuacion":{"estilo":0-10,"claridad":0-10,"rigor":0-10},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
 
   let narrativePrompt = localStorage.getItem('cv_preeditor_narrative') || DEFAULT_NARRATIVE;
   let descriptivePrompt = localStorage.getItem('cv_preeditor_descriptive') || DEFAULT_DESCRIPTIVE;
@@ -747,6 +754,19 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
   function $(id) { return document.getElementById(id); }
   function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
   function saveUndo() { undoStack.push(editor.innerHTML); if (undoStack.length > 30) undoStack.shift(); }
+  
+  function updateKeyPill() { 
+    const p = $('key-pill'); 
+    if (!p) return;
+    if (GROQ_KEY && GROQ_KEY.startsWith('gsk_')) { 
+      p.textContent = '⚿ clave OK'; 
+      p.classList.add('ok'); 
+    } else { 
+      p.textContent = '⚿ sin clave'; 
+      p.classList.remove('ok'); 
+    } 
+  }
+  
   function updateSidebar() {
     $('count-keep').textContent = editor.querySelectorAll('.keep').length;
     $('count-emph').textContent = editor.querySelectorAll('.emph').length;
@@ -837,15 +857,12 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
   // FUNCIÓN PARA OBTENER EL PÁRRAFO COMPLETO DONDE ESTÁ LA SELECCIÓN
   function getParagraphContext(range) {
     let node = range.commonAncestorContainer;
-    // Buscar el elemento bloque más cercano (p, div, o hasta el editor)
     while (node && node !== editor && !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'LI'].includes(node.nodeName)) {
       node = node.parentNode;
     }
     if (node === editor) {
-      // Si la selección cruza múltiples párrafos, devolvemos todo el contenido del editor
       return editor.innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     }
-    // Devolver el texto del párrafo completo
     return node.textContent.trim();
   }
 
@@ -866,7 +883,6 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
     
     let texto = textoSeleccionado;
     let parrafoContexto = contextoCompleto;
-    let esSeleccion = !!texto;
     
     try {
       let systemPrompt = '', userPrompt = '';
@@ -1030,16 +1046,31 @@ El fragmento a reformular está marcado con >>> <<<. Tu respuesta debe ser SOLO 
     $('groq-spinner').classList.add('on');
     $('groq-zone').classList.add('visible');
     $('groq-result').innerHTML = '';
+    $('groq-status').textContent = 'Procesando...';
     try {
       const systemMatch = promptText.match(/SYSTEM:\n([\s\S]*?)\n\nFRAGMENTO:/);
       const fragMatch = promptText.match(/FRAGMENTO:\n([\s\S]*)/);
       const system = systemMatch ? systemMatch[1].trim() : (activeMode === 'narrative' ? narrativePrompt : descriptivePrompt);
       const fragmento = fragMatch ? fragMatch[1].trim() : '';
       const respuesta = await llamarGroq(system, fragmento);
-      $('groq-result').innerHTML = respuesta.replace(/\n/g, '<br>');
-      $('groq-status').textContent = '✓ Listo';
+      // Intentar extraer solo el JSON si viene con texto adicional
+      let jsonStr = respuesta;
+      const jsonMatch = respuesta.match(/\{[\s\S]*\}/);
+      if (jsonMatch) jsonStr = jsonMatch[0];
+      try {
+        const parsed = JSON.parse(jsonStr);
+        $('groq-result').innerHTML = (parsed.texto_mejorado || respuesta).replace(/\n/g, '<br>');
+        if (parsed.puntuacion) {
+          $('groq-status').innerHTML = `🎨 Estilo:${parsed.puntuacion.estilo || '?'} | 📖 Claridad:${parsed.puntuacion.claridad || '?'} | 📜 Rigor:${parsed.puntuacion.rigor || '?'}`;
+        } else {
+          $('groq-status').textContent = '✓ Listo';
+        }
+      } catch(e) {
+        $('groq-result').innerHTML = respuesta.replace(/\n/g, '<br>');
+        $('groq-status').textContent = '✓ Listo (texto plano)';
+      }
     } catch (err) {
-      $('groq-status').textContent = '⚠ Error';
+      $('groq-status').textContent = '⚠ Error: ' + err.message;
       $('groq-result').innerHTML = err.message;
     }
     $('btn-send-groq').disabled = false;
@@ -1060,10 +1091,26 @@ El fragmento a reformular está marcado con >>> <<<. Tu respuesta debe ser SOLO 
   editor?.addEventListener('input', updateSidebar);
   
   // MODALES
-  function updateKeyPill() { const p = $('key-pill'); if (p) p.classList.toggle('ok', GROQ_KEY.startsWith('gsk_')); }
   $('key-pill')?.addEventListener('click', () => $('modal-key').classList.add('visible'));
-  $('mk-save')?.addEventListener('click', () => { const v = $('mki').value.trim(); if (v && v.startsWith('gsk_')) { GROQ_KEY = v; localStorage.setItem('cv_preeditor_groq', v); updateKeyPill(); toast('Clave guardada'); $('modal-key').classList.remove('visible'); } else alert('Clave inválida (debe empezar por gsk_)'); });
-  $('mk-forget')?.addEventListener('click', () => { localStorage.removeItem('cv_preeditor_groq'); GROQ_KEY = ''; updateKeyPill(); toast('Clave eliminada'); $('modal-key').classList.remove('visible'); });
+  $('mk-save')?.addEventListener('click', () => { 
+    const v = $('mki').value.trim(); 
+    if (v && v.startsWith('gsk_')) { 
+      GROQ_KEY = v; 
+      localStorage.setItem('cv_preeditor_groq', v); 
+      updateKeyPill(); 
+      toast('Clave guardada'); 
+      $('modal-key').classList.remove('visible'); 
+    } else { 
+      alert('Clave inválida (debe empezar por gsk_)'); 
+    } 
+  });
+  $('mk-forget')?.addEventListener('click', () => { 
+    localStorage.removeItem('cv_preeditor_groq'); 
+    GROQ_KEY = ''; 
+    updateKeyPill(); 
+    toast('Clave eliminada'); 
+    $('modal-key').classList.remove('visible'); 
+  });
   $('mk-cancel')?.addEventListener('click', () => $('modal-key').classList.remove('visible'));
   $('btn-open-settings')?.addEventListener('click', () => { $('settings-prompt-narrative').value = narrativePrompt; $('settings-prompt-descriptive').value = descriptivePrompt; $('modal-settings').classList.add('visible'); });
   $('settings-save')?.addEventListener('click', () => { narrativePrompt = $('settings-prompt-narrative').value; descriptivePrompt = $('settings-prompt-descriptive').value; localStorage.setItem('cv_preeditor_narrative', narrativePrompt); localStorage.setItem('cv_preeditor_descriptive', descriptivePrompt); toast('Prompts guardados'); $('modal-settings').classList.remove('visible'); });
