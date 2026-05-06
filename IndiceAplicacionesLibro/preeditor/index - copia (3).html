@@ -154,13 +154,6 @@
     .btn-undo:hover { border-color: var(--accent); color: var(--accent); }
     .btn-reset { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 11px; }
     .btn-reset:hover { border-color: var(--red); color: var(--red); }
-    /* Nuevos botones de resumen y eliminación */
-    .btn-delete { background: #ffeeee; color: #a03322; border: 1px solid #d99; }
-    .btn-delete:hover { background: #ffc0c0; border-color: #a44; }
-    .btn-summary { background: #e8f0e8; color: #2a6e3a; border: 1px solid #a9c5a9; }
-    .btn-summary:hover { background: #c8dfc8; }
-    .btn-summary-much { background: #e0efe0; color: #1c5a2c; border: 1px solid #92b892; }
-    .btn-summary-much:hover { background: #b8d8b8; }
     /* Selector de modo */
     .mode-selector {
       display: flex;
@@ -400,7 +393,7 @@
       letter-spacing: .5px;
     }
     /* MODALES */
-    .modal-overlay, .modal-key-overlay, .modal-settings-overlay, .modal-summary-overlay {
+    .modal-overlay, .modal-key-overlay, .modal-settings-overlay {
       display: none;
       position: fixed;
       inset: 0;
@@ -410,7 +403,7 @@
       justify-content: center;
       padding: 20px;
     }
-    .modal-overlay.visible, .modal-key-overlay.visible, .modal-settings-overlay.visible, .modal-summary-overlay.visible { display: flex; }
+    .modal-overlay.visible, .modal-key-overlay.visible, .modal-settings-overlay.visible { display: flex; }
     .modal-box {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -593,11 +586,6 @@
       <button class="btn-mark btn-clear" id="btn-clear">✕ Quitar marca</button>
       <button class="btn-mark btn-undo" id="btn-undo">↩ Deshacer</button>
       <button class="btn-mark btn-reset" id="btn-reset">⊘ Resetear todo</button>
-      <div class="tool-sep"></div>
-      <!-- NUEVAS FUNCIONES -->
-      <button class="btn-mark btn-delete" id="btn-delete">🗑️ Eliminar</button>
-      <button class="btn-mark btn-summary" id="btn-summary-light">📝 Resumir poco</button>
-      <button class="btn-mark btn-summary-much" id="btn-summary-heavy">✂️ Resumir mucho</button>
       <div class="mode-selector" id="mode-selector">
         <button class="mode-btn" data-mode="narrative">📖 Narrativo</button>
         <button class="mode-btn" data-mode="descriptive">📋 Descriptivo</button>
@@ -887,91 +875,6 @@ FORMATO DE RESPUESTA
   }
   function extraerTexto(raw) { try { const parsed = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim()); if (parsed.texto_mejorado) return { texto: parsed.texto_mejorado.trim(), resumen: parsed.cambios_resumen || '' }; } catch(e) {} return { texto: raw.trim(), resumen: '' }; }
   function limpiarEtiquetas(t) { return t.replace(/<keep>([\s\S]*?)<\/keep>/gi,'$1').replace(/<emph>([\s\S]*?)<\/emph>/gi,'$1').replace(/<ctx>([\s\S]*?)<\/ctx>/gi,'$1').trim(); }
-
-  /* ----- NUEVAS FUNCIONES: ELIMINAR Y RESUMIR ----- */
-  async function aplicarAccionTexto(accion, textoSeleccionado, esSeleccion) {
-    if (!GROQ_KEY.startsWith('gsk_')) { toast('Necesitas clave de Groq para esta acción.'); openKeyModal(); return false; }
-    
-    let promptSistema = '';
-    let promptUsuario = '';
-    
-    if (accion === 'eliminar') {
-      promptSistema = 'Eres un asistente que elimina partes del texto siguiendo instrucciones precisas. Devuelve SOLO el texto resultante sin explicaciones.';
-      promptUsuario = `Elimina este texto por completo (no devuelvas nada relacionado con él, simplemente omítelo). Si hay texto alrededor, consérvalo tal cual. Texto a eliminar: """${textoSeleccionado}"""`;
-    } else if (accion === 'resumir_poco') {
-      promptSistema = 'Eres un asistente que resume textos manteniendo la información clave. Devuelve SOLO el resumen.';
-      promptUsuario = `Resume el siguiente texto de forma breve pero manteniendo todos los detalles importantes. Resumen conciso pero completo:\n\n${textoSeleccionado}`;
-    } else if (accion === 'resumir_mucho') {
-      promptSistema = 'Eres un asistente que extrae la esencia de un texto en muy pocas palabras. Devuelve SOLO el resumen extremadamente conciso.';
-      promptUsuario = `Haz un resumen MUY CORTO (máximo 2-3 frases) de este texto, capturando solo la idea principal:\n\n${textoSeleccionado}`;
-    }
-    
-    try {
-      const respuesta = await llamarGroq(promptSistema, promptUsuario);
-      return { exito: true, resultado: respuesta.trim() };
-    } catch (err) {
-      toast(`Error en ${accion}: ${err.message}`);
-      return { exito: false, resultado: '' };
-    }
-  }
-  
-  async function procesarTexto(accion) {
-    const sel = window.getSelection();
-    let textoAProcesar = '';
-    let rango = null;
-    let esSeleccion = false;
-    
-    if (sel && !sel.isCollapsed && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
-      rango = sel.getRangeAt(0).cloneRange();
-      textoAProcesar = rango.toString().trim();
-      esSeleccion = !!textoAProcesar;
-    }
-    
-    if (!textoAProcesar) {
-      textoAProcesar = editor.textContent.trim();
-      if (!textoAProcesar) { toast('No hay texto en el editor.'); return; }
-      esSeleccion = false;
-    }
-    
-    if (accion === 'eliminar' && esSeleccion && !confirm(`¿Eliminar definitivamente el texto seleccionado (${textoAProcesar.length} caracteres)?`)) return;
-    if (accion !== 'eliminar' && esSeleccion && !confirm(`¿Aplicar ${accion === 'resumir_poco' ? 'resumen ligero' : 'resumen intensivo'} a la selección actual?`)) return;
-    
-    toast(`Procesando... ${accion === 'eliminar' ? 'Eliminando' : (accion === 'resumir_poco' ? 'Resumiendo (poco)' : 'Resumiendo (mucho)')}`);
-    
-    saveUndo();
-    const resultado = await aplicarAccionTexto(accion, textoAProcesar, esSeleccion);
-    if (!resultado.exito) return;
-    
-    if (accion === 'eliminar') {
-      if (esSeleccion && rango) {
-        rango.deleteContents();
-        sel.removeAllRanges();
-      } else {
-        editor.innerHTML = '';
-      }
-      toast('Texto eliminado.');
-    } else {
-      let nuevoHTML = '';
-      if (esSeleccion && rango) {
-        const span = document.createElement('span');
-        span.textContent = resultado.resultado;
-        rango.deleteContents();
-        rango.insertNode(span);
-        nuevoHTML = editor.innerHTML;
-        sel.removeAllRanges();
-      } else {
-        editor.innerHTML = resultado.resultado;
-        nuevoHTML = editor.innerHTML;
-      }
-      toast(`${accion === 'resumir_poco' ? 'Resumen ligero' : 'Resumen intensivo'} completado.`);
-    }
-    
-    updateSidebar();
-  }
-  
-  get('btn-delete').addEventListener('click', () => procesarTexto('eliminar'));
-  get('btn-summary-light').addEventListener('click', () => procesarTexto('resumir_poco'));
-  get('btn-summary-heavy').addEventListener('click', () => procesarTexto('resumir_mucho'));
 
   get('btn-send-groq').addEventListener('click', async function() {
     const promptText = get('prompt-output').value;
