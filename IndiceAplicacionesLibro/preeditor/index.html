@@ -705,8 +705,8 @@
 <!-- MODAL REFORMULAR -->
 <div class="modal-rewrite-overlay" id="modal-rewrite">
   <div class="modal-rewrite-box">
-    <div class="rwt">🔄 Reformular</div>
-    <div class="rwd">Selecciona el estilo para la palabra o frase seleccionada.</div>
+    <div class="rwt">🔄 Reformular con contexto</div>
+    <div class="rwd">Groq leerá el párrafo completo para ofrecer una reformulación coherente con el estilo del texto.</div>
     <select id="rewrite-style">
       <option value="sinonimos">🔤 Solo sinónimos</option>
       <option value="conservador">📖 Conservador (mismo significado)</option>
@@ -834,6 +834,21 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
     toast('Deshecho');
   }
 
+  // FUNCIÓN PARA OBTENER EL PÁRRAFO COMPLETO DONDE ESTÁ LA SELECCIÓN
+  function getParagraphContext(range) {
+    let node = range.commonAncestorContainer;
+    // Buscar el elemento bloque más cercano (p, div, o hasta el editor)
+    while (node && node !== editor && !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'LI'].includes(node.nodeName)) {
+      node = node.parentNode;
+    }
+    if (node === editor) {
+      // Si la selección cruza múltiples párrafos, devolvemos todo el contenido del editor
+      return editor.innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    // Devolver el texto del párrafo completo
+    return node.textContent.trim();
+  }
+
   // FUNCIONES CON GROQ
   async function llamarGroq(systemMsg, userMsg) {
     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -846,30 +861,12 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
     return data.choices[0].message.content;
   }
 
-  async function procesarTexto(accion, estilo = null) {
-    if (!GROQ_KEY.startsWith('gsk_')) { toast('Configura clave Groq'); $('modal-key').classList.add('visible'); return; }
-    const sel = window.getSelection();
-    let texto = '', range = null, esSeleccion = false;
-    if (sel && !sel.isCollapsed && sel.rangeCount && editor.contains(sel.anchorNode)) {
-      range = sel.getRangeAt(0).cloneRange();
-      texto = range.toString().trim();
-      esSeleccion = !!texto;
-    }
-    if (!texto && accion !== 'reformular') {
-      texto = editor.textContent.trim();
-      if (!texto) { toast('No hay texto en el editor'); return; }
-    }
-    if (!texto && accion === 'reformular') { toast('Selecciona la palabra o frase a reformular'); return; }
+  async function procesarTexto(accion, estilo = null, contextoCompleto = null, textoSeleccionado = null, rango = null) {
+    if (!GROQ_KEY.startsWith('gsk_')) { toast('Configura clave Groq'); $('modal-key').classList.add('visible'); return null; }
     
-    let confirmMsg = '';
-    if (accion === 'eliminar') confirmMsg = `¿Eliminar "${texto.slice(0, 50)}${texto.length > 50 ? '…' : ''}"?`;
-    else if (accion === 'resumir_poco') confirmMsg = `¿Resumir (poco) ${esSeleccion ? 'la selección' : 'todo'}?`;
-    else if (accion === 'resumir_mucho') confirmMsg = `¿Resumir (mucho) ${esSeleccion ? 'la selección' : 'todo'}?`;
-    else if (accion === 'reformular') confirmMsg = `¿Reformular "${texto.slice(0, 50)}${texto.length > 50 ? '…' : ''}"?`;
-    if (confirmMsg && !confirm(confirmMsg)) return;
-    
-    saveUndo();
-    toast('Procesando...');
+    let texto = textoSeleccionado;
+    let parrafoContexto = contextoCompleto;
+    let esSeleccion = !!texto;
     
     try {
       let systemPrompt = '', userPrompt = '';
@@ -884,35 +881,132 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
         userPrompt = `Resumen extremadamente corto de:\n${texto}`;
       } else if (accion === 'reformular') {
         const estilos = {
-          sinonimos: 'cambia palabras por sinónimos, mismo significado',
+          sinonimos: 'cambia palabras por sinónimos adecuados al contexto',
           conservador: 'reformula ligeramente, mismo significado exacto',
           creativo: 'reformula de forma natural y fluida',
           formal: 'tono más formal y elegante',
           coloquial: 'tono más cercano y coloquial'
         };
-        systemPrompt = `Reescribe el texto: ${estilos[estilo]}. Devuelve SOLO el resultado.`;
-        userPrompt = `Texto original:\n${texto}`;
+        systemPrompt = `Eres un editor literario experto. Reescribe SOLO el fragmento indicado entre >>> <<<, manteniendo el mismo significado pero con el estilo: ${estilos[estilo]}. 
+El texto completo del párrafo (o fragmento) es este, para que entiendas el contexto y la voz del texto:
+
+--- CONTEXTO COMPLETO ---
+${parrafoContexto}
+--- FIN CONTEXTO ---
+
+El fragmento a reformular está marcado con >>> <<<. Tu respuesta debe ser SOLO el fragmento reformulado, sin añadir nada más, ni explicaciones, ni el contexto.`;
+        userPrompt = `Fragmento a reformular: >>>${texto}<<<`;
       }
       const resultado = await llamarGroq(systemPrompt, userPrompt);
-      
-      if (accion === 'eliminar' && esSeleccion && range) {
+      return { exito: true, resultado: resultado.trim() };
+    } catch (err) {
+      toast('Error: ' + err.message);
+      return { exito: false, resultado: '' };
+    }
+  }
+
+  // EJECUTAR ACCIONES (eliminar/resumir)
+  async function ejecutarAccion(accion) {
+    if (!GROQ_KEY.startsWith('gsk_')) { toast('Configura clave Groq'); $('modal-key').classList.add('visible'); return; }
+    const sel = window.getSelection();
+    let texto = '', range = null, esSeleccion = false;
+    if (sel && !sel.isCollapsed && sel.rangeCount && editor.contains(sel.anchorNode)) {
+      range = sel.getRangeAt(0).cloneRange();
+      texto = range.toString().trim();
+      esSeleccion = !!texto;
+    }
+    if (!texto) {
+      texto = editor.textContent.trim();
+      if (!texto) { toast('No hay texto en el editor'); return; }
+    }
+    
+    let confirmMsg = '';
+    if (accion === 'eliminar') confirmMsg = `¿Eliminar "${texto.slice(0, 50)}${texto.length > 50 ? '…' : ''}"?`;
+    else if (accion === 'resumir_poco') confirmMsg = `¿Resumir (poco) ${esSeleccion ? 'la selección' : 'todo'}?`;
+    else if (accion === 'resumir_mucho') confirmMsg = `¿Resumir (mucho) ${esSeleccion ? 'la selección' : 'todo'}?`;
+    if (!confirm(confirmMsg)) return;
+    
+    saveUndo();
+    toast('Procesando...');
+    
+    const resultado = await procesarTexto(accion, null, null, texto, range);
+    if (!resultado || !resultado.exito) return;
+    
+    if (accion === 'eliminar') {
+      if (esSeleccion && range) {
         range.deleteContents();
         sel.removeAllRanges();
-      } else if (esSeleccion && range) {
+      } else {
+        editor.innerHTML = '';
+      }
+      toast('Texto eliminado.');
+    } else {
+      if (esSeleccion && range) {
         const span = document.createElement('span');
-        span.textContent = resultado;
+        span.textContent = resultado.resultado;
         range.deleteContents();
         range.insertNode(span);
         sel.removeAllRanges();
       } else {
-        editor.innerHTML = resultado;
+        editor.innerHTML = resultado.resultado;
       }
-      updateSidebar();
-      toast('Completado');
-    } catch (err) {
-      toast('Error: ' + err.message);
+      toast(`${accion === 'resumir_poco' ? 'Resumen ligero' : 'Resumen intensivo'} completado.`);
     }
+    updateSidebar();
   }
+
+  // REFORMULAR CON CONTEXTO
+  let pendingRewrite = null;
+  let pendingRangeRewrite = null;
+  let pendingContext = null;
+  
+  $('btn-rewrite')?.addEventListener('click', () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !editor.contains(sel.anchorNode)) { toast('Selecciona la palabra o frase que quieres reformular'); return; }
+    const texto = sel.toString().trim();
+    if (!texto) { toast('Selecciona texto válido'); return; }
+    
+    const range = sel.getRangeAt(0).cloneRange();
+    const contexto = getParagraphContext(range);
+    
+    pendingRewrite = texto;
+    pendingRangeRewrite = range;
+    pendingContext = contexto;
+    $('modal-rewrite').classList.add('visible');
+  });
+  
+  $('rewrite-apply')?.addEventListener('click', async () => {
+    if (!pendingRewrite || !pendingRangeRewrite) return;
+    const estilo = $('rewrite-style').value;
+    $('modal-rewrite').classList.remove('visible');
+    
+    if (!GROQ_KEY.startsWith('gsk_')) { toast('Clave Groq necesaria'); $('modal-key').classList.add('visible'); pendingRewrite = null; return; }
+    if (!confirm(`¿Reformular "${pendingRewrite.slice(0, 50)}${pendingRewrite.length > 50 ? '…' : ''}" con contexto?`)) { pendingRewrite = null; return; }
+    
+    saveUndo();
+    toast('Reformulando con contexto...');
+    
+    const resultado = await procesarTexto('reformular', estilo, pendingContext, pendingRewrite, pendingRangeRewrite);
+    if (resultado && resultado.exito) {
+      const span = document.createElement('span');
+      span.textContent = resultado.resultado;
+      pendingRangeRewrite.deleteContents();
+      pendingRangeRewrite.insertNode(span);
+      window.getSelection()?.removeAllRanges();
+      updateSidebar();
+      toast('Reformulación completada');
+    }
+    pendingRewrite = null;
+    pendingRangeRewrite = null;
+    pendingContext = null;
+  });
+  
+  $('rewrite-cancel')?.addEventListener('click', () => { 
+    $('modal-rewrite').classList.remove('visible'); 
+    pendingRewrite = null;
+    pendingRangeRewrite = null;
+    pendingContext = null;
+  });
 
   // GENERAR PROMPT
   function generatePrompt() {
@@ -959,52 +1053,11 @@ FORMATO: {"texto_mejorado":"...","cambios_resumen":"..."}`;
   $('btn-clear')?.addEventListener('click', clearMark);
   $('btn-undo')?.addEventListener('click', undo);
   $('btn-reset')?.addEventListener('click', resetAll);
-  $('btn-delete')?.addEventListener('click', () => procesarTexto('eliminar'));
-  $('btn-summary-light')?.addEventListener('click', () => procesarTexto('resumir_poco'));
-  $('btn-summary-heavy')?.addEventListener('click', () => procesarTexto('resumir_mucho'));
+  $('btn-delete')?.addEventListener('click', () => ejecutarAccion('eliminar'));
+  $('btn-summary-light')?.addEventListener('click', () => ejecutarAccion('resumir_poco'));
+  $('btn-summary-heavy')?.addEventListener('click', () => ejecutarAccion('resumir_mucho'));
   $('btn-generate')?.addEventListener('click', generatePrompt);
   editor?.addEventListener('input', updateSidebar);
-  
-  // REFORMULAR con modal
-  let pendingText = null, pendingRange = null;
-  $('btn-rewrite')?.addEventListener('click', () => {
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !editor.contains(sel.anchorNode)) { toast('Selecciona texto'); return; }
-    const texto = sel.toString().trim();
-    if (!texto) { toast('Selecciona texto válido'); return; }
-    pendingText = texto;
-    pendingRange = sel.getRangeAt(0).cloneRange();
-    $('modal-rewrite').classList.add('visible');
-  });
-  $('rewrite-apply')?.addEventListener('click', async () => {
-    if (!pendingText || !pendingRange) return;
-    const estilo = $('rewrite-style').value;
-    $('modal-rewrite').classList.remove('visible');
-    if (!GROQ_KEY.startsWith('gsk_')) { toast('Clave Groq necesaria'); $('modal-key').classList.add('visible'); pendingText = null; return; }
-    if (!confirm(`¿Reformular "${pendingText.slice(0, 50)}${pendingText.length > 50 ? '…' : ''}"?`)) { pendingText = null; return; }
-    saveUndo();
-    toast('Reformulando...');
-    try {
-      const estilos = {
-        sinonimos: 'cambia palabras por sinónimos',
-        conservador: 'reformula ligeramente, mismo significado',
-        creativo: 'reformula de forma natural',
-        formal: 'tono formal',
-        coloquial: 'tono coloquial'
-      };
-      const system = `Reescribe el texto: ${estilos[estilo]}. Devuelve SOLO el resultado.`;
-      const resultado = await llamarGroq(system, pendingText);
-      const span = document.createElement('span');
-      span.textContent = resultado;
-      pendingRange.deleteContents();
-      pendingRange.insertNode(span);
-      window.getSelection()?.removeAllRanges();
-      updateSidebar();
-      toast('Reformulado');
-    } catch (err) { toast('Error: ' + err.message); }
-    pendingText = null;
-  });
-  $('rewrite-cancel')?.addEventListener('click', () => { $('modal-rewrite').classList.remove('visible'); pendingText = null; });
   
   // MODALES
   function updateKeyPill() { const p = $('key-pill'); if (p) p.classList.toggle('ok', GROQ_KEY.startsWith('gsk_')); }
