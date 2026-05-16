@@ -482,6 +482,7 @@ function buildSystemWithTono() {
   const tono = getTonoProfile().trim();
   let result = base.replace(/\{\{parte_libro\}\}/g, parte);
   if (tono) result += '\n\nINSTRUCCIONES ADICIONALES DE TONO:\n' + tono;
+  result += '\n\nREGLA DE FORMATO: No reproduzcas el texto completo del autor en tu respuesta. Cita solo los fragmentos estrictamente necesarios para ilustrar un punto concreto (máximo 2-3 frases por cita). Tu respuesta es un análisis editorial, no una reescritura completa.';
   return result;
 }
 
@@ -547,16 +548,15 @@ async function callGemini(systemPrompt, userPrompt) {
   const data = await resp.json();
   const candidate = data.candidates?.[0];
   const finishReason = candidate?.finishReason;
-  if (finishReason && finishReason !== 'STOP') {
-    console.warn('Gemini finishReason:', finishReason, data);
-  }
-  // Recoger todos los parts de tipo texto (excluye el bloque de thinking)
   const parts = candidate?.content?.parts || [];
   const text = parts
     .filter(p => p.text && !p.thought)
     .map(p => p.text)
     .join('');
   if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
+  if (finishReason && finishReason !== 'STOP') {
+    return text + '\n\n⚠ Respuesta truncada por la API (finishReason: ' + finishReason + ')';
+  }
   return text;
 }
 
