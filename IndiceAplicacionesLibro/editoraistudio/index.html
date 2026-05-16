@@ -511,6 +511,8 @@
         Fidelidad histórica
       </button>
       <div class="steps-bar-right">
+        <button class="btn btn-ghost" id="btn-prev" onclick="navStep(-1)" style="font-size:11px;padding:5px 10px;" title="Paso anterior">←</button>
+        <button class="btn btn-ghost" id="btn-next" onclick="navStep(+1)" style="font-size:11px;padding:5px 10px;" title="Paso siguiente">→</button>
         <button class="btn btn-ghost" id="btn-run-all" onclick="runAll()" style="font-size:9px;padding:5px 12px;">▶ Todo en cadena</button>
       </div>
     </div>
@@ -697,6 +699,7 @@ function clearAll() {
   document.getElementById('copy-2').disabled = true;
   step1Result = '';
   step2Result = '';
+  step3Result = '';
 }
 
 // ══════════════════════════════════════════════════════
@@ -725,15 +728,23 @@ function setResultText(n, text) {
 function setFidelidadResult(text) {
   const box = document.getElementById('result-3');
   const trimmed = text.trim();
+  if (!trimmed) {
+    box.innerHTML = '<span class="error-msg">Respuesta vacía del modelo.</span>';
+    return;
+  }
   const isOk = /^ok\b/i.test(trimmed);
   if (isOk) {
     box.innerHTML = `<div class="fidelidad-ok"><span class="fi-icon">✓</span><div><strong>OK</strong> — No se detecta pérdida significativa de matiz histórico.</div></div>`;
   } else {
-    // Render con saltos de línea
-    const escaped = trimmed.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const lines = escaped.split('\n').filter(l => l.trim());
-    const body = lines.map((l, i) => i === 0 ? `<span class="fi-label">${l}</span>` : `<p style="margin-bottom:6px;">${l}</p>`).join('');
-    box.innerHTML = `<div class="fidelidad-warn">${body}</div>`;
+    const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const lines = trimmed.split('\n').map(l => l.trim()).filter(Boolean);
+    const firstIsLabel = /p[eé]rdida/i.test(lines[0]);
+    const parts = lines.map((l, i) =>
+      (i === 0 && firstIsLabel)
+        ? `<span class="fi-label">${escape(l)}</span>`
+        : `<p style="margin-bottom:6px;">${escape(l)}</p>`
+    ).join('');
+    box.innerHTML = `<div class="fidelidad-warn">${parts}</div>`;
   }
 }
 
@@ -865,13 +876,13 @@ async function callGemini(systemPrompt, userPrompt) {
     throw new Error(err.error?.message || 'Error ' + resp.status);
   }
   const data = await resp.json();
+  console.log('[Gemini raw]', JSON.stringify(data).substring(0, 400));
   const candidate = data.candidates?.[0];
   const finishReason = candidate?.finishReason;
   const parts = candidate?.content?.parts || [];
-  const text = parts
-    .filter(p => p.text && !p.thought)
-    .map(p => p.text)
-    .join('');
+  // Primero intentamos excluir thought; si queda vacío, tomamos todos los parts con texto
+  let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
+  if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
   if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
   if (finishReason && finishReason !== 'STOP') {
     return text + '\n\n⚠ Respuesta truncada (finishReason: ' + finishReason + ')';
@@ -880,10 +891,11 @@ async function callGemini(systemPrompt, userPrompt) {
 }
 
 // ══════════════════════════════════════════════════════
-//  STATE
+//  STATE  (caché por sesión)
 // ══════════════════════════════════════════════════════
 let step1Result = '';
 let step2Result = '';
+let step3Result = '';   // raw text de fidelidad
 
 // ══════════════════════════════════════════════════════
 //  VALIDACIÓN
@@ -898,17 +910,66 @@ function checkKey() {
 }
 
 // ══════════════════════════════════════════════════════
+//  NAVEGACIÓN ← →
+// ══════════════════════════════════════════════════════
+function navStep(delta) {
+  const target = activeTab + delta;
+  if (target < 1 || target > 3) return;
+
+  // Al avanzar, ejecutar el paso si no tiene resultado aún
+  if (delta > 0) {
+    if (target === 2) { runStep2(); return; }
+    if (target === 3) { runStep3(); return; }
+  }
+
+  // Al retroceder (o avanzar con caché), solo mostrar
+  switchTab(target);
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  document.getElementById('btn-prev').disabled = (activeTab === 1);
+  document.getElementById('btn-next').disabled = (activeTab === 3);
+}
+
+// ══════════════════════════════════════════════════════
+//  BLOQUEO GLOBAL durante llamadas
+// ══════════════════════════════════════════════════════
+function lockUI(on) {
+  ['btn-step1','btn-step2','btn-step3','btn-run-all','btn-prev','btn-next']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = on ? true : false;
+    });
+  if (!on) restoreStepButtons(); // rehabilitar según estado real
+}
+
+function restoreStepButtons() {
+  // Paso 2 disponible si hay resultado del 1
+  document.getElementById('btn-step2').disabled = !step1Result;
+  // Paso 3 disponible si hay resultado del 2
+  document.getElementById('btn-step3').disabled = !step2Result;
+  updateNavButtons();
+}
+
+// ══════════════════════════════════════════════════════
 //  PASO 1
 // ══════════════════════════════════════════════════════
 async function runStep1() {
   const texto = document.getElementById('input-text').value.trim();
   if (!texto) { showStatus('err', 'Pega primero el texto a procesar.'); return; }
+
+  // Si ya hay resultado en caché, solo mostrar
+  if (step1Result) {
+    setResultText(1, step1Result);
+    switchTab(1);
+    updateNavButtons();
+    return;
+  }
+
   if (!checkKey()) return;
 
-  const btn = document.getElementById('btn-step1');
-  btn.classList.add('running');
-  btn.disabled = true;
-  document.getElementById('btn-run-all').disabled = true;
+  lockUI(true);
   setDot(1, 'running');
   switchTab(1);
   setResultLoading(1, 'Corrección técnica con Gemini…');
@@ -919,7 +980,6 @@ async function runStep1() {
     step1Result = result.trim();
     setResultText(1, step1Result);
     setDot(1, 'done');
-    document.getElementById('btn-step2').disabled = false;
     document.getElementById('copy-1').disabled = false;
     showStatus('ok', '✓ Paso 1 completado');
   } catch(e) {
@@ -927,9 +987,7 @@ async function runStep1() {
     setDot(1, '');
     showStatus('err', 'Error en Paso 1: ' + e.message);
   } finally {
-    btn.classList.remove('running');
-    btn.disabled = false;
-    document.getElementById('btn-run-all').disabled = false;
+    lockUI(false);
   }
 }
 
@@ -938,12 +996,18 @@ async function runStep1() {
 // ══════════════════════════════════════════════════════
 async function runStep2() {
   if (!step1Result) { showStatus('err', 'Ejecuta el Paso 1 primero.'); return; }
+
+  // Si ya hay resultado en caché, solo mostrar
+  if (step2Result) {
+    setResultText(2, step2Result);
+    switchTab(2);
+    updateNavButtons();
+    return;
+  }
+
   if (!checkKey()) return;
 
-  const btn = document.getElementById('btn-step2');
-  btn.classList.add('running');
-  btn.disabled = true;
-  document.getElementById('btn-run-all').disabled = true;
+  lockUI(true);
   setDot(2, 'running');
   switchTab(2);
   setResultLoading(2, 'Edición literaria con Gemini…');
@@ -954,7 +1018,6 @@ async function runStep2() {
     step2Result = result.trim();
     setResultText(2, step2Result);
     setDot(2, 'done');
-    document.getElementById('btn-step3').disabled = false;
     document.getElementById('copy-2').disabled = false;
     showStatus('ok', '✓ Paso 2 completado');
   } catch(e) {
@@ -962,9 +1025,7 @@ async function runStep2() {
     setDot(2, '');
     showStatus('err', 'Error en Paso 2: ' + e.message);
   } finally {
-    btn.classList.remove('running');
-    btn.disabled = false;
-    document.getElementById('btn-run-all').disabled = false;
+    lockUI(false);
   }
 }
 
@@ -975,29 +1036,28 @@ async function runStep3() {
   const textoOriginal = document.getElementById('input-text').value.trim();
   if (!textoOriginal) { showStatus('err', 'No hay texto original.'); return; }
   if (!step2Result) { showStatus('err', 'Ejecuta los pasos 1 y 2 primero.'); return; }
+
+  // Si ya hay resultado en caché, solo mostrar
+  if (step3Result) {
+    setFidelidadResult(step3Result);
+    switchTab(3);
+    updateNavButtons();
+    return;
+  }
+
   if (!checkKey()) return;
 
-  const btn = document.getElementById('btn-step3');
-  btn.classList.add('running');
-  btn.disabled = true;
-  document.getElementById('btn-run-all').disabled = true;
+  lockUI(true);
   setDot(3, 'running');
   switchTab(3);
   document.getElementById('result-3').innerHTML = '<span class="loading-msg">… Revisando fidelidad histórica con Gemini…</span>';
 
-  const userMsg = `TEXTO ORIGINAL:
-"""
-${textoOriginal}
-"""
-
-TEXTO EDITADO:
-"""
-${step2Result}
-"""`;
+  const userMsg = `TEXTO ORIGINAL:\n"""\n${textoOriginal}\n"""\n\nTEXTO EDITADO:\n"""\n${step2Result}\n"""`;
 
   try {
     const result = await callGemini(PROMPT_3_SYSTEM, userMsg);
-    setFidelidadResult(result);
+    step3Result = result.trim();
+    setFidelidadResult(step3Result);
     setDot(3, 'done');
     showStatus('ok', '✓ Revisión de fidelidad completada');
   } catch(e) {
@@ -1005,9 +1065,7 @@ ${step2Result}
     setDot(3, '');
     showStatus('err', 'Error en Paso 3: ' + e.message);
   } finally {
-    btn.classList.remove('running');
-    btn.disabled = false;
-    document.getElementById('btn-run-all').disabled = false;
+    lockUI(false);
   }
 }
 
@@ -1041,6 +1099,7 @@ function copyResult(n) {
 //  ARRANQUE
 // ══════════════════════════════════════════════════════
 updateCount();
+updateNavButtons();
 if (!GEMINI_API_KEY) setTimeout(openGeminiModal, 500);
 </script>
 </body>
