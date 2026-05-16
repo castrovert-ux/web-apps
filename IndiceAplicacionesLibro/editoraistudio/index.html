@@ -541,6 +541,7 @@
         <div class="panel-row">
           <span class="panel-label">Texto corregido (salida del Paso 1)</span>
           <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-1" onclick="showPrompt(1)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-1" onclick="copyResult(1)" disabled>Copiar</button>
           </div>
         </div>
@@ -554,6 +555,7 @@
         <div class="panel-row">
           <span class="panel-label">Texto editado (salida del Paso 2)</span>
           <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-2" onclick="showPrompt(2)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-2" onclick="copyResult(2)" disabled>Copiar</button>
           </div>
         </div>
@@ -566,7 +568,9 @@
       <div class="tab-panel" id="panel-3">
         <div class="panel-row">
           <span class="panel-label">Revisión de fidelidad histórica (original vs. editado)</span>
-          <div class="panel-actions"></div>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-3" onclick="showPrompt(3)" disabled>Ver prompt</button>
+          </div>
         </div>
         <div id="result-3-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
           <div class="result-box" id="result-3" style="flex:1;">
@@ -578,6 +582,24 @@
     </div><!-- /tab-panels -->
   </div><!-- /panel-right -->
 </div><!-- /main -->
+
+
+<!-- MODAL PROMPT -->
+<div class="modal-overlay" id="modal-prompt">
+  <div class="modal-box" style="width:680px;">
+    <div class="modal-title" id="modal-prompt-title">Prompt</div>
+    <div class="modal-sub">System prompt + mensaje de usuario enviado a Gemini</div>
+    <textarea id="modal-prompt-text" readonly
+      style="width:100%;height:340px;background:var(--bg);border:1px solid var(--border);
+             color:var(--text);padding:10px 12px;font-family:var(--font-ui);font-size:11px;
+             line-height:1.6;border-radius:var(--radius);outline:none;resize:none;
+             overflow-y:auto;"></textarea>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closePromptModal()">Cerrar</button>
+      <button class="btn btn-primary" id="copy-prompt-modal" onclick="copyPromptModal()">Copiar todo</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL CLAVE GEMINI -->
 <div class="modal-overlay" id="modal-gemini">
@@ -697,9 +719,9 @@ function clearAll() {
   document.getElementById('btn-step3').disabled = true;
   document.getElementById('copy-1').disabled = true;
   document.getElementById('copy-2').disabled = true;
-  step1Result = '';
-  step2Result = '';
-  step3Result = '';
+  step1Result = ''; step2Result = ''; step3Result = '';
+  step1Prompt = ''; step2Prompt = ''; step3Prompt = '';
+  ['show-prompt-1','show-prompt-2','show-prompt-3'].forEach(id => { document.getElementById(id).disabled = true; });
 }
 
 // ══════════════════════════════════════════════════════
@@ -976,11 +998,14 @@ async function runStep1() {
   document.getElementById('copy-1').disabled = true;
 
   try {
-    const result = await callGemini(PROMPT_1_SYSTEM, 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""');
+    const user1 = 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""';
+    step1Prompt = buildFullPrompt(PROMPT_1_SYSTEM, user1);
+    const result = await callGemini(PROMPT_1_SYSTEM, user1);
     step1Result = result.trim();
     setResultText(1, step1Result);
     setDot(1, 'done');
     document.getElementById('copy-1').disabled = false;
+    document.getElementById('show-prompt-1').disabled = false;
     showStatus('ok', '✓ Paso 1 completado');
   } catch(e) {
     setResultError(1, e.message);
@@ -1014,11 +1039,14 @@ async function runStep2() {
   document.getElementById('copy-2').disabled = true;
 
   try {
-    const result = await callGemini(PROMPT_2_SYSTEM, 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""');
+    const user2 = 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""';
+    step2Prompt = buildFullPrompt(PROMPT_2_SYSTEM, user2);
+    const result = await callGemini(PROMPT_2_SYSTEM, user2);
     step2Result = result.trim();
     setResultText(2, step2Result);
     setDot(2, 'done');
     document.getElementById('copy-2').disabled = false;
+    document.getElementById('show-prompt-2').disabled = false;
     showStatus('ok', '✓ Paso 2 completado');
   } catch(e) {
     setResultError(2, e.message);
@@ -1033,8 +1061,6 @@ async function runStep2() {
 //  PASO 3
 // ══════════════════════════════════════════════════════
 async function runStep3() {
-  const textoOriginal = document.getElementById('input-text').value.trim();
-  if (!textoOriginal) { showStatus('err', 'No hay texto original.'); return; }
   if (!step2Result) { showStatus('err', 'Ejecuta los pasos 1 y 2 primero.'); return; }
 
   // Si ya hay resultado en caché, solo mostrar
@@ -1045,6 +1071,9 @@ async function runStep3() {
     return;
   }
 
+  const textoOriginal = document.getElementById('input-text').value.trim();
+  if (!textoOriginal) { showStatus('err', 'No hay texto original.'); return; }
+
   if (!checkKey()) return;
 
   lockUI(true);
@@ -1053,12 +1082,14 @@ async function runStep3() {
   document.getElementById('result-3').innerHTML = '<span class="loading-msg">… Revisando fidelidad histórica con Gemini…</span>';
 
   const userMsg = `TEXTO ORIGINAL:\n"""\n${textoOriginal}\n"""\n\nTEXTO EDITADO:\n"""\n${step2Result}\n"""`;
+  step3Prompt = buildFullPrompt(PROMPT_3_SYSTEM, userMsg);
 
   try {
     const result = await callGemini(PROMPT_3_SYSTEM, userMsg);
     step3Result = result.trim();
     setFidelidadResult(step3Result);
     setDot(3, 'done');
+    document.getElementById('show-prompt-3').disabled = false;
     showStatus('ok', '✓ Revisión de fidelidad completada');
   } catch(e) {
     document.getElementById('result-3').innerHTML = '<span class="error-msg">✗ ' + e.message + '</span>';
@@ -1094,6 +1125,47 @@ function copyResult(n) {
     setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
   });
 }
+
+
+// ══════════════════════════════════════════════════════
+//  CACHÉ DE PROMPTS ENVIADOS
+// ══════════════════════════════════════════════════════
+let step1Prompt = '';
+let step2Prompt = '';
+let step3Prompt = '';
+
+function buildFullPrompt(systemPrompt, userPrompt) {
+  return '=== SYSTEM ===\n' + systemPrompt + '\n\n=== USER ===\n' + userPrompt;
+}
+
+function showPrompt(n) {
+  const prompts = { 1: step1Prompt, 2: step2Prompt, 3: step3Prompt };
+  const titles  = { 1: 'Prompt Paso 1 · Corrección', 2: 'Prompt Paso 2 · Edición', 3: 'Prompt Paso 3 · Fidelidad' };
+  const text = prompts[n];
+  if (!text) return;
+  document.getElementById('modal-prompt-title').textContent = titles[n];
+  document.getElementById('modal-prompt-text').value = text;
+  document.getElementById('copy-prompt-modal').textContent = 'Copiar todo';
+  document.getElementById('copy-prompt-modal').classList.remove('copied');
+  document.getElementById('modal-prompt').classList.add('visible');
+}
+
+function closePromptModal() {
+  document.getElementById('modal-prompt').classList.remove('visible');
+}
+
+function copyPromptModal() {
+  const text = document.getElementById('modal-prompt-text').value;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-prompt-modal');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.textContent = 'Copiar todo'; }, 2000);
+  });
+}
+
+document.getElementById('modal-prompt').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-prompt')) closePromptModal();
+});
 
 // ══════════════════════════════════════════════════════
 //  ARRANQUE
