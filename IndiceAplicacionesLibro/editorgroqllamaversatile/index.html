@@ -1,66 +1,1182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2a7a6e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Castroverde">
+  <title>Editor · Castroverde · Narrativo / Descriptivo</title>
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&display=swap" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <style>
+    /* ── VARIABLES OPTIMIZADAS PARA VISIBILIDAD ── */
+    :root {
+      --bg:        #eef4f3;
+      --surface:   #e2edeb;
+      --card:      #d6e8e5;
+      --border:    #a3c2be; 
+      --text:      #12201e; /* Contraste más alto */
+      --muted:     #4d7570;
+      --accent:    #2a7a6e;
+      --accent2:   #2d8a5f;
+      --red:       #b04a2d;
+      --blue:      #2d6a9d;
+      --cloud:     #357abd;
+      --font-h:    'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui:   'DM Mono', monospace;
+      --radius:    4px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; -webkit-font-smoothing: antialiased; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+      display: flex; flex-direction: column;
+    }
+
+    /* SYNC BAR */
+    #sync-bar {
+      flex-shrink: 0;
+      background: #1a2e2a;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 6px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn-sync {
+      background: none;
+      border: 1px solid rgba(74,144,217,0.4);
+      color: #7eb8f0;
+      padding: 4px 11px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      transition: background .2s, color .2s, border-color .2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-sync:hover { background: var(--cloud); color: #fff; border-color: var(--cloud); }
+    .btn-sync.synced { border-color: rgba(58,158,110,0.5); color: #7ec87f; }
+    .btn-sync.synced:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-sync.syncing { opacity: .6; cursor: default; pointer-events: none; }
+    .sync-spinner { display: inline-block; animation: syncSpin 1s linear infinite; }
+    @keyframes syncSpin { to { transform: rotate(360deg); } }
+    .sync-user-text { font-family: var(--font-ui); font-size: 8px; color: rgba(255,255,255,.35); letter-spacing: 1px; }
+    .btn-signout {
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 8px; letter-spacing: 1px;
+      color: rgba(255,255,255,.25); padding: 2px 6px; border-radius: 3px;
+      transition: color .15s, background .15s; text-transform: uppercase;
+    }
+    .btn-signout:hover { color: var(--red); background: rgba(196,90,58,.1); }
+    #sync-status {
+      flex-shrink: 0;
+      padding: 5px 18px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #sync-status.visible { display: flex; }
+    #sync-status.ok  { background: rgba(58,158,110,.12); color: var(--accent2); }
+    #sync-status.err { background: rgba(196,90,58,.1);   color: var(--red); }
+    #sync-status.info{ background: rgba(74,144,217,.1);  color: var(--cloud); }
+    .sync-status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .6; font-size: 12px; padding: 0 3px; }
+    .sync-status-close:hover { opacity: 1; }
+
+    /* CABECERA */
+    header {
+      flex-shrink: 0; background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 14px 24px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+      flex-wrap: wrap;
+    }
+    .logo { font-family: var(--font-h); font-size: 21px; font-weight: 700; color: var(--text); }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small { display: block; font-family: var(--font-ui); font-size: 9px; color: var(--muted); letter-spacing: 2px; font-weight: 500; text-transform: uppercase; margin-top: 1px; opacity: 0.9; }
+    .header-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+
+    /* SELECTOR NARRATIVO / DESCRIPTIVO */
+    .profile-selector {
+      display: flex;
+      gap: 6px;
+      background: var(--card);
+      padding: 3px;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+    }
+    .profile-btn {
+      background: transparent;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 30px;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .profile-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    .profile-btn:hover:not(.active) {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .btn {
+      padding: 9px 16px; border: none; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #eef4f3; }
+    .btn-primary:hover:not(:disabled) { background: #d4a23a; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-success { background: var(--accent2); color: #eef4f3; }
+    .btn-success:hover { background: #8ab87e; }
+
+    /* LAYOUT */
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; min-height: 0; position: relative; }
+
+    /* PANEL IZQUIERDO */
+    .panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header {
+      flex-shrink: 0; padding: 9px 15px; border-bottom: 1px solid var(--border);
+      background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .panel-title { font-family: var(--font-ui); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 2px; color: var(--text); }
+    .panel-title span { color: var(--accent); }
+    .analysis-select {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 4px 8px; font-family: var(--font-ui); font-size: 10px;
+      border-radius: var(--radius); cursor: pointer; outline: none;
+    }
+
+    .text-area-wrap { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+    #input-text {
+      width: 100%; height: 100%; background: transparent; border: none;
+      color: var(--text); font-family: var(--font-body); font-size: 17px;
+      line-height: 1.8; padding: 24px; resize: none; outline: none;
+    }
+    #input-text:focus { background: rgba(255,255,255,0.3); }
+    #input-text::placeholder { color: var(--muted); font-style: italic; }
+    .char-count { position: absolute; bottom: 5px; right: 10px; font-family: var(--font-ui); font-size: 9px; color: var(--muted); pointer-events: none; }
+    .char-count.warn { color: var(--red); }
+
+    /* NOTAS */
+    .notes-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+    .notes-toggle {
+      width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between;
+      background: transparent; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .notes-toggle:hover { color: var(--accent); }
+    .notes-body { display: none; padding: 0 15px 10px; }
+    .notes-body.open { display: block; }
+    #notes-text {
+      width: 100%; height: 76px; background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-body); font-size: 12px;
+      line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius);
+    }
+    #notes-text::placeholder { color: var(--border); font-style: italic; }
+    #notes-text:focus { border-color: var(--accent); }
+    .notes-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+
+    /* INSTRUCCIONES */
+    .instrucciones-section { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+    .instrucciones-toggle {
+      width: 100%; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between;
+      background: transparent; border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .instrucciones-toggle:hover { color: var(--accent); }
+    .instrucciones-body { display: none; padding: 0 15px 10px; }
+    .instrucciones-body.open { display: block; }
+    .instruc-label { font-family: var(--font-ui); font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; display: block; }
+    .instruc-label:first-child { margin-top: 0; }
+    .parte-select { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 9px; font-family: var(--font-ui); font-size: 10px; border-radius: var(--radius); outline: none; cursor: pointer; }
+    .parte-select:focus { border-color: var(--accent); }
+    #instruc-fragmento, #instruc-generales {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-body); font-size: 12px;
+      line-height: 1.6; padding: 7px 10px; resize: none; outline: none; border-radius: var(--radius);
+    }
+    #instruc-fragmento { height: 60px; }
+    #instruc-generales { height: 72px; }
+    #instruc-fragmento::placeholder, #instruc-generales::placeholder { color: var(--border); font-style: italic; }
+    #instruc-fragmento:focus, #instruc-generales:focus { border-color: var(--accent); }
+    .instruc-hint { font-family: var(--font-ui); font-size: 8px; color: var(--border); margin-top: 3px; line-height: 1.5; }
+
+    .panel-actions {
+      flex-shrink: 0; padding: 9px 15px; border-top: 1px solid var(--border);
+      background: var(--surface); display: flex; gap: 7px; align-items: center;
+      flex-wrap: wrap;
+    }
+    .fragment-name-input {
+      flex: 1; background: var(--card); border: 1.5px solid var(--border); color: var(--text);
+      padding: 8px 12px; font-family: var(--font-ui); font-size: 11px;
+      border-radius: var(--radius); outline: none;
+    }
+    .fragment-name-input:focus { border-color: var(--accent); }
+    .fragment-name-input::placeholder { color: var(--muted); }
+
+    /* PANEL DERECHO */
+    .panel-right { display: flex; flex-direction: column; overflow: hidden; }
+    .result-tabs { flex-shrink: 0; display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .result-tab {
+      padding: 10px 15px; border: none; background: transparent;
+      font-family: var(--font-ui); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 2px;
+      color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+      position: relative; top: 1px; transition: color 0.2s;
+    }
+    .result-tab:hover { color: var(--text); }
+    .result-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; border-bottom-width: 3px; }
+    .result-content { flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }
+
+    .empty-result { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; text-align: center; color: var(--muted); gap: 10px; }
+    .empty-result .big-char { font-family: var(--font-h); font-size: 52px; color: var(--border); line-height: 1; }
+    .empty-result p { font-family: var(--font-ui); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+    .improved-text { font-family: var(--font-body); font-size: 17px; line-height: 1.9; white-space: pre-wrap; color: #0d1a18; max-width: 800px; margin: 0 auto; }
+    .error-box { display: none; background: rgba(196,90,58,0.1); border: 1px solid var(--red); border-left: 3px solid var(--red); padding: 10px 14px; border-radius: var(--radius); color: var(--red); font-size: 13px; margin-bottom: 10px; }
+
+    .report-section { margin-bottom: 18px; }
+    .report-section-title { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+    .report-item { display: flex; gap: 9px; margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: var(--text); }
+    .score-row { display: flex; gap: 9px; margin-bottom: 16px; flex-wrap: wrap; }
+    .score-badge { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 13px; text-align: center; min-width: 68px; }
+    .score-badge-label { font-family: var(--font-ui); font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); display: block; margin-bottom: 3px; }
+    .score-badge-value { font-family: var(--font-h); font-size: 21px; font-weight: 700; line-height: 1; }
+    .score-a { color: var(--accent2); } .score-b { color: var(--accent); } .score-c { color: var(--red); }
+
+    /* VERSIONES */
+    .version-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; margin-bottom: 7px; cursor: pointer; transition: border-color 0.2s; }
+    .version-item:hover { border-color: var(--accent); }
+    .version-meta { display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px; }
+    .version-name { font-family: var(--font-h); font-size: 13px; font-weight: 700; }
+    .version-date { font-family: var(--font-ui); font-size: 9px; color: var(--muted); }
+    .version-preview { font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .version-actions { display: flex; gap: 5px; margin-top: 6px; }
+
+    /* VEREDICTO */
+    .verdict-box { background: var(--card); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; }
+    .verdict-title { font-family: var(--font-h); font-size: 17px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .verdict-body { font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+
+    /* COPY BAR */
+    .copy-bar { display: none; flex-shrink: 0; padding: 8px 15px; border-top: 1px solid var(--border); background: var(--surface); gap: 7px; align-items: center; }
+    .copy-bar.visible { display: flex; }
+    .copy-feedback { font-family: var(--font-ui); font-size: 9px; color: var(--accent2); text-transform: uppercase; letter-spacing: 2px; display: none; }
+
+    /* LOADING */
+    .loading-overlay { display: none; position: absolute; inset: 0; background: rgba(238,244,243,0.88); z-index: 50; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+    .loading-overlay.visible { display: flex; }
+    .spinner { width: 26px; height: 26px; border: 1px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+
+    /* HISTORIAL SIDEBAR */
+    .history-sidebar { position: fixed; top: 0; right: 0; width: 310px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 200; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s ease; }
+    .history-sidebar.open { transform: translateX(0); }
+    .history-sidebar-header { padding: 13px 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .history-sidebar-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); }
+    .btn-close { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 2px 5px; }
+    .btn-close:hover { color: var(--text); }
+    .history-list { flex: 1; overflow-y: auto; padding: 12px; }
+    .history-empty { text-align: center; padding: 28px 14px; color: var(--muted); font-family: var(--font-ui); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; line-height: 2; }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.35); z-index: 199; }
+    .sidebar-overlay.visible { display: block; }
+
+    /* MODALES */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(30,53,50,0.55); z-index: 500; align-items: center; justify-content: center; }
+    .modal-overlay.visible { display: flex; }
+    .modal-box { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 32px; width: 760px; max-width: 95vw; box-shadow: 0 8px 32px rgba(30,53,50,0.18); }
+    .modal-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal-subtitle { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 22px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section-title { font-family: var(--font-ui); font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+    .modal-textarea { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; font-family: var(--font-body); font-size: 14px; border-radius: var(--radius); outline: none; resize: vertical; line-height: 1.6; min-height: 80px; }
+    .modal-textarea.tall { min-height: 150px; }
+    .modal-hint-inline { font-family: var(--font-ui); font-size: 8px; color: var(--muted); margin-top: 4px; line-height: 1.6; margin-bottom: 10px; }
+    .ptabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ptab { padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; font-family: var(--font-ui); font-size: 9px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .ptab.active { background: var(--accent); color: #eef4f3; border-color: var(--accent); }
+    .ptab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+    .ppanel { display: none; }
+    .ppanel.visible { display: block; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .modal-box-sm { width: 420px; max-width: 95vw; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; border: 2px solid var(--bg); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar">
+  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
+  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-signout" id="btn-fb-key" style="display:inline;color:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.1);padding:2px 8px;border-radius:3px;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;" onmouseover="this.style.color='#7eb8f0'" onmouseout="this.style.color='rgba(255,255,255,.25)'">⚿ Firebase</button>
+  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar historial</span>
+  </button>
+</div>
+<div id="sync-status">
+  <span id="sync-status-msg"></span>
+  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
+</div>
+
+<header>
+  <div class="logo">Editor <span>Castroverde</span><small>Narrativo · Descriptivo · llama-3.3-70b</small></div>
+  <div class="header-actions">
+    <div class="profile-selector" id="profile-selector">
+      <button class="profile-btn" data-profile="narrativo">📖 Narrativo</button>
+      <button class="profile-btn" data-profile="descriptivo">📋 Descriptivo</button>
+    </div>
+    <span class="key-status" id="key-status">⚿ clave</span>
+    <button class="btn btn-ghost" id="btn-api-key">⚙ API Key</button>
+    <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
+    <button class="btn btn-ghost" id="btn-verdict">⚖ Veredicto</button>
+    <button class="btn btn-ghost" id="btn-history">📚 Historial</button>
+    <button class="btn btn-ghost" id="btn-clear-all">✕ Limpiar</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Analizando…</div>
+  </div>
+
+  <div class="panel-left">
+    <div class="panel-header">
+      <span class="panel-title">✍ Tu texto · <span id="fragment-label">nuevo fragmento</span></span>
+      <select class="analysis-select" id="analysis-type">
+        <option value="completo">Revisión completa</option>
+        <option value="estilo">Solo estilo y voz</option>
+        <option value="ortografia">Solo ortografía y gramática</option>
+        <option value="historico">Coherencia histórica</option>
+        <option value="claridad">Claridad y estructura</option>
+      </select>
+    </div>
+
+    <div class="text-area-wrap">
+      <textarea id="input-text" maxlength="4000" placeholder="Pega aquí tu fragmento del libro de Castroverde…&#10;Ctrl+Enter para analizar rápido."></textarea>
+      <div class="char-count" id="char-count">0 / 4000</div>
+      <button id="btn-clear-text" title="Borrar texto" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:var(--border);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;transition:color 0.2s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--border)'">✕</button>
+    </div>
+
+    <div class="notes-section">
+      <button class="notes-toggle" id="btn-toggle-notes">
+        <span>📎 Notas al pie — contexto para la IA</span>
+        <span id="notes-arrow">▾ mostrar</span>
+      </button>
+      <div class="notes-body" id="notes-body">
+        <textarea id="notes-text" maxlength="2000" placeholder="Pega las notas al pie del fragmento…
+Ej: ¹ AHN, Órdenes Militares, Santiago, carp. 312, doc. 4."></textarea>
+        <div class="notes-hint">Contexto para la IA. No aparecen en el texto mejorado ni se modifican.</div>
+      </div>
+    </div>
+
+    <div class="instrucciones-section">
+      <button class="instrucciones-toggle" id="btn-toggle-instruc">
+        <span>✦ Instrucciones para la IA</span>
+        <span id="instruc-arrow">▾ mostrar</span>
+      </button>
+      <div class="instrucciones-body" id="instruc-body">
+        <label class="instruc-label">Parte del libro</label>
+        <select class="parte-select" id="parte-libro">
+          <option value="primera">Primera parte — narrativa divulgativa</option>
+          <option value="segunda">Segunda parte — temática y formal</option>
+        </select>
+        <label class="instruc-label">Instrucciones para este fragmento</label>
+        <textarea id="instruc-fragmento" maxlength="800" placeholder="Instrucción concreta del plan de intervención: ej. Suavizar tono técnico. Reescribir el cierre."></textarea>
+        <label class="instruc-label" id="lbl-instruc-gen">Instrucciones generales <span style="color:var(--accent2);">● guardadas</span></label>
+        <textarea id="instruc-generales" maxlength="3000" placeholder="Perfil tonal y reglas permanentes del libro. Se guarda automáticamente y se aplica a ambos perfiles."></textarea>
+        <div class="instruc-hint">Las instrucciones generales se guardan en este navegador y se aplican a ambos perfiles (Narrativo y Descriptivo).</div>
+      </div>
+    </div>
+
+    <div class="panel-actions">
+      <input type="text" class="fragment-name-input" id="fragment-name" placeholder="Nombre del fragmento (ej: Cap.2 · Prehistoria)" maxlength="60">
+      <label class="btn btn-ghost" style="cursor:pointer;">📄 Cargar<input type="file" id="file-input" accept=".txt,.docx" style="display:none;"></label>
+      <button class="btn btn-primary" id="btn-analyze">Analizar →</button>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="result-tabs">
+      <button class="result-tab active" data-tab="improved">Texto mejorado</button>
+      <button class="result-tab" data-tab="report">Informe</button>
+      <button class="result-tab" data-tab="compare">Comparar versiones</button>
+    </div>
+    <div class="result-content">
+      <div class="empty-result" id="empty-result">
+        <div class="big-char">❧</div>
+        <p>Introduce tu texto y pulsa Analizar</p>
+        <p>Perfil activo: <span id="active-profile-name">Narrativo</span></p>
+      </div>
+      <div class="error-box" id="error-box"></div>
+      <div id="pane-improved" style="display:none;"></div>
+      <div id="pane-report"   style="display:none;"></div>
+      <div id="pane-compare"  style="display:none;"></div>
+    </div>
+    <div class="copy-bar" id="copy-bar">
+      <button class="btn btn-success" id="btn-copy">⎘ Copiar texto mejorado</button>
+      <button class="btn btn-ghost"   id="btn-save-version" style="display:none;">💾 Guardar versión</button>
+      <span class="copy-feedback" id="copy-feedback">¡Copiado!</span>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="history-sidebar" id="history-sidebar">
+  <div class="history-sidebar-header">
+    <span class="history-sidebar-title">Versiones guardadas</span>
+    <button class="btn-close" id="btn-close-sidebar">×</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty">Sin versiones guardadas.<br>Analiza y guarda<br>fragmentos para verlos aquí.</div>
+  </div>
+  <div style="padding:10px 13px;border-top:1px solid var(--border);">
+    <button class="btn btn-danger" style="width:100%;" id="btn-clear-history">Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- MODAL AJUSTES (NARRATIVO/DESCRIPTIVO) -->
+<div class="modal-overlay" id="modal-settings" style="align-items:flex-start;padding:20px;overflow-y:auto;">
+  <div class="modal-box modal-box-lg" style="margin:auto;">
+    <div class="modal-title">Ajustes de prompts por perfil</div>
+    <div class="modal-subtitle">Personaliza el system prompt y los prompts de análisis/veredicto para cada perfil</div>
+    <div class="ptabs" id="settings-ptabs">
+      <button class="ptab active" data-profile="narrativo">📖 Narrativo</button>
+      <button class="ptab" data-profile="descriptivo">📋 Descriptivo</button>
+    </div>
+    <div id="settings-panels">
+      <div class="ppanel visible" data-profile="narrativo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Narrativo)</div>
+          <div class="modal-hint-inline">Variables: <code>{{parte_libro}}</code> · <code>{{instrucciones_generales}}</code></div>
+          <textarea class="modal-textarea tall" id="system-narrativo" rows="12"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompt de análisis (Narrativo)</div>
+          <div class="modal-hint-inline">Variables: <code>{{tipo}}</code> · <code>{{instruc_frag}}</code> · <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea tall" id="analisis-narrativo" rows="9"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompt de veredicto (Narrativo)</div>
+          <div class="modal-hint-inline">Variables: <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea tall" id="veredicto-narrativo" rows="9"></textarea>
+        </div>
+      </div>
+      <div class="ppanel" data-profile="descriptivo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Descriptivo)</div>
+          <div class="modal-hint-inline">Variables: <code>{{parte_libro}}</code> · <code>{{instrucciones_generales}}</code></div>
+          <textarea class="modal-textarea tall" id="system-descriptivo" rows="12"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompt de análisis (Descriptivo)</div>
+          <div class="modal-hint-inline">Variables: <code>{{tipo}}</code> · <code>{{instruc_frag}}</code> · <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea tall" id="analisis-descriptivo" rows="9"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompt de veredicto (Descriptivo)</div>
+          <div class="modal-hint-inline">Variables: <code>{{notas}}</code> · <code>{{texto}}</code></div>
+          <textarea class="modal-textarea tall" id="veredicto-descriptivo" rows="9"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
+      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FIREBASE KEY -->
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <div class="modal-desc">Necesaria para sincronizar el historial en la nube. Se guarda <strong>solo en este navegador</strong>.<br><br>Consíguela en <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> → Credenciales → Claves de API.</div>
+    <label class="modal-label" for="fb-key-input">Firebase API Key</label>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
+    <div class="modal-hint">Empieza por <code>AIzaSy</code>. Solo tú la ves.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL API KEY GROQ -->
+<div class="modal-overlay" id="modal-apikey">
+  <div class="modal-box">
+    <div class="modal-title">Clave API de Groq</div>
+    <div class="modal-desc">Tu clave se guarda <strong>solo en este navegador</strong> (localStorage). Nunca sale de tu ordenador ni se sube a ningún servidor.<br><br>Consíguela en <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>.</div>
+    <label class="modal-label" for="modal-key-input">API Key</label>
+    <input class="modal-input" id="modal-key-input" type="password" placeholder="gsk_…" autocomplete="off" spellcheck="false">
+    <div class="modal-hint">La clave empieza por <code>gsk_</code>. Solo tú la ves. Para borrarla, pulsa "Olvidar".</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="modal-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="modal-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="modal-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
-(function() {
-    // Función para abrir ajustes
-    window.openSettings = function() {
-        var modal = document.getElementById('modal-settings');
-        if (modal) {
-            modal.classList.add('visible');
-            console.log("Modal de ajustes abierto");
-            // Cargar valores actuales en los campos
-            if (typeof settings !== 'undefined') {
-                try {
-                    document.getElementById('system-narrativo').value = settings.narrativo.system;
-                    document.getElementById('analisis-narrativo').value = settings.narrativo.promptAnalisis;
-                    document.getElementById('veredicto-narrativo').value = settings.narrativo.promptVeredicto;
-                    document.getElementById('system-descriptivo').value = settings.descriptivo.system;
-                    document.getElementById('analisis-descriptivo').value = settings.descriptivo.promptAnalisis;
-                    document.getElementById('veredicto-descriptivo').value = settings.descriptivo.promptVeredicto;
-                } catch(e) { console.warn("Error cargando valores:", e); }
-            }
-        } else {
-            alert("Error: No se encuentra el modal de ajustes");
+// [Aquí va el script JavaScript original del archivo index.html para que todo funcione de nuevo]
+// ══════════════════════════════════════════════════════
+//  FIREBASE CONFIG
+// ══════════════════════════════════════════════════════
+var FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
+var fbAuth = null, fbDb = null, fbProvider = null;
+let fbUser = null;
+
+function initFirebase(k) {
+  try { if(firebase.apps.length){ firebase.app().delete().then(function(){ startFB(k); }); } else { startFB(k); } }
+  catch(e){ startFB(k); }
+}
+function startFB(k) {
+  firebase.initializeApp({apiKey:k,authDomain:'castroverde-apps.firebaseapp.com',projectId:'castroverde-apps',storageBucket:'castroverde-apps.firebasestorage.app',messagingSenderId:'371026533141',appId:'1:371026533141:web:315767f60cbf8d6f47671c'});
+  fbAuth=firebase.auth(); fbDb=firebase.firestore(); fbProvider=new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(function(u){
+    fbUser=u;
+    updateSyncUI();
+    if (u && fbDb) {
+      var localTs = parseInt(localStorage.getItem('castroverde_editor_settings_ts') || '0');
+      fbDb.collection('editor').doc(u.uid).get().then(function(snap){
+        if (snap.exists && snap.data().editorSettings && snap.data().editorSettingsTs > localTs) {
+          const remote = snap.data().editorSettings;
+          if (remote.narrativo && remote.descriptivo) {
+            settings = remote;
+            saveSettingsToLocal();
+            localStorage.setItem('castroverde_editor_settings_ts', snap.data().editorSettingsTs);
+          }
         }
-    };
-    
-    window.closeSettings = function() {
-        var modal = document.getElementById('modal-settings');
-        if (modal) modal.classList.remove('visible');
-    };
-    
-    // Asignar evento al botón cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', function() {
-        var btn = document.getElementById('btn-settings');
-        if (btn) {
-            btn.onclick = function(e) {
-                e.preventDefault();
-                window.openSettings();
-            };
-            console.log("Botón ajustes configurado correctamente");
-        } else {
-            console.error("No se encontró el botón #btn-settings");
+      }).catch(function(){});
+    }
+  });
+}
+if(FB_API_KEY) initFirebase(FB_API_KEY);
+
+function updateSyncUI() {
+  const icon    = get('sync-icon');
+  const label   = get('sync-label');
+  const btn     = get('btn-sync');
+  const userEl  = get('sync-user-text');
+  const signout = get('btn-signout');
+  if (fbUser) {
+    btn.classList.add('synced');
+    icon.textContent  = '✓';
+    label.textContent = 'Sincronizar historial';
+    userEl.textContent = fbUser.email;
+    userEl.style.display = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.classList.remove('synced');
+    icon.textContent  = '☁';
+    label.textContent = 'Sincronizar historial';
+    userEl.style.display = 'none';
+    signout.style.display = 'none';
+  }
+}
+
+async function handleSync() {
+  if (!fbAuth || !fbProvider) {
+    openFbKeyModal();
+    return;
+  }
+  if (!fbUser) {
+    try {
+      setSyncStatus('info', 'Iniciando sesión con Google…');
+      await fbAuth.signInWithPopup(fbProvider);
+      await doSync();
+    } catch(err) {
+      setSyncStatus('err', 'Error al iniciar sesión: ' + err.message);
+    }
+  } else {
+    await doSync();
+  }
+}
+
+async function doSync() {
+  if (!fbUser || !fbDb) return;
+  setSyncStatus('info', 'Sincronizando historial…');
+  get('btn-sync').classList.add('syncing');
+
+  try {
+    const docRef = fbDb.collection('editor').doc(fbUser.uid);
+    const snap   = await docRef.get();
+    const local  = [...versions];
+    const localSettings = JSON.parse(JSON.stringify(settings));
+    const localSettingsTs = parseInt(localStorage.getItem('castroverde_editor_settings_ts') || '0');
+
+    if (snap.exists) {
+      const data   = snap.data();
+      const remote = data.versions || [];
+      const merged = mergeVersions(local, remote);
+      versions = merged;
+      saveVersions();
+
+      var mergedSettings = localSettings;
+      if (data.editorSettings && data.editorSettingsTs) {
+        if (data.editorSettingsTs > localSettingsTs) {
+          mergedSettings = data.editorSettings;
+          settings = mergedSettings;
+          saveSettingsToLocal();
+          localStorage.setItem('castroverde_editor_settings_ts', data.editorSettingsTs);
         }
-        
-        // Botón guardar ajustes
-        var saveBtn = document.getElementById('settings-save');
-        if (saveBtn) {
-            saveBtn.onclick = function() {
-                if (typeof settings !== 'undefined') {
-                    settings.narrativo.system = document.getElementById('system-narrativo').value;
-                    settings.narrativo.promptAnalisis = document.getElementById('analisis-narrativo').value;
-                    settings.narrativo.promptVeredicto = document.getElementById('veredicto-narrativo').value;
-                    settings.descriptivo.system = document.getElementById('system-descriptivo').value;
-                    settings.descriptivo.promptAnalisis = document.getElementById('analisis-descriptivo').value;
-                    settings.descriptivo.promptVeredicto = document.getElementById('veredicto-descriptivo').value;
-                    localStorage.setItem('castroverde_profiles', JSON.stringify(settings));
-                }
-                saveBtn.innerText = '✓ Guardado';
-                setTimeout(function() { saveBtn.innerText = 'Guardar ajustes'; }, 1500);
-            };
-        }
-        
-        // Botón cancelar
-        var cancelBtn = document.getElementById('settings-cancel');
-        if (cancelBtn) cancelBtn.onclick = window.closeSettings;
+      }
+
+      await docRef.set({
+        versions: merged,
+        editorSettings: mergedSettings,
+        editorSettingsTs: Math.max(localSettingsTs, data.editorSettingsTs || 0),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setSyncStatus('ok', '✓ Sincronizado — ' + merged.length + ' versión' + (merged.length !== 1 ? 'es' : '') + ' en historial');
+    } else {
+      await docRef.set({
+        versions: local,
+        editorSettings: localSettings,
+        editorSettingsTs: localSettingsTs || Date.now(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setSyncStatus('ok', '✓ Historial subido por primera vez — ' + local.length + ' versión' + (local.length !== 1 ? 'es' : ''));
+    }
+
+    renderHistoryList();
+
+  } catch(err) {
+    console.error('Sync error:', err);
+    setSyncStatus('err', 'Error al sincronizar: ' + err.message);
+  }
+
+  get('btn-sync').classList.remove('syncing');
+}
+
+function mergeVersions(local, remote) {
+  const map = new Map();
+  for (const v of remote) if (v.ts) map.set(v.ts, v);
+  for (const v of local)  if (v.ts) map.set(v.ts, v);
+  return Array.from(map.values()).sort((a, b) => a.ts - b.ts);
+}
+
+function setSyncStatus(type, msg) {
+  const el = get('sync-status');
+  get('sync-status-msg').textContent = msg;
+  el.className = 'visible ' + type;
+  if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+}
+
+function closeSyncStatus() {
+  get('sync-status').className = '';
+  updateSyncUI();
+}
+
+async function fbSignOut() {
+  if(fbAuth) await fbAuth.signOut();
+  fbUser = null;
+  updateSyncUI();
+}
+
+// ══════════════════════════════════════════════════════
+//  APP — DOS PERFILES: NARRATIVO / DESCRIPTIVO
+// ══════════════════════════════════════════════════════
+var API_KEY    = localStorage.getItem('castroverde_api_key') || '';
+var MODEL      = 'llama-3.3-70b-versatile';
+var MAX_TOKENS = 2048;
+var STORAGE_KEY = 'castroverde_v2';
+
+// PROMPTS POR DEFECTO
+const DEFAULT_NARRATIVE = `ROL
+Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato".
+
+PRIORIDAD (en caso de conflicto):
+1. Voz de referencia
+2. Claridad del texto
+3. Fluidez narrativa
+
+RESTRICCIÓN CLAVE
+No añadir información histórica nueva. Prohibido inventar datos.
+
+VOZ DE REFERENCIA
+"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano es tierra de frontera... No era un lugar cualquiera."
+
+Modelo: cercano, con ritmo, apoyado en imágenes concretas, sin exceso literario.
+
+OBJETIVO
+Reescribir manteniendo:
+- Estilo narrativo y vivo
+- Tono cercano y directo
+- Ritmo natural
+- Fidelidad histórica total
+
+REGLAS DE EDICIÓN
+- Claridad y flujo narrativo > todo
+- Integra datos históricos de forma natural en la narración
+- Corrige ortografía, puntuación, gramática
+- Elimina solo redundancias obvias
+- Evita punto y coma e incisos innecesarios
+- Evita lenguaje abstracto o grandilocuente
+- Mantén extensión similar al original
+- Si una frase es clara y funciona, no la toques innecesariamente
+
+FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de código, empezando con {:
+{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
+
+const DEFAULT_DESCRIPTIVE = `ROL
+Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato".
+
+PRIORIDAD (en caso de conflicto):
+1. Claridad absoluta
+2. Fidelidad histórica
+3. Fluidez narrativa
+4. Voz de referencia
+
+RESTRICCIÓN CLAVE
+No añadir información histórica nueva. Prohibido inventar datos.
+
+VOZ DE REFERENCIA
+"Esa imagen de un «castro verde» no tardaría en modificarse en los registros escritos. Poco más de un siglo después, el 29 de diciembre de 1059, con motivo de la restauración de la diócesis de Palencia, la villa figuraba ya como «Castrouert» dentro de los alfoces que la componían..."
+
+Modelo: claro, continuo, explicativo, bien estructurado.
+
+OBJETIVO
+Reescribir manteniendo:
+- Estilo claro y fácil de seguir
+- Narrativa sobria, sin carga literaria
+- Fluidez continua sin fragmentación
+- Precisión histórica absoluta
+
+REGLAS DE EDICIÓN
+- Claridad > todo lo demás
+- Integra fechas, nombres, datos de forma natural
+- Explica conceptos históricos solo si son nuevos o necesarios para el lector
+- Transiciones suaves entre ideas
+- Corrige ortografía, puntuación, gramática
+- Elimina solo redundancias obvias
+- Mantén coherencia interna
+- Si una frase es clara y funciona, no la toques innecesariamente
+- NO convertir a estilo narrativo-literario
+- NO caer en tono académico rígido
+
+FORMATO DE RESPUESTA — responde SOLO con este JSON válido, sin bloques de código, empezando con {:
+{"texto_mejorado":"...","puntuacion":{"estilo":8,"claridad":7,"rigor":9},"observaciones":[{"tipo":"positivo","texto":"..."}],"cambios_resumen":"..."}`;
+
+// Estructura de settings (dos perfiles)
+let settings = {
+  narrativo: {
+    system: DEFAULT_NARRATIVE,
+    promptAnalisis: `TIPO DE ANÁLISIS: {{tipo}}
+
+INSTRUCCIONES ESPECÍFICAS:
+{{instruc_frag}}
+
+NOTAS AL PIE (contexto, no modificar):
+{{notas}}
+
+FRAGMENTO A REVISAR:
+'''
+{{texto}}
+'''
+
+Por favor, entrega el texto mejorado con un tono narrativo fluido. Después, escribe "---" y un breve informe de cambios.`,
+    promptVeredicto: `VEREDICTO EDITORIAL (Perfil Narrativo)
+
+NOTAS AL PIE:
+{{notas}}
+
+Evalúa el fragmento desde una perspectiva narrativa. Devuelve:
+
+1. El texto mejorado.
+2. "---"
+3. VEREDICTO: LISTO / REVISIÓN MENOR / REVISIÓN MAYOR
+4. Comentarios sobre ritmo, voz y coherencia.
+5. Puntuaciones 1-10: Ritmo, Voz narrativa, Rigor histórico, Claridad.
+
+Fragmento:
+'''
+{{texto}}
+'''`
+  },
+  descriptivo: {
+    system: DEFAULT_DESCRIPTIVE,
+    promptAnalisis: `TIPO DE ANÁLISIS: {{tipo}}
+
+INSTRUCCIONES ESPECÍFICAS:
+{{instruc_frag}}
+
+NOTAS AL PIE:
+{{notas}}
+
+FRAGMENTO (revisión descriptiva):
+'''
+{{texto}}
+'''
+
+Proporciona el texto mejorado siguiendo las normas estrictas. Luego "---" y un informe técnico de cambios (sin JSON).`,
+    promptVeredicto: `VEREDICTO FINAL (Perfil Descriptivo)
+
+NOTAS AL PIE:
+{{notas}}
+
+Evalúa el fragmento como si fuera una corrección de estilo definitiva. Devuelve:
+
+1. Texto mejorado.
+2. "---"
+3. VEREDICTO: LISTO / REVISIÓN MENOR / REVISIÓN MAYOR
+4. Detalle de aspectos a mejorar.
+5. Puntuaciones 1-10: Estructura, Ritmo, Rigor histórico, Cohesión, Voz.
+
+Fragmento:
+'''
+{{texto}}
+'''`
+  }
+};
+
+// Estado de la aplicación
+let activeProfile = 'narrativo'; // 'narrativo' o 'descriptivo'
+let versions = [];
+let currentResult = null;
+let activeTab = 'improved';
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('castroverde_profiles');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.narrativo) settings.narrativo = parsed.narrativo;
+      if (parsed.descriptivo) settings.descriptivo = parsed.descriptivo;
+    }
+  } catch(e) {}
+}
+function saveSettingsToLocal() {
+  localStorage.setItem('castroverde_profiles', JSON.stringify(settings));
+}
+
+function getInstrucGen(){ return localStorage.getItem('castroverde_instruc_gen') || ''; }
+function saveInstrucGen(){ localStorage.setItem('castroverde_instruc_gen', get('instruc-generales').value); }
+
+function getParteLibroTexto() {
+  const parte = get('parte-libro').value;
+  return parte === 'segunda' ? 'SEGUNDA PARTE (temática y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
+}
+
+function getActiveSystem() {
+  let template = settings[activeProfile].system;
+  const parte = getParteLibroTexto();
+  const instrucGen = getInstrucGen();
+  return template
+    .replace(/\{\{parte_libro\}\}/g, parte)
+    .replace(/\{\{instrucciones_generales\}\}/g, instrucGen);
+}
+
+function renderTemplate(template, type, text, notes, instrucFrag) {
+  let result = template;
+  const tipoLabel = {
+    completo: 'Revisión completa',
+    estilo: 'Solo estilo y voz',
+    ortografia: 'Solo ortografía y gramática',
+    historico: 'Coherencia histórica',
+    claridad: 'Claridad y estructura'
+  }[type] || 'Revisión completa';
+  result = result.replace(/\{\{tipo\}\}/g, tipoLabel);
+  result = result.replace(/\{\{instruc_frag\}\}/g, instrucFrag || '');
+  result = result.replace(/\{\{notas\}\}/g, notes || '');
+  result = result.replace(/\{\{texto\}\}/g, text);
+  return result;
+}
+
+function buildUserMessage(text, notes, tipo, instrucFrag) {
+  const template = settings[activeProfile].promptAnalisis;
+  return renderTemplate(template, tipo, text, notes, instrucFrag);
+}
+
+function buildVeredictoMessage(text, notes) {
+  const template = settings[activeProfile].promptVeredicto;
+  return renderTemplate(template, 'veredicto', text, notes, '');
+}
+
+function callGroq(msg, onOk, onErr) {
+  if(!API_KEY || !API_KEY.startsWith('gsk_')){
+    onErr('No hay clave API de Groq configurada. Pulsa "⚙ API Key" en la cabecera para introducirla.');
+    return;
+  }
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST','https://api.groq.com/openai/v1/chat/completions',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+API_KEY);
+  xhr.timeout=60000;
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState!==4) return;
+    try{
+      var data=JSON.parse(xhr.responseText);
+      if(xhr.status>=200&&xhr.status<300){
+        var txt=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'';
+        onOk(txt);
+      } else { onErr((data.error&&data.error.message)?data.error.message:'Error '+xhr.status); }
+    }catch(e){ onErr('Error al procesar la respuesta.'); }
+  };
+  xhr.ontimeout=function(){ onErr('Timeout. Inténtalo de nuevo.'); };
+  xhr.onerror=function(){ onErr('Error de red.'); };
+  xhr.send(JSON.stringify({model:MODEL,max_tokens:MAX_TOKENS,messages:[{role:'system',content:getActiveSystem()},{role:'user',content:msg}]}));
+}
+
+function analyzeText(){
+  var text=get('input-text').value.trim();
+  var notes=get('notes-text').value.trim();
+  if(!text){ showError('Introduce un texto para analizar.'); return; }
+  if(text.length<50){ showError('El fragmento es demasiado corto.'); return; }
+  var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value.trim() : '';
+  var msg = buildUserMessage(text, notes, get('analysis-type').value, instrucFrag);
+  showLoading('Analizando con Groq...'); hideError();
+  callGroq(msg, function(response){
+    hideLoading();
+    try{
+      var clean=response.replace(/`{1,3}json\s*/gi,'').replace(/`{1,3}\s*/g,'').trim();
+      var jsonStart=clean.indexOf('{'),jsonEnd=clean.lastIndexOf('}');
+      if(jsonStart!==-1&&jsonEnd!==-1) clean=clean.substring(jsonStart,jsonEnd+1);
+      var result=JSON.parse(clean);
+      currentResult={improved:result.texto_mejorado||text,report:result,original:text,name:get('fragment-name').value.trim()||('Fragmento · '+dateStr(new Date())),profile:activeProfile};
+      renderResult(currentResult);
+      autoSaveVersion();
+    }catch(e){
+      currentResult={improved:response,report:null,original:text,name:get('fragment-name').value.trim()||'Fragmento',profile:activeProfile};
+      renderPlain(response);
+      autoSaveVersion();
+    }
+  }, function(err){ hideLoading(); showError(err); });
+}
+
+function requestVerdict(){
+  var text=get('input-text').value.trim();
+  var notes=get('notes-text').value.trim();
+  if(!text){ showError('Introduce el fragmento para el veredicto.'); return; }
+  var msg = buildVeredictoMessage(text, notes);
+  showLoading('Elaborando veredicto editorial...'); hideError();
+  callGroq(msg, function(response){
+    hideLoading();
+    try{
+      var clean=response.replace(/`{1,3}json\s*/gi,'').replace(/`{1,3}\s*/g,'').trim();
+      var jsonStart=clean.indexOf('{'),jsonEnd=clean.lastIndexOf('}');
+      if(jsonStart!==-1&&jsonEnd!==-1) clean=clean.substring(jsonStart,jsonEnd+1);
+      var result=JSON.parse(clean);
+      currentResult={improved:result.texto_mejorado||text,report:result,original:text,name:get('fragment-name').value.trim()||('Veredicto · '+dateStr(new Date())),isVerdict:true,profile:activeProfile};
+      renderResult(currentResult);
+      autoSaveVersion();
+    }catch(e){
+      currentResult={improved:response,report:null,original:text,name:'Veredicto',isVerdict:true,profile:activeProfile};
+      renderPlain(response);
+      autoSaveVersion();
+    }
+  }, function(err){ hideLoading(); showError(err); });
+}
+
+function renderResult(res){
+  get('empty-result').style.display='none';
+  get('copy-bar').classList.add('visible');
+  get('pane-improved').innerHTML='<div style="margin-bottom:12px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">'+esc(res.name)+' (Perfil '+(res.profile==='narrativo'?'Narrativo':'Descriptivo')+')</div><div class="improved-text">'+esc(res.improved)+'</div>';
+  var html='';
+  if(res.report){
+    var r=res.report;
+    if(r.puntuacion){
+      html+='<div class="score-row">';
+      [{k:'estilo',l:'Estilo'},{k:'claridad',l:'Claridad'},{k:'rigor',l:'Rigor'}].forEach(function(s){
+        var v=r.puntuacion[s.k]||0;
+        html+='<div class="score-badge"><span class="score-badge-label">'+s.l+'</span><span class="score-badge-value '+(v>=8?'score-a':v>=6?'score-b':'score-c')+'">'+v+'</span></div>';
+      });
+      html+='</div>';
+    }
+    if(r.cambios_resumen) html+='<div class="report-section"><div class="report-section-title">Resumen de cambios</div><div style="font-size:13px;line-height:1.7;font-style:italic;">'+esc(r.cambios_resumen)+'</div></div>';
+    if(r.observaciones&&r.observaciones.length){
+      html+='<div class="report-section"><div class="report-section-title">Observaciones</div>';
+      r.observaciones.forEach(function(o){ html+='<div class="report-item"><span>·</span><span>'+esc(o.texto)+'</span></div>'; });
+      html+='</div>';
+    }
+  } else { html='<div style="color:var(--muted);font-style:italic;font-size:13px;">Sin informe estructurado.</div>'; }
+  get('pane-report').innerHTML=html;
+  get('pane-compare').innerHTML='<div class="report-section"><div class="report-section-title">Original → Revisado</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"><div><div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:7px;">Original</div><div style="font-size:13px;line-height:1.7;color:var(--muted);white-space:pre-wrap;">'+esc(res.original)+'</div></div><div><div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--accent2);margin-bottom:7px;">Revisado</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">'+esc(res.improved)+'</div></div></div></div>';
+  switchTab(activeTab);
+}
+
+function renderPlain(text){
+  get('empty-result').style.display='none'; get('copy-bar').classList.add('visible');
+  get('pane-improved').innerHTML='<div class="improved-text">'+esc(text)+'</div>';
+  get('pane-report').innerHTML='<div style="color:var(--muted);font-style:italic;font-size:13px;">Respuesta en texto libre.</div>';
+  get('pane-compare').innerHTML='';
+  switchTab('improved');
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.result-tab').forEach(function(btn){
+    var t=btn.getAttribute('data-tab');
+    btn.className='result-tab'+(t===tab?' active':'');
+    get('pane-'+t).style.display=t===tab?'block':'none';
+  });
+}
+
+function showLoading(msg){ get('loading-text').textContent=msg; get('loading-overlay').classList.add('visible'); get('btn-analyze').disabled=true; }
+function hideLoading(){ get('loading-overlay').classList.remove('visible'); get('btn-analyze').disabled=false; }
+function showError(msg){ var e=get('error-box'); e.textContent='⚠ '+msg; e.style.display='block'; }
+function hideError(){ get('error-box').style.display='none'; }
+function openHistory(){ renderHistoryList(); get('history-sidebar').classList.add('open'); get('sidebar-overlay').classList.add('visible'); }
+function closeHistory(){ get('history-sidebar').classList.remove('open'); get('sidebar-overlay').classList.remove('visible'); }
+function updateCharCount(){ var l=get('input-text').value.length; var el=get('char-count'); el.textContent=l+' / 4000'; el.className='char-count'+(l>3500?' warn':''); }
+
+function renderHistoryList(){
+  var list=get('history-list');
+  if(!versions.length){ list.innerHTML='<div class="history-empty">Sin versiones guardadas.</div>'; return; }
+  var html='';
+  for(var i=versions.length-1;i>=0;i--){
+    var v=versions[i];
+    html+='<div class="version-item"><div class="version-meta"><span class="version-name">'+esc(v.name)+'</span><span class="version-date">'+v.date+'</span></div><div class="version-preview">'+esc(v.original.substring(0,80))+'…</div><div class="version-actions"><button class="btn btn-ghost" onclick="loadVersion('+i+')">Cargar</button></div></div>';
+  }
+  list.innerHTML=html;
+}
+
+function autoSaveVersion(){
+  if(!currentResult) return;
+  var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value : '';
+  versions.push({name:currentResult.name,original:currentResult.original,improved:currentResult.improved,report:currentResult.report,instrucFragmento:instrucFrag,date:dateStr(new Date()),ts:Date.now(),profile:currentResult.profile});
+  saveVersions(); renderHistoryList();
+}
+
+function saveCurrentVersion(){
+  if(!currentResult) return;
+  var instrucFrag = get('instruc-fragmento') ? get('instruc-fragmento').value : '';
+  versions.push({name:currentResult.name,original:currentResult.original,improved:currentResult.improved,report:currentResult.report,instrucFragmento:instrucFrag,date:dateStr(new Date()),ts:Date.now(),profile:currentResult.profile});
+  saveVersions(); renderHistoryList();
+}
+
+function loadVersion(idx){
+  var v=versions[idx]; if(!v) return;
+  get('input-text').value=v.original; get('fragment-name').value=v.name; updateCharCount();
+  currentResult={improved:v.improved,report:v.report,original:v.original,name:v.name,profile:v.profile};
+  renderResult(currentResult); closeHistory();
+}
+
+function get(id){ return document.getElementById(id); }
+function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function dateStr(d){ var p=function(n){return n<10?'0'+n:''+n;}; return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function saveVersions(){ try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(versions)); }catch(e){} }
+function loadVersions(){ try{ var r=localStorage.getItem(STORAGE_KEY); if(r) versions=JSON.parse(r); }catch(e){ versions=[]; } }
+
+function openSettings(){ get('modal-settings').classList.add('visible'); }
+function closeSettings(){ get('modal-settings').classList.remove('visible'); }
+function openFbKeyModal(){ get('modal-fbkey').classList.add('visible'); }
+function closeFbKeyModal(){ get('modal-fbkey').classList.remove('visible'); }
+function openApiKeyModal(){ get('modal-apikey').classList.add('visible'); }
+function closeApiKeyModal(){ get('modal-apikey').classList.remove('visible'); }
+function updateKeyStatus(){
+  var ok=API_KEY&&API_KEY.startsWith('gsk_');
+  var el=get('key-status');
+  if(ok){ el.textContent='⚿ clave OK'; el.className='key-status ok'; }
+  else  { el.textContent='⚿ sin clave'; el.className='key-status missing'; }
+}
+
+window.onload = function(){
+  loadSettings();
+  loadVersions();
+  setActiveProfile('narrativo');
+  get('instruc-generales').value = getInstrucGen();
+  get('instruc-generales').addEventListener('input', saveInstrucGen);
+  updateCharCount();
+  updateKeyStatus();
+
+  get('btn-analyze').addEventListener('click', analyzeText);
+  get('btn-verdict').addEventListener('click', requestVerdict);
+  get('btn-settings').addEventListener('click', openSettings);
+  get('settings-cancel').addEventListener('click', closeSettings);
+  get('btn-history').addEventListener('click', openHistory);
+  get('btn-close-sidebar').addEventListener('click', closeHistory);
+  get('btn-api-key').addEventListener('click', openApiKeyModal);
+  get('modal-btn-cancel').addEventListener('click', closeApiKeyModal);
+  get('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
+  
+  get('btn-copy').addEventListener('click', function(){
+    if(!currentResult) return;
+    navigator.clipboard.writeText(currentResult.improved).then(function(){
+      get('copy-feedback').style.display='inline'; setTimeout(function(){ get('copy-feedback').style.display='none'; },2000);
     });
-})();
+  });
+
+  get('btn-clear-all').addEventListener('click', function(){
+    get('input-text').value=''; get('fragment-name').value=''; get('notes-text').value=''; updateCharCount();
+    currentResult=null; get('empty-result').style.display='flex'; get('copy-bar').classList.remove('visible');
+  });
+
+  get('btn-toggle-notes').addEventListener('click', function(){
+    get('notes-body').classList.toggle('open');
+  });
+
+  get('btn-toggle-instruc').addEventListener('click', function(){
+    get('instruc-body').classList.toggle('open');
+  });
+
+  document.querySelectorAll('.profile-btn').forEach(btn => {
+    btn.addEventListener('click', () => { setActiveProfile(btn.getAttribute('data-profile')); });
+  });
+
+  get('modal-btn-save').addEventListener('click', function(){
+    API_KEY = get('modal-key-input').value.trim();
+    localStorage.setItem('castroverde_api_key', API_KEY); updateKeyStatus(); closeApiKeyModal();
+  });
+  
+  get('fb-btn-save').addEventListener('click', function(){
+    FB_API_KEY = get('fb-key-input').value.trim();
+    localStorage.setItem('castroverde_fb_key', FB_API_KEY); initFirebase(FB_API_KEY); closeFbKeyModal();
+  });
+};
+
+function setActiveProfile(profile) {
+  activeProfile = profile;
+  document.querySelectorAll('.profile-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-profile') === profile);
+  });
+  get('active-profile-name').innerText = profile.charAt(0).toUpperCase() + profile.slice(1);
+}
 </script>
+</body>
+</html>
