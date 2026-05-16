@@ -134,10 +134,19 @@
     .result-badge{background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:var(--radius);font-size:8px;}
     .result-box{
       flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-      padding:16px 18px;font-size:13px;line-height:1.8;white-space:pre-wrap;
-      color:var(--text);overflow-y:scroll;font-family:var(--font-body);
+      padding:16px 18px;font-size:13px;line-height:1.8;
+      color:var(--text);overflow-y:auto;font-family:var(--font-body);
       min-height:0;cursor:text;user-select:text;
     }
+    .result-box h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
+    .result-box h4{font-family:var(--font-h);font-size:13px;font-weight:700;margin:10px 0 4px;}
+    .result-box p{margin-bottom:9px;}
+    .result-box strong{font-weight:700;color:var(--accent2);}
+    .result-box em{font-style:italic;}
+    .result-box ol,.result-box ul{margin:6px 0 10px 20px;}
+    .result-box li{margin-bottom:4px;}
+    .result-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .result-box .loading{color:var(--muted);font-style:italic;}
 
     .btn{padding:7px 13px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.2s;white-space:nowrap;}
     .btn-primary{background:var(--accent);color:var(--bg);}
@@ -504,13 +513,12 @@ function generatePrompt(idx, btnEl) {
   document.getElementById('result-badge').textContent = p.label;
   document.getElementById('result-label-text').textContent = p.name;
   const box = document.getElementById('result-box');
-  box.textContent = '… Analizando con Gemini';
+  box.innerHTML = '<span class="loading">… Analizando con Gemini</span>';
 
   callGemini(systemMsg, userMsg).then(respuesta => {
-    box.textContent = respuesta;
-    box.scrollTop = 0;
+    setResultBox(respuesta);
   }).catch(err => {
-    box.textContent = '✗ Error: ' + err.message;
+    box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
   }).finally(() => {
     document.querySelectorAll('.btn-prompt').forEach(b => { b.disabled = false; });
   });
@@ -542,13 +550,51 @@ async function callGemini(systemPrompt, userPrompt) {
   return text;
 }
 
-function mostrarResultado(label, name, text) {
+function parseMarkdown(md) {
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // Bloques
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\*\*\*\s*$/gm,'<hr>')
+    .replace(/^---\s*$/gm,'<hr>')
+    // Inline
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    // Listas numeradas
+    .replace(/^\d+\.\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ol>' + m + '</ol>')
+    // Listas con guión/asterisco
+    .replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => {
+      if (m.includes('<ol>')) return m;
+      return '<ul>' + m + '</ul>';
+    })
+    // Párrafos: líneas sueltas separadas por \n\n
+    .split(/\n{2,}/)
+    .map(block => {
+      block = block.trim();
+      if (!block) return '';
+      if (/^<(h[234]|hr|ol|ul)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g,' ') + '</p>';
+    })
+    .join('\n');
+}
+
+function setResultBox(text) {
+  const box = document.getElementById('result-box');
+  box.innerHTML = parseMarkdown(text);
+  box.scrollTop = 0;
+}
+
+function getResultBoxText() {
+  return document.getElementById('result-box').innerText;
+}
   document.getElementById('result-empty').style.display = 'none';
   document.getElementById('result-content').classList.add('visible');
   document.getElementById('result-badge').textContent = label;
   document.getElementById('result-label-text').textContent = name;
-  document.getElementById('result-box').textContent = text;
-  document.getElementById('result-box').scrollTop = 0;
+  setResultBox(text);
 }
 
 function clearAll() {
@@ -989,7 +1035,7 @@ document.getElementById('fb-btn-forget').addEventListener('click', () => {
 document.getElementById('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
 document.getElementById('modal-fbkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-fbkey')) closeFbKeyModal(); });
 document.getElementById('btn-copy-prompt').addEventListener('click', () => {
-  const text = document.getElementById('result-box').textContent;
+  const text = getResultBoxText();
   if (text) navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('btn-copy-prompt');
     const orig = btn.textContent;
