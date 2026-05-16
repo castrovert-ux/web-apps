@@ -449,6 +449,35 @@
     }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+
+    /* ── API SELECTOR ── */
+    .api-selector {
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .api-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .api-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .api-btn:hover:not(.active) { color: var(--text); }
+
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -463,7 +492,12 @@
     <small>Corrección · Edición · Fidelidad histórica</small>
   </div>
   <div class="header-right">
+    <div class="api-selector" id="api-selector">
+      <button class="api-btn active" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
+    </div>
     <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
   </div>
 </header>
 
@@ -616,6 +650,22 @@
   </div>
 </div>
 
+
+<!-- MODAL CLAVE GROQ -->
+<div class="modal-overlay" id="modal-groq">
+  <div class="modal-box">
+    <div class="modal-title">Clave Groq</div>
+    <div class="modal-sub">api.groq.com · modelo llama-3.3-70b-versatile</div>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="off">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por gsk_.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="forgetGroqKey()">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeGroqModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGroqKey()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════
 //  CLAVE GEMINI
@@ -652,6 +702,61 @@ document.getElementById('btn-gemini-key').addEventListener('click', openGeminiMo
 document.getElementById('modal-gemini').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-gemini')) closeGeminiModal();
 });
+
+
+// ══════════════════════════════════════════════════════
+//  CLAVE GROQ
+// ══════════════════════════════════════════════════════
+let GROQ_API_KEY = localStorage.getItem('castroverde_editor_groq_key') || '';
+
+function openGroqModal() {
+  document.getElementById('groq-key-input').value = GROQ_API_KEY;
+  document.getElementById('modal-groq').classList.add('visible');
+  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
+}
+function closeGroqModal() {
+  document.getElementById('modal-groq').classList.remove('visible');
+}
+function saveGroqKey() {
+  const val = document.getElementById('groq-key-input').value.trim();
+  if (!val || !val.startsWith('gsk_')) {
+    showStatus('err', 'La clave de Groq debe empezar por gsk_');
+    return;
+  }
+  GROQ_API_KEY = val;
+  localStorage.setItem('castroverde_editor_groq_key', val);
+  closeGroqModal();
+  showStatus('ok', '✓ Clave Groq guardada');
+}
+function forgetGroqKey() {
+  if (!confirm('¿Borrar la clave de Groq?')) return;
+  GROQ_API_KEY = '';
+  localStorage.removeItem('castroverde_editor_groq_key');
+  document.getElementById('groq-key-input').value = '';
+  closeGroqModal();
+}
+document.getElementById('btn-groq-key').addEventListener('click', openGroqModal);
+document.getElementById('modal-groq').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-groq')) closeGroqModal();
+});
+
+// ══════════════════════════════════════════════════════
+//  SELECTOR DE API
+// ══════════════════════════════════════════════════════
+let activeApi = localStorage.getItem('castroverde_editor_api') || 'gemini';
+
+function setApi(api) {
+  activeApi = api;
+  localStorage.setItem('castroverde_editor_api', api);
+  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
+  document.getElementById('btn-gemini-key').style.display = api === 'gemini' ? '' : 'none';
+  document.getElementById('btn-groq-key').style.display  = api === 'groq'   ? '' : 'none';
+  // Actualizar subtítulo del modal de prompt
+  const sub = document.querySelector('#modal-prompt .modal-sub');
+  if (sub) sub.textContent = api === 'gemini'
+    ? 'System prompt + mensaje de usuario enviado a Gemini'
+    : 'System prompt + mensaje de usuario enviado a Groq';
+}
 
 // ══════════════════════════════════════════════════════
 //  STATUS BAR
@@ -875,8 +980,13 @@ o
 y en ese caso lista brevemente qué se ha perdido.`;
 
 // ══════════════════════════════════════════════════════
-//  GEMINI API CALL
+//  API CALL (Gemini o Groq según selector)
 // ══════════════════════════════════════════════════════
+async function callAPI(systemPrompt, userPrompt) {
+  if (activeApi === 'groq') return callGroq(systemPrompt, userPrompt);
+  return callGemini(systemPrompt, userPrompt);
+}
+
 async function callGemini(systemPrompt, userPrompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   const body = {
@@ -895,20 +1005,45 @@ async function callGemini(systemPrompt, userPrompt) {
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error?.message || 'Error ' + resp.status);
+    throw new Error(err.error?.message || 'Error Gemini ' + resp.status);
   }
   const data = await resp.json();
-  console.log('[Gemini raw]', JSON.stringify(data).substring(0, 400));
   const candidate = data.candidates?.[0];
   const finishReason = candidate?.finishReason;
   const parts = candidate?.content?.parts || [];
-  // Primero intentamos excluir thought; si queda vacío, tomamos todos los parts con texto
   let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
   if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
   if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
   if (finishReason && finishReason !== 'STOP') {
     return text + '\n\n⚠ Respuesta truncada (finishReason: ' + finishReason + ')';
   }
+  return text;
+}
+
+async function callGroq(systemPrompt, userPrompt) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + GROQ_API_KEY
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 8192,
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt }
+      ]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Groq ' + resp.status);
+  }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Groq');
   return text;
 }
 
@@ -923,7 +1058,12 @@ let step3Result = '';   // raw text de fidelidad
 //  VALIDACIÓN
 // ══════════════════════════════════════════════════════
 function checkKey() {
-  if (!GEMINI_API_KEY) {
+  if (activeApi === 'groq' && !GROQ_API_KEY) {
+    showStatus('err', 'Introduce primero la clave de Groq.');
+    setTimeout(openGroqModal, 700);
+    return false;
+  }
+  if (activeApi === 'gemini' && !GEMINI_API_KEY) {
     showStatus('err', 'Introduce primero la clave de Gemini.');
     setTimeout(openGeminiModal, 700);
     return false;
@@ -1000,7 +1140,7 @@ async function runStep1() {
   try {
     const user1 = 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""';
     step1Prompt = buildFullPrompt(PROMPT_1_SYSTEM, user1);
-    const result = await callGemini(PROMPT_1_SYSTEM, user1);
+    const result = await callAPI(PROMPT_1_SYSTEM, user1);
     step1Result = result.trim();
     setResultText(1, step1Result);
     setDot(1, 'done');
@@ -1041,7 +1181,7 @@ async function runStep2() {
   try {
     const user2 = 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""';
     step2Prompt = buildFullPrompt(PROMPT_2_SYSTEM, user2);
-    const result = await callGemini(PROMPT_2_SYSTEM, user2);
+    const result = await callAPI(PROMPT_2_SYSTEM, user2);
     step2Result = result.trim();
     setResultText(2, step2Result);
     setDot(2, 'done');
@@ -1085,7 +1225,7 @@ async function runStep3() {
   step3Prompt = buildFullPrompt(PROMPT_3_SYSTEM, userMsg);
 
   try {
-    const result = await callGemini(PROMPT_3_SYSTEM, userMsg);
+    const result = await callAPI(PROMPT_3_SYSTEM, userMsg);
     step3Result = result.trim();
     setFidelidadResult(step3Result);
     setDot(3, 'done');
@@ -1172,7 +1312,9 @@ document.getElementById('modal-prompt').addEventListener('click', e => {
 // ══════════════════════════════════════════════════════
 updateCount();
 updateNavButtons();
-if (!GEMINI_API_KEY) setTimeout(openGeminiModal, 500);
+setApi(activeApi);
+if (activeApi === 'gemini' && !GEMINI_API_KEY) setTimeout(openGeminiModal, 500);
+if (activeApi === 'groq'   && !GROQ_API_KEY)   setTimeout(openGroqModal,   500);
 </script>
 </body>
 </html>
