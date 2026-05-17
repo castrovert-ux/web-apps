@@ -555,11 +555,6 @@
         <span class="step-num">5</span>
         Pulido final
       </button>
-      <span class="step-arrow">→</span>
-      <button class="step-btn" id="btn-step6" onclick="runStep6()" disabled>
-        <span class="step-num">6</span>
-        Análisis final
-      </button>
       <div class="steps-bar-right">
         <button class="btn btn-ghost" id="btn-prev" onclick="navStep(-1)" style="font-size:11px;padding:5px 10px;" title="Paso anterior">←</button>
         <button class="btn btn-ghost" id="btn-next" onclick="navStep(+1)" style="font-size:11px;padding:5px 10px;" title="Paso siguiente">→</button>
@@ -588,10 +583,6 @@
       <button class="tab" id="tab-5" onclick="switchTab(5)">
         <span class="tab-dot" id="dot-5"></span>
         Paso 5 · Pulido
-      </button>
-      <button class="tab" id="tab-6" onclick="switchTab(6)">
-        <span class="tab-dot" id="dot-6"></span>
-        Paso 6 · Análisis
       </button>
     </div>
 
@@ -669,20 +660,6 @@
         </div>
       </div>
 
-      <!-- Panel 6 -->
-      <div class="tab-panel" id="panel-6">
-        <div class="panel-row">
-          <span class="panel-label">Análisis comparativo — Original vs. resultado final (Paso 5)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-6" onclick="showPrompt(6)" disabled>Ver prompt</button>
-            <button class="btn btn-copy" id="copy-report-6" onclick="copyReport6()" disabled>Copiar informe</button>
-          </div>
-        </div>
-        <div class="result-box" id="result-6" style="flex:1;overflow-y:auto;">
-          <span class="empty-msg">El Paso 6 compara el texto original con el resultado final del Paso 5.</span>
-        </div>
-      </div>
-
     </div><!-- /tab-panels -->
   </div><!-- /panel-right -->
 </div><!-- /main -->
@@ -702,7 +679,6 @@
       <button class="api-btn" id="pcfg-tab-3" onclick="switchPromptTab(3)">3 · Fidelidad</button>
       <button class="api-btn" id="pcfg-tab-4" onclick="switchPromptTab(4)">4 · Coherencia</button>
       <button class="api-btn" id="pcfg-tab-5" onclick="switchPromptTab(5)">5 · Pulido final</button>
-      <button class="api-btn" id="pcfg-tab-6" onclick="switchPromptTab(6)">6 · Análisis</button>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -882,7 +858,7 @@ function closeStatus() { document.getElementById('status-bar').className = ''; }
 let activeTab = 1;
 function switchTab(n) {
   activeTab = n;
-  [1,2,3,4,5,6].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     document.getElementById('tab-' + i).classList.toggle('active', i === n);
     document.getElementById('panel-' + i).classList.toggle('active', i === n);
   });
@@ -929,12 +905,11 @@ function clearAll() {
   document.getElementById('btn-step3').disabled = true;
   document.getElementById('copy-1').disabled = true;
   document.getElementById('copy-2').disabled = true;
-  step1Result = ''; step2Result = ''; step3Result = ''; step4Result = ''; step5Result = ''; step6Result = '';
-  step1Prompt = ''; step2Prompt = ''; step3Prompt = ''; step4Prompt = ''; step5Prompt = ''; step6Prompt = '';
+  step1Result = ''; step2Result = ''; step3Result = ''; step4Result = ''; step5Result = '';
+  step1Prompt = ''; step2Prompt = ''; step3Prompt = ''; step4Prompt = ''; step5Prompt = '';
   ['show-prompt-1','show-prompt-2','show-prompt-3','show-prompt-4','show-prompt-5'].forEach(id => { document.getElementById(id).disabled = true; });
   ['copy-4','copy-5'].forEach(id => { document.getElementById(id).disabled = true; });
-  [4,5,6].forEach(i => { setResultEmpty(i); setDot(i,''); });
-  ['show-prompt-6','copy-report-6'].forEach(id => { const el=document.getElementById(id); if(el) el.disabled=true; });
+  [4,5].forEach(i => { setResultEmpty(i); setDot(i,''); });
 }
 
 // ══════════════════════════════════════════════════════
@@ -945,8 +920,7 @@ const EMPTY_MSGS = {
   2: 'El Paso 2 tomará el resultado del Paso 1 como entrada.',
   3: 'El Paso 3 compara el texto original con el resultado del Paso 2.',
   4: 'El Paso 4 toma el resultado del Paso 2 como entrada.',
-  5: 'El Paso 5 toma el resultado del Paso 4 como entrada.',
-  6: 'El Paso 6 compara el texto original con el resultado final del Paso 5.'
+  5: 'El Paso 5 toma el resultado del Paso 4 como entrada.'
 };
 function setResultEmpty(n) {
   const box = document.getElementById('result-' + n);
@@ -1193,7 +1167,6 @@ let step2Result = '';
 let step3Result = '';   // raw text de fidelidad
 let step4Result = '';
 let step5Result = '';
-let step6Result = '';
 
 // ══════════════════════════════════════════════════════
 //  VALIDACIÓN
@@ -1217,7 +1190,7 @@ function checkKey() {
 // ══════════════════════════════════════════════════════
 function navStep(delta) {
   const target = activeTab + delta;
-  if (target < 1 || target > 6) return;
+  if (target < 1 || target > 5) return;
 
   // Al avanzar, ejecutar el paso si no tiene resultado aún
   if (delta > 0) {
@@ -1225,7 +1198,6 @@ function navStep(delta) {
     if (target === 3) { runStep3(); return; }
     if (target === 4) { runStep4(); return; }
     if (target === 5) { runStep5(); return; }
-    if (target === 6) { runStep6(); return; }
   }
 
   // Al retroceder (o avanzar con caché), solo mostrar
@@ -1235,14 +1207,14 @@ function navStep(delta) {
 
 function updateNavButtons() {
   document.getElementById('btn-prev').disabled = (activeTab === 1);
-  document.getElementById('btn-next').disabled = (activeTab === 6);
+  document.getElementById('btn-next').disabled = (activeTab === 5);
 }
 
 // ══════════════════════════════════════════════════════
 //  BLOQUEO GLOBAL durante llamadas
 // ══════════════════════════════════════════════════════
 function lockUI(on) {
-  ['btn-step1','btn-step2','btn-step3','btn-step4','btn-step5','btn-step6','btn-run-all','btn-prev','btn-next']
+  ['btn-step1','btn-step2','btn-step3','btn-step4','btn-step5','btn-run-all','btn-prev','btn-next']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.disabled = on ? true : false;
@@ -1255,87 +1227,8 @@ function restoreStepButtons() {
   document.getElementById('btn-step3').disabled = !step2Result;
   document.getElementById('btn-step4').disabled = !step2Result;
   document.getElementById('btn-step5').disabled = !step4Result;
-  document.getElementById('btn-step6').disabled = !step5Result;
   updateNavButtons();
 }
-
-const PROMPT_6_SYSTEM = `ROL
-Eres un analista textual especializado en edición de textos históricos. Comparas dos versiones de un mismo texto: una versión original y una versión editada.
-
-OBJETIVO
-Detectar con precisión cualquier cambio de significado, pérdida de información, alteración de matiz histórico, modificación de certeza o cambio en la estructura informativa entre ambas versiones.
-
-ENTRADAS
-Te proporcionaré:
-- TEXTO ORIGINAL
-- TEXTO EDITADO (resultado final tras cinco pasadas de edición)
-
-RESTRICCIÓN FUNDAMENTAL
-No debes reescribir los textos. No debes proponer mejoras. No debes "corregir" el texto editado.
-Solo comparar.
-
-QUÉ DEBES DETECTAR
-Debes identificar y listar de forma clara:
-
-1. Pérdida de información
-Elementos presentes en el original que han desaparecido o se han debilitado.
-
-2. Añadidos no presentes en el original
-Cualquier matiz, explicación o inferencia nueva introducida en el texto editado.
-
-3. Cambios de significado
-Frases donde el sentido ha sido modificado aunque parezca similar.
-
-4. Cambios de grado de certeza
-Alteraciones en:
-- hipótesis a afirmación
-- duda a seguridad
-- posibilidad a causalidad directa
-
-5. Cambios de causalidad
-Si una relación débil o sugerida se convierte en causa directa (o al revés).
-
-6. Cambios de jerarquía informativa
-Si algún dato pierde importancia o se reordena de forma que cambia su peso relativo.
-
-7. Simplificaciones con pérdida de matiz
-Reducciones que eliminan precisión histórica, geográfica o contextual.
-
-QUÉ NO DEBES HACER
-- No editar ninguno de los textos
-- No reescribir versiones alternativas
-- No juzgar estilo literario
-- No valorar "mejor o peor"
-- No introducir conocimiento externo
-
-FORMATO DE SALIDA
-Estructura la respuesta exactamente así:
-
-RESUMEN GENERAL
-[Breve diagnóstico global, 2-4 líneas]
-
-CAMBIOS DETECTADOS
-
-1. Pérdida de información
-[lista de items o "Ninguna detectada"]
-
-2. Añadidos no presentes en el original
-[lista de items o "Ninguno detectado"]
-
-3. Cambios de significado
-[lista de items o "Ninguno detectado"]
-
-4. Cambios de certeza o modalidad
-[lista de items o "Ninguno detectado"]
-
-5. Cambios de causalidad
-[lista de items o "Ninguno detectado"]
-
-6. Cambios de jerarquía informativa
-[lista de items o "Ninguno detectado"]
-
-7. Simplificaciones con pérdida de matiz
-[lista de items o "Ninguna detectada"]`;
 
 const PROMPT_4_SYSTEM = `=== SYSTEM PROMPT ===
 
@@ -1626,97 +1519,6 @@ async function runStep5() {
 }
 
 // ══════════════════════════════════════════════════════
-//  PASO 6
-// ══════════════════════════════════════════════════════
-async function runStep6() {
-  if (!step5Result) { showStatus('err', 'Ejecuta el Paso 5 primero.'); return; }
-
-  if (step6Result) {
-    renderReport6(step6Result);
-    switchTab(6);
-    updateNavButtons();
-    return;
-  }
-
-  const textoOriginal = document.getElementById('input-text').value.trim();
-  if (!textoOriginal) { showStatus('err', 'No hay texto original.'); return; }
-  if (!checkKey()) return;
-
-  lockUI(true);
-  setDot(6, 'running');
-  switchTab(6);
-  document.getElementById('result-6').innerHTML = '<span class="loading-msg">… Analizando diferencias entre original y texto final…</span>';
-
-  const userMsg6 = `TEXTO ORIGINAL:\n"""\n${textoOriginal}\n"""\n\nTEXTO EDITADO:\n"""\n${step5Result}\n"""`;
-  const P6 = getPrompt(6);
-  step6Prompt = buildFullPrompt(P6, userMsg6);
-
-  try {
-    const result = await callAPI(P6, userMsg6);
-    step6Result = result.trim();
-    renderReport6(step6Result);
-    setDot(6, 'done');
-    document.getElementById('show-prompt-6').disabled = false;
-    document.getElementById('copy-report-6').disabled = false;
-    showStatus('ok', '✓ Análisis final completado');
-  } catch(e) {
-    document.getElementById('result-6').innerHTML = '<span class="error-msg">✗ ' + e.message + '</span>';
-    setDot(6, '');
-    showStatus('err', 'Error en Paso 6: ' + e.message);
-  } finally {
-    lockUI(false);
-  }
-}
-
-function renderReport6(text) {
-  const box = document.getElementById('result-6');
-  if (!text.trim()) { box.innerHTML = '<span class="error-msg">Respuesta vacía.</span>'; return; }
-
-  const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const lines = text.split('\n');
-  let html = '';
-
-  for (const line of lines) {
-    const t = line.trim();
-    if (!t) { html += '<div style="height:8px;"></div>'; continue; }
-
-    // Sección principal (RESUMEN GENERAL, CAMBIOS DETECTADOS)
-    if (/^(RESUMEN GENERAL|CAMBIOS DETECTADOS)$/i.test(t)) {
-      html += `<div style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:14px 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px;">${escape(t)}</div>`;
-    }
-    // Subsección numerada (1. Pérdida de información, etc.)
-    else if (/^\d+\.\s/.test(t)) {
-      html += `<div style="font-family:var(--font-ui);font-size:10px;font-weight:500;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:1px;">${escape(t)}</div>`;
-    }
-    // Item de lista
-    else if (t.startsWith('- ') || t.startsWith('* ') || t.startsWith('• ')) {
-      const item = t.slice(2);
-      html += `<div style="padding:3px 0 3px 14px;border-left:2px solid var(--border);margin:3px 0;font-size:13px;line-height:1.6;">${escape(item)}</div>`;
-    }
-    // "Ninguna detectada" etc.
-    else if (/^ningún|^ninguna/i.test(t)) {
-      html += `<div style="color:var(--green);font-style:italic;font-size:12px;padding:2px 0 2px 14px;">${escape(t)}</div>`;
-    }
-    // Párrafo normal (resumen)
-    else {
-      html += `<div style="font-size:13px;line-height:1.75;margin:3px 0;">${escape(t)}</div>`;
-    }
-  }
-  box.innerHTML = html;
-}
-
-function copyReport6() {
-  if (!step6Result) return;
-  navigator.clipboard.writeText(step6Result).then(() => {
-    const btn = document.getElementById('copy-report-6');
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiado';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
-  });
-}
-
-// ══════════════════════════════════════════════════════
 //  TODO EN CADENA
 // ══════════════════════════════════════════════════════
 async function runAll() {
@@ -1728,8 +1530,6 @@ async function runAll() {
   await runStep4();
   if (!step4Result) return;
   await runStep5();
-  if (!step5Result) return;
-  await runStep6();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1763,14 +1563,13 @@ function initDefaultPrompts() {
   DEFAULT_PROMPTS[3] = PROMPT_3_SYSTEM;
   DEFAULT_PROMPTS[4] = PROMPT_4_SYSTEM;
   DEFAULT_PROMPTS[5] = PROMPT_5_SYSTEM;
-  DEFAULT_PROMPTS[6] = PROMPT_6_SYSTEM;
 }
 
 // Prompts activos (pueden ser editados)
 const ACTIVE_PROMPTS = {};
 
 function loadActivePrompts() {
-  [1,2,3,4,5,6].forEach(n => {
+  [1,2,3,4,5].forEach(n => {
     const saved = localStorage.getItem('castroverde_prompt_' + n);
     ACTIVE_PROMPTS[n] = saved || DEFAULT_PROMPTS[n];
   });
@@ -1799,10 +1598,10 @@ function switchPromptTab(n) {
 }
 
 function renderPromptTab(n) {
-  [1,2,3,4,5,6].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     document.getElementById('pcfg-tab-' + i).classList.toggle('active', i === n);
   });
-  const labels = {1:'Paso 1 · Corrección previa', 2:'Paso 2 · Edición literaria', 3:'Paso 3 · Fidelidad histórica', 4:'Paso 4 · Pulido coherencia', 5:'Paso 5 · Pulido final', 6:'Paso 6 · Análisis comparativo final'};
+  const labels = {1:'Paso 1 · Corrección previa', 2:'Paso 2 · Edición literaria', 3:'Paso 3 · Fidelidad histórica', 4:'Paso 4 · Pulido coherencia', 5:'Paso 5 · Pulido final'};
   document.getElementById('pcfg-label').textContent = labels[n];
   document.getElementById('pcfg-textarea').value = ACTIVE_PROMPTS[n];
 }
@@ -1816,7 +1615,7 @@ function restoreDefaultPrompt() {
 function savePromptConfig() {
   // Guardar el textarea actual también
   ACTIVE_PROMPTS[currentPromptTab] = document.getElementById('pcfg-textarea').value;
-  [1,2,3,4,5,6].forEach(n => {
+  [1,2,3,4,5].forEach(n => {
     const val = ACTIVE_PROMPTS[n].trim();
     if (val && val !== DEFAULT_PROMPTS[n]) {
       localStorage.setItem('castroverde_prompt_' + n, val);
@@ -1840,15 +1639,14 @@ let step2Prompt = '';
 let step3Prompt = '';
 let step4Prompt = '';
 let step5Prompt = '';
-let step6Prompt = '';
 
 function buildFullPrompt(systemPrompt, userPrompt) {
   return '=== SYSTEM ===\n' + systemPrompt + '\n\n=== USER ===\n' + userPrompt;
 }
 
 function showPrompt(n) {
-  const prompts = { 1: step1Prompt, 2: step2Prompt, 3: step3Prompt, 4: step4Prompt, 5: step5Prompt, 6: step6Prompt };
-  const titles  = { 1: 'Prompt Paso 1 · Corrección', 2: 'Prompt Paso 2 · Edición', 3: 'Prompt Paso 3 · Fidelidad', 4: 'Prompt Paso 4 · Coherencia', 5: 'Prompt Paso 5 · Pulido final', 6: 'Prompt Paso 6 · Análisis final' };
+  const prompts = { 1: step1Prompt, 2: step2Prompt, 3: step3Prompt, 4: step4Prompt, 5: step5Prompt };
+  const titles  = { 1: 'Prompt Paso 1 · Corrección', 2: 'Prompt Paso 2 · Edición', 3: 'Prompt Paso 3 · Fidelidad', 4: 'Prompt Paso 4 · Coherencia', 5: 'Prompt Paso 5 · Pulido final' };
   const text = prompts[n];
   if (!text) return;
   document.getElementById('modal-prompt-title').textContent = titles[n];
