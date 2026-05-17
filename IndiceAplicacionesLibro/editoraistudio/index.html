@@ -498,6 +498,7 @@
     </div>
     <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
     <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-prompts" onclick="openPromptsModal()" style="border-color:rgba(139,90,43,.4);color:#c8a87a;">✎ Prompts</button>
   </div>
 </header>
 
@@ -663,6 +664,40 @@
   </div><!-- /panel-right -->
 </div><!-- /main -->
 
+
+
+<!-- MODAL CONFIGURACIÓN PROMPTS -->
+<div class="modal-overlay" id="modal-prompts-config">
+  <div class="modal-box" style="width:780px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-title">Configuración de prompts</div>
+    <div class="modal-sub">Los cambios se guardan en localStorage. Los prompts por defecto se restauran con el botón correspondiente.</div>
+
+    <!-- Selector de paso -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="api-btn active" id="pcfg-tab-1" onclick="switchPromptTab(1)">1 · Corrección</button>
+      <button class="api-btn" id="pcfg-tab-2" onclick="switchPromptTab(2)">2 · Edición</button>
+      <button class="api-btn" id="pcfg-tab-3" onclick="switchPromptTab(3)">3 · Fidelidad</button>
+      <button class="api-btn" id="pcfg-tab-4" onclick="switchPromptTab(4)">4 · Coherencia</button>
+      <button class="api-btn" id="pcfg-tab-5" onclick="switchPromptTab(5)">5 · Pulido final</button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span id="pcfg-label" style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">System prompt activo</span>
+      <button class="btn btn-ghost" onclick="restoreDefaultPrompt()" style="font-size:9px;padding:4px 10px;">↺ Restaurar por defecto</button>
+    </div>
+
+    <textarea id="pcfg-textarea"
+      style="flex:1;min-height:340px;background:var(--bg);border:1px solid var(--border);
+             color:var(--text);padding:10px 12px;font-family:var(--font-ui);font-size:11px;
+             line-height:1.65;border-radius:var(--radius);outline:none;resize:none;
+             overflow-y:auto;"></textarea>
+
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closePromptsModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePromptConfig()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL PROMPT -->
 <div class="modal-overlay" id="modal-prompt">
@@ -956,52 +991,79 @@ const PROMPT_2_SYSTEM = `ROL
 Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato". No eres el autor.
 
 OBJETIVO
-Mejorar la claridad, fluidez y estructura del texto, manteniendo fielmente su contenido, significado y voz original.
+Mejorar la claridad, fluidez y estructura del texto, manteniendo fielmente su contenido, significado, jerarquía informativa y voz original.
 
 RESTRICCIÓN ABSOLUTA
-No añadir información nueva bajo ninguna circunstancia. No inventar hechos, interpretaciones, matices, contexto ni explicaciones implícitas. No ampliar el significado del texto.
+No añadir información nueva bajo ninguna circunstancia.
+No inventar hechos, interpretaciones, matices, contexto ni explicaciones implícitas.
+No ampliar ni reducir el significado del texto.
+
+INVARIANTES EDITORIALES (OBLIGATORIOS)
+Debes respetar siempre:
+- Orden de los hechos y su secuencia interna
+- Jerarquía de la información dentro de cada frase
+- Grado de certeza histórica (posibilidad, duda, hipótesis, afirmación)
+- Información geográfica y espacial completa
+- Tono sobrio y documental
+- Nivel de detalle original
 
 PRINCIPIO EDITORIAL
-El texto puede ajustarse solo a nivel local (frases y párrafos).
+El texto puede ajustarse solo a nivel local (frases y párrafos). No se permite reestructuración global ni reconstrucción del texto bajo ningún concepto.
+
 QUÉ PUEDES HACER
 - Corregir ortografía, puntuación y gramática
 - Dividir frases largas si dificultan la lectura
-- Reordenar frases dentro de un mismo párrafo solo si es estrictamente necesario para evitar ambigüedad o mejorar la comprensión inmediata, sin alterar el énfasis original.
-- Unir frases cortas si mejora la continuidad
-- Reducir repeticiones claras
-- Simplificar estructuras sintácticas densas sin cambiar el significado
-- Introducir transiciones solo si son estrictamente necesarias para evitar ambigüedad inmediata y no modificar el orden lógico del texto original.
+- Reordenar frases dentro de un mismo párrafo solo si es estrictamente necesario para evitar ambigüedad inmediata, sin alterar el énfasis ni la jerarquía informativa original
+- Unir frases cortas si mejora la continuidad sin eliminar información
+- Reducir repeticiones claras de expresión (no de contenido)
+- Simplificar estructuras sintácticas densas solo si afectan a la comprensión literal
+- Introducir transiciones solo si son imprescindibles para resolver ambigüedad inmediata y ya están implícitas en el texto
+
+PROTECCIONES CRÍTICAS (NO NEGOCIABLES)
+
+1. Protección de jerarquía informativa
+No se puede eliminar, degradar ni reinterpretar información geográfica, espacial o contextual aunque parezca redundante.
+
+2. Protección de modalidad histórica (certeza)
+No se puede modificar el grado de certeza del texto.
+Esto incluye no transformar:
+- hipótesis en afirmaciones
+- prudencia en seguridad
+- relaciones débiles en causales directas
+- ni viceversa
+
+3. Protección de causalidad histórica
+No se puede cambiar el nivel de relación causal expresado en el texto.
+Expresiones de posibilidad, influencia o relación indirecta deben mantenerse exactamente en su grado de incertidumbre.
+
 QUÉ NO DEBES HACER
 - No reinterpretar el contenido
-- No modernizar el lenguaje si altera matiz histórico
+- No modernizar el lenguaje si altera el matiz histórico
 - No embellecer ni literaturizar el estilo
 - No añadir contexto, explicaciones ni inferencias
-- No se permite reestructuración global ni reconstrucción del texto bajo ningún concepto.
-
-VOZ Y ESTILO
-Mantén la voz original del autor. El resultado debe seguir sonando como un borrador histórico real, no como una reescritura académica o literaria.
+- No reescribir el texto como si fuera nuevo
+- No reorganizar globalmente el contenido
+- No simplificar eliminando información
+- No alterar el grado de certeza o causalidad
 
 CONTROL DE CONECTORES Y TRANSICIONES
-Utiliza conectores de forma mínima y natural. Evita sobreestructurar el texto con marcadores explícitos de orden o contraste.
-
-QUÉ EVITAR
+- Utilizar conectores de forma mínima y funcional
+- Evitar sobreestructuración del texto
+- Mantener transiciones implícitas cuando ya estén sugeridas
+- Usar conectores solo si son estrictamente necesarios para evitar ambigüedad inmediata
+Evitar especialmente:
 - "en cambio"
-- "sin embargo" cuando no sea estrictamente necesario
+- "sin embargo" salvo necesidad clara
 - "en aquel contexto"
-- "por otro lado" como recurso sistemático
-- conectores añadidos solo para mejorar fluidez estilística
-
-QUÉ HACER EN SU LUGAR
-- Mantener transiciones implícitas cuando el orden del texto ya las sugiere
-- Usar conectores solo si son imprescindibles para evitar ambigüedad
-- Priorizar la continuidad natural entre frases sin marcarla excesivamente
+- "por otro lado" como recurso estilístico
+- conectores añadidos solo por fluidez
 
 PRINCIPIO CLAVE
 El texto debe leerse como un desarrollo natural de ideas históricas, no como un texto reorganizado por un editor moderno.
 
 FORMATO DE SALIDA (OBLIGATORIO)
 Devuelve únicamente el texto reescrito.
-No incluyas explicaciones, diagnósticos, resúmenes ni comentarios.`;
+No incluyas explicaciones, diagnósticos, resúmenes ni comentarios.`
 
 const PROMPT_3_SYSTEM = `ROL
 Eres un revisor de fidelidad histórica textual.
@@ -1270,9 +1332,9 @@ async function runStep1() {
   document.getElementById('copy-1').disabled = true;
 
   try {
-    const user1 = 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""';
-    step1Prompt = buildFullPrompt(PROMPT_1_SYSTEM, user1);
-    const result = await callAPI(PROMPT_1_SYSTEM, user1);
+    const user1 = 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""'; const P1 = getPrompt(1);
+    step1Prompt = buildFullPrompt(P1, user1);
+    const result = await callAPI(P1, user1);
     step1Result = result.trim();
     setResultText(1, step1Result);
     setDot(1, 'done');
@@ -1311,9 +1373,9 @@ async function runStep2() {
   document.getElementById('copy-2').disabled = true;
 
   try {
-    const user2 = 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""';
-    step2Prompt = buildFullPrompt(PROMPT_2_SYSTEM, user2);
-    const result = await callAPI(PROMPT_2_SYSTEM, user2);
+    const user2 = 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""'; const P2 = getPrompt(2);
+    step2Prompt = buildFullPrompt(P2, user2);
+    const result = await callAPI(P2, user2);
     step2Result = result.trim();
     setResultText(2, step2Result);
     setDot(2, 'done');
@@ -1354,10 +1416,11 @@ async function runStep3() {
   document.getElementById('result-3').innerHTML = '<span class="loading-msg">… Revisando fidelidad histórica con Gemini…</span>';
 
   const userMsg = `TEXTO ORIGINAL:\n"""\n${textoOriginal}\n"""\n\nTEXTO EDITADO:\n"""\n${step2Result}\n"""`;
-  step3Prompt = buildFullPrompt(PROMPT_3_SYSTEM, userMsg);
+  const P3 = getPrompt(3);
+  step3Prompt = buildFullPrompt(P3, userMsg);
 
   try {
-    const result = await callAPI(PROMPT_3_SYSTEM, userMsg);
+    const result = await callAPI(P3, userMsg);
     step3Result = result.trim();
     setFidelidadResult(step3Result);
     setDot(3, 'done');
@@ -1395,8 +1458,9 @@ async function runStep4() {
 
   try {
     const user4 = `Revisa el siguiente texto:\n\n"""\n` + step2Result + `\n"""`;
-    step4Prompt = buildFullPrompt(PROMPT_4_SYSTEM, user4);
-    const result = await callAPI(PROMPT_4_SYSTEM, user4);
+    const P4 = getPrompt(4);
+    step4Prompt = buildFullPrompt(P4, user4);
+    const result = await callAPI(P4, user4);
     step4Result = result.trim();
     setResultText(4, step4Result);
     setDot(4, 'done');
@@ -1436,8 +1500,9 @@ async function runStep5() {
 
   try {
     const user5 = `Aplica el pulido final al siguiente texto:\n\n"""\n` + step4Result + `\n"""`;
-    step5Prompt = buildFullPrompt(PROMPT_5_SYSTEM, user5);
-    const result = await callAPI(PROMPT_5_SYSTEM, user5);
+    const P5 = getPrompt(5);
+    step5Prompt = buildFullPrompt(P5, user5);
+    const result = await callAPI(P5, user5);
     step5Result = result.trim();
     setResultText(5, step5Result);
     setDot(5, 'done');
@@ -1484,6 +1549,88 @@ function copyResult(n) {
 }
 
 
+
+// ══════════════════════════════════════════════════════
+//  PROMPTS CONFIGURABLES (localStorage)
+// ══════════════════════════════════════════════════════
+
+// Prompts por defecto (referencia inmutable)
+const DEFAULT_PROMPTS = {};
+
+function initDefaultPrompts() {
+  DEFAULT_PROMPTS[1] = PROMPT_1_SYSTEM;
+  DEFAULT_PROMPTS[2] = PROMPT_2_SYSTEM;
+  DEFAULT_PROMPTS[3] = PROMPT_3_SYSTEM;
+  DEFAULT_PROMPTS[4] = PROMPT_4_SYSTEM;
+  DEFAULT_PROMPTS[5] = PROMPT_5_SYSTEM;
+}
+
+// Prompts activos (pueden ser editados)
+const ACTIVE_PROMPTS = {};
+
+function loadActivePrompts() {
+  [1,2,3,4,5].forEach(n => {
+    const saved = localStorage.getItem('castroverde_prompt_' + n);
+    ACTIVE_PROMPTS[n] = saved || DEFAULT_PROMPTS[n];
+  });
+}
+
+function getPrompt(n) { return ACTIVE_PROMPTS[n]; }
+
+// ── Modal de configuración ───────────────────────────
+let currentPromptTab = 1;
+
+function openPromptsModal() {
+  currentPromptTab = 1;
+  renderPromptTab(1);
+  document.getElementById('modal-prompts-config').classList.add('visible');
+}
+
+function closePromptsModal() {
+  document.getElementById('modal-prompts-config').classList.remove('visible');
+}
+
+function switchPromptTab(n) {
+  // Guardar el textarea actual antes de cambiar
+  ACTIVE_PROMPTS[currentPromptTab] = document.getElementById('pcfg-textarea').value;
+  currentPromptTab = n;
+  renderPromptTab(n);
+}
+
+function renderPromptTab(n) {
+  [1,2,3,4,5].forEach(i => {
+    document.getElementById('pcfg-tab-' + i).classList.toggle('active', i === n);
+  });
+  const labels = {1:'Paso 1 · Corrección previa', 2:'Paso 2 · Edición literaria', 3:'Paso 3 · Fidelidad histórica', 4:'Paso 4 · Pulido coherencia', 5:'Paso 5 · Pulido final'};
+  document.getElementById('pcfg-label').textContent = labels[n];
+  document.getElementById('pcfg-textarea').value = ACTIVE_PROMPTS[n];
+}
+
+function restoreDefaultPrompt() {
+  if (!confirm('¿Restaurar el prompt por defecto para este paso? Se perderán los cambios no guardados.')) return;
+  ACTIVE_PROMPTS[currentPromptTab] = DEFAULT_PROMPTS[currentPromptTab];
+  document.getElementById('pcfg-textarea').value = DEFAULT_PROMPTS[currentPromptTab];
+}
+
+function savePromptConfig() {
+  // Guardar el textarea actual también
+  ACTIVE_PROMPTS[currentPromptTab] = document.getElementById('pcfg-textarea').value;
+  [1,2,3,4,5].forEach(n => {
+    const val = ACTIVE_PROMPTS[n].trim();
+    if (val && val !== DEFAULT_PROMPTS[n]) {
+      localStorage.setItem('castroverde_prompt_' + n, val);
+    } else {
+      localStorage.removeItem('castroverde_prompt_' + n);
+    }
+  });
+  closePromptsModal();
+  showStatus('ok', '✓ Prompts guardados');
+}
+
+document.getElementById('modal-prompts-config').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-prompts-config')) closePromptsModal();
+});
+
 // ══════════════════════════════════════════════════════
 //  CACHÉ DE PROMPTS ENVIADOS
 // ══════════════════════════════════════════════════════
@@ -1529,6 +1676,8 @@ document.getElementById('modal-prompt').addEventListener('click', e => {
 // ══════════════════════════════════════════════════════
 //  ARRANQUE
 // ══════════════════════════════════════════════════════
+initDefaultPrompts();
+loadActivePrompts();
 updateCount();
 updateNavButtons();
 setApi(activeApi);
