@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análisis · Castroverde (Narrativo / Descriptivo)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDK (opcional) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ESTILOS (igual que antes) */
+    :root {
+      --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
+      --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
+      --red:#c45a3a; --blue:#3a7ab0; --green:#2a7a4a;
+      --cloud:#4A90D9;
+      --font-h:'Playfair Display',Georgia,serif;
+      --font-body:'Source Serif 4',Georgia,serif;
+      --font-ui:'DM Mono',monospace;
+      --radius:3px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;overflow:hidden;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.7;display:flex;flex-direction:column;}
+
+    /* Sync bar (igual) */
+    #sync-bar{
+      flex-shrink:0;background:var(--text);
+      display:flex;align-items:center;justify-content:flex-end;gap:10px;
+      padding:5px 18px;border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .btn-sync{
+      background:none;border:1px solid rgba(74,144,217,0.4);color:#7eb8f0;
+      padding:4px 11px;border-radius:20px;cursor:pointer;
+      font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;
+      transition:background .2s,color .2s,border-color .2s;white-space:nowrap;
+      display:flex;align-items:center;gap:5px;
+    }
+    .btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud);}
+    .btn-sync.synced{border-color:rgba(42,122,74,0.5);color:#7ec87f;}
+    .btn-sync.synced:hover{background:var(--green);color:#fff;border-color:var(--green);}
+    .btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none;}
+    .sync-user-text{font-family:var(--font-ui);font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1px;}
+    .btn-signout{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;text-transform:uppercase;}
+    .btn-signout:hover{color:var(--red);background:rgba(196,90,58,.1);}
+    #sync-status{
+      flex-shrink:0;padding:5px 18px;font-family:var(--font-ui);font-size:9px;
+      letter-spacing:1px;text-transform:uppercase;display:none;
+      align-items:center;justify-content:space-between;gap:10px;
+    }
+    #sync-status.visible{display:flex;}
+    #sync-status.ok{background:rgba(42,122,74,.12);color:var(--green);}
+    #sync-status.err{background:rgba(196,90,58,.1);color:var(--red);}
+    #sync-status.info{background:rgba(74,144,217,.1);color:var(--cloud);}
+    .sync-status-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:12px;padding:0 3px;}
+    .sync-status-close:hover{opacity:1;}
+
+    /* Cabecera con selector de modo */
+    header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
+    .logo span{color:var(--accent);font-style:italic;}
+    .logo small{display:block;font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
+    .header-actions{display:flex;gap:7px;align-items:center;}
+
+    .mode-selector {
+      display: flex;
+      gap: 6px;
+      background: var(--card);
+      padding: 3px;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+    }
+    .mode-btn {
+      background: transparent;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 30px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    .mode-btn:hover:not(.active) {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    /* Layout principal */
+    .layout{flex:1;display:grid;grid-template-columns:370px 1fr;overflow:hidden;min-height:0;}
+    .panel-left{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
+    .panel-header{flex-shrink:0;padding:9px 15px;border-bottom:1px solid var(--border);background:var(--card);}
+    .panel-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+    .input-section{flex-shrink:0;padding:10px 15px;border-bottom:1px solid var(--border);}
+    .input-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:5px;display:block;}
+    .input-field{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;line-height:1.5;}
+    .input-field:focus{border-color:var(--accent);}
+    .text-area-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+    #input-text{width:100%;height:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.8;padding:14px 15px 24px;resize:none;outline:none;}
+    .char-count{position:absolute;bottom:5px;right:10px;font-family:var(--font-ui);font-size:9px;color:var(--muted);pointer-events:none;}
+    .char-count.warn{color:var(--red);}
+    .panel-footer{flex-shrink:0;padding:9px 15px;border-top:1px solid var(--border);background:var(--card);display:flex;gap:7px;}
+
+    .panel-right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+    .prompt-buttons-bar{flex-shrink:0;padding:14px 18px 12px;border-bottom:1px solid var(--border);background:var(--surface);}
+    .prompt-buttons-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:10px;display:block;}
+    .prompt-buttons-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+    .btn-prompt{
+      padding:9px 6px;border:1px solid var(--border);border-radius:var(--radius);
+      background:var(--card);color:var(--accent);cursor:pointer;
+      font-family:var(--font-ui);font-size:9px;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px;line-height:1.3;
+      transition:all 0.18s;text-align:center;
+    }
+    .btn-prompt:hover{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+    .btn-prompt.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+
+    .result-area{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:16px 20px;gap:10px;min-height:0;}
+    .result-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;color:var(--muted);gap:10px;}
+    .result-content{display:none;flex-direction:column;flex:1;gap:10px;min-height:0;}
+    .result-content.visible{display:flex;}
+    .result-header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+    .result-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:8px;}
+    .result-badge{background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:var(--radius);font-size:8px;}
+    .result-box{
+      flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:16px 18px;font-size:13px;line-height:1.8;
+      color:var(--text);overflow-y:auto;font-family:var(--font-body);
+      min-height:0;cursor:text;user-select:text;
+    }
+    .result-box h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
+    .result-box h4{font-family:var(--font-h);font-size:13px;font-weight:700;margin:10px 0 4px;}
+    .result-box p{margin-bottom:9px;}
+    .result-box strong{font-weight:700;color:var(--accent2);}
+    .result-box em{font-style:italic;}
+    .result-box ol,.result-box ul{margin:6px 0 10px 20px;}
+    .result-box li{margin-bottom:4px;}
+    .result-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .result-box .loading{color:var(--muted);font-style:italic;}
+
+    .btn{padding:7px 13px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.2s;white-space:nowrap;}
+    .btn-primary{background:var(--accent);color:var(--bg);}
+    .btn-primary:hover:not(:disabled){background:var(--accent2);}
+    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-sm{padding:4px 9px;font-size:9px;}
+
+    /* Modales */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.55);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+    .modal-overlay.visible{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:760px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
+    .modal-box-sm{width:430px;}
+    .modal-title{font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;}
+    .modal-subtitle{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:22px;}
+    .modal-section{margin-bottom:20px;}
+    .modal-section-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+    .modal-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;resize:vertical;line-height:1.6;min-height:80px;}
+    .modal-textarea.tall{min-height:140px;}
+    .modal-hint{font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:4px;line-height:1.6;}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+    .ptabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;}
+    .ptab{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;font-family:var(--font-ui);font-size:9px;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+    .ptab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+    .ppanel{display:none;}
+    .ppanel.visible{display:block;}
+    .btn-corrector{
+      padding:7px 16px;border:1px solid var(--blue);border-radius:var(--radius);
+      background:transparent;color:var(--blue);cursor:pointer;
+      font-family:var(--font-ui);font-size:10px;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px;
+      transition:all 0.18s;white-space:nowrap;
+    }
+    .btn-corrector:hover:not(:disabled){background:var(--blue);color:#fff;}
+    .btn-corrector:disabled{opacity:.45;cursor:default;}
+    .btn-corrector.running{opacity:.6;cursor:default;pointer-events:none;}
+    ::-webkit-scrollbar{width:4px;}
+  </style>
+</head>
+<body>
+
+<!-- SYNC BAR (igual) -->
+<div id="sync-bar">
+  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
+  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-ghost btn-sm btn" id="btn-gemini-key" style="font-size:8px;padding:3px 9px;color:#4A90D9;border-color:rgba(74,144,217,0.3);">⚙ Gemini</button>
+  <button class="btn-ghost btn-sm btn" id="btn-groq-key" style="font-size:8px;padding:3px 9px;">⚙ Groq</button>
+  <button class="btn-ghost btn-sm btn" id="btn-fb-key" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
+  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar</span>
+  </button>
+</div>
+<div id="sync-status">
+  <span id="sync-status-msg"></span>
+  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
+</div>
+
+<header>
+  <div class="logo">Análisis <span>Castroverde</span><small>Narrativo / Descriptivo</small></div>
+  <div class="header-actions">
+    <div class="mode-selector" id="mode-selector">
+      <button class="mode-btn" data-mode="narrativo">📖 Narrativo</button>
+      <button class="mode-btn" data-mode="descriptivo">📐 Descriptivo</button>
+    </div>
+    <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="panel-left">
+    <div class="panel-header"><span class="panel-title">✍ Sección / Capítulo</span></div>
+    <div class="input-section">
+      <label class="input-label" for="section-name">Nombre de la sección o capítulo</label>
+      <input class="input-field" id="section-name" type="text" placeholder="Ej: Cap. 3 · Época medieval" maxlength="80">
+    </div>
+    <div class="input-section">
+      <label class="input-label" for="section-goal">Objetivo de esta sección/capítulo</label>
+      <textarea class="input-field" id="section-goal" rows="3" maxlength="600" style="resize:none;line-height:1.6;" placeholder="Qué quieres conseguir, qué época o tema aborda, qué debe transmitir al lector…"></textarea>
+    </div>
+    <div class="input-section">
+      <label class="input-label" for="ana-parte-libro">Parte del libro</label>
+      <select class="input-field" id="ana-parte-libro">
+        <option value="primera">Primera parte — narrativa divulgativa</option>
+        <option value="segunda">Segunda parte — temática y formal</option>
+      </select>
+    </div>
+    <div class="text-area-wrap">
+      <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto de la sección o capítulo…&#10;&#10;Hasta 10 páginas aproximadamente."></textarea>
+      <div class="char-count" id="char-count">0 / 20.000</div>
+    </div>
+    <div class="panel-footer">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">📄 .txt<input type="file" id="file-input" accept=".txt" style="display:none;"></label>
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()" style="margin-left:auto;">✕ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="prompt-buttons-bar">
+      <span class="prompt-buttons-label">Paso 0 · Corrección técnica previa</span>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="btn-corrector" id="btn-corrector" onclick="runCorrector()">
+          ✦ Corrector técnico
+        </button>
+        <span id="corrector-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
+      </div>
+    </div>
+    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
+      <span class="prompt-buttons-label">Selecciona el análisis · procesado con Gemini 2.5 Flash</span>
+      <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
+    </div>
+    <div class="result-area">
+      <div class="result-empty" id="result-empty">
+        <div class="big-char">❦</div>
+        <p>Pega el texto y pulsa un botón de análisis</p>
+        <p>Modo activo: <span id="active-mode-label">Narrativo</span></p>
+      </div>
+      <div class="result-content" id="result-content">
+        <div class="result-header">
+          <div class="result-title">
+            <span class="result-badge" id="result-badge">—</span>
+            <span id="result-label-text">—</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="btn-copy-prompt">⎘ Copiar prompt</button>
+        </div>
+        <div class="result-box" id="result-box"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AJUSTES -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal-box">
+    <div class="modal-title">Ajustes de perfiles</div>
+    <div class="modal-subtitle">Personaliza el system prompt y los análisis para cada modo</div>
+    <div class="ptabs" id="settings-ptabs">
+      <button class="ptab active" data-profile="narrativo">📖 Narrativo</button>
+      <button class="ptab" data-profile="descriptivo">📐 Descriptivo</button>
+    </div>
+    <div id="settings-panels">
+      <div class="ppanel visible" data-profile="narrativo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Narrativo)</div>
+          <textarea class="modal-textarea tall" id="system-narrativo" rows="10"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Perfil tonal (común a ambos modos)</div>
+          <textarea class="modal-textarea tall" id="tono-comun" rows="6"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompts de análisis (Narrativo)</div>
+          <div class="modal-hint" style="margin-bottom:10px;">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
+          <div id="ptabs-narrativo" class="ptabs"></div>
+          <div id="ppanels-narrativo"></div>
+        </div>
+      </div>
+      <div class="ppanel" data-profile="descriptivo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Descriptivo)</div>
+          <textarea class="modal-textarea tall" id="system-descriptivo" rows="10"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Perfil tonal (común)</div>
+          <div class="modal-hint">El mismo texto que en Narrativo se guarda automáticamente.</div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompts de análisis (Descriptivo)</div>
+          <div class="modal-hint">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
+          <div id="ptabs-descriptivo" class="ptabs"></div>
+          <div id="ppanels-descriptivo"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
+      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GEMINI KEY -->
+<div class="modal-overlay" id="modal-geminikey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Gemini</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis de texto. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">Gemini API Key</label>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="gemini-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="gemini-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="gemini-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GROQ KEY -->
+<div class="modal-overlay" id="modal-groqkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Groq</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para el corrector técnico automático. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">Groq API Key</label>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="groq-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="groq-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="groq-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FIREBASE KEY -->
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para sincronización en la nube. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">Firebase API Key</label>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  PERFILES NARRATIVO / DESCRIPTIVO (VALORES POR DEFECTO MEJORADOS)
+// ══════════════════════════════════════════════════════
+
+const DEFAULT_NARRATIVO = {
+  system: `ROL
+Eres un editor de historia local y divulgación histórica castellana. Trabajas sobre los borradores del libro Castroverde de Cerrato. No eres el autor: no sustituyas su voz por la tuya.
+
+PRINCIPIO ABSOLUTO
+Intervención mínima. Antes de modificar una frase, pregúntate: ¿realmente dificulta la lectura, o simplemente no es como yo la escribiría? Si funciona y transmite autenticidad, no se toca.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información histórica nueva. No inventar escenas, pensamientos, emociones, diálogos ni interpretaciones ausentes en el original. Lo que no está en el borrador, no existe.
+
+OBJETIVO
+Convertir pasajes densos o compactos en narración accesible y continua, sin perder rigor ni autenticidad. El lector debe sentir que recorre la historia de un territorio real, no que lee una enciclopedia ni una novela histórica.
+
+QUÉ PUEDES HACER
+- Corregir ortografía, puntuación y gramática
+- Dividir frases excesivamente largas o densas
+- Si un párrafo concentra varios tipos de información heterogénea, dividirlo en dos buscando el corte en una frase que ya exista en el original. No comprimir ni eliminar contenido como alternativa a la división.
+- Si el texto contiene la marca [//], introducir ahí un punto y aparte. No moverla ni ignorarla.
+- Mejorar la continuidad entre párrafos
+- Cuando el contexto lo permita, cerrar bloques temáticos con una referencia a la vida cotidiana o al uso concreto del territorio: es el recurso que mejor ancla la historia local sin caer en literaturismo.
+- Convertir acumulaciones de datos en secuencias legibles
+- Reordenar frases si mejora la comprensión
+- Reducir repeticiones y perífrasis innecesarias
+- Simplificar definiciones técnicas que rompen el ritmo
+- Añadir transiciones suaves solo si nacen directamente de datos ya presentes en el texto
+
+QUÉ NO DEBES HACER
+- Prosa literaria, lenguaje épico, metáforas decorativas
+- Expresiones de folleto turístico o divulgación genérica
+- Adjetivos innecesarios o formulaciones abstractas
+- Reescribir frases correctas solo porque podrían sonar "mejor"
+- Sustituir expresiones naturales del autor por giros estándar impersonales
+- Comenzar párrafos con "La historia de…", "A lo largo del tiempo…", "La situación no era solo…" u otros arranques impersonales salvo que estén en el original
+- Añadir frases de apertura o cierre que no estén en el original
+
+VOZ Y ESTILO
+El texto debe conservar la sensación de estar escrito por alguien vinculado al territorio y a sus fuentes. La emoción, si aparece, debe nacer de los hechos, no del adorno. El tono de referencia es el de la buena divulgación histórica local: sobrio, claro, humano, sin rigidez académica ni artificio literario.
+Evita formulaciones abstractas como "según cobrara mayor importancia" o "en función del peso relativo de"; sustitúyelas por construcciones concretas cuando sea posible sin forzar el texto.
+Conserva el léxico característico del autor aunque no sea el que tú elegirías.
+
+EXTENSIÓN
+Similar al original (±10%). Si el texto no necesita intervención, puede ser menor.
+
+FORMATO DE SALIDA
+1. DIAGNÓSTICO — Qué problemas concretos se han corregido y qué tipo de intervención se ha realizado. Breve y específico: nombra las frases o construcciones modificadas, no hagas valoraciones generales.
+2. TEXTO EDITADO
+
+CONTEXTO HISTÓRICO FIJO
+- Primer documento conservado: 916 d.C. (Ordoño II, "Castro Viride")
+- Orden de Santiago · Cerrato vallisoletano · Valle del Esgueva · Frontera con Palencia
+- 676 habitantes en 1950 · 189 habitantes en la actualidad
+
+PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
+  prompts: [
+    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura global: ritmo, progresión emocional y capacidad de enganchar.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', content:'Evalúa el tono narrativo. ¿Es evocador? ¿Hay pasajes fríos?\nObjetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', content:'Como lector sin conocimientos previos: ¿qué engancha? ¿Dónde se pierde el interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno: cita el original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial. Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+  ]
+};
+
+const DEFAULT_DESCRIPTIVO = {
+  system: `Eres un editor técnico especializado en claridad expositiva y precisión. Tu objetivo es evaluar y mejorar la estructura lógica, la coherencia interna y la comprensibilidad del texto, eliminando ambigüedades y redundancias.
+
+VOZ DE REFERENCIA (Descriptivo):
+"El texto debe ser claro, ordenado y preciso. Cada idea debe exponerse de manera que el lector la entienda sin esfuerzo."
+
+REGLAS DESCRIPTIVAS:
+- Prioriza la organización lógica y la coherencia.
+- Elimina ambigüedades y repeticiones innecesarias.
+- Usa conectores y marcadores estructurales cuando sea necesario.
+- La extensión puede ajustarse para mayor claridad, pero sin omitir información.
+- Evita el lirismo y las metáforas que oscurezcan el significado.
+
+RESTRICCIONES:
+- No añadir hechos no explicitados en el texto
+- No eliminar información relevante
+- Evitar juicios de valor no justificados
+
+CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
+
+PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
+  prompts: [
+    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado?\nObjetivo: {{objetivo}}\n\nSeñala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo desde la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', content:'Como lector no experto: ¿qué partes se entienden con facilidad? ¿Dónde se pierde el hilo? ¿Qué necesita mejor explicación?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos confusos o mal estructurados. Para cada uno: cita el original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+  ]
+};
+
+let activeProfile = 'narrativo';
+let settings = {
+  narrativo: JSON.parse(JSON.stringify(DEFAULT_NARRATIVO)),
+  descriptivo: JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO))
+};
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('castroverde_profiles_ana');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.narrativo && parsed.descriptivo) settings = parsed;
+    }
+  } catch(e) {}
+  if (!settings.narrativo.prompts) settings.narrativo.prompts = DEFAULT_NARRATIVO.prompts.map(p=>({...p}));
+  if (!settings.descriptivo.prompts) settings.descriptivo.prompts = DEFAULT_DESCRIPTIVO.prompts.map(p=>({...p}));
+}
+function saveSettings() {
+  localStorage.setItem('castroverde_profiles_ana', JSON.stringify(settings));
+  localStorage.setItem('castroverde_ana_settings_ts', Date.now());
+}
+
+const TONO_KEY = 'castroverde_ana_tono';
+function getTonoProfile() { return localStorage.getItem(TONO_KEY) || ''; }
+function saveTonoProfile(val) { localStorage.setItem(TONO_KEY, val); }
+
+function getParteLabel() {
+  const el = document.getElementById('ana-parte-libro');
+  return el.value === 'segunda' ? 'SEGUNDA PARTE (temática y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
+}
+
+function buildSystemWithTono() {
+  const base = settings[activeProfile].system;
+  const parte = getParteLabel();
+  const tono = getTonoProfile().trim();
+  let result = base.replace(/\{\{parte_libro\}\}/g, parte);
+  if (tono) result += '\n\nINSTRUCCIONES ADICIONALES DE TONO:\n' + tono;
+  result += '\n\nREGLA DE FORMATO: No reproduzcas el texto completo del autor en tu respuesta. Cita solo los fragmentos estrictamente necesarios para ilustrar un punto concreto (máximo 2-3 frases por cita). Tu respuesta es un análisis editorial, no una reescritura completa.';
+  return result;
+}
+
+function buildUserPrompt(template, texto, objetivo) {
+  return template
+    .replace(/\{\{texto\}\}/g, texto)
+    .replace(/\{\{objetivo\}\}/g, objetivo || '(no especificado)');
+}
+
+function generatePrompt(idx, btnEl) {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+  if (!GEMINI_API_KEY) {
+    setSyncStatus('err', 'Introduce la clave de Gemini primero.');
+    setTimeout(openGeminiKeyModal, 800);
+    return;
+  }
+  const p = settings[activeProfile].prompts[idx];
+  const objetivo = document.getElementById('section-goal').value.trim();
+  const systemMsg = buildSystemWithTono();
+  const userMsg = buildUserPrompt(p.content, texto, objetivo);
+
+  document.querySelectorAll('.btn-prompt').forEach(b => { b.classList.remove('active'); b.disabled = true; });
+  if (btnEl) btnEl.classList.add('active');
+
+  // Mostrar estado de carga
+  document.getElementById('result-empty').style.display = 'none';
+  document.getElementById('result-content').classList.add('visible');
+  document.getElementById('result-badge').textContent = p.label;
+  document.getElementById('result-label-text').textContent = p.name;
+  const box = document.getElementById('result-box');
+  box.innerHTML = '<span class="loading">… Analizando con Gemini</span>';
+
+  callGemini(systemMsg, userMsg).then(respuesta => {
+    setResultBox(respuesta);
+  }).catch(err => {
+    box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
+  }).finally(() => {
+    document.querySelectorAll('.btn-prompt').forEach(b => { b.disabled = false; });
+  });
+}
+
+async function callGemini(systemPrompt, userPrompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 16000,
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error ' + resp.status);
+  }
+  const data = await resp.json();
+  const candidate = data.candidates?.[0];
+  const finishReason = candidate?.finishReason;
+  const parts = candidate?.content?.parts || [];
+  const text = parts
+    .filter(p => p.text && !p.thought)
+    .map(p => p.text)
+    .join('');
+  if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
+  if (finishReason && finishReason !== 'STOP') {
+    return text + '\n\n⚠ Respuesta truncada por la API (finishReason: ' + finishReason + ')';
+  }
+  return text;
+}
+
+function parseMarkdown(md) {
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // Bloques
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\*\*\*\s*$/gm,'<hr>')
+    .replace(/^---\s*$/gm,'<hr>')
+    // Inline
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    // Listas numeradas
+    .replace(/^\d+\.\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ol>' + m + '</ol>')
+    // Listas con guión/asterisco
+    .replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => {
+      if (m.includes('<ol>')) return m;
+      return '<ul>' + m + '</ul>';
+    })
+    // Párrafos: líneas sueltas separadas por \n\n
+    .split(/\n{2,}/)
+    .map(block => {
+      block = block.trim();
+      if (!block) return '';
+      if (/^<(h[234]|hr|ol|ul)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g,' ') + '</p>';
+    })
+    .join('\n');
+}
+
+function setResultBox(text) {
+  const box = document.getElementById('result-box');
+  box.innerHTML = parseMarkdown(text);
+  box.scrollTop = 0;
+}
+
+function getResultBoxText() {
+  return document.getElementById('result-box').innerText;
+}
+
+function clearAll() {
+  document.getElementById('section-name').value = '';
+  document.getElementById('section-goal').value = '';
+  document.getElementById('input-text').value = '';
+  actualizarContador();
+  document.getElementById('result-empty').style.display = 'flex';
+  document.getElementById('result-content').classList.remove('visible');
+  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
+}
+
+function actualizarContador() {
+  const l = document.getElementById('input-text').value.length;
+  const el = document.getElementById('char-count');
+  el.textContent = l.toLocaleString() + ' / 20.000';
+  el.className = 'char-count' + (l > 18000 ? ' warn' : '');
+}
+
+function renderPromptButtons() {
+  const grid = document.getElementById('prompt-buttons-grid');
+  grid.innerHTML = '';
+  settings[activeProfile].prompts.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-prompt';
+    btn.textContent = p.label;
+    btn.title = p.name;
+    btn.setAttribute('data-idx', i);
+    btn.addEventListener('click', () => generatePrompt(i, btn));
+    grid.appendChild(btn);
+  });
+}
+
+function setActiveProfile(profile) {
+  activeProfile = profile;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    if (btn.getAttribute('data-mode') === profile) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+  document.getElementById('active-mode-label').innerText = profile === 'narrativo' ? 'Narrativo' : 'Descriptivo';
+  renderPromptButtons();
+  localStorage.setItem('castroverde_active_profile_ana', profile);
+}
+
+// ══════════════════════════════════════════════════════
+//  MODAL DE AJUSTES (con pestañas principales funcionales)
+// ══════════════════════════════════════════════════════
+
+function generarPanelesPrompts(perfil, promptsArray) {
+  const tabsContainer = document.getElementById(`ptabs-${perfil}`);
+  const panelsContainer = document.getElementById(`ppanels-${perfil}`);
+  if (!tabsContainer) return;
+  tabsContainer.innerHTML = '';
+  panelsContainer.innerHTML = '';
+  promptsArray.forEach((p, idx) => {
+    const tab = document.createElement('button');
+    tab.className = 'ptab' + (idx === 0 ? ' active' : '');
+    tab.textContent = p.label;
+    tab.setAttribute('data-idx', idx);
+    tab.addEventListener('click', () => {
+      tabsContainer.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      panelsContainer.querySelectorAll('.ppanel').forEach(panel => panel.classList.remove('visible'));
+      document.getElementById(`pp-${perfil}-${idx}`).classList.add('visible');
+    });
+    tabsContainer.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'ppanel' + (idx === 0 ? ' visible' : '');
+    panel.id = `pp-${perfil}-${idx}`;
+    panel.innerHTML = `
+      <label class="modal-label">Nombre completo</label>
+      <input class="modal-input pp-name" data-perfil="${perfil}" data-idx="${idx}" value="${escapeHtml(p.name)}">
+      <label class="modal-label">Etiqueta del botón</label>
+      <input class="modal-input pp-label" data-perfil="${perfil}" data-idx="${idx}" value="${escapeHtml(p.label)}">
+      <label class="modal-label">Contenido del prompt</label>
+      <textarea class="modal-textarea tall pp-content" data-perfil="${perfil}" data-idx="${idx}" rows="10">${escapeHtml(p.content)}</textarea>
+    `;
+    panelsContainer.appendChild(panel);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function openSettings() {
+  // Cargar valores actuales
+  document.getElementById('system-narrativo').value = settings.narrativo.system;
+  document.getElementById('system-descriptivo').value = settings.descriptivo.system;
+  const tono = getTonoProfile();
+  document.getElementById('tono-comun').value = tono;
+
+  generarPanelesPrompts('narrativo', settings.narrativo.prompts);
+  generarPanelesPrompts('descriptivo', settings.descriptivo.prompts);
+
+  // Mostrar la pestaña correspondiente al perfil activo por defecto
+  const activeTabProfile = activeProfile;
+  const mainTabs = document.querySelectorAll('#settings-ptabs .ptab');
+  const mainPanels = document.querySelectorAll('#settings-panels .ppanel');
+  mainTabs.forEach(tab => {
+    if (tab.getAttribute('data-profile') === activeTabProfile) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+  mainPanels.forEach(panel => {
+    if (panel.getAttribute('data-profile') === activeTabProfile) {
+      panel.classList.add('visible');
+    } else {
+      panel.classList.remove('visible');
+    }
+  });
+
+  document.getElementById('modal-settings').classList.add('visible');
+}
+
+function closeSettings() {
+  document.getElementById('modal-settings').classList.remove('visible');
+}
+
+function saveSettingsFromModal() {
+  settings.narrativo.system = document.getElementById('system-narrativo').value;
+  settings.descriptivo.system = document.getElementById('system-descriptivo').value;
+  const tonoVal = document.getElementById('tono-comun').value;
+  saveTonoProfile(tonoVal);
+
+  // Guardar prompts de Narrativo
+  document.querySelectorAll('#ppanels-narrativo .pp-name').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].name = inp.value;
+  });
+  document.querySelectorAll('#ppanels-narrativo .pp-label').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].label = inp.value;
+  });
+  document.querySelectorAll('#ppanels-narrativo .pp-content').forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].content = ta.value;
+  });
+  // Guardar prompts de Descriptivo
+  document.querySelectorAll('#ppanels-descriptivo .pp-name').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].name = inp.value;
+  });
+  document.querySelectorAll('#ppanels-descriptivo .pp-label').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].label = inp.value;
+  });
+  document.querySelectorAll('#ppanels-descriptivo .pp-content').forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].content = ta.value;
+  });
+
+  saveSettings();
+  renderPromptButtons();
+  closeSettings();
+}
+
+function resetSettings() {
+  if (!confirm('¿Restaurar todos los ajustes a los valores por defecto para ambos perfiles?')) return;
+  settings.narrativo = JSON.parse(JSON.stringify(DEFAULT_NARRATIVO));
+  settings.descriptivo = JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO));
+  // Restaurar también el perfil tonal por defecto mejorado
+  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
+  saveSettings();
+  renderPromptButtons();
+  openSettings(); // refrescar modal
+}
+
+// ══════════════════════════════════════════════════════
+//  GEMINI KEY
+// ══════════════════════════════════════════════════════
+let GEMINI_API_KEY = localStorage.getItem('castroverde_gemini_key') || '';
+
+function openGeminiKeyModal() {
+  document.getElementById('gemini-key-input').value = GEMINI_API_KEY || '';
+  document.getElementById('modal-geminikey').classList.add('visible');
+  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
+}
+function closeGeminiKeyModal() { document.getElementById('modal-geminikey').classList.remove('visible'); }
+function saveGeminiKey(val) {
+  if (!val || !val.startsWith('AIzaSy')) { alert('La clave de Gemini debe empezar por AIzaSy'); return false; }
+  GEMINI_API_KEY = val;
+  localStorage.setItem('castroverde_gemini_key', val);
+  closeGeminiKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  GROQ KEY + CORRECTOR TÉCNICO
+// ══════════════════════════════════════════════════════
+let GROQ_API_KEY = localStorage.getItem('castroverde_groq_key') || '';
+
+function openGroqKeyModal() {
+  document.getElementById('groq-key-input').value = GROQ_API_KEY || '';
+  document.getElementById('modal-groqkey').classList.add('visible');
+  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
+}
+function closeGroqKeyModal() { document.getElementById('modal-groqkey').classList.remove('visible'); }
+function saveGroqKey(val) {
+  if (!val || !val.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return false; }
+  GROQ_API_KEY = val;
+  localStorage.setItem('castroverde_groq_key', val);
+  closeGroqKeyModal();
+  return true;
+}
+
+const CORRECTOR_SYSTEM = `Eres un corrector técnico. Tu trabajo es limpiar el texto de problemas formales sin tocar la voz del autor ni reescribir nada.
+
+REGLA ABSOLUTA
+No reescribas frases. No mejores el estilo. No suavices ni amplifiques. Si una frase te parece mejorable estilísticamente, déjala exactamente como está.
+
+QUÉ PUEDES CORREGIR
+- Errores ortográficos
+- Errores de puntuación (comas, puntos, mayúsculas)
+- Errores gramaticales evidentes (concordancia, tiempos verbales)
+- Espacios dobles o mal colocados
+- Mayúsculas incorrectas en nombres propios o términos históricos
+- Paréntesis o comillas mal cerrados
+
+QUÉ TIENES PROHIBIDO
+- Cambiar el orden de las palabras
+- Sustituir palabras por sinónimos
+- Añadir o eliminar frases
+- Reorganizar párrafos
+- Suavizar o reforzar cualquier afirmación
+- Añadir conectores o transiciones
+
+FORMATO DE SALIDA
+Devuelve únicamente el texto corregido, sin comentarios, sin explicaciones, sin listar los cambios. Solo el texto limpio.`;
+
+async function runCorrector() {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto a corregir.'); return; }
+  if (!GROQ_API_KEY) {
+    setSyncStatus('err', 'Introduce la clave de Groq primero.');
+    setTimeout(openGroqKeyModal, 800);
+    return;
+  }
+  const btn = document.getElementById('btn-corrector');
+  const status = document.getElementById('corrector-status');
+  btn.classList.add('running');
+  btn.textContent = '… Corrigiendo';
+  status.textContent = 'Llamando a Groq…';
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 4096,
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: CORRECTOR_SYSTEM },
+          { role: 'user', content: 'Corrige técnicamente el siguiente texto:\n\n"""\n' + texto + '\n"""' }
+        ]
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Error ' + resp.status);
+    }
+    const data = await resp.json();
+    const textoCorregido = data.choices?.[0]?.message?.content?.trim();
+    if (!textoCorregido) throw new Error('Respuesta vacía de Groq');
+
+    document.getElementById('input-text').value = textoCorregido;
+    actualizarContador();
+    status.textContent = '✓ Texto actualizado';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  } catch(e) {
+    status.textContent = '✗ ' + e.message;
+    setTimeout(() => { status.textContent = ''; }, 6000);
+  } finally {
+    btn.classList.remove('running');
+    btn.textContent = '✦ Corrector técnico';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  FIREBASE (misma lógica, simplificada)
+// ══════════════════════════════════════════════════════
+let FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
+let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+
+function initFirebase(apiKey) {
+  if (!apiKey) return;
+  try {
+    if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey));
+    else startFirebase(apiKey);
+  } catch(e) {}
+}
+function startFirebase(apiKey) {
+  const config = {
+    apiKey: apiKey,
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(config);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(user => { fbUser = user; updateSyncUI(); });
+}
+if (FB_API_KEY) initFirebase(FB_API_KEY);
+
+function updateSyncUI() {
+  const btn = document.getElementById('btn-sync');
+  const icon = document.getElementById('sync-icon');
+  const label = document.getElementById('sync-label');
+  const userEl = document.getElementById('sync-user-text');
+  const signout = document.getElementById('btn-signout');
+  if (fbUser) {
+    btn.classList.add('synced');
+    icon.textContent = '✓';
+    label.textContent = 'Sincronizado';
+    userEl.textContent = fbUser.email;
+    userEl.style.display = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.classList.remove('synced');
+    icon.textContent = '☁';
+    label.textContent = 'Sincronizar';
+    userEl.style.display = 'none';
+    signout.style.display = 'none';
+  }
+}
+function handleSync() {
+  if (!fbAuth) { setSyncStatus('err', 'Introduce clave de Firebase.'); setTimeout(openFbKeyModal, 800); return; }
+  if (!fbUser) {
+    setSyncStatus('info', 'Iniciando sesión…');
+    fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(err => setSyncStatus('err', err.message));
+  } else { doSync(); }
+}
+function doSync() {
+  if (!fbUser || !fbDb) return;
+  setSyncStatus('info', 'Sincronizando…');
+  document.getElementById('btn-sync').classList.add('syncing');
+  const docRef = fbDb.collection('analizador').doc(fbUser.uid);
+  docRef.get().then(snap => {
+    const localSettings = JSON.parse(JSON.stringify(settings));
+    const localTs = parseInt(localStorage.getItem('castroverde_ana_settings_ts') || '0');
+    if (snap.exists && snap.data().settings && snap.data().settingsUpdatedAt > localTs) {
+      settings = snap.data().settings;
+      saveSettings();
+      localStorage.setItem('castroverde_ana_settings_ts', snap.data().settingsUpdatedAt);
+      renderPromptButtons();
+    }
+    return docRef.set({
+      settings: localSettings,
+      settingsUpdatedAt: Date.now(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(() => {
+    document.getElementById('btn-sync').classList.remove('syncing');
+    setSyncStatus('ok', '✓ Ajustes sincronizados');
+  }).catch(err => {
+    document.getElementById('btn-sync').classList.remove('syncing');
+    setSyncStatus('err', 'Error: ' + err.message);
+  });
+}
+function setSyncStatus(type, msg) {
+  const el = document.getElementById('sync-status');
+  document.getElementById('sync-status-msg').textContent = msg;
+  el.className = 'visible ' + type;
+  if (type === 'ok') setTimeout(() => el.className = '', 4000);
+}
+function closeSyncStatus() { document.getElementById('sync-status').className = ''; updateSyncUI(); }
+function fbSignOut() { if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
+
+// MODALES Firebase
+function openFbKeyModal() {
+  document.getElementById('fb-key-input').value = FB_API_KEY || '';
+  document.getElementById('modal-fbkey').classList.add('visible');
+  setTimeout(() => document.getElementById('fb-key-input').focus(), 80);
+}
+function closeFbKeyModal() { document.getElementById('modal-fbkey').classList.remove('visible'); }
+function saveFbKey(val) {
+  if (!val || !val.startsWith('AIzaSy')) { alert('La clave debe empezar por AIzaSy'); return false; }
+  FB_API_KEY = val;
+  localStorage.setItem('castroverde_fb_key', val);
+  initFirebase(val);
+  closeFbKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  EVENTOS Y ARRANQUE
+// ══════════════════════════════════════════════════════
+document.getElementById('btn-gemini-key').addEventListener('click', openGeminiKeyModal);
+document.getElementById('gemini-btn-save').addEventListener('click', () => saveGeminiKey(document.getElementById('gemini-key-input').value.trim()));
+document.getElementById('gemini-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Gemini?')) {
+    GEMINI_API_KEY = '';
+    localStorage.removeItem('castroverde_gemini_key');
+    document.getElementById('gemini-key-input').value = '';
+    closeGeminiKeyModal();
+  }
+});
+document.getElementById('gemini-btn-cancel').addEventListener('click', closeGeminiKeyModal);
+document.getElementById('modal-geminikey').addEventListener('click', e => { if (e.target === document.getElementById('modal-geminikey')) closeGeminiKeyModal(); });
+document.getElementById('btn-groq-key').addEventListener('click', openGroqKeyModal);
+document.getElementById('groq-btn-save').addEventListener('click', () => saveGroqKey(document.getElementById('groq-key-input').value.trim()));
+document.getElementById('groq-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Groq?')) {
+    GROQ_API_KEY = '';
+    localStorage.removeItem('castroverde_groq_key');
+    document.getElementById('groq-key-input').value = '';
+    closeGroqKeyModal();
+  }
+});
+document.getElementById('groq-btn-cancel').addEventListener('click', closeGroqKeyModal);
+document.getElementById('modal-groqkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-groqkey')) closeGroqKeyModal(); });
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('settings-save').addEventListener('click', saveSettingsFromModal);
+document.getElementById('settings-cancel').addEventListener('click', closeSettings);
+document.getElementById('settings-reset').addEventListener('click', resetSettings);
+document.getElementById('modal-settings').addEventListener('click', e => { if (e.target === document.getElementById('modal-settings')) closeSettings(); });
+document.getElementById('btn-fb-key').addEventListener('click', openFbKeyModal);
+document.getElementById('fb-btn-save').addEventListener('click', () => saveFbKey(document.getElementById('fb-key-input').value.trim()));
+document.getElementById('fb-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Firebase?')) {
+    FB_API_KEY = '';
+    localStorage.removeItem('castroverde_fb_key');
+    document.getElementById('fb-key-input').value = '';
+    closeFbKeyModal();
+  }
+});
+document.getElementById('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
+document.getElementById('modal-fbkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-fbkey')) closeFbKeyModal(); });
+document.getElementById('btn-copy-prompt').addEventListener('click', () => {
+  const text = getResultBoxText();
+  if (text) navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-prompt');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+});
+document.getElementById('input-text').addEventListener('input', actualizarContador);
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('input-text').value = ev.target.result.substring(0, 20000);
+    actualizarContador();
+    if (!document.getElementById('section-name').value) document.getElementById('section-name').value = file.name.replace('.txt', '');
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+});
+
+// Selección de modo principal
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setActiveProfile(btn.getAttribute('data-mode')));
+});
+
+// Pestañas principales del modal de ajustes
+document.querySelectorAll('#settings-ptabs .ptab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const profile = tab.getAttribute('data-profile');
+    document.querySelectorAll('#settings-ptabs .ptab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('#settings-panels .ppanel').forEach(panel => {
+      if (panel.getAttribute('data-profile') === profile) panel.classList.add('visible');
+      else panel.classList.remove('visible');
+    });
+  });
+});
+
+// Inicialización
+loadSettings();
+if (!getTonoProfile()) {
+  // Perfil tonal por defecto mejorado
+  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
+}
+const savedProfile = localStorage.getItem('castroverde_active_profile_ana');
+if (savedProfile === 'narrativo' || savedProfile === 'descriptivo') setActiveProfile(savedProfile);
+else setActiveProfile('narrativo');
+actualizarContador();
+if (!FB_API_KEY) setTimeout(openFbKeyModal, 500);
+</script>
+</body>
+</html>
