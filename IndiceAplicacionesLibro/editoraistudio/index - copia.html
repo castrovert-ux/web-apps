@@ -481,67 +481,6 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* ── HISTÓRICO PASO 6 ── */
-    #history-6-panel {
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-      flex: 1;
-    }
-    #history-6-panel.visible { display: flex; }
-    .history-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .history-entry {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      overflow: hidden;
-    }
-    .history-entry-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 12px;
-      background: var(--card);
-      cursor: pointer;
-      font-family: var(--font-ui);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      gap: 8px;
-    }
-    .history-entry-header:hover { color: var(--accent); }
-    .history-entry-header .he-date { flex: 1; }
-    .history-entry-header .he-toggle { font-size: 10px; }
-    .history-entry-body {
-      display: none;
-      padding: 10px 14px;
-      font-size: 13px;
-      line-height: 1.75;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-y: auto;
-      max-height: 320px;
-    }
-    .history-entry-body.open { display: block; }
-    .history-empty {
-      font-family: var(--font-ui);
-      font-size: 10px;
-      color: var(--muted);
-      text-align: center;
-      padding: 30px;
-      letter-spacing: 1px;
-    }
   </style>
 </head>
 <body>
@@ -735,26 +674,12 @@
         <div class="panel-row">
           <span class="panel-label">Análisis comparativo — Original vs. resultado final (Paso 5)</span>
           <div class="panel-actions">
-            <button class="btn btn-ghost" id="btn-toggle-history-6" onclick="toggleHistory6()" style="font-size:9px;padding:5px 10px;">⏱ Histórico</button>
             <button class="btn btn-copy" id="show-prompt-6" onclick="showPrompt(6)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-report-6" onclick="copyReport6()" disabled>Copiar informe</button>
           </div>
         </div>
-        <!-- Vista normal -->
-        <div id="result-6-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
-          <div class="result-box" id="result-6" style="flex:1;overflow-y:auto;">
-            <span class="empty-msg">El Paso 6 compara el texto original con el resultado final del Paso 5.</span>
-          </div>
-        </div>
-        <!-- Vista histórico -->
-        <div id="history-6-panel">
-          <div style="padding:8px 14px 4px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">Histórico de ejecuciones</span>
-            <button class="btn btn-ghost" onclick="clearHistory6()" style="font-size:9px;padding:4px 9px;">✕ Limpiar</button>
-          </div>
-          <div class="history-list" id="history-6-list">
-            <div class="history-empty">Sin ejecuciones registradas aún.</div>
-          </div>
+        <div class="result-box" id="result-6" style="flex:1;overflow-y:auto;">
+          <span class="empty-msg">El Paso 6 compara el texto original con el resultado final del Paso 5.</span>
         </div>
       </div>
 
@@ -1338,66 +1263,56 @@ const PROMPT_6_SYSTEM = `ROL
 Eres un analista textual especializado en edición de textos históricos. Comparas dos versiones de un mismo texto: una versión original y una versión editada.
 
 OBJETIVO
-Detectar con precisión cualquier cambio de significado, pérdida de información, alteración de matiz histórico, modificación de certeza, cambio en la causalidad, en la jerarquía informativa o en la voz del texto.
+Detectar con precisión cualquier cambio de significado, pérdida de información, alteración de matiz histórico, modificación de certeza o cambio en la estructura informativa entre ambas versiones.
 
 ENTRADAS
 Te proporcionaré:
 - TEXTO ORIGINAL
-- TEXTO EDITADO
+- TEXTO EDITADO (resultado final tras cinco pasadas de edición)
 
 RESTRICCIÓN FUNDAMENTAL
-No debes reescribir los textos. No debes proponer mejoras. No debes corregir el texto editado.
+No debes reescribir los textos. No debes proponer mejoras. No debes "corregir" el texto editado.
 Solo comparar.
 
 QUÉ DEBES DETECTAR
 Debes identificar y listar de forma clara:
 
 1. Pérdida de información
-Elementos presentes en el original que han desaparecido, se han reducido o se han debilitado.
+Elementos presentes en el original que han desaparecido o se han debilitado.
 
 2. Añadidos no presentes en el original
-Cualquier palabra, conector o formulación que introduzca explicación, énfasis o interpretación no presente en el original.
+Cualquier matiz, explicación o inferencia nueva introducida en el texto editado.
 
 3. Cambios de significado
-Frases donde el sentido ha sido modificado, aunque parezca similar.
+Frases donde el sentido ha sido modificado aunque parezca similar.
 
-4. Cambios de grado de certeza (modalidad)
-Alteraciones en el nivel de seguridad del texto, por ejemplo:
-- hipótesis → afirmación
-- duda → seguridad
-- posibilidad → relación más firme
+4. Cambios de grado de certeza
+Alteraciones en:
+- hipótesis a afirmación
+- duda a seguridad
+- posibilidad a causalidad directa
 
 5. Cambios de causalidad
-Si una relación sugerida o abierta se convierte en una relación más directa o explicativa, o al revés.
+Si una relación débil o sugerida se convierte en causa directa (o al revés).
 
 6. Cambios de jerarquía informativa
-Si algún dato pierde peso, se desplaza o se presenta con menor o mayor relevancia que en el original.
+Si algún dato pierde importancia o se reordena de forma que cambia su peso relativo.
 
 7. Simplificaciones con pérdida de matiz
 Reducciones que eliminan precisión histórica, geográfica o contextual.
 
-8. Cambios en la voz del historiador (MUY IMPORTANTE)
-Detectar si cambia la posición del autor en el texto, por ejemplo:
-- de implicación directa ("encontramos", "vemos") a formulación impersonal ("se encuentra")
-- de voz vinculada a la investigación a voz neutra o expositiva
-
-9. Cambios en el grado de explicitación
-Detectar si el texto editado:
-- explica más de lo que el original sugería
-- introduce conectores ("por ejemplo", "ya que", etc.) que guían la interpretación
-- hace explícitas relaciones que en el original eran implícitas
-
 QUÉ NO DEBES HACER
-- No editar los textos
+- No editar ninguno de los textos
 - No reescribir versiones alternativas
-- No valorar si el texto es mejor o peor
+- No juzgar estilo literario
+- No valorar "mejor o peor"
 - No introducir conocimiento externo
 
 FORMATO DE SALIDA
 Estructura la respuesta exactamente así:
 
 RESUMEN GENERAL
-[Diagnóstico global breve, 2-4 líneas]
+[Breve diagnóstico global, 2-4 líneas]
 
 CAMBIOS DETECTADOS
 
@@ -1420,16 +1335,7 @@ CAMBIOS DETECTADOS
 [lista de items o "Ninguno detectado"]
 
 7. Simplificaciones con pérdida de matiz
-[lista de items o "Ninguna detectada"]
-
-8. Cambios en la voz del historiador
-[lista de items o "Ninguno detectado"]
-
-9. Cambios en el grado de explicitación
-[lista de items o "Ninguno detectado"]
-
-CONCLUSIÓN FINAL
-[Valoración breve del nivel de fidelidad del texto editado respecto al original]`;
+[lista de items o "Ninguna detectada"]`;
 
 const PROMPT_4_SYSTEM = `=== SYSTEM PROMPT ===
 
@@ -1762,83 +1668,9 @@ async function runStep6() {
   }
 }
 
-// ══════════════════════════════════════════════════════
-//  HISTÓRICO PASO 6
-// ══════════════════════════════════════════════════════
-const HISTORY_6_KEY = 'castroverde_history_6';
-let history6Visible = false;
-
-function loadHistory6() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_6_KEY) || '[]'); } catch { return []; }
-}
-function saveHistory6(arr) {
-  localStorage.setItem(HISTORY_6_KEY, JSON.stringify(arr));
-}
-function addToHistory6(text) {
-  const arr = loadHistory6();
-  arr.unshift({ ts: new Date().toISOString(), text });
-  if (arr.length > 30) arr.splice(30);
-  saveHistory6(arr);
-  if (history6Visible) renderHistory6();
-}
-function clearHistory6() {
-  if (!confirm('¿Borrar todo el histórico del Paso 6?')) return;
-  localStorage.removeItem(HISTORY_6_KEY);
-  renderHistory6();
-}
-function toggleHistory6() {
-  history6Visible = !history6Visible;
-  document.getElementById('result-6-wrap').style.display = history6Visible ? 'none' : '';
-  document.getElementById('history-6-panel').classList.toggle('visible', history6Visible);
-  const btn = document.getElementById('btn-toggle-history-6');
-  btn.textContent = history6Visible ? '◀ Informe' : '⏱ Histórico';
-  if (history6Visible) renderHistory6();
-}
-function renderHistory6() {
-  const list = document.getElementById('history-6-list');
-  const arr = loadHistory6();
-  if (!arr.length) {
-    list.innerHTML = '<div class="history-empty">Sin ejecuciones registradas aún.</div>';
-    return;
-  }
-  const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  list.innerHTML = arr.map((entry, i) => {
-    const d = new Date(entry.ts);
-    const label = d.toLocaleDateString('es-ES', {day:'2-digit',month:'2-digit',year:'numeric'})
-      + ' · ' + d.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
-    const snippet = entry.text.slice(0, 80).replace(/\n/g, ' ') + (entry.text.length > 80 ? '…' : '');
-    return `<div class="history-entry">
-      <div class="history-entry-header" onclick="toggleHistoryEntry(this)">
-        <span class="he-date">${label} — <em style="font-style:italic;color:var(--text);text-transform:none;">${escape(snippet)}</em></span>
-        <span class="he-toggle">▾</span>
-      </div>
-      <div class="history-entry-body">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
-          <button class="btn btn-copy" style="font-size:9px;padding:4px 9px;" onclick="copyHistoryEntry(${i})">Copiar</button>
-        </div>
-        ${escape(entry.text)}
-      </div>
-    </div>`;
-  }).join('');
-}
-function toggleHistoryEntry(header) {
-  const body = header.nextElementSibling;
-  const toggle = header.querySelector('.he-toggle');
-  const open = body.classList.toggle('open');
-  toggle.textContent = open ? '▴' : '▾';
-}
-function copyHistoryEntry(i) {
-  const arr = loadHistory6();
-  if (!arr[i]) return;
-  navigator.clipboard.writeText(arr[i].text).then(() => showStatus('ok', '✓ Entrada copiada'));
-}
-
 function renderReport6(text) {
   const box = document.getElementById('result-6');
   if (!text.trim()) { box.innerHTML = '<span class="error-msg">Respuesta vacía.</span>'; return; }
-
-  // Guardar en histórico
-  addToHistory6(text);
 
   const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const lines = text.split('\n');
@@ -1848,10 +1680,9 @@ function renderReport6(text) {
     const t = line.trim();
     if (!t) { html += '<div style="height:8px;"></div>'; continue; }
 
-    // Sección principal (RESUMEN GENERAL, CAMBIOS DETECTADOS, CONCLUSIÓN FINAL)
-    if (/^(RESUMEN GENERAL|CAMBIOS DETECTADOS|CONCLUSI[ÓO]N FINAL)$/i.test(t)) {
-      const isConclusion = /^CONCLUSI/i.test(t);
-      html += `<div style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${isConclusion ? 'var(--blue)' : 'var(--accent)'};margin:${isConclusion ? '18px' : '14px'} 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px;">${escape(t)}</div>`;
+    // Sección principal (RESUMEN GENERAL, CAMBIOS DETECTADOS)
+    if (/^(RESUMEN GENERAL|CAMBIOS DETECTADOS)$/i.test(t)) {
+      html += `<div style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:14px 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px;">${escape(t)}</div>`;
     }
     // Subsección numerada (1. Pérdida de información, etc.)
     else if (/^\d+\.\s/.test(t)) {
@@ -1866,7 +1697,7 @@ function renderReport6(text) {
     else if (/^ningún|^ninguna/i.test(t)) {
       html += `<div style="color:var(--green);font-style:italic;font-size:12px;padding:2px 0 2px 14px;">${escape(t)}</div>`;
     }
-    // Párrafo normal (resumen / conclusión)
+    // Párrafo normal (resumen)
     else {
       html += `<div style="font-size:13px;line-height:1.75;margin:3px 0;">${escape(t)}</div>`;
     }
