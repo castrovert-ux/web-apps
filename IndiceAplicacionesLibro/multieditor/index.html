@@ -1014,6 +1014,7 @@ let activeApi = localStorage.getItem('castroverde_editor_api') || 'gemini';
 function setApi(api) {
   activeApi = api;
   localStorage.setItem('castroverde_editor_api', api);
+  document.body.dataset.api = api;  // redundant truth source
   document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
   document.getElementById('btn-gemini-key').style.display  = api === 'gemini'  ? '' : 'none';
   document.getElementById('btn-groq-key').style.display    = api === 'groq'    ? '' : 'none';
@@ -1285,8 +1286,9 @@ y en ese caso lista brevemente qué se ha perdido.`;
 //  API CALL (Gemini o Groq según selector)
 // ══════════════════════════════════════════════════════
 async function callAPI(systemPrompt, userPrompt, opts={}) {
-  if (activeApi === 'groq') return callGroq(systemPrompt, userPrompt, opts);
-  if (activeApi === 'mistral') return callMistral(systemPrompt, userPrompt, opts);
+  const api = document.body.dataset.api || activeApi;
+  if (api === 'groq') return callGroq(systemPrompt, userPrompt, opts);
+  if (api === 'mistral') return callMistral(systemPrompt, userPrompt, opts);
   return callGemini(systemPrompt, userPrompt, opts);
 }
 
@@ -1384,8 +1386,32 @@ async function callMistral(systemPrompt, userPrompt, opts={}, _retry=0) {
     throw new Error(msg || 'Error Mistral ' + resp.status);
   }
   const data = await resp.json();
+  // Mistral sometimes returns 200 with an error object instead of choices
+  if (data.object === 'error' || data.type === 'error') {
+    const msg = data.message || data.error || 'Error desconocido de Mistral';
+    if (/rate|limit|exceed/i.test(msg)) {
+      if (_retry < 3) {
+        const wait = ((_retry + 1) * 20);
+        showStatus('warn', `⏳ Mistral: límite de tokens/peticiones. Reintentando en ${wait}s… (${_retry+1}/3)`);
+        await new Promise(r => setTimeout(r, wait * 1000));
+        return callMistral(systemPrompt, userPrompt, opts, _retry + 1);
+      }
+      throw new Error('Mistral: límite de uso alcanzado. Espera unos minutos o cambia a Gemini/Groq.');
+    }
+    throw new Error('Mistral: ' + msg);
+  }
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Respuesta vacía de Mistral');
+  // Detect error message sneaked into content
+  if (/text rate exceeded|rate limit|token limit/i.test(text)) {
+    if (_retry < 3) {
+      const wait = ((_retry + 1) * 20);
+      showStatus('warn', `⏳ Mistral: límite alcanzado. Reintentando en ${wait}s… (${_retry+1}/3)`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(systemPrompt, userPrompt, opts, _retry + 1);
+    }
+    throw new Error('Mistral: límite de uso alcanzado. Espera unos minutos o cambia a Gemini/Groq.');
+  }
   return text;
 }
 
@@ -1661,7 +1687,7 @@ async function runStep1() {
   lockUI(true);
   setDot(1, 'running');
   switchTab(1);
-  setResultLoading(1, 'Corrección técnica con ' + activeApi.charAt(0).toUpperCase() + activeApi.slice(1) + '…');
+  setResultLoading(1, 'Corrección técnica con ' + (document.body.dataset.api || activeApi).charAt(0).toUpperCase() + (document.body.dataset.api || activeApi).slice(1) + '…');
   document.getElementById('copy-1').disabled = true;
 
   try {
@@ -1703,7 +1729,7 @@ async function runStep2() {
   lockUI(true);
   setDot(2, 'running');
   switchTab(2);
-  setResultLoading(2, 'Edición literaria con ' + activeApi.charAt(0).toUpperCase() + activeApi.slice(1) + '…');
+  setResultLoading(2, 'Edición literaria con ' + (document.body.dataset.api || activeApi).charAt(0).toUpperCase() + (document.body.dataset.api || activeApi).slice(1) + '…');
   document.getElementById('copy-2').disabled = true;
 
   try {
@@ -2228,8 +2254,9 @@ loadActivePrompts();
 updateCount();
 updateNavButtons();
 setApi(activeApi);
-if (activeApi === 'gemini' && !GEMINI_API_KEY) setTimeout(openGeminiModal, 500);
-if (activeApi === 'groq'   && !GROQ_API_KEY)   setTimeout(openGroqModal,   500);
+if (activeApi === 'gemini'  && !GEMINI_API_KEY)  setTimeout(openGeminiModal,  500);
+if (activeApi === 'groq'    && !GROQ_API_KEY)    setTimeout(openGroqModal,    500);
+if (activeApi === 'mistral' && !MISTRAL_API_KEY) setTimeout(openMistralModal, 500);
 </script>
 </body>
 </html>
