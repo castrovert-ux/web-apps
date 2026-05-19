@@ -705,7 +705,7 @@
         <div class="panel-row">
           <span class="panel-label">Texto corregido (salida del Paso 1)</span>
           <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-1" onclick="showPrompt(1)">Ver prompt</button>
+            <button class="btn btn-copy" id="show-prompt-1" onclick="showPrompt(1)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-1" onclick="copyResult(1)" disabled>Copiar</button>
           </div>
         </div>
@@ -719,7 +719,7 @@
         <div class="panel-row">
           <span class="panel-label">Texto editado (salida del Paso 2)</span>
           <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-2" onclick="showPrompt(2)">Ver prompt</button>
+            <button class="btn btn-copy" id="show-prompt-2" onclick="showPrompt(2)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-2" onclick="copyResult(2)" disabled>Copiar</button>
           </div>
         </div>
@@ -733,7 +733,7 @@
         <div class="panel-row">
           <span class="panel-label">Revisión de fidelidad histórica (original vs. editado)</span>
           <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-3" onclick="showPrompt(3)">Ver prompt</button>
+            <button class="btn btn-copy" id="show-prompt-3" onclick="showPrompt(3)" disabled>Ver prompt</button>
           </div>
         </div>
         <div id="result-3-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
@@ -748,7 +748,7 @@
         <div class="panel-row">
           <span class="panel-label">Texto pulido — coherencia y redundancia (Paso 4)</span>
           <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-4" onclick="showPrompt(4)">Ver prompt</button>
+            <button class="btn btn-copy" id="show-prompt-4" onclick="showPrompt(4)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-4" onclick="copyResult(4)" disabled>Copiar</button>
           </div>
         </div>
@@ -762,7 +762,7 @@
         <div class="panel-row">
           <span class="panel-label">Texto con pulido final de lectura (Paso 5)</span>
           <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-5" onclick="showPrompt(5)">Ver prompt</button>
+            <button class="btn btn-copy" id="show-prompt-5" onclick="showPrompt(5)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-5" onclick="copyResult(5)" disabled>Copiar</button>
           </div>
         </div>
@@ -776,7 +776,7 @@
         <div class="panel-row">
           <span class="panel-label">Análisis comparativo — Original vs. resultado final (Paso 5)</span>
           <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-6" onclick="showPrompt(6)">Ver prompt</button>
+            <button class="btn btn-copy" id="show-prompt-6" onclick="showPrompt(6)" disabled>Ver prompt</button>
             <button class="btn btn-copy" id="copy-report-6" onclick="copyReport6()" disabled>Copiar informe</button>
           </div>
         </div>
@@ -1116,7 +1116,7 @@ function setDot(step, state) {
 // ══════════════════════════════════════════════════════
 //  TEXTAREA / FILE
 // ══════════════════════════════════════════════════════
-document.getElementById('input-text').addEventListener('input', () => { updateCount(); updatePromptButtons(); });
+document.getElementById('input-text').addEventListener('input', updateCount);
 document.getElementById('file-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1124,7 +1124,6 @@ document.getElementById('file-input').addEventListener('change', e => {
   reader.onload = ev => {
     document.getElementById('input-text').value = ev.target.result.substring(0, 20000);
     updateCount();
-    updatePromptButtons();
   };
   reader.readAsText(file, 'UTF-8');
   e.target.value = '';
@@ -1798,7 +1797,6 @@ async function runStep1() {
     document.getElementById('copy-1').disabled = false;
     document.getElementById('show-prompt-1').disabled = false;
     showStatus('ok', '✓ Paso 1 completado');
-    updatePromptButtons();
   } catch(e) {
     setResultError(1, e.message);
     setDot(1, '');
@@ -1841,7 +1839,6 @@ async function runStep2() {
     document.getElementById('copy-2').disabled = false;
     document.getElementById('show-prompt-2').disabled = false;
     showStatus('ok', '✓ Paso 2 completado');
-    updatePromptButtons();
   } catch(e) {
     setResultError(2, e.message);
     setDot(2, '');
@@ -1887,7 +1884,6 @@ async function runStep3() {
     setDot(3, 'done');
     document.getElementById('show-prompt-3').disabled = false;
     showStatus('ok', '✓ Revisión de fidelidad completada');
-    updatePromptButtons();
   } catch(e) {
     document.getElementById('result-3').innerHTML = '<span class="error-msg">✗ ' + e.message + '</span>';
     setDot(3, '');
@@ -1931,7 +1927,6 @@ async function runStep4() {
     document.getElementById('show-prompt-4').disabled = false;
     document.getElementById('btn-step5').disabled = false;
     showStatus('ok', '✓ Paso 4 completado');
-    updatePromptButtons();
   } catch(e) {
     setResultError(4, e.message);
     setDot(4, '');
@@ -1974,7 +1969,6 @@ async function runStep5() {
     document.getElementById('copy-5').disabled = false;
     document.getElementById('show-prompt-5').disabled = false;
     showStatus('ok', '✓ Paso 5 completado — texto listo');
-    updatePromptButtons();
   } catch(e) {
     setResultError(5, e.message);
     setDot(5, '');
@@ -2019,7 +2013,6 @@ async function runStep6() {
     document.getElementById('show-prompt-6').disabled = false;
     document.getElementById('copy-report-6').disabled = false;
     showStatus('ok', '✓ Análisis final completado');
-    updatePromptButtons();
   } catch(e) {
     document.getElementById('result-6').innerHTML = '<span class="error-msg">✗ ' + e.message + '</span>';
     setDot(6, '');
@@ -2320,60 +2313,12 @@ function buildFullPrompt(systemPrompt, userPrompt) {
   return '=== SYSTEM ===\n' + systemPrompt + '\n\n=== USER ===\n' + userPrompt;
 }
 
-function updatePromptButtons() {
-  const texto = document.getElementById('input-text').value.trim();
-  const has = {
-    1: !!texto,
-    2: !!step1Result,
-    3: !!(texto && (step2Result || step1Result || texto)),
-    4: !!step2Result,
-    5: !!step4Result,
-    6: !!(texto && (step5Result || step4Result || step2Result))
-  };
-  [1,2,3,4,5,6].forEach(n => {
-    const btn = document.getElementById('show-prompt-' + n);
-    if (btn) btn.disabled = !has[n];
-  });
-}
-
-function buildPromptPreview(n) {
-  const texto = document.getElementById('input-text').value.trim();
-  const P = getPrompt(n);
-  switch (n) {
-    case 1:
-      if (!texto) return null;
-      return buildFullPrompt(P, 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""');
-    case 2:
-      if (!step1Result) return null;
-      return buildFullPrompt(P, 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""');
-    case 3: {
-      const src = step2Result || step1Result || texto;
-      if (!src) return null;
-      const orig = texto || src;
-      return buildFullPrompt(P, 'TEXTO ORIGINAL:\n"""\n' + orig + '\n"""\n\nTEXTO EDITADO:\n"""\n' + src + '\n"""');
-    }
-    case 4:
-      if (!step2Result) return null;
-      return buildFullPrompt(P, 'Revisa el siguiente texto:\n\n"""\n' + step2Result + '\n"""');
-    case 5:
-      if (!step4Result) return null;
-      return buildFullPrompt(P, 'Revisa y pule el siguiente texto:\n\n"""\n' + step4Result + '\n"""');
-    case 6: {
-      const final = step5Result || step4Result || step2Result;
-      if (!final || !texto) return null;
-      return buildFullPrompt(P, 'TEXTO ORIGINAL:\n"""\n' + texto + '\n"""\n\nTEXTO EDITADO:\n"""\n' + final + '\n"""');
-    }
-    default: return null;
-  }
-}
-
 function showPrompt(n) {
-  const cached = { 1: step1Prompt, 2: step2Prompt, 3: step3Prompt, 4: step4Prompt, 5: step5Prompt, 6: step6Prompt };
+  const prompts = { 1: step1Prompt, 2: step2Prompt, 3: step3Prompt, 4: step4Prompt, 5: step5Prompt, 6: step6Prompt };
   const titles  = { 1: 'Prompt Paso 1 · Corrección', 2: 'Prompt Paso 2 · Edición', 3: 'Prompt Paso 3 · Fidelidad', 4: 'Prompt Paso 4 · Coherencia', 5: 'Prompt Paso 5 · Pulido final', 6: 'Prompt Paso 6 · Análisis final' };
-  const text = cached[n] || buildPromptPreview(n);
+  const text = prompts[n];
   if (!text) return;
-  const isPreview = !cached[n];
-  document.getElementById('modal-prompt-title').textContent = titles[n] + (isPreview ? ' · Vista previa' : '');
+  document.getElementById('modal-prompt-title').textContent = titles[n];
   document.getElementById('modal-prompt-text').value = text;
   document.getElementById('copy-prompt-modal').textContent = 'Copiar todo';
   document.getElementById('copy-prompt-modal').classList.remove('copied');
@@ -2404,7 +2349,6 @@ initDefaultPrompts();
 loadActivePrompts();
 updateCount();
 updateNavButtons();
-updatePromptButtons();
 setApi(activeApi);
 if (activeApi === 'gemini'  && !GEMINI_API_KEY)  setTimeout(openGeminiModal,  500);
 if (activeApi === 'groq'    && !GROQ_API_KEY)    setTimeout(openGroqModal,    500);
