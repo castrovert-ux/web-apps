@@ -593,12 +593,10 @@
       <button class="api-btn active" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
       <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
       <button class="api-btn" data-api="mistral" onclick="setApi('mistral')">Mistral</button>
-      <button class="api-btn" data-api="claude" onclick="setApi('claude')">Claude</button>
     </div>
     <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
     <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
     <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
-    <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
     <button class="btn-key" id="btn-history" onclick="openHistoryModal(1)" style="border-color:rgba(42,122,74,.4);color:#6ab88a;">⏱ Histórico</button>
     <button class="btn-key" id="btn-prompts" onclick="openPromptsModal()" style="border-color:rgba(139,90,43,.4);color:#c8a87a;">✎ Prompts</button>
   </div>
@@ -890,19 +888,6 @@
   </div>
 </div>
 
-
-<!-- MODAL CLAVE CLAUDE -->
-<div class="modal-overlay" id="modal-claude">
-  <div class="modal-box">
-    <div class="modal-title">Clave API Claude</div>
-    <div class="modal-sub">api.anthropic.com · modelo claude-sonnet-4-6 · temperatura 0.3</div>
-    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="new-password">
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="clearClaudeKey()">Borrar clave</button>
-      <button class="btn btn-run" onclick="saveClaudeKey()">Guardar</button>
-    </div>
-  </div>
-</div>
 <!-- MODAL CLAVE MISTRAL -->
 <div class="modal-overlay" id="modal-mistral">
   <div class="modal-box">
@@ -990,37 +975,6 @@ document.getElementById('modal-groq').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-groq')) closeGroqModal();
 });
 
-
-// ══════════════════════════════════════════════════════
-//  CLAVE CLAUDE
-// ══════════════════════════════════════════════════════
-let CLAUDE_API_KEY = localStorage.getItem('castroverde_editor_claude_key') || '';
-function openClaudeModal() {
-  document.getElementById('claude-key-input').value = CLAUDE_API_KEY;
-  document.getElementById('modal-claude').classList.add('visible');
-  setTimeout(() => document.getElementById('claude-key-input').focus(), 80);
-}
-function closeClaudeModal() {
-  document.getElementById('modal-claude').classList.remove('visible');
-}
-function saveClaudeKey() {
-  const val = document.getElementById('claude-key-input').value.trim();
-  if (!val) { clearClaudeKey(); return; }
-  CLAUDE_API_KEY = val;
-  localStorage.setItem('castroverde_editor_claude_key', val);
-  closeClaudeModal();
-  showStatus('ok', '✓ Clave Claude guardada');
-}
-function clearClaudeKey() {
-  CLAUDE_API_KEY = '';
-  localStorage.removeItem('castroverde_editor_claude_key');
-  document.getElementById('claude-key-input').value = '';
-  showStatus('ok', 'Clave Claude eliminada');
-}
-document.getElementById('btn-claude-key').addEventListener('click', openClaudeModal);
-document.getElementById('modal-claude').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal-claude')) closeClaudeModal();
-});
 // ══════════════════════════════════════════════════════
 //  CLAVE MISTRAL
 // ══════════════════════════════════════════════════════
@@ -1065,17 +1019,12 @@ function setApi(api) {
   document.getElementById('btn-gemini-key').style.display  = api === 'gemini'  ? '' : 'none';
   document.getElementById('btn-groq-key').style.display    = api === 'groq'    ? '' : 'none';
   document.getElementById('btn-mistral-key').style.display = api === 'mistral' ? '' : 'none';
-  document.getElementById('btn-claude-key').style.display  = api === 'claude'  ? '' : 'none';
   // Actualizar subtítulo del modal de prompt
   const sub = document.querySelector('#modal-prompt .modal-sub');
   if (sub) sub.textContent = api === 'gemini'
     ? 'System prompt + mensaje de usuario enviado a Gemini'
     : api === 'mistral'
     ? 'System prompt + mensaje de usuario enviado a Mistral'
-    : api === 'mistral'
-    ? 'System prompt + mensaje de usuario enviado a Mistral'
-    : api === 'claude'
-    ? 'System prompt + mensaje de usuario enviado a Claude (claude-sonnet-4-6)'
     : 'System prompt + mensaje de usuario enviado a Groq';
 }
 
@@ -1340,7 +1289,6 @@ async function callAPI(systemPrompt, userPrompt, opts={}) {
   const api = document.body.dataset.api || activeApi;
   if (api === 'groq') return callGroq(systemPrompt, userPrompt, opts);
   if (api === 'mistral') return callMistral(systemPrompt, userPrompt, opts);
-  if (api === 'claude') return callClaude(systemPrompt, userPrompt, opts);
   return callGemini(systemPrompt, userPrompt, opts);
 }
 
@@ -1467,45 +1415,6 @@ async function callMistral(systemPrompt, userPrompt, opts={}, _retry=0) {
   return text;
 }
 
-async function callClaude(systemPrompt, userPrompt, opts={}) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: opts.maxTokens || 8192,
-      temperature: opts.temperature !== undefined ? opts.temperature : 0.3,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    })
-  });
-  if (resp.status === 429) {
-    if ((opts._retry || 0) < 3) {
-      const wait = ((opts._retry || 0) + 1) * 15;
-      showStatus('warn', `⏳ Claude: límite de peticiones. Reintentando en ${wait}s… (${(opts._retry||0)+1}/3)`);
-      await new Promise(r => setTimeout(r, wait * 1000));
-      return callClaude(systemPrompt, userPrompt, {...opts, _retry: (opts._retry||0)+1});
-    }
-    throw new Error('Claude: límite de peticiones alcanzado. Espera un momento e inténtalo de nuevo.');
-  }
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    const msg = err.error?.message || '';
-    if (resp.status === 401) throw new Error('Claude: clave API incorrecta o inválida.');
-    if (resp.status === 403) throw new Error('Claude: acceso denegado. Verifica tu clave en console.anthropic.com');
-    throw new Error(msg || 'Error Claude ' + resp.status);
-  }
-  const data = await resp.json();
-  const text = data.content?.[0]?.text?.trim();
-  if (!text) throw new Error('Respuesta vacía de Claude');
-  return text;
-}
-
 // ══════════════════════════════════════════════════════
 //  STATE  (caché por sesión)
 // ══════════════════════════════════════════════════════
@@ -1528,11 +1437,6 @@ function checkKey() {
   if (activeApi === 'mistral' && !MISTRAL_API_KEY) {
     showStatus('err', 'Introduce primero la clave de Mistral.');
     setTimeout(openMistralModal, 700);
-    return false;
-  }
-  if (activeApi === 'claude' && !CLAUDE_API_KEY) {
-    showStatus('err', 'Introduce primero la clave de Claude.');
-    setTimeout(openClaudeModal, 700);
     return false;
   }
   if (activeApi === 'gemini' && !GEMINI_API_KEY) {
@@ -2353,7 +2257,6 @@ setApi(activeApi);
 if (activeApi === 'gemini'  && !GEMINI_API_KEY)  setTimeout(openGeminiModal,  500);
 if (activeApi === 'groq'    && !GROQ_API_KEY)    setTimeout(openGroqModal,    500);
 if (activeApi === 'mistral' && !MISTRAL_API_KEY) setTimeout(openMistralModal, 500);
-if (activeApi === 'claude'  && !CLAUDE_API_KEY)  setTimeout(openClaudeModal,  500);
 </script>
 </body>
 </html>
