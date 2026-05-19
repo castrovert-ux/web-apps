@@ -245,15 +245,6 @@
       </div>
     </div>
     <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
-      <span class="prompt-buttons-label">Paso 0b · Corrector de voz del autor</span>
-      <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-corrector" id="btn-corrector-voz" onclick="runCorrectorVoz()">
-          ✦ Aplicar plan de acción
-        </button>
-        <span id="corrector-voz-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
-      </div>
-    </div>
-    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
       <span class="prompt-buttons-label">Selecciona el análisis · el prompt se adaptará al modo activo</span>
       <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
     </div>
@@ -759,85 +750,6 @@ async function runCorrector() {
   } finally {
     btn.classList.remove('running');
     btn.textContent = '✦ Corrector técnico';
-  }
-}
-
-// ══════════════════════════════════════════════════════
-//  CORRECTOR DE VOZ DEL AUTOR
-// ══════════════════════════════════════════════════════
-const CORRECTOR_VOZ_SYSTEM = `ROL
-Eres un corrector de textos históricos.
-
-OBJETIVO
-Corregir y clarificar el texto sin cambiar su estilo ni su contenido.
-
-RESTRICCIÓN ABSOLUTA
-No añadir información nueva ni cambiar el significado.
-
-QUÉ PUEDES HACER
-- corregir ortografía y puntuación
-- dividir frases demasiado largas
-- ordenar ligeramente frases dentro del mismo párrafo si es necesario
-- eliminar repeticiones evidentes
-
-QUÉ NO DEBES HACER
-- no reescribir el estilo
-- no embellecer el texto
-- no añadir explicaciones
-- no cambiar el tono
-
-SALIDA
-Devuelve solo el texto corregido.`;
-
-async function runCorrectorVoz() {
-  const texto = document.getElementById('input-text').value.trim();
-  if (!texto) { alert('Primero pega el texto a corregir.'); return; }
-  if (!GROQ_API_KEY) {
-    setSyncStatus('err', 'Introduce la clave de Groq primero.');
-    setTimeout(openGroqKeyModal, 800);
-    return;
-  }
-  const btn = document.getElementById('btn-corrector-voz');
-  const status = document.getElementById('corrector-voz-status');
-  btn.classList.add('running');
-  btn.textContent = '… Aplicando';
-  status.textContent = 'Llamando a Groq…';
-
-  try {
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 4096,
-        temperature: 0.15,
-        messages: [
-          { role: 'system', content: CORRECTOR_VOZ_SYSTEM },
-          { role: 'user', content: 'Corrige el siguiente texto aplicando los cambios del plan de acción:\n\n"""\n' + texto + '\n"""' }
-        ]
-      })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'Error ' + resp.status);
-    }
-    const data = await resp.json();
-    const textoCorregido = data.choices?.[0]?.message?.content?.trim();
-    if (!textoCorregido) throw new Error('Respuesta vacía de Groq');
-
-    document.getElementById('input-text').value = textoCorregido;
-    actualizarContador();
-    status.textContent = '✓ Texto actualizado';
-    setTimeout(() => { status.textContent = ''; }, 4000);
-  } catch(e) {
-    status.textContent = '✗ ' + e.message;
-    setTimeout(() => { status.textContent = ''; }, 6000);
-  } finally {
-    btn.classList.remove('running');
-    btn.textContent = '✦ Aplicar plan de acción';
   }
 }
 
