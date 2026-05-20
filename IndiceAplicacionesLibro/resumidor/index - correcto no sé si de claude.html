@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resumidor · IA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #f0f4fa;
+      --surface:  #e4ecf5;
+      --card:     #d8e4f0;
+      --border:   #aac0d8;
+      --text:     #1a2a3a;
+      --muted:    #5a7090;
+      --accent:   #1a5a9a;
+      --accent2:  #2570c0;
+      --red:      #c45a3a;
+      --green:    #2a7a4a;
+      --blue:     #1a5a9a;
+      --font-h:   'Lora', Georgia, serif;
+      --font-body:'Lora', Georgia, serif;
+      --font-ui:  'Inter', system-ui, sans-serif;
+      --font-mono:'DM Mono', monospace;
+      --radius:   4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .logo {
+      font-family: var(--font-h);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-weight: 400;
+    }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── API SELECTOR ── */
+    .api-selector {
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .api-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .api-btn.active { background: var(--accent); color: #fff; }
+    .api-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── BTN KEY ── */
+    .btn-key {
+      background: none;
+      border: 1px solid rgba(26,90,154,0.35);
+      color: #5090c8;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .btn-key:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-key.prompts-btn {
+      border-color: rgba(42,112,192,.35);
+      color: #6090c0;
+    }
+    .btn-key.prompts-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+    /* ── STATUS BAR ── */
+    #status-bar {
+      flex-shrink: 0;
+      padding: 5px 22px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #status-bar.visible { display: flex; }
+    #status-bar.ok   { background: rgba(42,122,74,.12);  color: var(--green); }
+    #status-bar.err  { background: rgba(196,90,58,.10);  color: var(--red);   }
+    #status-bar.info { background: rgba(26,90,154,.10);  color: var(--accent);}
+    #status-bar.warn { background: rgba(196,140,0,.10);  color: #a07010;      }
+    .status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .55; font-size: 13px; padding: 0 4px; }
+    .status-close:hover { opacity: 1; }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      padding: 30px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── CONTROLS ROW ── */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .controls-row label {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* NUEVO ESTILO: Contenedor y caja de texto para el porcentaje */
+    .pct-input-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #pct-input {
+      width: 60px;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      outline: none;
+    }
+    #pct-input:focus {
+      border-color: var(--accent);
+    }
+    .pct-symbol {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    /* ── TEXTAREA ── */
+    .textarea-wrap { position: relative; }
+    #main-textarea {
+      width: 100%;
+      min-height: 370px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.9;
+      padding: 18px 18px 34px;
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #main-textarea:focus { border-color: var(--accent); }
+    #main-textarea.loading { opacity: .5; pointer-events: none; }
+    .char-count {
+      position: absolute;
+      bottom: 9px;
+      right: 13px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* ── ACTION ROW ── */
+    .action-row { display: flex; gap: 10px; align-items: center; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+    .btn-primary:disabled { opacity: .4; cursor: default; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost:disabled { opacity: .4; cursor: default; }
+    .btn-copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .btn-copy:hover { border-color: var(--green); color: var(--green); }
+    .btn-copy.copied { border-color: var(--green); color: var(--green); background: rgba(42,122,74,.08); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: none;
+      width: 15px; height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,25,50,0.50);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 440px;
+      max-width: 96vw;
+      box-shadow: 0 8px 36px rgba(10,25,50,.18);
+    }
+    .modal-title {
+      font-family: var(--font-h);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .modal-sub {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 11px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      border-radius: var(--radius);
+      outline: none;
+      margin-bottom: 9px;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-hint {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.65;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Modal prompt grande */
+    #modal-prompt .modal-box {
+      width: 740px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #prompt-textarea {
+      flex: 1;
+      min-height: 400px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      line-height: 1.7;
+      border-radius: var(--radius);
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    #prompt-textarea:focus { border-color: var(--accent); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    Resumidor <span>·</span> IA
+    <small>Resumen con voz del autor</small>
+  </div>
+  <div class="header-right">
+    <div class="api-selector" id="api-selector">
+      <button class="api-btn active" data-api="gemini"  onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn"        data-api="groq"    onclick="setApi('groq')">Groq</button>
+      <button class="api-btn"        data-api="mistral" onclick="setApi('mistral')">Mistral</button>
+      <button class="api-btn"        data-api="claude"  onclick="setApi('claude')">Claude</button>
+    </div>
+    <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key"    style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
+    <button class="btn-key" id="btn-claude-key"  style="display:none;">⚙ Claude</button>
+    <button class="btn-key prompts-btn" onclick="openPromptModal()">✎ Prompt</button>
+  </div>
+</header>
+
+<div id="status-bar">
+  <span id="status-msg"></span>
+  <button class="status-close" onclick="closeStatus()">✕</button>
+</div>
+
+<div class="main">
+
+  <div class="controls-row">
+    <label for="pct-input">Porcentaje de reducción</label>
+    <div class="pct-input-container">
+      <input type="number" id="pct-input" min="10" max="90" value="50" step="5">
+      <span class="pct-symbol">%</span>
+    </div>
+  </div>
+
+  <div class="textarea-wrap">
+    <textarea id="main-textarea" placeholder="Pega aquí el texto a resumir…&#10;&#10;El resultado reemplazará este texto."></textarea>
+    <div class="char-count" id="char-count">0 caracteres</div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-primary" id="btn-resumir" onclick="resumir()">▶ Resumir</button>
+    <div class="spinner" id="spinner"></div>
+    <button class="btn-copy" id="btn-copy" onclick="copiar()">Copiar</button>
+    <button class="btn btn-ghost" onclick="limpiar()" style="margin-left:auto;">✕ Limpiar</button>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modal-gemini">
+  <div class="modal-box">
+    <div class="modal-title">Clave Gemini</div>
+    <div class="modal-sub">Google AI Studio · gemini-2.5-flash</div>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage
