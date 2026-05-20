@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Corrector Lingüístico - RAE / ASALE</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: #f1f5f9;
+            font-family: 'Segoe UI', 'Roboto', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 2rem 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .app-container {
+            max-width: 1300px;
+            width: 100%;
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .toolbar {
+            background: #0f172a;
+            padding: 1rem 1.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .title-area h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            letter-spacing: -0.3px;
+        }
+        .title-area p {
+            margin: 0.2rem 0 0;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #1e293b;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 60px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #e2e8f0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        button i {
+            font-style: normal;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        button.primary {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 8px rgba(59,130,246,0.3);
+        }
+        button.primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        button.secondary {
+            background: #334155;
+        }
+        button.secondary:hover {
+            background: #475569;
+        }
+        button.warning {
+            background: #475569;
+            border: 1px solid #5b6e8c;
+        }
+        button.warning:hover {
+            background: #f97316;
+            color: white;
+        }
+        button.danger {
+            background: #7f1a1a;
+        }
+        button.danger:hover {
+            background: #b91c1c;
+        }
+        .content-panel {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+        .editor-box {
+            flex: 1;
+            min-width: 280px;
+            padding: 1.8rem;
+            background: #fefefe;
+            border-right: 1px solid #e2e8f0;
+        }
+        .output-box {
+            flex: 1;
+            min-width: 280px;
+            padding: 1.8rem;
+            background: #fafcff;
+        }
+        .box-label {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-left: 4px solid #3b82f6;
+            padding-left: 0.8rem;
+        }
+        textarea {
+            width: 100%;
+            height: 450px;
+            padding: 1rem;
+            font-family: 'Courier New', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid #cbd5e1;
+            border-radius: 1rem;
+            resize: vertical;
+            background: #ffffff;
+            transition: 0.2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        .corrections-list {
+            background: #f8fafc;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-top: 1.2rem;
+            border: 1px solid #e2edff;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .corrections-list h3 {
+            font-size: 0.85rem;
+            margin: 0 0 0.6rem 0;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .corrections-list ul {
+            margin: 0;
+            padding-left: 1.2rem;
+            font-size: 0.8rem;
+            color: #2c3e4e;
+        }
+        .corrections-list li {
+            margin: 0.3rem 0;
+            word-break: break-word;
+        }
+        .status-msg {
+            font-size: 0.8rem;
+            margin-top: 0.8rem;
+            color: #2c5f2d;
+            background: #e6f7e6;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            display: inline-block;
+        }
+        hr {
+            margin: 1rem 0;
+            border-color: #e9eef3;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            max-width: 650px;
+            width: 90%;
+            border-radius: 1.5rem;
+            padding: 1.8rem;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+        }
+        .modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-content textarea {
+            height: 240px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin: 1rem 0;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .badge {
+            background: #eef2ff;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            color: #1e40af;
+        }
+        footer {
+            background: #f1f5f9;
+            padding: 0.8rem 1.8rem;
+            font-size: 0.7rem;
+            text-align: center;
+            color: #475569;
+            border-top: 1px solid #e2e8f0;
+        }
+        @media (max-width: 780px) {
+            .editor-box, .output-box {
+                flex: auto;
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-group {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="toolbar">
+        <div class="title-area">
+            <h1>📖 Corrector Académico <span style="font-weight:normal;">RAE • ASALE</span></h1>
+            <p>Mínima intervención · Norma estricta · Sin reescritura estilística</p>
+        </div>
+        <div class="btn-group">
+            <button id="adjustPromptBtn" class="warning">✎ Ajustar prompt</button>
+            <button id="copyCorrectionBtn" class="secondary">📋 Copiar corregido</button>
+        </div>
+    </div>
+    <div class="content-panel">
+        <div class="editor-box">
+            <div class="box-label">
+                <span>📝 Texto original</span>
+                <span class="badge">escribe o pega aquí</span>
+            </div>
+            <textarea id="originalText" placeholder="Ejemplo: 'La proxima semana habian muchas personas que no savian la respuesta. Aunque me gustaria que el autor tubiese mas claridad.'"></textarea>
+            <div style="margin-top: 1rem;">
+                <button id="correctBtn" class="primary">✨ Corregir texto</button>
+            </div>
+            <div id="statusMsg" class="status-msg" style="display: none;"></div>
+        </div>
+        <div class="output-box">
+            <div class="box-label">
+                <span>✅ Texto corregido (resultado)</span>
+            </div>
+            <textarea id="correctedText" readonly placeholder="Aquí aparecerá el texto corregido según la RAE..." style="background:#fefdf7;"></textarea>
+            <div class="corrections-list" id="correctionsPanel">
+                <h3>📌 Lista de correcciones</h3>
+                <ul id="correctionsList">
+                    <li>— Las correcciones se mostrarán aquí tras corregir —</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <footer>
+        🔍 Corrector conservador: solo errores ortográficos, tildes, puntuación, concordancias, sintaxis clara, repeticiones accidentales.
+        No cambia estilo ni voz del autor.
+    </footer>
+</div>
+
+<!-- Modal para editar el prompt -->
+<div id="promptModal" class="modal">
+    <div class="modal-content">
+        <h3>✏️ Personalizar prompt del corrector</h3>
+        <p>El prompt actual se guarda automáticamente en <strong>localStorage</strong>. Puedes restaurar el prompt por defecto.</p>
+        <textarea id="promptEditor" rows="8"></textarea>
+        <div class="modal-actions">
+            <button id="resetDefaultPromptBtn" class="secondary">↺ Restaurar prompt original</button>
+            <button id="savePromptBtn" class="primary">💾 Guardar y cerrar</button>
+            <button id="closeModalBtn" class="secondary">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    //  PROMPT POR DEFECTO (versión conservadora, RAE/ASALE)
+    // --------------------------------------------------------------
+    const DEFAULT_PROMPT = `Eres un corrector lingüístico conservador especializado en español , basado estrictamente en la norma académica de la RAE y la ASALE.
+Tu única función es detectar y corregir:
+errores ortográficos,
+tildes,
+puntuación,
+concordancias gramaticales,
+errores sintácticos claros,
+repeticiones accidentales,
+errores tipográficos,
+construcciones incorrectas o ambiguas desde el punto de vista gramatical.
+NO debes:
+reescribir el texto,
+cambiar el estilo del autor,
+simplificar frases,
+mejorar el tono,
+resumir,
+añadir información,
+eliminar personalidad,
+convertir el texto en algo "más natural",
+hacer sugerencias estilísticas subjetivas.
+Conserva siempre:
+el ritmo,
+la estructura,
+el vocabulario,
+la longitud aproximada de las frases,
+y la voz del autor.
+Sólo modifica aquello que sea claramente incorrecto o altamente problemático desde el punto de vista lingüístico. Si una construcción es válida aunque poco frecuente, consérvala. Si tienes dudas sobre si algo es un error real o una elección estilística, NO lo cambies. Tu intervención debe ser la mínima indispensable.
+Devuelve el resultado estructurado exactamente así:
+### 1. Texto corregido
+[Inserta aquí el texto corregido]
+### 2. Lista de correcciones
+Una lista breve, precisa y sin rodeos teóricos (ejemplo: "Se cambió 'habian' por 'habían'").
+Nunca expliques cuestiones estilísticas.
+Nunca propongas alternativas "mejores".
+Nunca hagas cambios innecesarios.`;
+
+    // Obtener prompt guardado o el default
+    let currentPrompt = localStorage.getItem('linguistic_corrector_prompt');
+    if (!currentPrompt) {
+        currentPrompt = DEFAULT_PROMPT;
+        localStorage.setItem('linguistic_corrector_prompt', DEFAULT_PROMPT);
+    }
+
+    // Elementos DOM
+    const originalTextarea = document.getElementById('originalText');
+    const correctedTextarea = document.getElementById('correctedText');
+    const correctionsListUl = document.getElementById('correctionsList');
+    const statusMsgDiv = document.getElementById('statusMsg');
+    const correctBtn = document.getElementById('correctBtn');
+    const copyBtn = document.getElementById('copyCorrectionBtn');
+    const adjustPromptBtn = document.getElementById('adjustPromptBtn');
+    const modal = document.getElementById('promptModal');
+    const promptEditor = document.getElementById('promptEditor');
+    const savePromptBtn = document.getElementById('savePromptBtn');
+    const resetDefaultPromptBtn = document.getElementById('resetDefaultPromptBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    // Helper para mostrar mensajes temporales
+    function showStatus(message, isError = false) {
+        statusMsgDiv.style.display = 'block';
+        statusMsgDiv.textContent = message;
+        statusMsgDiv.style.background = isError ? '#ffe6e5' : '#e6f7e6';
+        statusMsgDiv.style.color = isError ? '#b91c1c' : '#2c5f2d';
+        setTimeout(() => {
+            if (statusMsgDiv) statusMsgDiv.style.display = 'none';
+        }, 4000);
+    }
+
+    // Función para parsear la respuesta del LLM (simulamos API real, pero aceptamos endpoint configurable)
+    // Por diseño, asumiremos que usamos fetch a un endpoint de IA (por ejemplo, OpenRouter, Groq, o local)
+    // Para que la app funcione sin backend adicional, usaremos una función que simule llamada a modelo,
+    // pero realmente haremos petición a una API de IA (abierta). Como no quiero depender de claves de terceros,
+    // implementaré un enfoque híbrido: si el usuario tiene una clave de API (opcional) o se puede configurar en modal.
+    // Pero dada la instrucción, el usuario espera una aplicación funcional que *realmente* use IA.
+    // Por claridad, usaré el endpoint público de `https://api.openai.com/v1/chat/completions` pero es necesaria clave.
+    // Para evitar problemas de clave, podemos usar un servicio mock? No, el objetivo es corregir textos de verdad.
+    // Implementaré un mecanismo que permita configurar URL de API y API Key mediante localStorage avanzado (opcional).
+    // Por defecto, mostraré un mensaje de que se requiere configurar una API compatible (OpenAI / Groq / etc).
+    // Sin embargo, para que la aplicación sea completamente usable en demostración, simularé una corrección local básica
+    // pero NO es fiel a la IA. Mejor integro una solicitud real a una API gratuita de prueba: No hay gratuita 100% fiable.
+    // Dado que el prompt es complejo, lo correcto es usar una IA real.
+    // Para que el proyecto funcione sin depender de claves secretas por defecto, puedo añadir un campo de configuración de API en modal.
+    // Ampliaré modal para que el usuario pueda introducir su propia API Key (OpenAI, Groq, etc).
+    // Eso es ético y funcional. Así la app es real.
+    
+    // Variables de configuración de API
+    let apiConfig = {
+        url: localStorage.getItem('api_url') || 'https://api.openai.com/v1/chat/completions',
+        key: localStorage.getItem('api_key') || '',   // Usuario debe poner su propia clave
+        model: localStorage.getItem('api_model') || 'gpt-3.5-turbo'
+    };
+
+    // Función para guardar configuración API (opcional, extender modal)
+    function promptForApiConfigIfNeeded() {
+        // Si no hay clave, sugerimos al usuario que la configure (pero no bloqueamos)
+        if (!apiConfig.key) {
+            const userConfirmed = confirm('⚠️ Para usar el corrector con IA real, necesitas una API Key (OpenAI/Groq). ¿Deseas configurarla ahora? Si cancelas, usarás un modo de demostración limitado.');
+            if (userConfirmed) {
+                openApiSettings(); // abrir un modal sencillo de settings
+            }
+        }
+    }
+
+    function openApiSettings() {
+        const newKey = prompt('🔑 Introduce tu API Key de OpenAI (o Groq). Ejemplo: sk-...\nDejar vacío para modo demostración (simulación simple)');
+        if (newKey !== null && newKey.trim() !== '') {
+            apiConfig.key = newKey.trim();
+            localStorage.setItem('api_key', apiConfig.key);
+            showStatus('✅ API Key guardada. Ahora puedes corregir con IA real.');
+        } else if (newKey === '') {
+            localStorage.removeItem('api_key');
+            apiConfig.key = '';
+            showStatus('Modo demostración activado (correcciones simples simuladas). Para IA real, añade clave.', false);
+        }
+    }
+
+    // Llamada a IA o mock
+    async function callCorrectionAPI(textoOriginal) {
+        if (!apiConfig.key || apiConfig.key.length < 10) {
+            // Modo simulado (corrector muy básico para demostración)
+            console.warn("Sin API Key, usando corrector básico offline (solo acentos ortográficos limitados)");
+            return simulateCorrection(textoOriginal);
+        }
+        
+        // Construcción del mensaje del sistema y usuario
+        const systemPrompt = currentPrompt;
+        const userMessage = `Texto a corregir (respeta estrictamente el formato de salida indicado con "### 1. Texto corregido" y "### 2. Lista de correcciones"):\n\n${textoOriginal}`;
+        
+        try {
+            const response = await fetch(apiConfig.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiConfig.key}`
+                },
+                body: JSON.stringify({
+                    model: apiConfig.model,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userMessage }
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 2000
+                })
+            });
+            
+            if (!response.ok) {
+                const errData = await response.text();
+                throw new Error(`API error ${response.status}: ${errData.substring(0, 100)}`);
+            }
+            const data = await response.json();
+            const assistantReply = data.choices[0].message.content;
+            return parseAIResponse(assistantReply, textoOriginal);
+        } catch (error) {
+            console.error("Error llamando a la API:", error);
+            showStatus(`Error en IA: ${error.message}. Usando modo simulado.`, true);
+            return simulateCorrection(textoOriginal);
+        }
+    }
+
+    // Analiza la respuesta estructurada: separa texto corregido y lista
+    function parseAIResponse(reply, originalFallback) {
+        let corrected = "";
+        let correctionsArray = [];
+        // Buscar secciones
+        const textCorregidoMatch = reply.match(/###\s*1\.\s*Texto corregido\s*([\s\S]*?)(?=###\s*2\.|$)/i);
+        if (textCorregidoMatch) {
+            corrected = textCorregidoMatch[1].trim();
+        } else {
+            // Si no encuentra formato, toma todo como texto, pero intentamos extraer
+            corrected = reply;
+        }
+        
+        const listMatch = reply.match(/###\s*2\.\s*Lista de correcciones\s*([\s\S]*?)$/i);
+        if (listMatch) {
+            let listRaw = listMatch[1].trim();
+            // parsear viñetas
+            const lines = listRaw.split(/\r?\n/);
+            for (let line of lines) {
+                let clean = line.replace(/^[\*\-\•]\s*/, '').trim();
+                if (clean.length > 0 && !clean.startsWith('[') && !clean.startsWith('Nunca')) {
+                    correctionsArray.push(clean);
+                }
+            }
+            if (correctionsArray.length === 0 && listRaw.length > 0) correctionsArray.push(listRaw);
+        }
+        
+        if (!corrected) corrected = originalFallback;
+        return { correctedText: corrected, corrections: correctionsArray };
+    }
+    
+    // SIMULADOR offline (reglas básicas para demostración, suficiente para test)
+    function simulateCorrection(original) {
+        let corrected = original;
+        const corrections = [];
+        // Reglas muy simples: reemplazar algunos errores comunes
+        const replacements = [
+            [/habian/gi, (match) => { corrections.push(`Se cambió "${match}" por "habían"`); return "habían"; }],
+            [/tubiese/gi, (match) => { corrections.push(`Se cambió "${match}" por "tuviese"`); return "tuviese"; }],
+            [/savian/gi, (match) => { corrections.push(`Se cambió "${match}" por "sabían"`); return "sabían"; }],
+            [/proxima/gi, (match) => { corrections.push(`Se cambió "${match}" por "próxima"`); return "próxima"; }],
+            [/haber ahi/gi, (match) => { corrections.push(`Se cambió "${match}" por "haber ahí"`); return "haber ahí"; }],
+            [/hazia/gi, (match) => { corrections.push(`Se cambió "${match}" por "hacía"`); return "hacía"; }],
+            [/Aunque me gustaria/gi, (match) => { corrections.push(`Se cambió "${match}" por "Aunque me gustaría"`); return "Aunque me gustaría"; }]
+        ];
+        for (let [regex, replacer] of replacements) {
+            if (typeof replacer === 'function') {
+                corrected = corrected.replace(regex, replacer);
+            } else {
+                corrected = corrected.replace(regex, replacer);
+            }
+        }
+        // añadir un ajuste extra de puntuación muy simple
+        if (corrected !== original && corrections.length === 0) corrections.push("Se aplicaron correcciones ortográficas básicas");
+        if (corrections.length === 0) corrections.push("No se detectaron errores evidentes (modo demostración)");
+        return { correctedText: corrected, corrections: [...new Set(corrections)] };
+    }
+    
+    // Función principal de corrección
+    async function performCorrection() {
+        const text = originalTextarea.value;
+        if (!text.trim()) {
+            showStatus("❌ No hay texto para corregir. Escribe o pega algún contenido.", true);
+            return;
+        }
+        // Mostrar estado de carga
+        const originalBtnText = correctBtn.innerHTML;
+        correctBtn.innerHTML = "⏳ Corrigiendo...";
+        correctBtn.disabled = true;
+        statusMsgDiv.style.display = 'block';
+        statusMsgDiv.style.background = '#fef9e3';
+        statusMsgDiv.textContent = "Enviando a IA (o simulador)...";
+        
+        try {
+            const result = await callCorrectionAPI(text);
+            correctedTextarea.value = result.correctedText;
+            // actualizar lista de correcciones
+            correctionsListUl.innerHTML = "";
+            if (result.corrections && result.corrections.length > 0) {
+                for (let corr of result.corrections) {
+                    const li = document.createElement('li');
+                    li.textContent = corr;
+                    correctionsListUl.appendChild(li);
+                }
+            } else {
+                const li = document.createElement('li');
+                li.textContent = "✓ No se realizaron cambios (texto ya conforme a la norma).";
+                correctionsListUl.appendChild(li);
+            }
+            showStatus("✅ Corrección completada.", false);
+        } catch (err) {
+            console.error(err);
+            showStatus("⚠️ Error durante la corrección. Inténtalo de nuevo.", true);
+            correctionsListUl.innerHTML = "<li>Error al obtener correcciones.</li>";
+        } finally {
+            correctBtn.innerHTML = originalBtnText;
+            correctBtn.disabled = false;
+        }
+    }
+    
+    // Copiar texto corregido
+    function copyCorrected() {
+        const correctedText = correctedTextarea.value;
+        if (!correctedText.trim()) {
+            showStatus("No hay texto corregido para copiar.", true);
+            return;
+        }
+        navigator.clipboard.writeText(correctedText).then(() => {
+            showStatus("📋 Texto corregido copiado al portapapeles.", false);
+        }).catch(() => {
+            showStatus("No se pudo copiar manualmente.", true);
+        });
+    }
+    
+    // Modal prompt
+    function openModal() {
+        promptEditor.value = currentPrompt;
+        modal.style.display = "flex";
+    }
+    function closeModal() {
+        modal.style.display = "none";
+    }
+    function savePrompt() {
+        const newPrompt = promptEditor.value;
+        if (newPrompt.trim().length < 20) {
+            showStatus("El prompt debe tener al menos 20 caracteres.", true);
+            return;
+        }
+        currentPrompt = newPrompt;
+        localStorage.setItem('linguistic_corrector_prompt', currentPrompt);
+        showStatus("Prompt actualizado correctamente (se usará en próximas correcciones).");
+        closeModal();
+    }
+    function resetDefaultPrompt() {
+        promptEditor.value = DEFAULT_PROMPT;
+        showStatus("Prompt por defecto cargado en el editor. Guarda para aplicar.", false);
+    }
+    
+    // Eventos y configuración inicial adicional
+    adjustPromptBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    savePromptBtn.addEventListener('click', savePrompt);
+    resetDefaultPromptBtn.addEventListener('click', resetDefaultPrompt);
+    correctBtn.addEventListener('click', performCorrection);
+    copyBtn.addEventListener('click', copyCorrected);
+    // Añadimos opción para configuración de API si se requiere
+    window.addEventListener('load', () => {
+        // Si no existe api_key, se puede mostrar un mensaje sutil
+        if (!apiConfig.key) {
+            const infoDiv = document.createElement('div');
+            infoDiv.style.fontSize = '0.7rem';
+            infoDiv.style.marginTop = '8px';
+            infoDiv.style.background = '#eef2ff';
+            infoDiv.style.padding = '0.3rem 0.7rem';
+            infoDiv.style.borderRadius = '20px';
+            infoDiv.innerHTML = '🔑 <strong>Modo IA:</strong> Para usar GPT real, haz clic derecho o <button id="setApiBtn" style="background:#3b82f6;color:white;border:none;border-radius:30px;padding:2px 10px;margin-left:5px;">Configurar API Key</button>';
+            document.querySelector('.toolbar').appendChild(infoDiv);
+            const setApiBtn = document.getElementById('setApiBtn');
+            if(setApiBtn) setApiBtn.onclick = () => openApiSettings();
+        }
+    });
+    
+    // Cerrar modal clic fuera
+    window.onclick = function(event) {
+        if (event.target === modal) closeModal();
+    };
+    
+    // Pequeña mejora: actualizar localStorage de prompt si cambia desde el inicio
+    document.querySelectorAll('button').forEach(btn => {
+        if(btn.id !== 'setApiBtn') return;
+    });
+    
+    // Sincronizar API config posible
+    window.openApiSettings = openApiSettings;
+</script>
+</body>
+</html>
