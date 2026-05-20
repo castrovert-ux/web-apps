@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor · Castroverde · v2 (con Histórico)</title>
+  <title>Resumidor · Gemini</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -25,7 +25,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
+    html, body { height: 100%; }
     body {
       background: var(--bg);
       color: var(--text);
@@ -34,6 +34,7 @@
       line-height: 1.7;
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
     }
 
     /* ── HEADER ── */
@@ -60,7 +61,7 @@
     }
     .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-    /* ── KEY BUTTON ── */
+    /* ── BTN KEY ── */
     .btn-key {
       background: none;
       border: 1px solid rgba(74,144,217,0.4);
@@ -75,6 +76,11 @@
       transition: background .2s, color .2s, border-color .2s;
     }
     .btn-key:hover { background: #4A90D9; color: #fff; border-color: #4A90D9; }
+    .btn-key.prompts-btn {
+      border-color: rgba(139,90,43,.4);
+      color: #c8a87a;
+    }
+    .btn-key.prompts-btn:hover { background: #a06830; color: #fff; border-color: #a06830; }
 
     /* ── STATUS BAR ── */
     #status-bar {
@@ -89,282 +95,119 @@
       justify-content: space-between;
     }
     #status-bar.visible { display: flex; }
-    #status-bar.ok { background: rgba(42,122,74,.12); color: var(--green); }
-    #status-bar.err { background: rgba(196,90,58,.1); color: var(--red); }
-    #status-bar.info { background: rgba(74,144,217,.1); color: #4A90D9; }
+    #status-bar.ok  { background: rgba(42,122,74,.12); color: var(--green); }
+    #status-bar.err { background: rgba(196,90,58,.1);  color: var(--red);   }
+    #status-bar.info{ background: rgba(74,144,217,.1); color: #4A90D9;      }
     .status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .6; font-size: 12px; padding: 0 4px; }
     .status-close:hover { opacity: 1; }
 
-    /* ── MAIN LAYOUT ── */
+    /* ── MAIN ── */
     .main {
       flex: 1;
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      overflow: hidden;
-      min-height: 0;
-    }
-
-    /* ── LEFT PANEL ── */
-    .panel-left {
-      border-right: 1px solid var(--border);
+      padding: 28px 24px;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      background: var(--surface);
+      gap: 16px;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
     }
-    .panel-title {
-      flex-shrink: 0;
-      padding: 9px 15px;
-      border-bottom: 1px solid var(--border);
-      background: var(--card);
+
+    /* ── CONTROLS ROW ── */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .controls-row label {
       font-family: var(--font-ui);
       font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 2px;
       color: var(--muted);
+      white-space: nowrap;
     }
-    .text-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      min-height: 0;
+
+    /* ── SLIDER ── */
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    #input-text {
-      width: 100%;
-      height: 100%;
-      background: transparent;
+    #pct-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 160px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    #pct-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+    #pct-slider::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
       border: none;
+      cursor: pointer;
+    }
+    #pct-value {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 500;
+      min-width: 38px;
+    }
+
+    /* ── TEXTAREA ── */
+    .textarea-wrap {
+      position: relative;
+    }
+    #main-textarea {
+      width: 100%;
+      min-height: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       color: var(--text);
       font-family: var(--font-body);
       font-size: 13px;
       line-height: 1.85;
-      padding: 14px 15px 28px;
-      resize: none;
+      padding: 16px 16px 32px;
+      resize: vertical;
       outline: none;
+      transition: border-color .2s;
     }
+    #main-textarea:focus { border-color: var(--accent); }
+    #main-textarea.loading { opacity: .55; pointer-events: none; }
     .char-count {
       position: absolute;
-      bottom: 5px;
-      right: 10px;
+      bottom: 8px;
+      right: 12px;
       font-family: var(--font-ui);
       font-size: 9px;
       color: var(--muted);
       pointer-events: none;
     }
-    .char-count.warn { color: var(--red); }
-    .panel-left-footer {
-      flex-shrink: 0;
-      padding: 9px 15px;
-      border-top: 1px solid var(--border);
-      background: var(--card);
-      display: flex;
-      gap: 7px;
-      align-items: center;
-    }
 
-    /* ── RIGHT PANEL ── */
-    .panel-right {
+    /* ── ACTION ROW ── */
+    .action-row {
       display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg);
-    }
-
-    /* ── STEPS BAR ── */
-    .steps-bar {
-      flex-shrink: 0;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
       gap: 10px;
-      flex-wrap: wrap;
-    }
-    .step-btn {
-      display: flex;
       align-items: center;
-      gap: 7px;
-      padding: 7px 14px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--accent);
-      cursor: pointer;
-      font-family: var(--font-ui);
-      font-size: 9px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: all .18s;
-      white-space: nowrap;
     }
-    .step-btn:hover:not(:disabled) { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-    .step-btn:disabled { opacity: .45; cursor: default; }
-    .step-btn.running { opacity: .6; cursor: default; pointer-events: none; }
-    .step-btn.done { border-color: var(--green); color: var(--green); }
-    .step-num {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: currentColor;
-      color: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-    .step-btn.done .step-num { background: var(--green); }
-    .step-arrow {
-      color: var(--border);
-      font-size: 12px;
-      font-family: var(--font-ui);
-    }
-    .steps-bar-right { margin-left: auto; display: flex; gap: 7px; align-items: center; }
-
-    /* ── RESULT AREA ── */
-    .result-area {
-      flex: 1;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
-    /* ── TABS ── */
-    .tabs {
-      flex-shrink: 0;
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-    .tab {
-      padding: 9px 16px;
-      font-family: var(--font-ui);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color .15s, border-color .15s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .tab:hover { color: var(--accent); }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--border);
-      flex-shrink: 0;
-    }
-    .tab-dot.done { background: var(--green); }
-    .tab-dot.running { background: #4A90D9; animation: pulse 1s ease-in-out infinite; }
-
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-    /* ── TAB PANELS ── */
-    .tab-panels { flex: 1; overflow: hidden; min-height: 0; position: relative; }
-    .tab-panel {
-      position: absolute;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      padding: 14px 18px;
-      gap: 10px;
-      overflow: hidden;
-    }
-    .tab-panel.active { display: flex; }
-
-    /* ── RESULT BOX ── */
-    .result-box {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      font-size: 13px;
-      line-height: 1.85;
-      color: var(--text);
-      overflow-y: auto;
-      font-family: var(--font-body);
-      min-height: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .result-box.editable { cursor: text; user-select: text; }
-    .result-box .empty-msg {
-      color: var(--muted);
-      font-style: italic;
-      font-size: 12px;
-    }
-    .result-box .loading-msg {
-      color: var(--muted);
-      font-style: italic;
-    }
-    .result-box .error-msg { color: var(--red); font-style: italic; }
-
-    /* Fidelidad: estilos especiales */
-    .fidelidad-ok {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      background: rgba(42,122,74,.08);
-      border: 1px solid rgba(42,122,74,.25);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      font-family: var(--font-body);
-      font-size: 13px;
-      color: var(--green);
-    }
-    .fidelidad-ok .fi-icon { font-size: 18px; flex-shrink: 0; }
-    .fidelidad-warn {
-      background: rgba(196,90,58,.07);
-      border: 1px solid rgba(196,90,58,.25);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      font-family: var(--font-body);
-      font-size: 13px;
-      color: var(--text);
-    }
-    .fidelidad-warn .fi-label {
-      font-family: var(--font-ui);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--red);
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    /* ── PANEL ROW (label + actions) ── */
-    .panel-row {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-    .panel-label {
-      font-family: var(--font-ui);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--muted);
-    }
-    .panel-actions { display: flex; gap: 6px; align-items: center; }
 
     /* ── BUTTONS ── */
     .btn {
-      padding: 6px 12px;
+      padding: 8px 18px;
       border: none;
       border-radius: var(--radius);
       cursor: pointer;
@@ -378,13 +221,14 @@
     }
     .btn-primary { background: var(--accent); color: var(--bg); }
     .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+    .btn-primary:disabled { opacity: .4; cursor: default; }
     .btn-ghost {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--muted);
     }
     .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-    .btn:disabled { opacity: .4; cursor: default; }
+    .btn-ghost:disabled { opacity: .4; cursor: default; }
     .btn-copy {
       background: transparent;
       border: 1px solid var(--border);
@@ -392,6 +236,19 @@
     }
     .btn-copy:hover { border-color: var(--green); color: var(--green); }
     .btn-copy.copied { border-color: var(--green); color: var(--green); background: rgba(42,122,74,.08); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── MODAL ── */
     .modal-overlay {
@@ -449,135 +306,34 @@
     }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-
-    /* ── API SELECTOR ── */
-    .api-selector {
+    /* Modal prompt grande */
+    #modal-prompt .modal-box {
+      width: 720px;
+      max-height: 90vh;
       display: flex;
-      background: var(--card);
+      flex-direction: column;
+    }
+    #prompt-textarea {
+      flex: 1;
+      min-height: 380px;
+      background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 3px;
-    }
-    .api-btn {
-      background: transparent;
-      border: none;
-      padding: 4px 12px;
-      border-radius: 20px;
+      color: var(--text);
+      padding: 10px 12px;
       font-family: var(--font-ui);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all .18s;
+      font-size: 11px;
+      line-height: 1.65;
+      border-radius: var(--radius);
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      margin-bottom: 14px;
     }
-    .api-btn.active {
-      background: var(--accent);
-      color: var(--bg);
-    }
-    .api-btn:hover:not(.active) { color: var(--text); }
+    #prompt-textarea:focus { border-color: var(--accent); }
 
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* ── MODAL HISTÓRICO (todos los pasos) ── */
-    #modal-history .modal-box {
-      width: 820px;
-      max-height: 88vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .hist-tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .hist-tab-btn {
-      padding: 5px 13px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--muted);
-      font-family: var(--font-ui);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .hist-tab-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-    .hist-tab-btn:hover:not(.active) { color: var(--accent); border-color: var(--accent); }
-    .hist-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-height: 340px;
-      max-height: 55vh;
-    }
-    .hist-entry {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--bg);
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .hist-entry-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      background: var(--card);
-      cursor: pointer;
-      font-family: var(--font-ui);
-      font-size: 9px;
-      letter-spacing: 1px;
-      color: var(--muted);
-    }
-    .hist-entry-header:hover { color: var(--text); }
-    .hist-entry-date { flex: 1; }
-    .hist-entry-actions { display: flex; gap: 5px; flex-shrink: 0; }
-    .hist-btn-sm {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 2px 8px;
-      border-radius: 2px;
-      font-family: var(--font-ui);
-      font-size: 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: all .15s;
-    }
-    .hist-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
-    .hist-btn-sm.del:hover { border-color: var(--red); color: var(--red); }
-    .hist-entry-body {
-      display: none;
-      padding: 10px 14px;
-      font-size: 12px;
-      line-height: 1.75;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 280px;
-      overflow-y: auto;
-      font-family: var(--font-body);
-    }
-    .hist-entry-body.open { display: block; }
-    .hist-empty {
-      font-family: var(--font-ui);
-      font-size: 10px;
-      color: var(--muted);
-      text-align: center;
-      padding: 40px;
-      letter-spacing: 1px;
-    }
-
   </style>
 </head>
 <body>
@@ -585,18 +341,12 @@
 <!-- HEADER -->
 <header>
   <div class="logo">
-    Editor <span>Castroverde</span>
-    <small>Corrección · Edición · Fidelidad histórica</small>
+    Resumidor <span>·</span> Gemini
+    <small>Resumen con voz del autor</small>
   </div>
   <div class="header-right">
-    <div class="api-selector" id="api-selector">
-      <button class="api-btn active" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
-      <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
-    </div>
+    <button class="btn-key prompts-btn" onclick="openPromptModal()">✎ Prompt</button>
     <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
-    <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
-    <button class="btn-key" id="btn-history" onclick="openHistoryModal(1)" style="border-color:rgba(42,122,74,.4);color:#6ab88a;">⏱ Histórico</button>
-    <button class="btn-key" id="btn-prompts" onclick="openPromptsModal()" style="border-color:rgba(139,90,43,.4);color:#c8a87a;">✎ Prompts</button>
   </div>
 </header>
 
@@ -609,374 +359,98 @@
 <!-- MAIN -->
 <div class="main">
 
-  <!-- PANEL IZQUIERDO: texto original -->
-  <div class="panel-left">
-    <div class="panel-title">✍ Texto original</div>
-    <div class="text-wrap">
-      <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto a procesar…&#10;&#10;Hasta 20.000 caracteres."></textarea>
-      <div class="char-count" id="char-count">0 / 20.000</div>
-    </div>
-    <div class="panel-left-footer">
-      <label class="btn btn-ghost" style="cursor:pointer;font-size:9px;padding:5px 10px;">
-        📄 .txt<input type="file" id="file-input" accept=".txt" style="display:none;">
-      </label>
-      <button class="btn btn-ghost" onclick="clearAll()" style="margin-left:auto;font-size:9px;padding:5px 10px;">✕ Limpiar</button>
+  <!-- CONTROLES -->
+  <div class="controls-row">
+    <label>Porcentaje de reducción</label>
+    <div class="slider-wrap">
+      <input type="range" id="pct-slider" min="10" max="90" value="50" step="5">
+      <span id="pct-value">50 %</span>
     </div>
   </div>
 
-  <!-- PANEL DERECHO -->
-  <div class="panel-right">
-
-    <!-- BARRA DE PASOS -->
-    <div class="steps-bar">
-      <button class="step-btn" id="btn-step1" onclick="runStep1()">
-        <span class="step-num">1</span>
-        Corrección previa
-      </button>
-      <span class="step-arrow">→</span>
-      <button class="step-btn" id="btn-step2" onclick="runStep2()" disabled>
-        <span class="step-num">2</span>
-        Edición literaria
-      </button>
-      <span class="step-arrow">→</span>
-      <button class="step-btn" id="btn-step3" onclick="runStep3()" disabled>
-        <span class="step-num">3</span>
-        Fidelidad histórica
-      </button>
-      <span class="step-arrow">→</span>
-      <button class="step-btn" id="btn-step4" onclick="runStep4()" disabled>
-        <span class="step-num">4</span>
-        Pulido coherencia
-      </button>
-      <span class="step-arrow">→</span>
-      <button class="step-btn" id="btn-step5" onclick="runStep5()" disabled>
-        <span class="step-num">5</span>
-        Pulido final
-      </button>
-      <span class="step-arrow">→</span>
-      <button class="step-btn" id="btn-step6" onclick="runStep6()" disabled>
-        <span class="step-num">6</span>
-        Análisis final
-      </button>
-      <div class="steps-bar-right">
-        <button class="btn btn-ghost" id="btn-prev" onclick="navStep(-1)" style="font-size:11px;padding:5px 10px;" title="Paso anterior">←</button>
-        <button class="btn btn-ghost" id="btn-next" onclick="navStep(+1)" style="font-size:11px;padding:5px 10px;" title="Paso siguiente">→</button>
-        <button class="btn btn-ghost" id="btn-run-all" onclick="runAll()" style="font-size:9px;padding:5px 12px;">▶ Todo en cadena</button>
-      </div>
-    </div>
-
-    <!-- TABS -->
-    <div class="tabs">
-      <button class="tab active" id="tab-1" onclick="switchTab(1)">
-        <span class="tab-dot" id="dot-1"></span>
-        Paso 1 · Corrección
-      </button>
-      <button class="tab" id="tab-2" onclick="switchTab(2)">
-        <span class="tab-dot" id="dot-2"></span>
-        Paso 2 · Edición
-      </button>
-      <button class="tab" id="tab-3" onclick="switchTab(3)">
-        <span class="tab-dot" id="dot-3"></span>
-        Paso 3 · Fidelidad
-      </button>
-      <button class="tab" id="tab-4" onclick="switchTab(4)">
-        <span class="tab-dot" id="dot-4"></span>
-        Paso 4 · Coherencia
-      </button>
-      <button class="tab" id="tab-5" onclick="switchTab(5)">
-        <span class="tab-dot" id="dot-5"></span>
-        Paso 5 · Pulido
-      </button>
-      <button class="tab" id="tab-6" onclick="switchTab(6)">
-        <span class="tab-dot" id="dot-6"></span>
-        Paso 6 · Análisis
-      </button>
-    </div>
-
-    <!-- TAB PANELS -->
-    <div class="tab-panels">
-
-      <!-- Panel 1 -->
-      <div class="tab-panel active" id="panel-1">
-        <div class="panel-row">
-          <span class="panel-label">Texto corregido (salida del Paso 1)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-1" onclick="showPrompt(1)" disabled>Ver prompt</button>
-            <button class="btn btn-copy" id="copy-1" onclick="copyResult(1)" disabled>Copiar</button>
-          </div>
-        </div>
-        <div class="result-box editable" id="result-1">
-          <span class="empty-msg">Ejecuta el Paso 1 para ver el resultado de la corrección técnica previa.</span>
-        </div>
-      </div>
-
-      <!-- Panel 2 -->
-      <div class="tab-panel" id="panel-2">
-        <div class="panel-row">
-          <span class="panel-label">Texto editado (salida del Paso 2)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-2" onclick="showPrompt(2)" disabled>Ver prompt</button>
-            <button class="btn btn-copy" id="copy-2" onclick="copyResult(2)" disabled>Copiar</button>
-          </div>
-        </div>
-        <div class="result-box editable" id="result-2">
-          <span class="empty-msg">El Paso 2 tomará el resultado del Paso 1 como entrada.</span>
-        </div>
-      </div>
-
-      <!-- Panel 3 -->
-      <div class="tab-panel" id="panel-3">
-        <div class="panel-row">
-          <span class="panel-label">Revisión de fidelidad histórica (original vs. editado)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-3" onclick="showPrompt(3)" disabled>Ver prompt</button>
-          </div>
-        </div>
-        <div id="result-3-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
-          <div class="result-box" id="result-3" style="flex:1;">
-            <span class="empty-msg">El Paso 3 compara el texto original con el resultado del Paso 2.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel 4 -->
-      <div class="tab-panel" id="panel-4">
-        <div class="panel-row">
-          <span class="panel-label">Texto pulido — coherencia y redundancia (Paso 4)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-4" onclick="showPrompt(4)" disabled>Ver prompt</button>
-            <button class="btn btn-copy" id="copy-4" onclick="copyResult(4)" disabled>Copiar</button>
-          </div>
-        </div>
-        <div class="result-box editable" id="result-4">
-          <span class="empty-msg">El Paso 4 toma el resultado del Paso 2 como entrada.</span>
-        </div>
-      </div>
-
-      <!-- Panel 5 -->
-      <div class="tab-panel" id="panel-5">
-        <div class="panel-row">
-          <span class="panel-label">Texto con pulido final de lectura (Paso 5)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-5" onclick="showPrompt(5)" disabled>Ver prompt</button>
-            <button class="btn btn-copy" id="copy-5" onclick="copyResult(5)" disabled>Copiar</button>
-          </div>
-        </div>
-        <div class="result-box editable" id="result-5">
-          <span class="empty-msg">El Paso 5 toma el resultado del Paso 4 como entrada.</span>
-        </div>
-      </div>
-
-      <!-- Panel 6 -->
-      <div class="tab-panel" id="panel-6">
-        <div class="panel-row">
-          <span class="panel-label">Análisis comparativo — Original vs. resultado final (Paso 5)</span>
-          <div class="panel-actions">
-            <button class="btn btn-copy" id="show-prompt-6" onclick="showPrompt(6)" disabled>Ver prompt</button>
-            <button class="btn btn-copy" id="copy-report-6" onclick="copyReport6()" disabled>Copiar informe</button>
-          </div>
-        </div>
-        <!-- Vista normal -->
-        <div id="result-6-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
-          <div class="result-box" id="result-6" style="flex:1;overflow-y:auto;">
-            <span class="empty-msg">El Paso 6 compara el texto original con el resultado final del Paso 5.</span>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /tab-panels -->
-  </div><!-- /panel-right -->
-</div><!-- /main -->
-
-<!-- MODAL HISTÓRICO -->
-<div class="modal-overlay" id="modal-history">
-  <div class="modal-box" style="width:820px;max-height:88vh;display:flex;flex-direction:column;">
-    <div class="modal-title">Histórico de ejecuciones</div>
-    <div class="modal-sub">Registros guardados en localStorage · Borrado individual o completo por paso</div>
-    <div class="hist-tabs" id="hist-tabs"></div>
-    <div class="hist-list" id="hist-list"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-shrink:0;">
-      <button class="btn btn-ghost" id="btn-hist-clear-step" onclick="histClearStep()" style="font-size:9px;padding:5px 11px;color:var(--red);border-color:var(--red);">✕ Borrar este paso</button>
-      <button class="btn btn-ghost" onclick="closeHistoryModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
-    </div>
+  <!-- TEXTAREA -->
+  <div class="textarea-wrap">
+    <textarea id="main-textarea" placeholder="Pega aquí el texto a resumir…&#10;&#10;El resultado reemplazará este texto."></textarea>
+    <div class="char-count" id="char-count">0 caracteres</div>
   </div>
+
+  <!-- BOTONES -->
+  <div class="action-row">
+    <button class="btn btn-primary" id="btn-resumir" onclick="resumir()">▶ Resumir</button>
+    <div class="spinner" id="spinner"></div>
+    <button class="btn btn-copy" id="btn-copy" onclick="copiar()">Copiar</button>
+    <button class="btn btn-ghost" onclick="limpiar()" style="margin-left:auto;">✕ Limpiar</button>
+  </div>
+
 </div>
 
-
-
-<!-- MODAL CONFIGURACIÓN PROMPTS -->
-<div class="modal-overlay" id="modal-prompts-config">
-  <div class="modal-box" style="width:780px;max-height:90vh;display:flex;flex-direction:column;">
-    <div class="modal-title">Configuración de prompts</div>
-    <div class="modal-sub">Los cambios se guardan en localStorage. Los prompts por defecto se restauran con el botón correspondiente.</div>
-
-    <!-- Selector de paso -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
-      <button class="api-btn active" id="pcfg-tab-1" onclick="switchPromptTab(1)">1 · Corrección</button>
-      <button class="api-btn" id="pcfg-tab-2" onclick="switchPromptTab(2)">2 · Edición</button>
-      <button class="api-btn" id="pcfg-tab-3" onclick="switchPromptTab(3)">3 · Fidelidad</button>
-      <button class="api-btn" id="pcfg-tab-4" onclick="switchPromptTab(4)">4 · Coherencia</button>
-      <button class="api-btn" id="pcfg-tab-5" onclick="switchPromptTab(5)">5 · Pulido final</button>
-      <button class="api-btn" id="pcfg-tab-6" onclick="switchPromptTab(6)">6 · Análisis</button>
-    </div>
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <span id="pcfg-label" style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">System prompt activo</span>
-      <button class="btn btn-ghost" onclick="restoreDefaultPrompt()" style="font-size:9px;padding:4px 10px;">↺ Restaurar por defecto</button>
-    </div>
-
-    <textarea id="pcfg-textarea"
-      style="flex:1;min-height:340px;background:var(--bg);border:1px solid var(--border);
-             color:var(--text);padding:10px 12px;font-family:var(--font-ui);font-size:11px;
-             line-height:1.65;border-radius:var(--radius);outline:none;resize:none;
-             overflow-y:auto;"></textarea>
-
-    <div class="modal-actions" style="margin-top:14px;">
-      <button class="btn btn-ghost" onclick="closePromptsModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="savePromptConfig()">Guardar</button>
+<!-- MODAL CLAVE GEMINI -->
+<div class="modal-overlay" id="modal-gemini">
+  <div class="modal-box">
+    <div class="modal-title">Clave Gemini</div>
+    <div class="modal-sub">Google AI Studio · generativelanguage.googleapis.com</div>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por AIzaSy.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave()">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeGeminiModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave()">Guardar</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL PROMPT -->
 <div class="modal-overlay" id="modal-prompt">
-  <div class="modal-box" style="width:680px;">
-    <div class="modal-title" id="modal-prompt-title">Prompt</div>
-    <div class="modal-sub">System prompt + mensaje de usuario enviado a Gemini</div>
-    <textarea id="modal-prompt-text" readonly
-      style="width:100%;height:340px;background:var(--bg);border:1px solid var(--border);
-             color:var(--text);padding:10px 12px;font-family:var(--font-ui);font-size:11px;
-             line-height:1.6;border-radius:var(--radius);outline:none;resize:none;
-             overflow-y:auto;"></textarea>
-    <div class="modal-actions" style="margin-top:14px;">
-      <button class="btn btn-ghost" onclick="closePromptModal()">Cerrar</button>
-      <button class="btn btn-primary" id="copy-prompt-modal" onclick="copyPromptModal()">Copiar todo</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CLAVE GEMINI -->
-<div class="modal-overlay" id="modal-gemini">
   <div class="modal-box">
-    <div class="modal-title">Clave Gemini (AI Studio)</div>
-    <div class="modal-sub">Google AI Studio · generativelanguage.googleapis.com</div>
-    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
-    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por AIzaSy.</div>
+    <div class="modal-title">Editar prompt</div>
+    <div class="modal-sub">Usa {PORCENTAJE} y {TEXTO} como marcadores. Se guardan en localStorage.</div>
+    <textarea id="prompt-textarea"></textarea>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="forgetGeminiKey()">Olvidar</button>
-      <button class="btn btn-ghost" onclick="closeGeminiModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveGeminiKey()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- MODAL CLAVE GROQ -->
-<div class="modal-overlay" id="modal-groq">
-  <div class="modal-box">
-    <div class="modal-title">Clave Groq</div>
-    <div class="modal-sub">api.groq.com · modelo llama-3.3-70b-versatile</div>
-    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="off">
-    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por gsk_.</div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="forgetGroqKey()">Olvidar</button>
-      <button class="btn btn-ghost" onclick="closeGroqModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveGroqKey()">Guardar</button>
+      <button class="btn btn-ghost" onclick="restaurarPrompt()">↺ Restaurar</button>
+      <button class="btn btn-ghost" onclick="closePromptModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrompt()">Guardar</button>
     </div>
   </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════════════════
-//  CLAVE GEMINI
+//  PROMPT POR DEFECTO
 // ══════════════════════════════════════════════════════
-let GEMINI_API_KEY = localStorage.getItem('castroverde_editor_gemini_key') || '';
+const DEFAULT_PROMPT = `Tu tarea es resumir el siguiente texto.
 
-function openGeminiModal() {
-  document.getElementById('gemini-key-input').value = GEMINI_API_KEY;
-  document.getElementById('modal-gemini').classList.add('visible');
-  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
-}
-function closeGeminiModal() {
-  document.getElementById('modal-gemini').classList.remove('visible');
-}
-function saveGeminiKey() {
-  const val = document.getElementById('gemini-key-input').value.trim();
-  if (!val || !val.startsWith('AIzaSy')) {
-    showStatus('err', 'La clave debe empezar por AIzaSy');
-    return;
-  }
-  GEMINI_API_KEY = val;
-  localStorage.setItem('castroverde_editor_gemini_key', val);
-  closeGeminiModal();
-  showStatus('ok', '✓ Clave guardada');
-}
-function forgetGeminiKey() {
-  if (!confirm('¿Borrar la clave de Gemini?')) return;
-  GEMINI_API_KEY = '';
-  localStorage.removeItem('castroverde_editor_gemini_key');
-  document.getElementById('gemini-key-input').value = '';
-  closeGeminiModal();
-}
-document.getElementById('btn-gemini-key').addEventListener('click', openGeminiModal);
-document.getElementById('modal-gemini').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal-gemini')) closeGeminiModal();
-});
+OBJETIVO PRINCIPAL:
+Reducir el texto aproximadamente al {PORCENTAJE}% de su longitud original, manteniendo la voz, el estilo y el tono del autor.
 
+REGLAS FUNDAMENTALES:
+- Conserva la voz del autor: su forma de escribir, su ritmo y su personalidad textual.
+- Mantén el nivel de formalidad, riqueza léxica y tono emocional original.
+- No transformes el texto en un esquema, lista o conjunto de ideas sueltas.
+- No adoptes un estilo académico neutro ni un "resumen típico de IA".
+- Mantén la fluidez natural del texto.
+- Prioriza eliminar redundancias, repeticiones, ejemplos secundarios y detalles accesorios antes que alterar ideas principales.
+- No añadas información nueva, interpretaciones ni explicaciones externas.
+- No cambies el sentido del texto.
+- Mantén, siempre que sea posible, las expresiones originales del autor.
+- Si hay pasajes especialmente expresivos o literarios, intenta preservarlos aunque debas comprimir otras partes.
+- Ajusta la longitud de forma aproximada, no exacta.
+
+SALIDA:
+Devuelve únicamente el texto resumido, sin comentarios, sin explicaciones y sin etiquetas.
+
+TEXTO A RESUMIR:
+"""
+{TEXTO}
+"""`;
+
+const LS_PROMPT_KEY  = 'resumidor_prompt';
+const LS_GEMINI_KEY  = 'resumidor_gemini_key';
 
 // ══════════════════════════════════════════════════════
-//  CLAVE GROQ
+//  ESTADO
 // ══════════════════════════════════════════════════════
-let GROQ_API_KEY = localStorage.getItem('castroverde_editor_groq_key') || '';
-
-function openGroqModal() {
-  document.getElementById('groq-key-input').value = GROQ_API_KEY;
-  document.getElementById('modal-groq').classList.add('visible');
-  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
-}
-function closeGroqModal() {
-  document.getElementById('modal-groq').classList.remove('visible');
-}
-function saveGroqKey() {
-  const val = document.getElementById('groq-key-input').value.trim();
-  if (!val || !val.startsWith('gsk_')) {
-    showStatus('err', 'La clave de Groq debe empezar por gsk_');
-    return;
-  }
-  GROQ_API_KEY = val;
-  localStorage.setItem('castroverde_editor_groq_key', val);
-  closeGroqModal();
-  showStatus('ok', '✓ Clave Groq guardada');
-}
-function forgetGroqKey() {
-  if (!confirm('¿Borrar la clave de Groq?')) return;
-  GROQ_API_KEY = '';
-  localStorage.removeItem('castroverde_editor_groq_key');
-  document.getElementById('groq-key-input').value = '';
-  closeGroqModal();
-}
-document.getElementById('btn-groq-key').addEventListener('click', openGroqModal);
-document.getElementById('modal-groq').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal-groq')) closeGroqModal();
-});
-
-// ══════════════════════════════════════════════════════
-//  SELECTOR DE API
-// ══════════════════════════════════════════════════════
-let activeApi = localStorage.getItem('castroverde_editor_api') || 'gemini';
-
-function setApi(api) {
-  activeApi = api;
-  localStorage.setItem('castroverde_editor_api', api);
-  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
-  document.getElementById('btn-gemini-key').style.display = api === 'gemini' ? '' : 'none';
-  document.getElementById('btn-groq-key').style.display  = api === 'groq'   ? '' : 'none';
-  // Actualizar subtítulo del modal de prompt
-  const sub = document.querySelector('#modal-prompt .modal-sub');
-  if (sub) sub.textContent = api === 'gemini'
-    ? 'System prompt + mensaje de usuario enviado a Gemini'
-    : 'System prompt + mensaje de usuario enviado a Groq';
-}
+let GEMINI_API_KEY = localStorage.getItem(LS_GEMINI_KEY) || '';
+let activePrompt   = localStorage.getItem(LS_PROMPT_KEY) || DEFAULT_PROMPT;
 
 // ══════════════════════════════════════════════════════
 //  STATUS BAR
@@ -992,278 +466,95 @@ function showStatus(type, msg) {
 function closeStatus() { document.getElementById('status-bar').className = ''; }
 
 // ══════════════════════════════════════════════════════
-//  TABS
+//  SLIDER
 // ══════════════════════════════════════════════════════
-let activeTab = 1;
-function switchTab(n) {
-  activeTab = n;
-  [1,2,3,4,5,6].forEach(i => {
-    document.getElementById('tab-' + i).classList.toggle('active', i === n);
-    document.getElementById('panel-' + i).classList.toggle('active', i === n);
-  });
-}
-
-// ══════════════════════════════════════════════════════
-//  TAB DOT STATE
-// ══════════════════════════════════════════════════════
-function setDot(step, state) {
-  // state: '' | 'running' | 'done'
-  const dot = document.getElementById('dot-' + step);
-  dot.className = 'tab-dot' + (state ? ' ' + state : '');
-}
-
-// ══════════════════════════════════════════════════════
-//  TEXTAREA / FILE
-// ══════════════════════════════════════════════════════
-document.getElementById('input-text').addEventListener('input', updateCount);
-document.getElementById('file-input').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('input-text').value = ev.target.result.substring(0, 20000);
-    updateCount();
-  };
-  reader.readAsText(file, 'UTF-8');
-  e.target.value = '';
+const slider   = document.getElementById('pct-slider');
+const pctValue = document.getElementById('pct-value');
+slider.addEventListener('input', () => {
+  pctValue.textContent = slider.value + ' %';
 });
+
+// ══════════════════════════════════════════════════════
+//  CONTADOR
+// ══════════════════════════════════════════════════════
+const textarea  = document.getElementById('main-textarea');
+const charCount = document.getElementById('char-count');
+textarea.addEventListener('input', updateCount);
 function updateCount() {
-  const l = document.getElementById('input-text').value.length;
-  const el = document.getElementById('char-count');
-  el.textContent = l.toLocaleString('es') + ' / 20.000';
-  el.className = 'char-count' + (l > 18000 ? ' warn' : '');
-}
-function clearAll() {
-  document.getElementById('input-text').value = '';
-  updateCount();
-  [1,2,3,4,5,6].forEach(i => {
-    if (i <= 3) setResultEmpty(i);
-    else setResultEmpty(i);
-    setDot(i, '');
-  });
-  document.getElementById('btn-step2').disabled = true;
-  document.getElementById('btn-step3').disabled = true;
-  document.getElementById('btn-step4').disabled = true;
-  document.getElementById('btn-step5').disabled = true;
-  document.getElementById('btn-step6').disabled = true;
-  document.getElementById('copy-1').disabled = true;
-  document.getElementById('copy-2').disabled = true;
-  document.getElementById('copy-4').disabled = true;
-  document.getElementById('copy-5').disabled = true;
-  document.getElementById('copy-report-6').disabled = true;
-  ['show-prompt-1','show-prompt-2','show-prompt-3','show-prompt-4','show-prompt-5','show-prompt-6'].forEach(id => { 
-    const el = document.getElementById(id); if(el) el.disabled = true; 
-  });
-  step1Result = ''; step2Result = ''; step3Result = ''; step4Result = ''; step5Result = ''; step6Result = '';
-  step1Prompt = ''; step2Prompt = ''; step3Prompt = ''; step4Prompt = ''; step5Prompt = ''; step6Prompt = '';
+  const n = textarea.value.length;
+  charCount.textContent = n.toLocaleString('es') + ' caracteres';
 }
 
 // ══════════════════════════════════════════════════════
-//  RESULT HELPERS
+//  CLAVE GEMINI
 // ══════════════════════════════════════════════════════
-const EMPTY_MSGS = {
-  1: 'Ejecuta el Paso 1 para ver el resultado de la corrección técnica previa.',
-  2: 'El Paso 2 tomará el resultado del Paso 1 como entrada.',
-  3: 'El Paso 3 compara el texto original con el resultado del Paso 2.',
-  4: 'El Paso 4 toma el resultado del Paso 2 como entrada.',
-  5: 'El Paso 5 toma el resultado del Paso 4 como entrada.',
-  6: 'El Paso 6 compara el texto original con el resultado final del Paso 5.'
-};
-function setResultEmpty(n) {
-  const box = document.getElementById('result-' + n);
-  if (box) box.innerHTML = '<span class="empty-msg">' + EMPTY_MSGS[n] + '</span>';
+function openGeminiModal() {
+  document.getElementById('gemini-key-input').value = GEMINI_API_KEY;
+  document.getElementById('modal-gemini').classList.add('visible');
+  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
 }
-function setResultLoading(n, msg) {
-  document.getElementById('result-' + n).innerHTML = '<span class="loading-msg">… ' + msg + '</span>';
+function closeGeminiModal() {
+  document.getElementById('modal-gemini').classList.remove('visible');
 }
-function setResultError(n, msg) {
-  document.getElementById('result-' + n).innerHTML = '<span class="error-msg">✗ ' + msg + '</span>';
-}
-function setResultText(n, text) {
-  const box = document.getElementById('result-' + n);
-  box.textContent = text;
-}
-function setFidelidadResult(text) {
-  const box = document.getElementById('result-3');
-  const trimmed = text.trim();
-  if (!trimmed) {
-    box.innerHTML = '<span class="error-msg">Respuesta vacía del modelo.</span>';
+function guardarClave() {
+  const val = document.getElementById('gemini-key-input').value.trim();
+  if (!val || !val.startsWith('AIzaSy')) {
+    showStatus('err', 'La clave debe empezar por AIzaSy');
     return;
   }
-  const isOk = /^ok\b/i.test(trimmed);
-  if (isOk) {
-    box.innerHTML = `<div class="fidelidad-ok"><span class="fi-icon">✓</span><div><strong>OK</strong> — No se detecta pérdida significativa de matiz histórico.</div></div>`;
-  } else {
-    const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const lines = trimmed.split('\n').map(l => l.trim()).filter(Boolean);
-    const firstIsLabel = /p[eé]rdida/i.test(lines[0]);
-    const parts = lines.map((l, i) =>
-      (i === 0 && firstIsLabel)
-        ? `<span class="fi-label">${escape(l)}</span>`
-        : `<p style="margin-bottom:6px;">${escape(l)}</p>`
-    ).join('');
-    box.innerHTML = `<div class="fidelidad-warn">${parts}</div>`;
-  }
+  GEMINI_API_KEY = val;
+  localStorage.setItem(LS_GEMINI_KEY, val);
+  closeGeminiModal();
+  showStatus('ok', '✓ Clave guardada');
 }
-
-// ══════════════════════════════════════════════════════
-//  PROMPTS (PASO 1 ACTUALIZADO CON NUEVO TEXTO RAE/ASALE)
-// ══════════════════════════════════════════════════════
-const PROMPT_1_SYSTEM = `Eres un corrector lingüístico conservador especializado en español, basado estrictamente en la norma académica de la RAE y la ASALE.
-Tu única función es detectar y corregir:
-errores ortográficos,
-tildes,
-puntuación,
-concordancias gramaticales,
-errores sintácticos claros,
-uso incorrecto de signos de puntuación según la norma académica (comas, punto y coma, dos puntos, puntos y enlaces entre oraciones),
-repeticiones accidentales,
-errores tipográficos,
-construcciones incorrectas o ambiguas desde el punto de vista gramatical.
-NO debes:
-reescribir el texto,
-cambiar el estilo del autor,
-simplificar frases,
-mejorar el tono,
-resumir,
-añadir información,
-eliminar personalidad,
-convertir el texto en algo "más natural",
-hacer sugerencias estilísticas subjetivas.
-Conserva siempre:
-el ritmo,
-la estructura,
-el vocabulario,
-la longitud aproximada de las frases,
-y la voz del autor.
-Sólo modifica aquello que sea claramente incorrecto o altamente problemático desde el punto de vista lingüístico. Si una construcción es válida aunque poco frecuente, consérvala. Conserva las elecciones estilísticas válidas, pero corrige siempre los usos de puntuación que produzcan incorrección gramatical, ambigüedad sintáctica o una relación lógica defectuosa entre oraciones. Debe ser la mínima indispensable. Prioriza la corrección sintáctica y lógica de la puntuación por encima de la conservación literal de pausas estilísticas.
-Cuando un error afecte a la estructura sintáctica de una oración, reconstruye la relación gramatical mínima necesaria para que la oración sea plenamente correcta, aunque eso implique mover signos de puntuación o reintegrar segmentos separados incorrectamente.
-Devuelve el resultado estructurado exactamente así:
-### 1. Texto corregido
-[Inserta aquí el texto corregido]	
-### 2. Lista de correcciones
-Una lista breve, precisa y sin rodeos teóricos (ejemplo: "Se cambió 'habian' por 'habían'").
-Nunca expliques cuestiones estilísticas.
-Nunca propongas alternativas "mejores".
-Nunca hagas cambios innecesarios.
-No reescribir nunca, salvo cuando la frase sea gramaticalmente ininterpretable o estructuralmente rota.`;
-
-const PROMPT_2_SYSTEM = `ROL
-Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato". No eres el autor.
-
-OBJETIVO
-Mejorar la claridad, fluidez y estructura del texto, manteniendo fielmente su contenido, significado, jerarquía informativa y voz original.
-
-RESTRICCIÓN ABSOLUTA
-No añadir información nueva bajo ninguna circunstancia.
-No inventar hechos, interpretaciones, matices, contexto ni explicaciones implícitas.
-No ampliar ni reducir el significado del texto.
-
-INVARIANTES EDITORIALES (OBLIGATORIOS)
-Debes respetar siempre:
-- Orden de los hechos y su secuencia interna
-- Jerarquía de la información dentro de cada frase
-- Grado de certeza histórica (posibilidad, duda, hipótesis, afirmación)
-- Información geográfica y espacial completa
-- Tono sobrio y documental
-- Nivel de detalle original
-
-PRINCIPIO EDITORIAL
-El texto puede ajustarse solo a nivel local (frases y párrafos). No se permite reestructuración global ni reconstrucción del texto bajo ningún concepto.
-
-QUÉ PUEDES HACER
-- Corregir ortografía, puntuación y gramática
-- Dividir frases largas si dificultan la lectura
-- Reordenar frases dentro de un mismo párrafo solo si es estrictamente necesario para evitar ambigüedad inmediata, sin alterar el énfasis ni la jerarquía informativa original
-- Unir frases cortas si mejora la continuidad sin eliminar información
-- Reducir repeticiones claras de expresión (no de contenido)
-- Simplificar estructuras sintácticas densas solo si afectan a la comprensión literal
-- Introducir transiciones solo si son imprescindibles para resolver ambigüedad inmediata y ya están implícitas en el texto
-
-PROTECCIONES CRÍTICAS (NO NEGOCIABLES)
-
-1. Protección de jerarquía informativa
-No se puede eliminar, degradar ni reinterpretar información geográfica, espacial o contextual aunque parezca redundante.
-
-2. Protección de modalidad histórica (certeza)
-No se puede modificar el grado de certeza del texto.
-Esto incluye no transformar:
-- hipótesis en afirmaciones
-- prudencia en seguridad
-- relaciones débiles en causales directas
-- ni viceversa
-
-3. Protección de causalidad histórica
-No se puede cambiar el nivel de relación causal expresado en el texto.
-Expresiones de posibilidad, influencia o relación indirecta deben mantenerse exactamente en su grado de incertidumbre.
-
-QUÉ NO DEBES HACER
-- No reinterpretar el contenido
-- No modernizar el lenguaje si altera el matiz histórico
-- No embellecer ni literaturizar el estilo
-- No añadir contexto, explicaciones ni inferencias
-- No reescribir el texto como si fuera nuevo
-- No reorganizar globalmente el contenido
-- No simplificar eliminando información
-- No alterar el grado de certeza o causalidad
-
-CONTROL DE CONECTORES Y TRANSICIONES
-- Utilizar conectores de forma mínima y funcional
-- Evitar sobreestructuración del texto
-- Mantener transiciones implícitas cuando ya estén sugeridas
-- Usar conectores solo si son estrictamente necesarios para evitar ambigüedad inmediata
-Evitar especialmente:
-- "en cambio"
-- "sin embargo" salvo necesidad clara
-- "en aquel contexto"
-- "por otro lado" como recurso estilístico
-- conectores añadidos solo por fluidez
-
-PRINCIPIO CLAVE
-El texto debe leerse como un desarrollo natural de ideas históricas, no como un texto reorganizado por un editor moderno.
-
-FORMATO DE SALIDA (OBLIGATORIO)
-Devuelve únicamente el texto reescrito.
-No incluyas explicaciones, diagnósticos, resúmenes ni comentarios.`;
-
-const PROMPT_3_SYSTEM = `ROL
-Eres un revisor de fidelidad histórica textual.
-
-TAREA
-Compara el TEXTO ORIGINAL con el TEXTO EDITADO y evalúa si se han perdido o debilitado explicaciones históricas, relaciones causales o matices de proceso.
-
-QUÉ DEBES DETECTAR
-- Eliminación de causas o explicaciones
-- Simplificación de procesos históricos
-- Pérdida de conectores causales (por, debido a, según, lo que explica que…)
-- Reducción de relaciones entre hechos
-- Transformación de explicaciones en afirmaciones simples
-
-QUÉ NO DEBES HACER
-- No reescribir el texto
-- No corregir estilo
-- No mejorar redacción
-- No añadir información nueva
-
-SALIDA
-Responde SOLO con:
-1. OK (si no hay pérdida significativa)
-o
-2. PÉRDIDA DE MATIZ (si detectas cambios relevantes)
-y en ese caso lista brevemente qué se ha perdido.`;
-
-// ══════════════════════════════════════════════════════
-//  API CALL (Gemini o Groq según selector)
-// ══════════════════════════════════════════════════════
-async function callAPI(systemPrompt, userPrompt) {
-  if (activeApi === 'groq') return callGroq(systemPrompt, userPrompt);
-  return callGemini(systemPrompt, userPrompt);
+function olvidarClave() {
+  if (!confirm('¿Borrar la clave de Gemini guardada?')) return;
+  GEMINI_API_KEY = '';
+  localStorage.removeItem(LS_GEMINI_KEY);
+  document.getElementById('gemini-key-input').value = '';
+  closeGeminiModal();
 }
+document.getElementById('btn-gemini-key').addEventListener('click', openGeminiModal);
+document.getElementById('modal-gemini').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-gemini')) closeGeminiModal();
+});
 
-async function callGemini(systemPrompt, userPrompt) {
+// ══════════════════════════════════════════════════════
+//  PROMPT MODAL
+// ══════════════════════════════════════════════════════
+function openPromptModal() {
+  document.getElementById('prompt-textarea').value = activePrompt;
+  document.getElementById('modal-prompt').classList.add('visible');
+}
+function closePromptModal() {
+  document.getElementById('modal-prompt').classList.remove('visible');
+}
+function guardarPrompt() {
+  const val = document.getElementById('prompt-textarea').value.trim();
+  if (!val) { showStatus('err', 'El prompt no puede estar vacío'); return; }
+  if (!val.includes('{TEXTO}')) { showStatus('err', 'El prompt debe incluir el marcador {TEXTO}'); return; }
+  activePrompt = val;
+  localStorage.setItem(LS_PROMPT_KEY, val);
+  closePromptModal();
+  showStatus('ok', '✓ Prompt guardado');
+}
+function restaurarPrompt() {
+  if (!confirm('¿Restaurar el prompt por defecto? Se perderán los cambios.')) return;
+  activePrompt = DEFAULT_PROMPT;
+  localStorage.removeItem(LS_PROMPT_KEY);
+  document.getElementById('prompt-textarea').value = DEFAULT_PROMPT;
+  showStatus('ok', '↺ Prompt restaurado');
+}
+document.getElementById('modal-prompt').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-prompt')) closePromptModal();
+});
+
+// ══════════════════════════════════════════════════════
+//  LLAMADA GEMINI
+// ══════════════════════════════════════════════════════
+async function callGemini(userPrompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   const body = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
       temperature: 0.3,
@@ -1293,244 +584,72 @@ async function callGemini(systemPrompt, userPrompt) {
   return text;
 }
 
-async function callGroq(systemPrompt, userPrompt) {
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + GROQ_API_KEY
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 8192,
-      temperature: 0.3,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userPrompt }
-      ]
-    })
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error?.message || 'Error Groq ' + resp.status);
-  }
-  const data = await resp.json();
-  const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Respuesta vacía de Groq');
-  return text;
-}
-
 // ══════════════════════════════════════════════════════
-//  STATE  (caché por sesión)
+//  RESUMIR
 // ══════════════════════════════════════════════════════
-let step1Result = '';
-let step2Result = '';
-let step3Result = '';   // raw text de fidelidad
-let step4Result = '';
-let step5Result = '';
-let step6Result = '';
-
-// ══════════════════════════════════════════════════════
-//  VALIDACIÓN
-// ══════════════════════════════════════════════════════
-function checkKey() {
-  if (activeApi === 'groq' && !GROQ_API_KEY) {
-    showStatus('err', 'Introduce primero la clave de Groq.');
-    setTimeout(openGroqModal, 700);
-    return false;
-  }
-  if (activeApi === 'gemini' && !GEMINI_API_KEY) {
+async function resumir() {
+  const texto = textarea.value.trim();
+  if (!texto) { showStatus('err', 'Pega un texto antes de resumir.'); return; }
+  if (!GEMINI_API_KEY) {
     showStatus('err', 'Introduce primero la clave de Gemini.');
     setTimeout(openGeminiModal, 700);
-    return false;
-  }
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  NAVEGACIÓN ← →
-// ══════════════════════════════════════════════════════
-function navStep(delta) {
-  const target = activeTab + delta;
-  if (target < 1 || target > 6) return;
-
-  // Al avanzar, ejecutar el paso si no tiene resultado aún
-  if (delta > 0) {
-    if (target === 2) { runStep2(); return; }
-    if (target === 3) { runStep3(); return; }
-    if (target === 4) { runStep4(); return; }
-    if (target === 5) { runStep5(); return; }
-    if (target === 6) { runStep6(); return; }
+    return;
   }
 
-  // Al retroceder (o avanzar con caché), solo mostrar
-  switchTab(target);
-  updateNavButtons();
-}
+  const pct = slider.value;
+  const prompt = activePrompt
+    .replace('{PORCENTAJE}', pct)
+    .replace('{TEXTO}', texto);
 
-function updateNavButtons() {
-  document.getElementById('btn-prev').disabled = (activeTab === 1);
-  document.getElementById('btn-next').disabled = (activeTab === 6);
+  // UI: estado de carga
+  textarea.classList.add('loading');
+  document.getElementById('btn-resumir').disabled = true;
+  document.getElementById('spinner').classList.add('visible');
+  showStatus('info', '⏳ Enviando a Gemini…');
+
+  try {
+    const resultado = await callGemini(prompt);
+    textarea.value = resultado;
+    updateCount();
+    showStatus('ok', '✓ Resumen generado');
+  } catch (err) {
+    showStatus('err', '✗ ' + err.message);
+  } finally {
+    textarea.classList.remove('loading');
+    document.getElementById('btn-resumir').disabled = false;
+    document.getElementById('spinner').classList.remove('visible');
+  }
 }
 
 // ══════════════════════════════════════════════════════
-//  BLOQUEO GLOBAL durante llamadas
+//  COPIAR
 // ══════════════════════════════════════════════════════
-function lockUI(on) {
-  ['btn-step1','btn-step2','btn-step3','btn-step4','btn-step5','btn-step6','btn-run-all','btn-prev','btn-next']
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = on ? true : false;
-    });
-  if (!on) restoreStepButtons(); // rehabilitar según estado real
+function copiar() {
+  const texto = textarea.value;
+  if (!texto) return;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btn-copy');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
-function restoreStepButtons() {
-  document.getElementById('btn-step2').disabled = !step1Result;
-  document.getElementById('btn-step3').disabled = !step2Result;
-  document.getElementById('btn-step4').disabled = !step2Result;
-  document.getElementById('btn-step5').disabled = !step4Result;
-  document.getElementById('btn-step6').disabled = !step5Result;
-  updateNavButtons();
+// ══════════════════════════════════════════════════════
+//  LIMPIAR
+// ══════════════════════════════════════════════════════
+function limpiar() {
+  if (textarea.value && !confirm('¿Borrar el contenido del área de texto?')) return;
+  textarea.value = '';
+  updateCount();
 }
 
-const PROMPT_6_SYSTEM = `ROL
-Eres un analista textual especializado en edición de textos históricos. Comparas dos versiones de un mismo texto: una versión original y una versión editada.
-
-OBJETIVO
-Detectar con precisión cualquier cambio de significado, pérdida de información, alteración de matiz histórico, modificación de certeza, cambio en la causalidad, en la jerarquía informativa o en la voz del texto.
-
-ENTRADAS
-Te proporcionaré:
-* TEXTO ORIGINAL
-* TEXTO EDITADO
-
-RESTRICCIÓN FUNDAMENTAL
-No debes reescribir los textos. No debes proponer mejoras. No debes corregir el texto editado. Solo comparar.
-
-QUÉ DEBES DETECTAR
-Debes identificar y listar de forma clara:
-
-1. Pérdida de información
-Elementos presentes en el original que han desaparecido, se han reducido o se han debilitado.
-
-2. Añadidos no presentes en el original
-Cualquier palabra, conector o formulación que introduzca explicación, énfasis o interpretación no presente en el original.
-
-3. Cambios de significado
-Frases donde el sentido ha sido modificado, aunque parezca similar.
-
-4. Cambios de grado de certeza (modalidad)
-Alteraciones en el nivel de seguridad del texto, por ejemplo:
-* hipótesis → afirmación
-* duda → seguridad
-* posibilidad → relación más firme
-
-5. Cambios de causalidad
-Si una relación sugerida o abierta se convierte en una relación más directa o explicativa, o al revés.
-
-6. Cambios de jerarquía informativa
-Si algún dato pierde peso, se desplaza o se presenta con menor o mayor relevancia que en el original.
-
-7. Simplificaciones con pérdida de matiz
-Reducciones que eliminan precisión histórica, geográfica o contextual.
-
-8. Cambios en la voz del historiador (MUY IMPORTANTE)
-Detectar si cambia la posición del autor en el texto, por ejemplo:
-* de implicación directa ("encontramos", "vemos") a formulación impersonal ("se encuentra")
-* de voz vinculada a la investigación a voz neutra o expositiva
-
-9. Cambios en el grado de explicitación
-Detectar si el texto editado:
-* explica más de lo que el original sugería
-* introduce conectores ("por ejemplo", "ya que", etc.) que guían la interpretación
-* hace explícitas relaciones que en el original eran implícitas
-
-QUÉ NO DEBES HACER
-* No editar los textos
-* No reescribir versiones alternativas
-* No valorar si el texto es mejor o peor
-* No introducir conocimiento externo
-
-FORMATO DE SALIDA
-
-RESUMEN GENERAL
-Diagnóstico global breve (2-4 líneas)
-
-CAMBIOS DETECTADOS
-
-1. Pérdida de información
-* ...
-
-2. Añadidos no presentes en el original
-* ...
-
-3. Cambios de significado
-* ...
-
-4. Cambios de certeza o modalidad
-* ...
-
-5. Cambios de causalidad
-* ...
-
-6. Cambios de jerarquía informativa
-* ...
-
-7. Simplificaciones con pérdida de matiz
-* ...
-
-8. Cambios en la voz del historiador
-* ...
-
-9. Cambios en el grado de explicitación
-* ...
-
-CONCLUSIÓN FINAL
-Valoración breve del nivel de fidelidad del texto editado respecto al original.`;
-
-const PROMPT_4_SYSTEM = `=== SYSTEM PROMPT ===
-
-ROL
-Eres un editor literario de estilo intermedio especializado en textos históricos locales.
-Trabajas sobre borradores ya corregidos estructuralmente.
-
-OBJETIVO
-Mejorar la fluidez, el ritmo de lectura y la cohesión del texto, eliminando redundancias
-y repeticiones innecesarias sin alterar su contenido histórico ni su lógica argumental.
-
-QUE PUEDES HACER
-- Eliminar repeticiones de la misma idea o redundancias léxicas y conceptuales
-- Mejorar la fluidez entre frases equivalentes
-- Ajustar puntuación para mejorar el ritmo de lectura
-- Reordenar elementos dentro de una frase solo si mejora la claridad sin alterar el significado
-- Suavizar transiciones cuando la relación entre ideas ya esté implícita
-- Unificar formulaciones repetitivas sin alterar matices históricos
-
-QUE NO PUEDES HACER
-- Añadir información nueva
-- Eliminar hechos históricos, fechas, ejemplos o referencias documentales
-- Cambiar el orden de los acontecimientos ni su lógica interna
-- Simplificar procesos históricos en afirmaciones generales
-- Fusionar ideas históricas distintas aunque parezcan similares
-- Resumir o condensar contenido informativo
-- Reescribir el texto como si fuera nuevo
-- Embellecer ni literaturizar el estilo
-- Reorganizar la estructura argumental
-
-FORMATO DE SALIDA
-Devuelve únicamente el texto revisado. Sin comentarios ni explicaciones.`;
-
-const PROMPT_5_SYSTEM = `=== SYSTEM PROMPT (Capa 3: Pulido final de lectura) ===
-
-ROL
-Eres un editor literario de estilo final especializado en textos históricos ya corregidos.
-Trabajas sobre un texto correcto en contenido, estructura y cohesión.
-
-OBJETIVO
-Mejorar el ritmo de lectura, la naturalidad del castellano escrito y la fluidez superficial,
-sin modificar contenido, estructura ni lógica interna.
-
-REGLA DE INTERVENCIÓN MÍNIMA
-Solo puedes modificar una frase si existe al menos una de estas condiciones:
-- D
+// ══════════════════════════════════════════════════════
+//  ARRANQUE
+// ══════════════════════════════════════════════════════
+updateCount();
+if (!GEMINI_API_KEY) setTimeout(openGeminiModal, 500);
+</script>
+</body>
+</html>
