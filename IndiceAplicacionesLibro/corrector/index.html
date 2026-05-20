@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corrector · IA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #f0f7f2;
+      --surface:  #e2f0e6;
+      --card:     #d2e8d8;
+      --border:   #96c4a4;
+      --text:     #1a2e20;
+      --muted:    #4a7058;
+      --accent:   #1a7a40;
+      --accent2:  #258c50;
+      --red:      #c45a3a;
+      --green:    #1a7a40;
+      --font-h:   'Lora', Georgia, serif;
+      --font-body:'Lora', Georgia, serif;
+      --font-ui:  'Inter', system-ui, sans-serif;
+      --font-mono:'DM Mono', monospace;
+      --radius:   4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .logo { font-family: var(--font-h); font-size: 19px; font-weight: 600; color: var(--text); }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-weight: 400;
+    }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── API SELECTOR ── */
+    .api-selector {
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .api-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .api-btn.active { background: var(--accent); color: #fff; }
+    .api-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── BTN KEY ── */
+    .btn-key {
+      background: none;
+      border: 1px solid rgba(26,122,64,0.35);
+      color: #50a870;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .btn-key:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-key.prompts-btn { border-color: rgba(37,140,80,.35); color: #60a880; }
+    .btn-key.prompts-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+    /* ── STATUS BAR ── */
+    #status-bar {
+      flex-shrink: 0;
+      padding: 5px 22px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #status-bar.visible { display: flex; }
+    #status-bar.ok   { background: rgba(26,122,64,.12);  color: var(--green); }
+    #status-bar.err  { background: rgba(196,90,58,.10);  color: var(--red);   }
+    #status-bar.info { background: rgba(26,122,64,.10);  color: var(--accent);}
+    #status-bar.warn { background: rgba(196,140,0,.10);  color: #a07010;      }
+    .status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .55; font-size: 13px; padding: 0 4px; }
+    .status-close:hover { opacity: 1; }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      padding: 30px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── TEXTAREA ── */
+    .textarea-wrap { position: relative; }
+    #main-textarea {
+      width: 100%;
+      min-height: 370px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.9;
+      padding: 18px 18px 34px;
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #main-textarea:focus { border-color: var(--accent); }
+    #main-textarea.loading { opacity: .5; pointer-events: none; }
+    .char-count {
+      position: absolute;
+      bottom: 9px;
+      right: 13px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* ── ACTION ROW ── */
+    .action-row { display: flex; gap: 10px; align-items: center; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+    .btn-primary:disabled { opacity: .4; cursor: default; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost:disabled { opacity: .4; cursor: default; }
+    .btn-copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .btn-copy:hover { border-color: var(--green); color: var(--green); }
+    .btn-copy.copied { border-color: var(--green); color: var(--green); background: rgba(26,122,64,.08); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: none;
+      width: 15px; height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── PANEL DE CORRECCIONES ── */
+    #correcciones-panel {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    #correcciones-panel.visible { display: block; }
+    .correcciones-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .correcciones-title {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
+    #correcciones-body {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--text);
+    }
+    #correcciones-body .item {
+      padding: 4px 0 4px 14px;
+      border-left: 2px solid var(--border);
+      margin: 4px 0;
+    }
+    #correcciones-body .ninguna {
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,30,15,0.50);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 440px;
+      max-width: 96vw;
+      box-shadow: 0 8px 36px rgba(10,30,15,.18);
+    }
+    .modal-title { font-family: var(--font-h); font-size: 19px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .modal-sub {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 11px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      border-radius: var(--radius);
+      outline: none;
+      margin-bottom: 9px;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-hint { font-family: var(--font-ui); font-size: 10px; color: var(--muted); margin-bottom: 18px; line-height: 1.65; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Modal prompt grande */
+    #modal-prompt .modal-box {
+      width: 740px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #prompt-textarea {
+      flex: 1;
+      min-height: 400px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      line-height: 1.7;
+      border-radius: var(--radius);
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    #prompt-textarea:focus { border-color: var(--accent); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    Corrector <span>·</span> IA
+    <small>Corrección RAE · Norma académica</small>
+  </div>
+  <div class="header-right">
+    <div class="api-selector" id="api-selector">
+      <button class="api-btn active" data-api="gemini"  onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn"        data-api="groq"    onclick="setApi('groq')">Groq</button>
+      <button class="api-btn"        data-api="mistral" onclick="setApi('mistral')">Mistral</button>
+      <button class="api-btn"        data-api="claude"  onclick="setApi('claude')">Claude</button>
+    </div>
+    <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key"    style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
+    <button class="btn-key" id="btn-claude-key"  style="display:none;">⚙ Claude</button>
+    <button class="btn-key prompts-btn" onclick="openPromptModal()">✎ Prompt</button>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <span id="status-msg"></span>
+  <button class="status-close" onclick="closeStatus()">✕</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="textarea-wrap">
+    <textarea id="main-textarea" placeholder="Pega aquí el texto a corregir…&#10;&#10;El texto corregido reemplazará este contenido.&#10;Las correcciones aplicadas aparecerán debajo."></textarea>
+    <div class="char-count" id="char-count">0 caracteres</div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-primary" id="btn-corregir" onclick="corregir()">✓ Corregir</button>
+    <div class="spinner" id="spinner"></div>
+    <button class="btn-copy" id="btn-copy" onclick="copiar()">Copiar</button>
+    <button class="btn btn-ghost" onclick="limpiar()" style="margin-left:auto;">✕ Limpiar</button>
+  </div>
+
+  <!-- Panel de correcciones -->
+  <div id="correcciones-panel">
+    <div class="correcciones-header">
+      <span class="correcciones-title">Correcciones aplicadas</span>
+      <button class="btn btn-ghost" style="font-size:10px;padding:4px 12px;" onclick="cerrarCorrecciones()">✕</button>
+    </div>
+    <div id="correcciones-body"></div>
+  </div>
+
+</div>
+
+<!-- MODALES DE CLAVE -->
+<div class="modal-overlay" id="modal-gemini">
+  <div class="modal-box">
+    <div class="modal-title">Clave Gemini</div>
+    <div class="modal-sub">Google AI Studio · gemini-2.5-flash</div>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por AIzaSy.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('gemini')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-gemini')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('gemini')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-groq">
+  <div class="modal-box">
+    <div class="modal-title">Clave Groq</div>
+    <div class="modal-sub">api.groq.com · llama-3.3-70b-versatile</div>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por gsk_.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('groq')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-groq')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('groq')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-mistral">
+  <div class="modal-box">
+    <div class="modal-title">Clave Mistral</div>
+    <div class="modal-sub">api.mistral.ai · mistral-large-latest</div>
+    <input class="modal-input" id="mistral-key-input" type="password" placeholder="…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('mistral')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-mistral')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('mistral')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-claude">
+  <div class="modal-box">
+    <div class="modal-title">Clave Claude</div>
+    <div class="modal-sub">api.anthropic.com · claude-sonnet-4-6</div>
+    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por sk-ant-.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('claude')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-claude')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('claude')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROMPT -->
+<div class="modal-overlay" id="modal-prompt">
+  <div class="modal-box">
+    <div class="modal-title">Editar prompt</div>
+    <div class="modal-sub">Usa {TEXTO} como marcador del texto a corregir · se guarda en localStorage</div>
+    <textarea id="prompt-textarea"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="restaurarPrompt()">↺ Restaurar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-prompt')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrompt()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  PROMPT POR DEFECTO
+// ══════════════════════════════════════════════════════
+const DEFAULT_PROMPT = `Eres un corrector lingüístico conservador especializado en español, basado estrictamente en la norma académica de la RAE y la ASALE.
+
+Tu única función es detectar y corregir:
+errores ortográficos,
+tildes,
+puntuación,
+concordancias gramaticales,
+errores sintácticos claros,
+uso incorrecto de signos de puntuación según la norma académica (comas, punto y coma, dos puntos, puntos y enlaces entre oraciones),
+repeticiones accidentales,
+errores tipográficos,
+construcciones incorrectas o ambiguas desde el punto de vista gramatical.
+
+NO debes:
+reescribir el texto,
+cambiar el estilo del autor,
+simplificar frases,
+mejorar el tono,
+resumir,
+añadir información,
+eliminar personalidad,
+convertir el texto en algo "más natural",
+hacer sugerencias estilísticas subjetivas.
+
+Conserva siempre:
+el ritmo,
+la estructura,
+el vocabulario,
+la longitud aproximada de las frases,
+y la voz del autor.
+
+Sólo modifica aquello que sea claramente incorrecto o altamente problemático desde el punto de vista lingüístico. Si una construcción es válida aunque poco frecuente, consérvala. Conserva las elecciones estilísticas válidas, pero corrige siempre los usos de puntuación que produzcan incorrección gramatical, ambigüedad sintáctica o una relación lógica defectuosa entre oraciones. Debe ser la mínima indispensable. Prioriza la corrección sintáctica y lógica de la puntuación por encima de la conservación literal de pausas estilísticas.
+
+Cuando un error afecte a la estructura sintáctica de una oración, reconstruye la relación gramatical mínima necesaria para que la oración sea plenamente correcta, aunque eso implique mover signos de puntuación o reintegrar segmentos separados incorrectamente.
+
+Devuelve el resultado estructurado exactamente así:
+
+### 1. Texto corregido
+[Inserta aquí el texto corregido]
+
+### 2. Lista de correcciones
+Una lista breve, precisa y sin rodeos teóricos (ejemplo: "Se cambió 'habian' por 'habían'").
+Nunca expliques cuestiones estilísticas.
+Nunca propongas alternativas "mejores".
+Nunca hagas cambios innecesarios.
+No reescribir nunca, salvo cuando la frase sea gramaticalmente ininterpretable o estructuralmente rota.
+
+TEXTO A CORREGIR:
+"""
+{TEXTO}
+"""`;
+
+// ══════════════════════════════════════════════════════
+//  CLAVES localStorage  (prefijo propio del corrector)
+// ══════════════════════════════════════════════════════
+const LS = {
+  gemini:  'corrector_gemini_key',
+  groq:    'corrector_groq_key',
+  mistral: 'corrector_mistral_key',
+  claude:  'corrector_claude_key',
+  api:     'corrector_active_api',
+  prompt:  'corrector_prompt',
+};
+
+let KEYS = {
+  gemini:  localStorage.getItem(LS.gemini)  || '',
+  groq:    localStorage.getItem(LS.groq)    || '',
+  mistral: localStorage.getItem(LS.mistral) || '',
+  claude:  localStorage.getItem(LS.claude)  || '',
+};
+
+let activeApi    = localStorage.getItem(LS.api) || 'gemini';
+let activePrompt = localStorage.getItem(LS.prompt) || DEFAULT_PROMPT;
+
+// ══════════════════════════════════════════════════════
+//  STATUS BAR
+// ══════════════════════════════════════════════════════
+let statusTimer = null;
+function showStatus(type, msg) {
+  const bar = document.getElementById('status-bar');
+  document.getElementById('status-msg').textContent = msg;
+  bar.className = 'visible ' + type;
+  if (statusTimer) clearTimeout(statusTimer);
+  if (type === 'ok') statusTimer = setTimeout(() => bar.className = '', 5000);
+}
+function closeStatus() { document.getElementById('status-bar').className = ''; }
+
+// ══════════════════════════════════════════════════════
+//  SELECTOR DE API
+// ══════════════════════════════════════════════════════
+const API_NAMES = { gemini:'Gemini', groq:'Groq', mistral:'Mistral', claude:'Claude' };
+
+function setApi(api) {
+  activeApi = api;
+  localStorage.setItem(LS.api, api);
+  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
+  ['gemini','groq','mistral','claude'].forEach(a => {
+    document.getElementById('btn-' + a + '-key').style.display = (a === api) ? '' : 'none';
+  });
+}
+setApi(activeApi);
+
+['gemini','groq','mistral','claude'].forEach(api => {
+  document.getElementById('btn-' + api + '-key').addEventListener('click', () => openKeyModal(api));
+});
+['modal-gemini','modal-groq','modal-mistral','modal-claude','modal-prompt'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target === document.getElementById(id)) closeModal(id);
+  });
+});
+
+// ══════════════════════════════════════════════════════
+//  MODALES DE CLAVE
+// ══════════════════════════════════════════════════════
+const KEY_CONFIG = {
+  gemini:  { prefix: 'AIzaSy', hint: 'debe empezar por AIzaSy' },
+  groq:    { prefix: 'gsk_',   hint: 'debe empezar por gsk_'   },
+  mistral: { prefix: null,     hint: null                       },
+  claude:  { prefix: 'sk-ant-',hint: 'debe empezar por sk-ant-'},
+};
+
+function openKeyModal(api) {
+  document.getElementById(api + '-key-input').value = KEYS[api];
+  document.getElementById('modal-' + api).classList.add('visible');
+  setTimeout(() => document.getElementById(api + '-key-input').focus(), 80);
+}
+function guardarClave(api) {
+  const val = document.getElementById(api + '-key-input').value.trim();
+  if (!val) { olvidarClave(api); return; }
+  const cfg = KEY_CONFIG[api];
+  if (cfg.prefix && !val.startsWith(cfg.prefix)) {
+    showStatus('err', 'La clave ' + cfg.hint);
+    return;
+  }
+  KEYS[api] = val;
+  localStorage.setItem(LS[api], val);
+  closeModal('modal-' + api);
+  showStatus('ok', '✓ Clave ' + API_NAMES[api] + ' guardada');
+}
+function olvidarClave(api) {
+  if (KEYS[api] && !confirm('¿Borrar la clave de ' + API_NAMES[api] + '?')) return;
+  KEYS[api] = '';
+  localStorage.removeItem(LS[api]);
+  document.getElementById(api + '-key-input').value = '';
+  closeModal('modal-' + api);
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════
+//  MODAL PROMPT
+// ══════════════════════════════════════════════════════
+function openPromptModal() {
+  document.getElementById('prompt-textarea').value = activePrompt;
+  document.getElementById('modal-prompt').classList.add('visible');
+}
+function guardarPrompt() {
+  const val = document.getElementById('prompt-textarea').value.trim();
+  if (!val) { showStatus('err', 'El prompt no puede estar vacío'); return; }
+  if (!val.includes('{TEXTO}')) { showStatus('err', 'El prompt debe incluir el marcador {TEXTO}'); return; }
+  activePrompt = val;
+  localStorage.setItem(LS.prompt, val);
+  closeModal('modal-prompt');
+  showStatus('ok', '✓ Prompt guardado');
+}
+function restaurarPrompt() {
+  if (!confirm('¿Restaurar el prompt por defecto? Se perderán los cambios.')) return;
+  activePrompt = DEFAULT_PROMPT;
+  localStorage.removeItem(LS.prompt);
+  document.getElementById('prompt-textarea').value = DEFAULT_PROMPT;
+  showStatus('ok', '↺ Prompt restaurado');
+}
+
+// ══════════════════════════════════════════════════════
+//  LLAMADAS A API
+// ══════════════════════════════════════════════════════
+async function callGemini(userPrompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${KEYS.gemini}`;
+  const body = {
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: { temperature: 0.2, maxOutputTokens: 16000, thinkingConfig: { thinkingBudget: 0 } }
+  };
+  const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Gemini ' + resp.status);
+  }
+  const data = await resp.json();
+  const candidate = data.candidates?.[0];
+  const finishReason = candidate?.finishReason;
+  const parts = candidate?.content?.parts || [];
+  let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
+  if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
+  if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
+  if (finishReason && finishReason !== 'STOP') return text + '\n\n⚠ Truncado (finishReason: ' + finishReason + ')';
+  return text;
+}
+
+async function callGroq(userPrompt) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + KEYS.groq },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 8192,
+      temperature: 0.2,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Groq ' + resp.status);
+  }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Groq');
+  return text;
+}
+
+async function callMistral(userPrompt, _retry=0) {
+  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + KEYS.mistral },
+    body: JSON.stringify({
+      model: 'mistral-large-latest',
+      max_tokens: 8192,
+      temperature: 0.2,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (resp.status === 429) {
+    if (_retry < 3) {
+      const wait = (_retry + 1) * 15;
+      showStatus('warn', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s… (${_retry+1}/3)`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(userPrompt, _retry + 1);
+    }
+    throw new Error('Mistral: límite de peticiones alcanzado. Espera un minuto o cambia de API.');
+  }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err.message || err.error?.message || '';
+    if (resp.status === 401) throw new Error('Mistral: clave API incorrecta o inválida.');
+    if (resp.status === 402) throw new Error('Mistral: créditos agotados. Revisa tu plan en console.mistral.ai');
+    throw new Error(msg || 'Error Mistral ' + resp.status);
+  }
+  const data = await resp.json();
+  if (data.object === 'error' || data.type === 'error') {
+    const msg = data.message || data.error || 'Error desconocido de Mistral';
+    if (/rate|limit|exceed/i.test(msg) && _retry < 3) {
+      const wait = (_retry + 1) * 20;
+      showStatus('warn', `⏳ Mistral: límite. Reintentando en ${wait}s…`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(userPrompt, _retry + 1);
+    }
+    throw new Error('Mistral: ' + msg);
+  }
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Mistral');
+  return text;
+}
+
+async function callClaude(userPrompt) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': KEYS.claude,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      temperature: 0.2,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err.error?.message || '';
+    if (resp.status === 401) throw new Error('Claude: clave API incorrecta o inválida.');
+    if (resp.status === 403) throw new Error('Claude: acceso denegado. Verifica tu clave en console.anthropic.com');
+    throw new Error(msg || 'Error Claude ' + resp.status);
+  }
+  const data = await resp.json();
+  const text = data.content?.[0]?.text?.trim();
+  if (!text) throw new Error('Respuesta vacía de Claude');
+  return text;
+}
+
+async function callAPI(prompt) {
+  switch (activeApi) {
+    case 'gemini':  return callGemini(prompt);
+    case 'groq':    return callGroq(prompt);
+    case 'mistral': return callMistral(prompt);
+    case 'claude':  return callClaude(prompt);
+    default: throw new Error('API desconocida: ' + activeApi);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  PARSEO DE RESPUESTA  (### 1 / ### 2)
+// ══════════════════════════════════════════════════════
+function parsearRespuesta(raw) {
+  // Busca las dos secciones por el marcador ### 1 y ### 2
+  const re1 = /###\s*1[\.\s]*Texto corregido\s*/i;
+  const re2 = /###\s*2[\.\s]*Lista de correcciones\s*/i;
+
+  const m1 = raw.search(re1);
+  const m2 = raw.search(re2);
+
+  if (m1 === -1) {
+    // Si no hay estructura, devolver todo como texto corregido
+    return { textoCorregido: raw.trim(), listaCorrecciones: '' };
+  }
+
+  const afterH1 = raw.slice(m1).replace(re1, '');
+  const textoCorregido = (m2 === -1 ? afterH1 : afterH1.slice(0, afterH1.search(re2))).trim();
+
+  let listaCorrecciones = '';
+  if (m2 !== -1) {
+    listaCorrecciones = raw.slice(m2).replace(re2, '').trim();
+  }
+
+  return { textoCorregido, listaCorrecciones };
+}
+
+function renderCorrecciones(lista) {
+  if (!lista) {
+    document.getElementById('correcciones-panel').classList.remove('visible');
+    return;
+  }
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lineas = lista.split('\n').map(l => l.trim()).filter(Boolean);
+  let html = '';
+  if (lineas.length === 0 || (lineas.length === 1 && /ninguna|no se han|sin correc/i.test(lineas[0]))) {
+    html = `<div class="ninguna">No se han aplicado correcciones.</div>`;
+  } else {
+    for (const l of lineas) {
+      // Quitar guión o asterisco inicial si lo hay
+      const texto = l.replace(/^[-*•]\s*/, '');
+      html += `<div class="item">${esc(texto)}</div>`;
+    }
+  }
+  document.getElementById('correcciones-body').innerHTML = html;
+  document.getElementById('correcciones-panel').classList.add('visible');
+}
+
+function cerrarCorrecciones() {
+  document.getElementById('correcciones-panel').classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════
+//  CONTADOR
+// ══════════════════════════════════════════════════════
+const textarea  = document.getElementById('main-textarea');
+const charCount = document.getElementById('char-count');
+textarea.addEventListener('input', updateCount);
+function updateCount() {
+  charCount.textContent = textarea.value.length.toLocaleString('es') + ' caracteres';
+}
+
+// ══════════════════════════════════════════════════════
+//  CORREGIR
+// ══════════════════════════════════════════════════════
+async function corregir() {
+  const texto = textarea.value.trim();
+  if (!texto) { showStatus('err', 'Pega un texto antes de corregir.'); return; }
+
+  if (!KEYS[activeApi]) {
+    showStatus('err', 'Introduce primero la clave de ' + API_NAMES[activeApi] + '.');
+    setTimeout(() => openKeyModal(activeApi), 700);
+    return;
+  }
+
+  const prompt = activePrompt.replace('{TEXTO}', texto);
+
+  textarea.classList.add('loading');
+  document.getElementById('btn-corregir').disabled = true;
+  document.getElementById('spinner').classList.add('visible');
+  cerrarCorrecciones();
+  showStatus('info', '⏳ Enviando a ' + API_NAMES[activeApi] + '…');
+
+  try {
+    const raw = await callAPI(prompt);
+    const { textoCorregido, listaCorrecciones } = parsearRespuesta(raw);
+    textarea.value = textoCorregido;
+    updateCount();
+    renderCorrecciones(listaCorrecciones);
+    showStatus('ok', '✓ Corrección completada con ' + API_NAMES[activeApi]);
+  } catch (err) {
+    showStatus('err', '✗ ' + err.message);
+  } finally {
+    textarea.classList.remove('loading');
+    document.getElementById('btn-corregir').disabled = false;
+    document.getElementById('spinner').classList.remove('visible');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  COPIAR / LIMPIAR
+// ══════════════════════════════════════════════════════
+function copiar() {
+  const texto = textarea.value;
+  if (!texto) return;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function limpiar() {
+  if (textarea.value && !confirm('¿Borrar el contenido?')) return;
+  textarea.value = '';
+  updateCount();
+  cerrarCorrecciones();
+}
+
+// ══════════════════════════════════════════════════════
+//  ARRANQUE
+// ══════════════════════════════════════════════════════
+updateCount();
+if (!KEYS[activeApi]) setTimeout(() => openKeyModal(activeApi), 500);
+</script>
+</body>
+</html>
