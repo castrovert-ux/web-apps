@@ -134,10 +134,19 @@
     .result-badge{background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:var(--radius);font-size:8px;}
     .result-box{
       flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-      padding:16px 18px;font-size:12px;line-height:1.75;white-space:pre-wrap;
-      color:var(--muted);overflow-y:auto;font-family:var(--font-ui);
-      resize:none;outline:none;min-height:0;
+      padding:16px 18px;font-size:13px;line-height:1.8;
+      color:var(--text);overflow-y:auto;font-family:var(--font-body);
+      min-height:0;cursor:text;user-select:text;
     }
+    .result-box h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
+    .result-box h4{font-family:var(--font-h);font-size:13px;font-weight:700;margin:10px 0 4px;}
+    .result-box p{margin-bottom:9px;}
+    .result-box strong{font-weight:700;color:var(--accent2);}
+    .result-box em{font-style:italic;}
+    .result-box ol,.result-box ul{margin:6px 0 10px 20px;}
+    .result-box li{margin-bottom:4px;}
+    .result-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .result-box .loading{color:var(--muted);font-style:italic;}
 
     .btn{padding:7px 13px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.2s;white-space:nowrap;}
     .btn-primary{background:var(--accent);color:var(--bg);}
@@ -183,6 +192,7 @@
 <div id="sync-bar">
   <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
   <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-ghost btn-sm btn" id="btn-or-key" style="font-size:8px;padding:3px 9px;color:#4A90D9;border-color:rgba(74,144,217,0.3);">⚙ OpenRouter</button>
   <button class="btn-ghost btn-sm btn" id="btn-groq-key" style="font-size:8px;padding:3px 9px;">⚙ Groq</button>
   <button class="btn-ghost btn-sm btn" id="btn-fb-key" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
   <button class="btn-sync" id="btn-sync" onclick="handleSync()">
@@ -202,6 +212,17 @@
       <button class="mode-btn" data-mode="narrativo">📖 Narrativo</button>
       <button class="mode-btn" data-mode="descriptivo">📐 Descriptivo</button>
     </div>
+    <select id="or-model-select" class="input-field" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);">
+      <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
+      <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5</option>
+      <option value="google/gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+      <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+      <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+      <option value="openai/gpt-4.1">GPT-4.1</option>
+      <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
+      <option value="mistralai/mistral-small-3.2-24b">Mistral Small 3.2</option>
+      <option value="deepseek/deepseek-r1-0528">DeepSeek R1</option>
+    </select>
     <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
   </div>
 </header>
@@ -245,16 +266,7 @@
       </div>
     </div>
     <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
-      <span class="prompt-buttons-label">Paso 0b · Corrector de voz del autor</span>
-      <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-corrector" id="btn-corrector-voz" onclick="runCorrectorVoz()">
-          ✦ Aplicar plan de acción
-        </button>
-        <span id="corrector-voz-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
-      </div>
-    </div>
-    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
-      <span class="prompt-buttons-label">Selecciona el análisis · el prompt se adaptará al modo activo</span>
+      <span class="prompt-buttons-label">Selecciona el análisis · <span id="active-model-label">Gemini 2.5 Flash</span></span>
       <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
     </div>
     <div class="result-area">
@@ -271,7 +283,7 @@
           </div>
           <button class="btn btn-ghost btn-sm" id="btn-copy-prompt">⎘ Copiar prompt</button>
         </div>
-        <textarea class="result-box" id="result-box" readonly></textarea>
+        <div class="result-box" id="result-box"></div>
       </div>
     </div>
   </div>
@@ -328,6 +340,21 @@
   </div>
 </div>
 
+<!-- MODAL OPENROUTER KEY -->
+<div class="modal-overlay" id="modal-orkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de OpenRouter</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis de texto. Permite usar múltiples modelos de IA. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">OpenRouter API Key</label>
+    <input class="modal-input" id="or-key-input" type="password" placeholder="sk-or-v1-…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="or-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="or-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="or-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GROQ KEY -->
 <div class="modal-overlay" id="modal-groqkey">
   <div class="modal-box modal-box-sm">
@@ -364,36 +391,66 @@
 // ══════════════════════════════════════════════════════
 
 const DEFAULT_NARRATIVO = {
-  system: `Eres un editor literario con voz cálida y narrativa. Te especializas en historia local con un tono cercano, casi de cuentacuentos. Buscas frases fluidas, ritmo amable y un lenguaje que invite a seguir leyendo.
+  system: `ROL
+Eres un editor de historia local y divulgación histórica castellana. Trabajas sobre los borradores del libro Castroverde de Cerrato. No eres el autor: no sustituyas su voz por la tuya.
 
-VOZ DE REFERENCIA (Narrativo):
-"Castroverde de Cerrato lleva más de mil años escribiendo su historia. Hoy apenas quedan 189 vecinos para contarla. Este pequeño municipio vallisoletano es tierra de frontera... No era un lugar cualquiera."
+PRINCIPIO ABSOLUTO
+Intervención mínima. Antes de modificar una frase, pregúntate: ¿realmente dificulta la lectura, o simplemente no es como yo la escribiría? Si funciona y transmite autenticidad, no se toca.
 
-REGLAS NARRATIVAS:
-- Prioriza la claridad y el flujo narrativo.
-- No elimines datos históricos relevantes; intégralos sin alterarlos.
-- Permite un tono ligeramente literario sin exageraciones.
-- Cuida la ortografía y gramática.
-- No uses punto y coma; prefiere puntos seguidos.
-- Extensión similar al original.
-- Cierres de párrafo concretos y visuales.
+RESTRICCIÓN ABSOLUTA
+No añadir información histórica nueva. No inventar escenas, pensamientos, emociones, diálogos ni interpretaciones ausentes en el original. Lo que no está en el borrador, no existe.
 
-RESTRICCIONES:
-- No añadir información histórica nueva
-- No eliminar datos relevantes
-- No sobredramatizar ni recargar el texto
+OBJETIVO
+Convertir pasajes densos o compactos en narración accesible y continua, sin perder rigor ni autenticidad. El lector debe sentir que recorre la historia de un territorio real, no que lee una enciclopedia ni una novela histórica.
 
-CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
+QUÉ PUEDES HACER
+- Corregir ortografía, puntuación y gramática
+- Dividir frases excesivamente largas o densas
+- Si un párrafo concentra varios tipos de información heterogénea, dividirlo en dos buscando el corte en una frase que ya exista en el original. No comprimir ni eliminar contenido como alternativa a la división.
+- Si el texto contiene la marca [//], introducir ahí un punto y aparte. No moverla ni ignorarla.
+- Mejorar la continuidad entre párrafos
+- Cuando el contexto lo permita, cerrar bloques temáticos con una referencia a la vida cotidiana o al uso concreto del territorio: es el recurso que mejor ancla la historia local sin caer en literaturismo.
+- Convertir acumulaciones de datos en secuencias legibles
+- Reordenar frases si mejora la comprensión
+- Reducir repeticiones y perífrasis innecesarias
+- Simplificar definiciones técnicas que rompen el ritmo
+- Añadir transiciones suaves solo si nacen directamente de datos ya presentes en el texto
+
+QUÉ NO DEBES HACER
+- Prosa literaria, lenguaje épico, metáforas decorativas
+- Expresiones de folleto turístico o divulgación genérica
+- Adjetivos innecesarios o formulaciones abstractas
+- Reescribir frases correctas solo porque podrían sonar "mejor"
+- Sustituir expresiones naturales del autor por giros estándar impersonales
+- Comenzar párrafos con "La historia de…", "A lo largo del tiempo…", "La situación no era solo…" u otros arranques impersonales salvo que estén en el original
+- Añadir frases de apertura o cierre que no estén en el original
+
+VOZ Y ESTILO
+El texto debe conservar la sensación de estar escrito por alguien vinculado al territorio y a sus fuentes. La emoción, si aparece, debe nacer de los hechos, no del adorno. El tono de referencia es el de la buena divulgación histórica local: sobrio, claro, humano, sin rigidez académica ni artificio literario.
+Evita formulaciones abstractas como "según cobrara mayor importancia" o "en función del peso relativo de"; sustitúyelas por construcciones concretas cuando sea posible sin forzar el texto.
+Conserva el léxico característico del autor aunque no sea el que tú elegirías.
+
+EXTENSIÓN
+Similar al original (±10%). Si el texto no necesita intervención, puede ser menor.
+
+FORMATO DE SALIDA
+1. DIAGNÓSTICO — Qué problemas concretos se han corregido y qué tipo de intervención se ha realizado. Breve y específico: nombra las frases o construcciones modificadas, no hagas valoraciones generales.
+2. TEXTO EDITADO
+
+CONTEXTO HISTÓRICO FIJO
+- Primer documento conservado: 916 d.C. (Ordoño II, "Castro Viride")
+- Orden de Santiago · Cerrato vallisoletano · Valle del Esgueva · Frontera con Palencia
+- 676 habitantes en 1950 · 189 habitantes en la actualidad
 
 PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   prompts: [
-    {name:'Estructura (Narrativo)', label:'Estructura', content:'Actúa como editor narrativo. Evalúa la estructura global del texto, pero con énfasis en el ritmo, la progresión emocional y la capacidad de enganchar. Objetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Tono (Narrativo)', label:'Tono', content:'Evalúa el tono desde una perspectiva narrativa. ¿Es evocador? ¿Hay pasajes fríos? Objetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Ritmo (Narrativo)', label:'Ritmo', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y partes ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Lector (Narrativo)', label:'Lector', content:'Como lector sin conocimientos previos: ¿qué te engancha? ¿Dónde pierdes interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Síntesis (Narrativo)', label:'Síntesis', content:'Síntesis editorial narrativa: los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva que no esté ya en el texto.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Cirugía (Narrativo)', label:'Cirugía', content:'Cirugía narrativa: señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno, cita original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Plan (Narrativo)', label:'Plan', content:'Plan de intervención secuencial (narrativo). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura global: ritmo, progresión emocional y capacidad de enganchar.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', content:'Evalúa el tono narrativo. ¿Es evocador? ¿Hay pasajes fríos?\nObjetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', content:'Como lector sin conocimientos previos: ¿qué engancha? ¿Dónde se pierde el interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno: cita el original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial. Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
   ]
 };
 
@@ -419,13 +476,13 @@ CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, 
 
 PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   prompts: [
-    {name:'Estructura (Descriptivo)', label:'Estructura', content:'Actúa como editor técnico. Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones. Objetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Tono (Descriptivo)', label:'Tono', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado? Señala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Ritmo (Descriptivo)', label:'Ritmo', content:'Analiza el ritmo desde la perspectiva de la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Lector (Descriptivo)', label:'Lector', content:'Como lector no experto: ¿qué partes entiendes con facilidad? ¿Dónde te pierdes? ¿Qué necesitas que se explique mejor?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Síntesis (Descriptivo)', label:'Síntesis', content:'Síntesis editorial técnica: los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva que no esté en el texto original.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Cirugía (Descriptivo)', label:'Cirugía', content:'Cirugía de precisión: señala 3 fragmentos confusos o mal estructurados. Para cada uno, cita original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Plan (Descriptivo)', label:'Plan', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado?\nObjetivo: {{objetivo}}\n\nSeñala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo desde la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', content:'Como lector no experto: ¿qué partes se entienden con facilidad? ¿Dónde se pierde el hilo? ¿Qué necesita mejor explicación?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos confusos o mal estructurados. Para cada uno: cita el original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
   ]
 };
 
@@ -466,36 +523,123 @@ function buildSystemWithTono() {
   const tono = getTonoProfile().trim();
   let result = base.replace(/\{\{parte_libro\}\}/g, parte);
   if (tono) result += '\n\nINSTRUCCIONES ADICIONALES DE TONO:\n' + tono;
+  result += '\n\nREGLA DE FORMATO: No reproduzcas el texto completo del autor en tu respuesta. Cita solo los fragmentos estrictamente necesarios para ilustrar un punto concreto (máximo 2-3 frases por cita). Tu respuesta es un análisis editorial, no una reescritura completa.';
   return result;
 }
 
 function buildUserPrompt(template, texto, objetivo) {
   return template
     .replace(/\{\{texto\}\}/g, texto)
-    .replace(/\{\{objetivo\}\}/g, objetivo || '(no especificado)')
-    .replace(/\{\{contexto\}\}/g, settings[activeProfile].system);
+    .replace(/\{\{objetivo\}\}/g, objetivo || '(no especificado)');
 }
 
 function generatePrompt(idx, btnEl) {
   const texto = document.getElementById('input-text').value.trim();
   if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+  if (!OR_API_KEY) {
+    setSyncStatus('err', 'Introduce la clave de OpenRouter primero.');
+    setTimeout(openOrKeyModal, 800);
+    return;
+  }
   const p = settings[activeProfile].prompts[idx];
   const objetivo = document.getElementById('section-goal').value.trim();
   const systemMsg = buildSystemWithTono();
   const userMsg = buildUserPrompt(p.content, texto, objetivo);
-  const fullPrompt = `=== SYSTEM PROMPT (${activeProfile === 'narrativo' ? 'Narrativo' : 'Descriptivo'}) ===\n\n${systemMsg}\n\n${'─'.repeat(60)}\n\n=== PROMPT DE USUARIO ===\n\n${userMsg}`;
-  mostrarResultado(p.label, p.name, fullPrompt);
-  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-  if (btnEl) btnEl.classList.add('active');
-}
 
-function mostrarResultado(label, name, text) {
+  document.querySelectorAll('.btn-prompt').forEach(b => { b.classList.remove('active'); b.disabled = true; });
+  if (btnEl) btnEl.classList.add('active');
+
+  const modelSelect = document.getElementById('or-model-select');
+  const modelId = modelSelect.value;
+  const modelLabel = modelSelect.options[modelSelect.selectedIndex].text;
+
+  // Mostrar estado de carga
   document.getElementById('result-empty').style.display = 'none';
   document.getElementById('result-content').classList.add('visible');
-  document.getElementById('result-badge').textContent = label;
-  document.getElementById('result-label-text').textContent = name;
-  document.getElementById('result-box').value = text;
-  document.getElementById('result-box').scrollTop = 0;
+  document.getElementById('result-badge').textContent = p.label;
+  document.getElementById('result-label-text').textContent = p.name;
+  const box = document.getElementById('result-box');
+  box.innerHTML = '<span class="loading">… Analizando con ' + modelLabel + '</span>';
+
+  callOpenRouter(systemMsg, userMsg, modelId).then(respuesta => {
+    setResultBox(respuesta);
+  }).catch(err => {
+    box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
+  }).finally(() => {
+    document.querySelectorAll('.btn-prompt').forEach(b => { b.disabled = false; });
+  });
+}
+
+async function callOpenRouter(systemPrompt, userPrompt, modelId) {
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const body = {
+    model: modelId,
+    max_tokens: 8000,
+    temperature: 0.4,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ]
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + OR_API_KEY,
+      'HTTP-Referer': 'https://castrovert-ux.github.io',
+      'X-Title': 'Análisis Castroverde'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error ' + resp.status);
+  }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de OpenRouter');
+  return text;
+}
+
+function parseMarkdown(md) {
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // Bloques
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\*\*\*\s*$/gm,'<hr>')
+    .replace(/^---\s*$/gm,'<hr>')
+    // Inline
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    // Listas numeradas
+    .replace(/^\d+\.\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ol>' + m + '</ol>')
+    // Listas con guión/asterisco
+    .replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => {
+      if (m.includes('<ol>')) return m;
+      return '<ul>' + m + '</ul>';
+    })
+    // Párrafos: líneas sueltas separadas por \n\n
+    .split(/\n{2,}/)
+    .map(block => {
+      block = block.trim();
+      if (!block) return '';
+      if (/^<(h[234]|hr|ol|ul)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g,' ') + '</p>';
+    })
+    .join('\n');
+}
+
+function setResultBox(text) {
+  const box = document.getElementById('result-box');
+  box.innerHTML = parseMarkdown(text);
+  box.scrollTop = 0;
+}
+
+function getResultBoxText() {
+  return document.getElementById('result-box').innerText;
 }
 
 function clearAll() {
@@ -668,6 +812,25 @@ function resetSettings() {
 }
 
 // ══════════════════════════════════════════════════════
+//  OPENROUTER KEY
+// ══════════════════════════════════════════════════════
+let OR_API_KEY = localStorage.getItem('castroverde_or_key') || '';
+
+function openOrKeyModal() {
+  document.getElementById('or-key-input').value = OR_API_KEY || '';
+  document.getElementById('modal-orkey').classList.add('visible');
+  setTimeout(() => document.getElementById('or-key-input').focus(), 80);
+}
+function closeOrKeyModal() { document.getElementById('modal-orkey').classList.remove('visible'); }
+function saveOrKey(val) {
+  if (!val || !val.startsWith('sk-or-')) { alert('La clave de OpenRouter debe empezar por sk-or-'); return false; }
+  OR_API_KEY = val;
+  localStorage.setItem('castroverde_or_key', val);
+  closeOrKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
 //  GROQ KEY + CORRECTOR TÉCNICO
 // ══════════════════════════════════════════════════════
 let GROQ_API_KEY = localStorage.getItem('castroverde_groq_key') || '';
@@ -759,85 +922,6 @@ async function runCorrector() {
   } finally {
     btn.classList.remove('running');
     btn.textContent = '✦ Corrector técnico';
-  }
-}
-
-// ══════════════════════════════════════════════════════
-//  CORRECTOR DE VOZ DEL AUTOR
-// ══════════════════════════════════════════════════════
-const CORRECTOR_VOZ_SYSTEM = `ROL
-Eres un corrector de textos históricos.
-
-OBJETIVO
-Corregir y clarificar el texto sin cambiar su estilo ni su contenido.
-
-RESTRICCIÓN ABSOLUTA
-No añadir información nueva ni cambiar el significado.
-
-QUÉ PUEDES HACER
-- corregir ortografía y puntuación
-- dividir frases demasiado largas
-- ordenar ligeramente frases dentro del mismo párrafo si es necesario
-- eliminar repeticiones evidentes
-
-QUÉ NO DEBES HACER
-- no reescribir el estilo
-- no embellecer el texto
-- no añadir explicaciones
-- no cambiar el tono
-
-SALIDA
-Devuelve solo el texto corregido.`;
-
-async function runCorrectorVoz() {
-  const texto = document.getElementById('input-text').value.trim();
-  if (!texto) { alert('Primero pega el texto a corregir.'); return; }
-  if (!GROQ_API_KEY) {
-    setSyncStatus('err', 'Introduce la clave de Groq primero.');
-    setTimeout(openGroqKeyModal, 800);
-    return;
-  }
-  const btn = document.getElementById('btn-corrector-voz');
-  const status = document.getElementById('corrector-voz-status');
-  btn.classList.add('running');
-  btn.textContent = '… Aplicando';
-  status.textContent = 'Llamando a Groq…';
-
-  try {
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 4096,
-        temperature: 0.15,
-        messages: [
-          { role: 'system', content: CORRECTOR_VOZ_SYSTEM },
-          { role: 'user', content: 'Corrige el siguiente texto aplicando los cambios del plan de acción:\n\n"""\n' + texto + '\n"""' }
-        ]
-      })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'Error ' + resp.status);
-    }
-    const data = await resp.json();
-    const textoCorregido = data.choices?.[0]?.message?.content?.trim();
-    if (!textoCorregido) throw new Error('Respuesta vacía de Groq');
-
-    document.getElementById('input-text').value = textoCorregido;
-    actualizarContador();
-    status.textContent = '✓ Texto actualizado';
-    setTimeout(() => { status.textContent = ''; }, 4000);
-  } catch(e) {
-    status.textContent = '✗ ' + e.message;
-    setTimeout(() => { status.textContent = ''; }, 6000);
-  } finally {
-    btn.classList.remove('running');
-    btn.textContent = '✦ Aplicar plan de acción';
   }
 }
 
@@ -954,6 +1038,35 @@ function saveFbKey(val) {
 // ══════════════════════════════════════════════════════
 //  EVENTOS Y ARRANQUE
 // ══════════════════════════════════════════════════════
+document.getElementById('btn-or-key').addEventListener('click', openOrKeyModal);
+document.getElementById('or-btn-save').addEventListener('click', () => saveOrKey(document.getElementById('or-key-input').value.trim()));
+document.getElementById('or-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de OpenRouter?')) {
+    OR_API_KEY = '';
+    localStorage.removeItem('castroverde_or_key');
+    document.getElementById('or-key-input').value = '';
+    closeOrKeyModal();
+  }
+});
+document.getElementById('or-btn-cancel').addEventListener('click', closeOrKeyModal);
+document.getElementById('modal-orkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-orkey')) closeOrKeyModal(); });
+// Restaurar modelo seleccionado
+const savedModel = localStorage.getItem('castroverde_or_model');
+if (savedModel) {
+  const sel = document.getElementById('or-model-select');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === savedModel) {
+      sel.selectedIndex = i;
+      document.getElementById('active-model-label').textContent = sel.options[i].text;
+      break;
+    }
+  }
+}
+document.getElementById('or-model-select').addEventListener('change', function() {
+  const label = this.options[this.selectedIndex].text;
+  document.getElementById('active-model-label').textContent = label;
+  localStorage.setItem('castroverde_or_model', this.value);
+});
 document.getElementById('btn-groq-key').addEventListener('click', openGroqKeyModal);
 document.getElementById('groq-btn-save').addEventListener('click', () => saveGroqKey(document.getElementById('groq-key-input').value.trim()));
 document.getElementById('groq-btn-forget').addEventListener('click', () => {
@@ -984,7 +1097,7 @@ document.getElementById('fb-btn-forget').addEventListener('click', () => {
 document.getElementById('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
 document.getElementById('modal-fbkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-fbkey')) closeFbKeyModal(); });
 document.getElementById('btn-copy-prompt').addEventListener('click', () => {
-  const text = document.getElementById('result-box').value;
+  const text = getResultBoxText();
   if (text) navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('btn-copy-prompt');
     const orig = btn.textContent;
@@ -1035,6 +1148,7 @@ if (savedProfile === 'narrativo' || savedProfile === 'descriptivo') setActivePro
 else setActiveProfile('narrativo');
 actualizarContador();
 if (!FB_API_KEY) setTimeout(openFbKeyModal, 500);
+if (!OR_API_KEY) setTimeout(openOrKeyModal, FB_API_KEY ? 300 : 900);
 </script>
 </body>
 </html>

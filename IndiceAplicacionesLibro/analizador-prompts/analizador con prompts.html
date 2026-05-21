@@ -164,6 +164,16 @@
     .ptab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
     .ppanel{display:none;}
     .ppanel.visible{display:block;}
+    .btn-corrector{
+      padding:7px 16px;border:1px solid var(--blue);border-radius:var(--radius);
+      background:transparent;color:var(--blue);cursor:pointer;
+      font-family:var(--font-ui);font-size:10px;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px;
+      transition:all 0.18s;white-space:nowrap;
+    }
+    .btn-corrector:hover:not(:disabled){background:var(--blue);color:#fff;}
+    .btn-corrector:disabled{opacity:.45;cursor:default;}
+    .btn-corrector.running{opacity:.6;cursor:default;pointer-events:none;}
     ::-webkit-scrollbar{width:4px;}
   </style>
 </head>
@@ -173,6 +183,7 @@
 <div id="sync-bar">
   <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
   <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-ghost btn-sm btn" id="btn-groq-key" style="font-size:8px;padding:3px 9px;">⚙ Groq</button>
   <button class="btn-ghost btn-sm btn" id="btn-fb-key" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
   <button class="btn-sync" id="btn-sync" onclick="handleSync()">
     <span id="sync-icon">☁</span>
@@ -225,6 +236,24 @@
 
   <div class="panel-right">
     <div class="prompt-buttons-bar">
+      <span class="prompt-buttons-label">Paso 0 · Corrección técnica previa</span>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="btn-corrector" id="btn-corrector" onclick="runCorrector()">
+          ✦ Corrector técnico
+        </button>
+        <span id="corrector-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
+      </div>
+    </div>
+    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
+      <span class="prompt-buttons-label">Paso 0b · Prompt de aplicación del plan de acción</span>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="btn-corrector" id="btn-aplicar-plan" onclick="generarPromptAplicarPlan()">
+          ✦ Generar prompt de aplicación
+        </button>
+        <span id="aplicar-plan-hint" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;">Genera primero el Plan en los pasos de análisis</span>
+      </div>
+    </div>
+    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
       <span class="prompt-buttons-label">Selecciona el análisis · el prompt se adaptará al modo activo</span>
       <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
     </div>
@@ -295,6 +324,21 @@
       <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
       <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
       <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GROQ KEY -->
+<div class="modal-overlay" id="modal-groqkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Groq</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para el corrector técnico automático. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">Groq API Key</label>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="groq-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="groq-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="groq-btn-save">Guardar</button>
     </div>
   </div>
 </div>
@@ -624,6 +668,146 @@ function resetSettings() {
 }
 
 // ══════════════════════════════════════════════════════
+//  GROQ KEY + CORRECTOR TÉCNICO
+// ══════════════════════════════════════════════════════
+let GROQ_API_KEY = localStorage.getItem('castroverde_groq_key') || '';
+
+function openGroqKeyModal() {
+  document.getElementById('groq-key-input').value = GROQ_API_KEY || '';
+  document.getElementById('modal-groqkey').classList.add('visible');
+  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
+}
+function closeGroqKeyModal() { document.getElementById('modal-groqkey').classList.remove('visible'); }
+function saveGroqKey(val) {
+  if (!val || !val.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return false; }
+  GROQ_API_KEY = val;
+  localStorage.setItem('castroverde_groq_key', val);
+  closeGroqKeyModal();
+  return true;
+}
+
+const CORRECTOR_SYSTEM = `Eres un corrector técnico. Tu trabajo es limpiar el texto de problemas formales sin tocar la voz del autor ni reescribir nada.
+
+REGLA ABSOLUTA
+No reescribas frases. No mejores el estilo. No suavices ni amplifiques. Si una frase te parece mejorable estilísticamente, déjala exactamente como está.
+
+QUÉ PUEDES CORREGIR
+- Errores ortográficos
+- Errores de puntuación (comas, puntos, mayúsculas)
+- Errores gramaticales evidentes (concordancia, tiempos verbales)
+- Espacios dobles o mal colocados
+- Mayúsculas incorrectas en nombres propios o términos históricos
+- Paréntesis o comillas mal cerrados
+
+QUÉ TIENES PROHIBIDO
+- Cambiar el orden de las palabras
+- Sustituir palabras por sinónimos
+- Añadir o eliminar frases
+- Reorganizar párrafos
+- Suavizar o reforzar cualquier afirmación
+- Añadir conectores o transiciones
+
+FORMATO DE SALIDA
+Devuelve únicamente el texto corregido, sin comentarios, sin explicaciones, sin listar los cambios. Solo el texto limpio.`;
+
+async function runCorrector() {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto a corregir.'); return; }
+  if (!GROQ_API_KEY) {
+    setSyncStatus('err', 'Introduce la clave de Groq primero.');
+    setTimeout(openGroqKeyModal, 800);
+    return;
+  }
+  const btn = document.getElementById('btn-corrector');
+  const status = document.getElementById('corrector-status');
+  btn.classList.add('running');
+  btn.textContent = '… Corrigiendo';
+  status.textContent = 'Llamando a Groq…';
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 4096,
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: CORRECTOR_SYSTEM },
+          { role: 'user', content: 'Corrige técnicamente el siguiente texto:\n\n"""\n' + texto + '\n"""' }
+        ]
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Error ' + resp.status);
+    }
+    const data = await resp.json();
+    const textoCorregido = data.choices?.[0]?.message?.content?.trim();
+    if (!textoCorregido) throw new Error('Respuesta vacía de Groq');
+
+    document.getElementById('input-text').value = textoCorregido;
+    actualizarContador();
+    status.textContent = '✓ Texto actualizado';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  } catch(e) {
+    status.textContent = '✗ ' + e.message;
+    setTimeout(() => { status.textContent = ''; }, 6000);
+  } finally {
+    btn.classList.remove('running');
+    btn.textContent = '✦ Corrector técnico';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  PASO 0b — PROMPT DE APLICACIÓN DEL PLAN DE ACCIÓN
+// ══════════════════════════════════════════════════════
+function generarPromptAplicarPlan() {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+
+  const planEnResultBox = document.getElementById('result-box').value.trim();
+  if (!planEnResultBox) {
+    alert('Primero genera el Plan de intervención (botón "Plan") en los pasos de análisis.');
+    return;
+  }
+
+  const systemPrompt = `ROL
+Eres un corrector de textos históricos.
+
+OBJETIVO
+Aplicar los cambios indicados en el plan de acción sin alterar el estilo ni la voz del autor.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información nueva ni cambiar el significado. No reescribir lo que no está señalado en el plan.
+
+QUÉ PUEDES HACER
+- Aplicar cada intervención del plan en el orden indicado
+- Corregir ortografía y puntuación si el plan lo señala
+- Dividir frases largas si el plan lo señala
+- Eliminar repeticiones si el plan lo señala
+- Reordenar ligeramente frases dentro del mismo párrafo si el plan lo señala
+
+QUÉ NO DEBES HACER
+- No reescribir el estilo
+- No embellecer el texto
+- No añadir explicaciones ni transiciones no pedidas
+- No cambiar el tono
+- No tocar lo que el plan no menciona
+
+SALIDA
+Devuelve solo el texto corregido, sin comentarios ni explicaciones.`;
+
+  const fullPrompt = `=== SYSTEM PROMPT ===\n\n${systemPrompt}\n\n${'─'.repeat(60)}\n\n=== PLAN DE ACCIÓN ===\n\n${planEnResultBox}\n\n${'─'.repeat(60)}\n\n=== TEXTO ORIGINAL ===\n\n"""\n${texto}\n"""`;
+
+  mostrarResultado('Aplicar', 'Aplicar plan de acción', fullPrompt);
+  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
+}
+
+// ══════════════════════════════════════════════════════
 //  FIREBASE (misma lógica, simplificada)
 // ══════════════════════════════════════════════════════
 let FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
@@ -736,6 +920,18 @@ function saveFbKey(val) {
 // ══════════════════════════════════════════════════════
 //  EVENTOS Y ARRANQUE
 // ══════════════════════════════════════════════════════
+document.getElementById('btn-groq-key').addEventListener('click', openGroqKeyModal);
+document.getElementById('groq-btn-save').addEventListener('click', () => saveGroqKey(document.getElementById('groq-key-input').value.trim()));
+document.getElementById('groq-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Groq?')) {
+    GROQ_API_KEY = '';
+    localStorage.removeItem('castroverde_groq_key');
+    document.getElementById('groq-key-input').value = '';
+    closeGroqKeyModal();
+  }
+});
+document.getElementById('groq-btn-cancel').addEventListener('click', closeGroqKeyModal);
+document.getElementById('modal-groqkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-groqkey')) closeGroqKeyModal(); });
 document.getElementById('btn-settings').addEventListener('click', openSettings);
 document.getElementById('settings-save').addEventListener('click', saveSettingsFromModal);
 document.getElementById('settings-cancel').addEventListener('click', closeSettings);

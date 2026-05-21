@@ -266,6 +266,15 @@
       </div>
     </div>
     <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
+      <span class="prompt-buttons-label">Paso 0b · Prompt de aplicación del plan de acción</span>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="btn-corrector" id="btn-aplicar-plan" onclick="generarPromptAplicarPlan()">
+          ✦ Generar prompt de aplicación
+        </button>
+        <span id="aplicar-plan-hint" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;">Genera primero el Plan en los pasos de análisis</span>
+      </div>
+    </div>
+    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
       <span class="prompt-buttons-label">Selecciona el análisis · <span id="active-model-label">Gemini 2.5 Flash</span></span>
       <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
     </div>
@@ -923,6 +932,60 @@ async function runCorrector() {
     btn.classList.remove('running');
     btn.textContent = '✦ Corrector técnico';
   }
+}
+
+// ══════════════════════════════════════════════════════
+//  PASO 0b — PROMPT DE APLICACIÓN DEL PLAN DE ACCIÓN
+// ══════════════════════════════════════════════════════
+function generarPromptAplicarPlan() {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+
+  const box = document.getElementById('result-box');
+  const planEnResultBox = box.innerText.trim();
+  if (!planEnResultBox) {
+    alert('Primero genera el Plan de intervención (botón "Plan") en los pasos de análisis.');
+    return;
+  }
+
+  const systemPrompt = `ROL
+Eres un corrector de textos históricos.
+
+OBJETIVO
+Aplicar los cambios indicados en el plan de acción sin alterar el estilo ni la voz del autor.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información nueva ni cambiar el significado. No reescribir lo que no está señalado en el plan.
+
+QUÉ PUEDES HACER
+- Aplicar cada intervención del plan en el orden indicado
+- Corregir ortografía y puntuación si el plan lo señala
+- Dividir frases largas si el plan lo señala
+- Eliminar repeticiones si el plan lo señala
+- Reordenar ligeramente frases dentro del mismo párrafo si el plan lo señala
+
+QUÉ NO DEBES HACER
+- No reescribir el estilo
+- No embellecer el texto
+- No añadir explicaciones ni transiciones no pedidas
+- No cambiar el tono
+- No tocar lo que el plan no menciona
+
+SALIDA
+Devuelve solo el texto corregido, sin comentarios ni explicaciones.`;
+
+  const fullPrompt = `=== SYSTEM PROMPT ===\n\n${systemPrompt}\n\n${'─'.repeat(60)}\n\n=== PLAN DE ACCIÓN ===\n\n${planEnResultBox}\n\n${'─'.repeat(60)}\n\n=== TEXTO ORIGINAL ===\n\n"""\n${texto}\n"""`;
+
+  // Mostrar el prompt generado en el result-box
+  document.getElementById('result-empty').style.display = 'none';
+  document.getElementById('result-content').classList.add('visible');
+  document.getElementById('result-badge').textContent = 'Aplicar';
+  document.getElementById('result-label-text').textContent = 'Prompt de aplicación del plan';
+  box.innerHTML = parseMarkdown(fullPrompt);
+  box.scrollTop = 0;
+  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
+  document.getElementById('aplicar-plan-hint').textContent = '✓ Prompt generado — cópialo con el botón ⎘';
+  setTimeout(() => { document.getElementById('aplicar-plan-hint').textContent = 'Genera primero el Plan en los pasos de análisis'; }, 6000);
 }
 
 // ══════════════════════════════════════════════════════
