@@ -14,9 +14,9 @@
   <style>
     /* ESTILOS (igual que antes) */
     :root {
-      --bg:#f0fdf4; --surface:#e4f5e9; --card:#d2eeda; --border:#a8d4b4;
-      --text:#1a3a22; --muted:#4a7a58; --accent:#1e6b3a; --accent2:#2d9055;
-      --red:#c45a3a; --blue:#3a7ab0; --green:#1e6b3a;
+      --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
+      --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
+      --red:#c45a3a; --blue:#3a7ab0; --green:#2a7a4a;
       --cloud:#4A90D9;
       --font-h:'Playfair Display',Georgia,serif;
       --font-body:'Source Serif 4',Georgia,serif;
@@ -184,20 +184,6 @@
     .btn-corrector:disabled{opacity:.45;cursor:default;}
     .btn-corrector.running{opacity:.6;cursor:default;pointer-events:none;}
     ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:transparent;}
-    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-
-    /* ── API SELECTOR ── */
-    .api-selector{display:flex;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:3px;}
-    .api-btn{background:transparent;border:none;padding:4px 12px;border-radius:20px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);cursor:pointer;transition:all .18s;}
-    .api-btn.active{background:var(--accent);color:var(--bg);}
-    .api-btn:hover:not(.active){color:var(--text);}
-
-    /* ── MODAL INPUT (claves de API adicionales) ── */
-    .modal-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-ui);font-size:12px;border-radius:var(--radius);outline:none;margin-bottom:8px;}
-    .modal-input:focus{border-color:var(--accent);}
-    .btn-key{background:none;border:1px solid rgba(30,107,58,0.35);color:var(--accent);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;}
-    .btn-key:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
   </style>
 </head>
 <body>
@@ -226,15 +212,6 @@
       <button class="mode-btn" data-mode="narrativo">📖 Narrativo</button>
       <button class="mode-btn" data-mode="descriptivo">📐 Descriptivo</button>
     </div>
-    <!-- Selector de API (nuevo) -->
-    <div class="api-selector" id="api-selector">
-      <button class="api-btn active" data-api="openrouter" onclick="setApi('openrouter')">OpenRouter</button>
-      <button class="api-btn" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
-      <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
-      <button class="api-btn" data-api="mistral" onclick="setApi('mistral')">Mistral</button>
-      <button class="api-btn" data-api="claude" onclick="setApi('claude')">Claude</button>
-    </div>
-    <!-- Selector de modelo OpenRouter (solo visible cuando api=openrouter) -->
     <select id="or-model-select" class="input-field" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);">
       <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
       <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5</option>
@@ -246,12 +223,6 @@
       <option value="mistralai/mistral-small-3.2-24b">Mistral Small 3.2</option>
       <option value="deepseek/deepseek-r1-0528">DeepSeek R1</option>
     </select>
-    <!-- Botones de clave API contextuales (nuevo) -->
-    <button class="btn-key" id="btn-or-key-header">⚙ OpenRouter</button>
-    <button class="btn-key" id="btn-gemini-key" style="display:none;">⚙ Gemini</button>
-    <button class="btn-key" id="btn-groq-key-header" style="display:none;">⚙ Groq</button>
-    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
-    <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
     <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
   </div>
 </header>
@@ -292,6 +263,15 @@
           ✦ Corrector técnico
         </button>
         <span id="corrector-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
+      </div>
+    </div>
+    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
+      <span class="prompt-buttons-label">Paso 0b · Prompt de aplicación del plan de acción</span>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="btn-corrector" id="btn-aplicar-plan" onclick="generarPromptAplicarPlan()">
+          ✦ Generar prompt de aplicación
+        </button>
+        <span id="aplicar-plan-hint" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;">Genera primero el Plan en los pasos de análisis</span>
       </div>
     </div>
     <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
@@ -410,54 +390,6 @@
       <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
       <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
       <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL GEMINI KEY -->
-<div class="modal-overlay" id="modal-geminikey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Gemini</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Gemini (Google AI Studio). Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="input-label">Gemini API Key</label>
-    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
-    <div class="modal-hint">Debe empezar por AIzaSy. Obtenla en aistudio.google.com</div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="gemini-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="gemini-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="gemini-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL MISTRAL KEY -->
-<div class="modal-overlay" id="modal-mistralkey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Mistral</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Mistral Large. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="input-label">Mistral API Key</label>
-    <input class="modal-input" id="mistral-key-input" type="password" placeholder="…" autocomplete="off">
-    <div class="modal-hint">Obtenla en console.mistral.ai</div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="mistral-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="mistral-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="mistral-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CLAUDE KEY -->
-<div class="modal-overlay" id="modal-claudekey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Claude</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Claude Sonnet. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="input-label">Anthropic API Key</label>
-    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="off">
-    <div class="modal-hint">Debe empezar por sk-ant-. Obtenla en console.anthropic.com</div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="claude-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="claude-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="claude-btn-save">Guardar</button>
     </div>
   </div>
 </div>
@@ -613,14 +545,11 @@ function buildUserPrompt(template, texto, objetivo) {
 function generatePrompt(idx, btnEl) {
   const texto = document.getElementById('input-text').value.trim();
   if (!texto) { alert('Primero pega el texto de la sección.'); return; }
-
-  const api = document.body.dataset.api || activeApi;
-  if (api === 'openrouter' && !OR_API_KEY) { setSyncStatus('err', 'Introduce la clave de OpenRouter primero.'); setTimeout(openOrKeyModal, 800); return; }
-  if (api === 'gemini'     && !GEMINI_API_KEY) { setSyncStatus('err', 'Introduce la clave de Gemini primero.'); setTimeout(openGeminiKeyModal, 800); return; }
-  if (api === 'groq'       && !GROQ_API_KEY) { setSyncStatus('err', 'Introduce la clave de Groq primero.'); setTimeout(openGroqKeyModal, 800); return; }
-  if (api === 'mistral'    && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral primero.'); setTimeout(openMistralKeyModal, 800); return; }
-  if (api === 'claude'     && !CLAUDE_API_KEY) { setSyncStatus('err', 'Introduce la clave de Claude primero.'); setTimeout(openClaudeKeyModal, 800); return; }
-
+  if (!OR_API_KEY) {
+    setSyncStatus('err', 'Introduce la clave de OpenRouter primero.');
+    setTimeout(openOrKeyModal, 800);
+    return;
+  }
   const p = settings[activeProfile].prompts[idx];
   const objetivo = document.getElementById('section-goal').value.trim();
   const systemMsg = buildSystemWithTono();
@@ -631,18 +560,17 @@ function generatePrompt(idx, btnEl) {
 
   const modelSelect = document.getElementById('or-model-select');
   const modelId = modelSelect.value;
-  const apiLabel = api === 'openrouter'
-    ? modelSelect.options[modelSelect.selectedIndex].text
-    : api.charAt(0).toUpperCase() + api.slice(1);
+  const modelLabel = modelSelect.options[modelSelect.selectedIndex].text;
 
+  // Mostrar estado de carga
   document.getElementById('result-empty').style.display = 'none';
   document.getElementById('result-content').classList.add('visible');
   document.getElementById('result-badge').textContent = p.label;
   document.getElementById('result-label-text').textContent = p.name;
   const box = document.getElementById('result-box');
-  box.innerHTML = '<span class="loading">… Analizando con ' + apiLabel + '</span>';
+  box.innerHTML = '<span class="loading">… Analizando con ' + modelLabel + '</span>';
 
-  callAPI(systemMsg, userMsg, modelId).then(respuesta => {
+  callOpenRouter(systemMsg, userMsg, modelId).then(respuesta => {
     setResultBox(respuesta);
   }).catch(err => {
     box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
@@ -651,21 +579,18 @@ function generatePrompt(idx, btnEl) {
   });
 }
 
-// ══════════════════════════════════════════════════════
-//  DISPATCHER DE API
-// ══════════════════════════════════════════════════════
-async function callAPI(systemPrompt, userPrompt, modelId) {
-  const api = document.body.dataset.api || activeApi;
-  if (api === 'groq')    return callGroq(systemPrompt, userPrompt);
-  if (api === 'mistral') return callMistral(systemPrompt, userPrompt);
-  if (api === 'claude')  return callClaude(systemPrompt, userPrompt);
-  if (api === 'gemini')  return callGemini(systemPrompt, userPrompt);
-  return callOpenRouter(systemPrompt, userPrompt, modelId);
-}
-
 async function callOpenRouter(systemPrompt, userPrompt, modelId) {
-  if (!OR_API_KEY) { openOrKeyModal(); throw new Error('Introduce la clave de OpenRouter primero.'); }
-  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const body = {
+    model: modelId,
+    max_tokens: 8000,
+    temperature: 0.4,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ]
+  };
+  const resp = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -673,101 +598,15 @@ async function callOpenRouter(systemPrompt, userPrompt, modelId) {
       'HTTP-Referer': 'https://castrovert-ux.github.io',
       'X-Title': 'Análisis Castroverde'
     },
-    body: JSON.stringify({
-      model: modelId,
-      max_tokens: 8000,
-      temperature: 0.4,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
-    })
+    body: JSON.stringify(body)
   });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error ' + resp.status); }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error ' + resp.status);
+  }
   const data = await resp.json();
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Respuesta vacía de OpenRouter');
-  return text;
-}
-
-async function callGemini(systemPrompt, userPrompt) {
-  if (!GEMINI_API_KEY) { openGeminiKeyModal(); throw new Error('Introduce la clave de Gemini primero.'); }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 8000, thinkingConfig: { thinkingBudget: 0 } }
-    })
-  });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Gemini ' + resp.status); }
-  const data = await resp.json();
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
-  if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
-  if (!text) throw new Error('Respuesta vacía de Gemini');
-  return text;
-}
-
-async function callGroq(systemPrompt, userPrompt) {
-  if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile', max_tokens: 8000, temperature: 0.4,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
-    })
-  });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Groq ' + resp.status); }
-  const data = await resp.json();
-  const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Respuesta vacía de Groq');
-  return text;
-}
-
-async function callMistral(systemPrompt, userPrompt, _retry=0) {
-  if (!MISTRAL_API_KEY) { openMistralKeyModal(); throw new Error('Introduce la clave de Mistral primero.'); }
-  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MISTRAL_API_KEY },
-    body: JSON.stringify({
-      model: 'mistral-large-latest', max_tokens: 8000, temperature: 1.0,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
-    })
-  });
-  if (resp.status === 429 && _retry < 3) {
-    const wait = (_retry + 1) * 15;
-    setSyncStatus('info', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s…`);
-    await new Promise(r => setTimeout(r, wait * 1000));
-    return callMistral(systemPrompt, userPrompt, _retry + 1);
-  }
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.message || err.error?.message || 'Error Mistral ' + resp.status); }
-  const data = await resp.json();
-  const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Respuesta vacía de Mistral');
-  return text;
-}
-
-async function callClaude(systemPrompt, userPrompt) {
-  if (!CLAUDE_API_KEY) { openClaudeKeyModal(); throw new Error('Introduce la clave de Claude primero.'); }
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.4,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    })
-  });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Claude ' + resp.status); }
-  const data = await resp.json();
-  const text = data.content?.[0]?.text?.trim();
-  if (!text) throw new Error('Respuesta vacía de Claude');
   return text;
 }
 
@@ -985,10 +824,6 @@ function resetSettings() {
 //  OPENROUTER KEY
 // ══════════════════════════════════════════════════════
 let OR_API_KEY = localStorage.getItem('castroverde_or_key') || '';
-let GEMINI_API_KEY  = localStorage.getItem('castroverde_ana_gemini_key')  || '';
-let MISTRAL_API_KEY = localStorage.getItem('castroverde_ana_mistral_key') || '';
-let CLAUDE_API_KEY  = localStorage.getItem('castroverde_ana_claude_key')  || '';
-let activeApi = localStorage.getItem('castroverde_ana_api') || 'openrouter';
 
 function openOrKeyModal() {
   document.getElementById('or-key-input').value = OR_API_KEY || '';
@@ -1097,6 +932,60 @@ async function runCorrector() {
     btn.classList.remove('running');
     btn.textContent = '✦ Corrector técnico';
   }
+}
+
+// ══════════════════════════════════════════════════════
+//  PASO 0b — PROMPT DE APLICACIÓN DEL PLAN DE ACCIÓN
+// ══════════════════════════════════════════════════════
+function generarPromptAplicarPlan() {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+
+  const box = document.getElementById('result-box');
+  const planEnResultBox = box.innerText.trim();
+  if (!planEnResultBox) {
+    alert('Primero genera el Plan de intervención (botón "Plan") en los pasos de análisis.');
+    return;
+  }
+
+  const systemPrompt = `ROL
+Eres un corrector de textos históricos.
+
+OBJETIVO
+Aplicar los cambios indicados en el plan de acción sin alterar el estilo ni la voz del autor.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información nueva ni cambiar el significado. No reescribir lo que no está señalado en el plan.
+
+QUÉ PUEDES HACER
+- Aplicar cada intervención del plan en el orden indicado
+- Corregir ortografía y puntuación si el plan lo señala
+- Dividir frases largas si el plan lo señala
+- Eliminar repeticiones si el plan lo señala
+- Reordenar ligeramente frases dentro del mismo párrafo si el plan lo señala
+
+QUÉ NO DEBES HACER
+- No reescribir el estilo
+- No embellecer el texto
+- No añadir explicaciones ni transiciones no pedidas
+- No cambiar el tono
+- No tocar lo que el plan no menciona
+
+SALIDA
+Devuelve solo el texto corregido, sin comentarios ni explicaciones.`;
+
+  const fullPrompt = `=== SYSTEM PROMPT ===\n\n${systemPrompt}\n\n${'─'.repeat(60)}\n\n=== PLAN DE ACCIÓN ===\n\n${planEnResultBox}\n\n${'─'.repeat(60)}\n\n=== TEXTO ORIGINAL ===\n\n"""\n${texto}\n"""`;
+
+  // Mostrar el prompt generado en el result-box
+  document.getElementById('result-empty').style.display = 'none';
+  document.getElementById('result-content').classList.add('visible');
+  document.getElementById('result-badge').textContent = 'Aplicar';
+  document.getElementById('result-label-text').textContent = 'Prompt de aplicación del plan';
+  box.innerHTML = parseMarkdown(fullPrompt);
+  box.scrollTop = 0;
+  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
+  document.getElementById('aplicar-plan-hint').textContent = '✓ Prompt generado — cópialo con el botón ⎘';
+  setTimeout(() => { document.getElementById('aplicar-plan-hint').textContent = 'Genera primero el Plan en los pasos de análisis'; }, 6000);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1210,86 +1099,9 @@ function saveFbKey(val) {
 }
 
 // ══════════════════════════════════════════════════════
-//  GEMINI KEY
-// ══════════════════════════════════════════════════════
-function openGeminiKeyModal() {
-  document.getElementById('gemini-key-input').value = GEMINI_API_KEY || '';
-  document.getElementById('modal-geminikey').classList.add('visible');
-  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
-}
-function closeGeminiKeyModal() { document.getElementById('modal-geminikey').classList.remove('visible'); }
-function saveGeminiKey(val) {
-  if (!val || !val.startsWith('AIzaSy')) { alert('La clave de Gemini debe empezar por AIzaSy'); return false; }
-  GEMINI_API_KEY = val;
-  localStorage.setItem('castroverde_ana_gemini_key', val);
-  closeGeminiKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  MISTRAL KEY
-// ══════════════════════════════════════════════════════
-function openMistralKeyModal() {
-  document.getElementById('mistral-key-input').value = MISTRAL_API_KEY || '';
-  document.getElementById('modal-mistralkey').classList.add('visible');
-  setTimeout(() => document.getElementById('mistral-key-input').focus(), 80);
-}
-function closeMistralKeyModal() { document.getElementById('modal-mistralkey').classList.remove('visible'); }
-function saveMistralKey(val) {
-  if (!val) { alert('Introduce una clave de Mistral válida'); return false; }
-  MISTRAL_API_KEY = val;
-  localStorage.setItem('castroverde_ana_mistral_key', val);
-  closeMistralKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  CLAUDE KEY
-// ══════════════════════════════════════════════════════
-function openClaudeKeyModal() {
-  document.getElementById('claude-key-input').value = CLAUDE_API_KEY || '';
-  document.getElementById('modal-claudekey').classList.add('visible');
-  setTimeout(() => document.getElementById('claude-key-input').focus(), 80);
-}
-function closeClaudeKeyModal() { document.getElementById('modal-claudekey').classList.remove('visible'); }
-function saveClaudeKey(val) {
-  if (!val || !val.startsWith('sk-ant-')) { alert('La clave de Claude debe empezar por sk-ant-'); return false; }
-  CLAUDE_API_KEY = val;
-  localStorage.setItem('castroverde_ana_claude_key', val);
-  closeClaudeKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  SELECTOR DE API
-// ══════════════════════════════════════════════════════
-function setApi(api) {
-  activeApi = api;
-  localStorage.setItem('castroverde_ana_api', api);
-  document.body.dataset.api = api;
-  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
-  // Mostrar/ocultar selector de modelo OR y botones de clave
-  document.getElementById('or-model-select').style.display      = api === 'openrouter' ? '' : 'none';
-  document.getElementById('btn-or-key-header').style.display    = api === 'openrouter' ? '' : 'none';
-  document.getElementById('btn-gemini-key').style.display       = api === 'gemini'     ? '' : 'none';
-  document.getElementById('btn-groq-key-header').style.display  = api === 'groq'       ? '' : 'none';
-  document.getElementById('btn-mistral-key').style.display      = api === 'mistral'    ? '' : 'none';
-  document.getElementById('btn-claude-key').style.display       = api === 'claude'     ? '' : 'none';
-  // Actualizar etiqueta del modelo activo
-  const apiLabels = { openrouter: null, gemini: 'Gemini 2.5 Flash', groq: 'Llama 3.3 70B', mistral: 'Mistral Large', claude: 'Claude Sonnet 4.6' };
-  if (api === 'openrouter') {
-    const sel = document.getElementById('or-model-select');
-    document.getElementById('active-model-label').textContent = sel.options[sel.selectedIndex].text;
-  } else {
-    document.getElementById('active-model-label').textContent = apiLabels[api] || api;
-  }
-}
-
-// ══════════════════════════════════════════════════════
 //  EVENTOS Y ARRANQUE
 // ══════════════════════════════════════════════════════
 document.getElementById('btn-or-key').addEventListener('click', openOrKeyModal);
-document.getElementById('btn-or-key-header').addEventListener('click', openOrKeyModal);
 document.getElementById('or-btn-save').addEventListener('click', () => saveOrKey(document.getElementById('or-key-input').value.trim()));
 document.getElementById('or-btn-forget').addEventListener('click', () => {
   if (confirm('¿Borrar la clave de OpenRouter?')) {
@@ -1301,35 +1113,6 @@ document.getElementById('or-btn-forget').addEventListener('click', () => {
 });
 document.getElementById('or-btn-cancel').addEventListener('click', closeOrKeyModal);
 document.getElementById('modal-orkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-orkey')) closeOrKeyModal(); });
-
-// Gemini key modal events
-document.getElementById('btn-gemini-key').addEventListener('click', openGeminiKeyModal);
-document.getElementById('gemini-btn-save').addEventListener('click', () => saveGeminiKey(document.getElementById('gemini-key-input').value.trim()));
-document.getElementById('gemini-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Gemini?')) { GEMINI_API_KEY = ''; localStorage.removeItem('castroverde_ana_gemini_key'); document.getElementById('gemini-key-input').value = ''; closeGeminiKeyModal(); }
-});
-document.getElementById('gemini-btn-cancel').addEventListener('click', closeGeminiKeyModal);
-document.getElementById('modal-geminikey').addEventListener('click', e => { if (e.target === document.getElementById('modal-geminikey')) closeGeminiKeyModal(); });
-
-// Mistral key modal events
-document.getElementById('btn-mistral-key').addEventListener('click', openMistralKeyModal);
-document.getElementById('mistral-btn-save').addEventListener('click', () => saveMistralKey(document.getElementById('mistral-key-input').value.trim()));
-document.getElementById('mistral-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Mistral?')) { MISTRAL_API_KEY = ''; localStorage.removeItem('castroverde_ana_mistral_key'); document.getElementById('mistral-key-input').value = ''; closeMistralKeyModal(); }
-});
-document.getElementById('mistral-btn-cancel').addEventListener('click', closeMistralKeyModal);
-document.getElementById('modal-mistralkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-mistralkey')) closeMistralKeyModal(); });
-
-// Claude key modal events
-document.getElementById('btn-claude-key').addEventListener('click', openClaudeKeyModal);
-document.getElementById('claude-btn-save').addEventListener('click', () => saveClaudeKey(document.getElementById('claude-key-input').value.trim()));
-document.getElementById('claude-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Claude?')) { CLAUDE_API_KEY = ''; localStorage.removeItem('castroverde_ana_claude_key'); document.getElementById('claude-key-input').value = ''; closeClaudeKeyModal(); }
-});
-document.getElementById('claude-btn-cancel').addEventListener('click', closeClaudeKeyModal);
-document.getElementById('modal-claudekey').addEventListener('click', e => { if (e.target === document.getElementById('modal-claudekey')) closeClaudeKeyModal(); });
-// btn-groq-key-header (en la sync-bar sigue siendo para el corrector, pero el header usa btn-groq-key-header)
-document.getElementById('btn-groq-key-header').addEventListener('click', openGroqKeyModal);
 // Restaurar modelo seleccionado
 const savedModel = localStorage.getItem('castroverde_or_model');
 if (savedModel) {
@@ -1420,29 +1203,15 @@ document.querySelectorAll('#settings-ptabs .ptab').forEach(tab => {
 // Inicialización
 loadSettings();
 if (!getTonoProfile()) {
+  // Perfil tonal por defecto mejorado
   saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
 }
 const savedProfile = localStorage.getItem('castroverde_active_profile_ana');
 if (savedProfile === 'narrativo' || savedProfile === 'descriptivo') setActiveProfile(savedProfile);
 else setActiveProfile('narrativo');
 actualizarContador();
-// Aplicar selector de API guardado
-setApi(activeApi);
-// Restaurar modelo OR seleccionado
-const savedModel = localStorage.getItem('castroverde_or_model');
-if (savedModel) {
-  const sel = document.getElementById('or-model-select');
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === savedModel) { sel.selectedIndex = i; break; }
-  }
-}
-// Si falta Firebase, pedirla; luego pedir la clave de la API activa si falta
 if (!FB_API_KEY) setTimeout(openFbKeyModal, 500);
-if (activeApi === 'openrouter' && !OR_API_KEY)      setTimeout(openOrKeyModal,      FB_API_KEY ? 300 : 900);
-if (activeApi === 'gemini'     && !GEMINI_API_KEY)  setTimeout(openGeminiKeyModal,  FB_API_KEY ? 300 : 900);
-if (activeApi === 'groq'       && !GROQ_API_KEY)    setTimeout(openGroqKeyModal,    FB_API_KEY ? 300 : 900);
-if (activeApi === 'mistral'    && !MISTRAL_API_KEY) setTimeout(openMistralKeyModal, FB_API_KEY ? 300 : 900);
-if (activeApi === 'claude'     && !CLAUDE_API_KEY)  setTimeout(openClaudeKeyModal,  FB_API_KEY ? 300 : 900);
+if (!OR_API_KEY) setTimeout(openOrKeyModal, FB_API_KEY ? 300 : 900);
 </script>
 </body>
 </html>
