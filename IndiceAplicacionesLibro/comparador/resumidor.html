@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resumidor · IA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #f0f4fa;
+      --surface:  #e4ecf5;
+      --card:     #d8e4f0;
+      --border:   #aac0d8;
+      --text:     #1a2a3a;
+      --muted:    #5a7090;
+      --accent:   #1a5a9a;
+      --accent2:  #2570c0;
+      --red:      #c45a3a;
+      --green:    #2a7a4a;
+      --blue:     #1a5a9a;
+      --font-h:   'Lora', Georgia, serif;
+      --font-body:'Lora', Georgia, serif;
+      --font-ui:  'Inter', system-ui, sans-serif;
+      --font-mono:'DM Mono', monospace;
+      --radius:   4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .logo {
+      font-family: var(--font-h);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-weight: 400;
+    }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── API SELECTOR ── */
+    .api-selector {
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .api-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .api-btn.active { background: var(--accent); color: #fff; }
+    .api-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── BTN KEY ── */
+    .btn-key {
+      background: none;
+      border: 1px solid rgba(26,90,154,0.35);
+      color: #5090c8;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .btn-key:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-key.prompts-btn {
+      border-color: rgba(42,112,192,.35);
+      color: #6090c0;
+    }
+    .btn-key.prompts-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+    /* ── STATUS BAR ── */
+    #status-bar {
+      flex-shrink: 0;
+      padding: 5px 22px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #status-bar.visible { display: flex; }
+    #status-bar.ok   { background: rgba(42,122,74,.12);  color: var(--green); }
+    #status-bar.err  { background: rgba(196,90,58,.10);  color: var(--red);   }
+    #status-bar.info { background: rgba(26,90,154,.10);  color: var(--accent);}
+    #status-bar.warn { background: rgba(196,140,0,.10);  color: #a07010;      }
+    .status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .55; font-size: 13px; padding: 0 4px; }
+    .status-close:hover { opacity: 1; }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      padding: 30px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── CONTROLS ROW ── */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .controls-row label {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── INPUT PORCENTAJE ── */
+    .pct-wrap { display: flex; align-items: center; gap: 8px; }
+    #pct-input {
+      width: 72px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      padding: 5px 8px;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color .2s;
+      -moz-appearance: textfield;
+    }
+    #pct-input::-webkit-inner-spin-button,
+    #pct-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    #pct-input:focus { border-color: var(--accent); }
+    .pct-wrap span {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* ── TEXTAREA ── */
+    .textarea-wrap { position: relative; }
+    #main-textarea {
+      width: 100%;
+      min-height: 370px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.9;
+      padding: 18px 18px 34px;
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #main-textarea:focus { border-color: var(--accent); }
+    #main-textarea.loading { opacity: .5; pointer-events: none; }
+    .char-count {
+      position: absolute;
+      bottom: 9px;
+      right: 13px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* ── ACTION ROW ── */
+    .action-row { display: flex; gap: 10px; align-items: center; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+    .btn-primary:disabled { opacity: .4; cursor: default; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost:disabled { opacity: .4; cursor: default; }
+    .btn-copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .btn-copy:hover { border-color: var(--green); color: var(--green); }
+    .btn-copy.copied { border-color: var(--green); color: var(--green); background: rgba(42,122,74,.08); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: none;
+      width: 15px; height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,25,50,0.50);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 440px;
+      max-width: 96vw;
+      box-shadow: 0 8px 36px rgba(10,25,50,.18);
+    }
+    .modal-title {
+      font-family: var(--font-h);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .modal-sub {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 11px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      border-radius: var(--radius);
+      outline: none;
+      margin-bottom: 9px;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-hint {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.65;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Modal prompt grande */
+    #modal-prompt .modal-box {
+      width: 740px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #prompt-textarea {
+      flex: 1;
+      min-height: 400px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      line-height: 1.7;
+      border-radius: var(--radius);
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    #prompt-textarea:focus { border-color: var(--accent); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    Resumidor <span>·</span> IA
+    <small>Resumen con voz del autor</small>
+  </div>
+  <div class="header-right">
+    <!-- Selector API -->
+    <div class="api-selector" id="api-selector">
+      <button class="api-btn active" data-api="gemini"  onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn"        data-api="groq"    onclick="setApi('groq')">Groq</button>
+      <button class="api-btn"        data-api="mistral" onclick="setApi('mistral')">Mistral</button>
+      <button class="api-btn"        data-api="claude"  onclick="setApi('claude')">Claude</button>
+    </div>
+    <!-- Botones de clave (solo el activo visible) -->
+    <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key"    style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
+    <button class="btn-key" id="btn-claude-key"  style="display:none;">⚙ Claude</button>
+    <!-- Prompt -->
+    <button class="btn-key prompts-btn" onclick="openPromptModal()">✎ Prompt</button>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <span id="status-msg"></span>
+  <button class="status-close" onclick="closeStatus()">✕</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="controls-row">
+    <label>Porcentaje de reducción</label>
+    <div class="pct-wrap">
+      <input type="number" id="pct-input" min="1" max="99" value="50">
+      <span>%</span>
+    </div>
+  </div>
+
+  <div class="textarea-wrap">
+    <textarea id="main-textarea" placeholder="Pega aquí el texto a resumir…&#10;&#10;El resultado reemplazará este texto."></textarea>
+    <div class="char-count" id="char-count">0 caracteres</div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-primary" id="btn-resumir" onclick="resumir()">▶ Resumir</button>
+    <div class="spinner" id="spinner"></div>
+    <button class="btn-copy" id="btn-copy" onclick="copiar()">Copiar</button>
+    <button class="btn btn-ghost" onclick="limpiar()" style="margin-left:auto;">✕ Limpiar</button>
+  </div>
+
+</div>
+
+<!-- MODAL CLAVE GEMINI -->
+<div class="modal-overlay" id="modal-gemini">
+  <div class="modal-box">
+    <div class="modal-title">Clave Gemini</div>
+    <div class="modal-sub">Google AI Studio · gemini-2.5-flash</div>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por AIzaSy.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('gemini')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-gemini')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('gemini')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE GROQ -->
+<div class="modal-overlay" id="modal-groq">
+  <div class="modal-box">
+    <div class="modal-title">Clave Groq</div>
+    <div class="modal-sub">api.groq.com · llama-3.3-70b-versatile</div>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por gsk_.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('groq')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-groq')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('groq')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE MISTRAL -->
+<div class="modal-overlay" id="modal-mistral">
+  <div class="modal-box">
+    <div class="modal-title">Clave Mistral</div>
+    <div class="modal-sub">api.mistral.ai · mistral-large-latest</div>
+    <input class="modal-input" id="mistral-key-input" type="password" placeholder="…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('mistral')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-mistral')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('mistral')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE CLAUDE -->
+<div class="modal-overlay" id="modal-claude">
+  <div class="modal-box">
+    <div class="modal-title">Clave Claude</div>
+    <div class="modal-sub">api.anthropic.com · claude-sonnet-4-6</div>
+    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por sk-ant-.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="olvidarClave('claude')">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-claude')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClave('claude')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROMPT -->
+<div class="modal-overlay" id="modal-prompt">
+  <div class="modal-box">
+    <div class="modal-title">Editar prompt</div>
+    <div class="modal-sub">Usa {PORCENTAJE} y {TEXTO} como marcadores · se guarda en localStorage</div>
+    <textarea id="prompt-textarea"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="restaurarPrompt()">↺ Restaurar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-prompt')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrompt()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  PROMPT POR DEFECTO
+// ══════════════════════════════════════════════════════
+const DEFAULT_PROMPT = `Tu tarea es resumir el siguiente texto.
+
+OBJETIVO PRINCIPAL:
+Reducir el texto aproximadamente al {PORCENTAJE}% de su longitud original, manteniendo la voz, el estilo y el tono del autor.
+
+REGLAS FUNDAMENTALES:
+- Conserva la voz del autor: su forma de escribir, su ritmo y su personalidad textual.
+- Mantén el nivel de formalidad, riqueza léxica y tono emocional original.
+- No transformes el texto en un esquema, lista o conjunto de ideas sueltas.
+- No adoptes un estilo académico neutro ni un "resumen típico de IA".
+- Mantén la fluidez natural del texto.
+- Prioriza eliminar redundancias, repeticiones, ejemplos secundarios y detalles accesorios antes que alterar ideas principales.
+- No añadas información nueva, interpretaciones ni explicaciones externas.
+- No cambies el sentido del texto.
+- Mantén, siempre que sea posible, las expresiones originales del autor.
+- Si hay pasajes especialmente expresivos o literarios, intenta preservarlos aunque debas comprimir otras partes.
+- Ajusta la longitud de forma aproximada, no exacta.
+
+SALIDA:
+Devuelve únicamente el texto resumido, sin comentarios, sin explicaciones y sin etiquetas.
+
+TEXTO A RESUMIR:
+"""
+{TEXTO}
+"""`;
+
+// ══════════════════════════════════════════════════════
+//  CLAVES localStorage
+// ══════════════════════════════════════════════════════
+const LS = {
+  gemini:  'resumidor_gemini_key',
+  groq:    'resumidor_groq_key',
+  mistral: 'resumidor_mistral_key',
+  claude:  'resumidor_claude_key',
+  api:     'resumidor_active_api',
+  prompt:  'resumidor_prompt',
+};
+
+let KEYS = {
+  gemini:  localStorage.getItem(LS.gemini)  || '',
+  groq:    localStorage.getItem(LS.groq)    || '',
+  mistral: localStorage.getItem(LS.mistral) || '',
+  claude:  localStorage.getItem(LS.claude)  || '',
+};
+
+let activeApi    = localStorage.getItem(LS.api) || 'gemini';
+let activePrompt = localStorage.getItem(LS.prompt) || DEFAULT_PROMPT;
+
+// ══════════════════════════════════════════════════════
+//  STATUS BAR
+// ══════════════════════════════════════════════════════
+let statusTimer = null;
+function showStatus(type, msg) {
+  const bar = document.getElementById('status-bar');
+  document.getElementById('status-msg').textContent = msg;
+  bar.className = 'visible ' + type;
+  if (statusTimer) clearTimeout(statusTimer);
+  if (type === 'ok') statusTimer = setTimeout(() => bar.className = '', 4000);
+}
+function closeStatus() { document.getElementById('status-bar').className = ''; }
+
+// ══════════════════════════════════════════════════════
+//  SELECTOR DE API
+// ══════════════════════════════════════════════════════
+const API_NAMES = { gemini:'Gemini', groq:'Groq', mistral:'Mistral', claude:'Claude (claude-sonnet-4-6)' };
+
+function setApi(api) {
+  activeApi = api;
+  localStorage.setItem(LS.api, api);
+  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
+  ['gemini','groq','mistral','claude'].forEach(a => {
+    document.getElementById('btn-' + a + '-key').style.display = (a === api) ? '' : 'none';
+  });
+}
+
+// Inicializar selector
+setApi(activeApi);
+
+// Listeners de botones de clave
+['gemini','groq','mistral','claude'].forEach(api => {
+  document.getElementById('btn-' + api + '-key').addEventListener('click', () => openKeyModal(api));
+});
+
+// Cerrar al hacer clic fuera
+['modal-gemini','modal-groq','modal-mistral','modal-claude','modal-prompt'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target === document.getElementById(id)) closeModal(id);
+  });
+});
+
+// ══════════════════════════════════════════════════════
+//  MODALES DE CLAVE
+// ══════════════════════════════════════════════════════
+const KEY_CONFIG = {
+  gemini:  { prefix: 'AIzaSy', hint: 'debe empezar por AIzaSy' },
+  groq:    { prefix: 'gsk_',   hint: 'debe empezar por gsk_'   },
+  mistral: { prefix: null,     hint: null                       },
+  claude:  { prefix: 'sk-ant-',hint: 'debe empezar por sk-ant-'},
+};
+
+function openKeyModal(api) {
+  document.getElementById(api + '-key-input').value = KEYS[api];
+  document.getElementById('modal-' + api).classList.add('visible');
+  setTimeout(() => document.getElementById(api + '-key-input').focus(), 80);
+}
+
+function guardarClave(api) {
+  const val = document.getElementById(api + '-key-input').value.trim();
+  if (!val) { olvidarClave(api); return; }
+  const cfg = KEY_CONFIG[api];
+  if (cfg.prefix && !val.startsWith(cfg.prefix)) {
+    showStatus('err', 'La clave ' + cfg.hint);
+    return;
+  }
+  KEYS[api] = val;
+  localStorage.setItem(LS[api], val);
+  closeModal('modal-' + api);
+  showStatus('ok', '✓ Clave ' + API_NAMES[api].split(' ')[0] + ' guardada');
+}
+
+function olvidarClave(api) {
+  if (KEYS[api] && !confirm('¿Borrar la clave de ' + API_NAMES[api].split(' ')[0] + '?')) return;
+  KEYS[api] = '';
+  localStorage.removeItem(LS[api]);
+  document.getElementById(api + '-key-input').value = '';
+  closeModal('modal-' + api);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════
+//  MODAL PROMPT
+// ══════════════════════════════════════════════════════
+function openPromptModal() {
+  document.getElementById('prompt-textarea').value = activePrompt;
+  document.getElementById('modal-prompt').classList.add('visible');
+}
+
+function guardarPrompt() {
+  const val = document.getElementById('prompt-textarea').value.trim();
+  if (!val) { showStatus('err', 'El prompt no puede estar vacío'); return; }
+  if (!val.includes('{TEXTO}')) { showStatus('err', 'El prompt debe incluir el marcador {TEXTO}'); return; }
+  activePrompt = val;
+  localStorage.setItem(LS.prompt, val);
+  closeModal('modal-prompt');
+  showStatus('ok', '✓ Prompt guardado');
+}
+
+function restaurarPrompt() {
+  if (!confirm('¿Restaurar el prompt por defecto? Se perderán los cambios.')) return;
+  activePrompt = DEFAULT_PROMPT;
+  localStorage.removeItem(LS.prompt);
+  document.getElementById('prompt-textarea').value = DEFAULT_PROMPT;
+  showStatus('ok', '↺ Prompt restaurado');
+}
+
+// ══════════════════════════════════════════════════════
+//  LLAMADAS A API
+// ══════════════════════════════════════════════════════
+async function callGemini(userPrompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${KEYS.gemini}`;
+  const body = {
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: { temperature: 0.3, maxOutputTokens: 16000, thinkingConfig: { thinkingBudget: 0 } }
+  };
+  const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Gemini ' + resp.status);
+  }
+  const data = await resp.json();
+  const candidate = data.candidates?.[0];
+  const finishReason = candidate?.finishReason;
+  const parts = candidate?.content?.parts || [];
+  let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
+  if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
+  if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
+  if (finishReason && finishReason !== 'STOP') return text + '\n\n⚠ Truncado (finishReason: ' + finishReason + ')';
+  return text;
+}
+
+async function callGroq(userPrompt) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + KEYS.groq },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 8192,
+      temperature: 0.3,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Groq ' + resp.status);
+  }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Groq');
+  return text;
+}
+
+async function callMistral(userPrompt, _retry=0) {
+  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + KEYS.mistral },
+    body: JSON.stringify({
+      model: 'mistral-large-latest',
+      max_tokens: 8192,
+      temperature: 1.0,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (resp.status === 429) {
+    if (_retry < 3) {
+      const wait = (_retry + 1) * 15;
+      showStatus('warn', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s… (${_retry+1}/3)`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(userPrompt, _retry + 1);
+    }
+    throw new Error('Mistral: límite de peticiones alcanzado. Espera un minuto o cambia de API.');
+  }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err.message || err.error?.message || '';
+    if (resp.status === 401) throw new Error('Mistral: clave API incorrecta o inválida.');
+    if (resp.status === 402) throw new Error('Mistral: créditos agotados. Revisa tu plan en console.mistral.ai');
+    throw new Error(msg || 'Error Mistral ' + resp.status);
+  }
+  const data = await resp.json();
+  if (data.object === 'error' || data.type === 'error') {
+    const msg = data.message || data.error || 'Error desconocido de Mistral';
+    if (/rate|limit|exceed/i.test(msg) && _retry < 3) {
+      const wait = (_retry + 1) * 20;
+      showStatus('warn', `⏳ Mistral: límite. Reintentando en ${wait}s…`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(userPrompt, _retry + 1);
+    }
+    throw new Error('Mistral: ' + msg);
+  }
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Mistral');
+  return text;
+}
+
+async function callClaude(userPrompt) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': KEYS.claude,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      temperature: 0.3,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err.error?.message || '';
+    if (resp.status === 401) throw new Error('Claude: clave API incorrecta o inválida.');
+    if (resp.status === 403) throw new Error('Claude: acceso denegado. Verifica tu clave en console.anthropic.com');
+    throw new Error(msg || 'Error Claude ' + resp.status);
+  }
+  const data = await resp.json();
+  const text = data.content?.[0]?.text?.trim();
+  if (!text) throw new Error('Respuesta vacía de Claude');
+  return text;
+}
+
+async function callAPI(prompt) {
+  switch (activeApi) {
+    case 'gemini':  return callGemini(prompt);
+    case 'groq':    return callGroq(prompt);
+    case 'mistral': return callMistral(prompt);
+    case 'claude':  return callClaude(prompt);
+    default: throw new Error('API desconocida: ' + activeApi);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  INPUT PORCENTAJE + CONTADOR
+// ══════════════════════════════════════════════════════
+const pctInput  = document.getElementById('pct-input');
+const textarea  = document.getElementById('main-textarea');
+const charCount = document.getElementById('char-count');
+
+pctInput.addEventListener('change', () => {
+  let v = parseInt(pctInput.value, 10);
+  if (isNaN(v) || v < 1)  v = 1;
+  if (v > 99) v = 99;
+  pctInput.value = v;
+});
+textarea.addEventListener('input', updateCount);
+function updateCount() {
+  charCount.textContent = textarea.value.length.toLocaleString('es') + ' caracteres';
+}
+
+// ══════════════════════════════════════════════════════
+//  RESUMIR
+// ══════════════════════════════════════════════════════
+async function resumir() {
+  const texto = textarea.value.trim();
+  if (!texto) { showStatus('err', 'Pega un texto antes de resumir.'); return; }
+
+  if (!KEYS[activeApi]) {
+    showStatus('err', 'Introduce primero la clave de ' + API_NAMES[activeApi].split(' ')[0] + '.');
+    setTimeout(() => openKeyModal(activeApi), 700);
+    return;
+  }
+
+  const pct    = pctInput.value;
+  const prompt = activePrompt.replace('{PORCENTAJE}', pct).replace('{TEXTO}', texto);
+
+  textarea.classList.add('loading');
+  document.getElementById('btn-resumir').disabled = true;
+  document.getElementById('spinner').classList.add('visible');
+  showStatus('info', '⏳ Enviando a ' + API_NAMES[activeApi].split(' ')[0] + '…');
+
+  try {
+    const resultado = await callAPI(prompt);
+    textarea.value = resultado;
+    updateCount();
+    showStatus('ok', '✓ Resumen generado con ' + API_NAMES[activeApi].split(' ')[0]);
+  } catch (err) {
+    showStatus('err', '✗ ' + err.message);
+  } finally {
+    textarea.classList.remove('loading');
+    document.getElementById('btn-resumir').disabled = false;
+    document.getElementById('spinner').classList.remove('visible');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  COPIAR / LIMPIAR
+// ══════════════════════════════════════════════════════
+function copiar() {
+  const texto = textarea.value;
+  if (!texto) return;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function limpiar() {
+  if (textarea.value && !confirm('¿Borrar el contenido del área de texto?')) return;
+  textarea.value = '';
+  updateCount();
+}
+
+// ══════════════════════════════════════════════════════
+//  ARRANQUE
+// ══════════════════════════════════════════════════════
+updateCount();
+if (!KEYS[activeApi]) setTimeout(() => openKeyModal(activeApi), 500);
+</script>
+</body>
+</html>
