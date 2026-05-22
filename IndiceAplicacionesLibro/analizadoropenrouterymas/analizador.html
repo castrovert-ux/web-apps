@@ -199,63 +199,6 @@
     .modal-input:focus{border-color:var(--accent);}
     .btn-key{background:none;border:1px solid rgba(30,107,58,0.35);color:var(--accent);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;}
     .btn-key:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
-
-    /* ── HISTÓRICO DEL ANALIZADOR ── */
-    .hist-modal-box {
-      width: 820px; max-height: 88vh; display: flex; flex-direction: column;
-    }
-    .hist-tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
-    .hist-tab-btn {
-      padding:5px 13px; border-radius:20px; border:1px solid var(--border);
-      background:var(--card); color:var(--muted); font-family:var(--font-ui);
-      font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; transition:all .15s;
-    }
-    .hist-tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .hist-tab-btn:hover:not(.active) { color:var(--accent); border-color:var(--accent); }
-    .hist-list { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; min-height:300px; max-height:52vh; }
-    .hist-entry { border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); overflow:hidden; flex-shrink:0; }
-    .hist-entry-header {
-      display:flex; align-items:center; gap:8px; padding:7px 10px;
-      background:var(--card); cursor:pointer; font-family:var(--font-ui);
-      font-size:9px; letter-spacing:1px; color:var(--muted);
-    }
-    .hist-entry-header:hover { color:var(--text); }
-    .hist-entry-date { flex:1; display:flex; align-items:center; gap:8px; }
-    .hist-entry-actions { display:flex; gap:5px; flex-shrink:0; }
-    .hist-btn-sm {
-      background:transparent; border:1px solid var(--border); color:var(--muted);
-      padding:2px 8px; border-radius:2px; font-family:var(--font-ui); font-size:8px;
-      cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all .15s;
-    }
-    .hist-btn-sm:hover { border-color:var(--accent); color:var(--accent); }
-    .hist-btn-sm.restore:hover { border-color:var(--blue); color:var(--blue); }
-    .hist-btn-sm.del:hover { border-color:var(--red); color:var(--red); }
-    .hist-entry-body {
-      display:none; padding:10px 14px; font-size:12px; line-height:1.75;
-      color:var(--text); max-height:240px; overflow-y:auto; font-family:var(--font-body);
-    }
-    .hist-entry-body.open { display:block; }
-    .hist-empty { font-family:var(--font-ui); font-size:10px; color:var(--muted); text-align:center; padding:40px; letter-spacing:1px; }
-    .hist-arrow { font-size:9px; }
-
-    /* Indicador de caché en botones de prompt */
-    .btn-prompt.cached { border-color:var(--blue); }
-    .btn-prompt.cached::after { content:'·'; color:var(--blue); margin-left:3px; font-size:14px; line-height:1; vertical-align:middle; }
-
-    /* Barra de resultado con info de caché */
-    .result-cache-bar {
-      flex-shrink:0; display:none; align-items:center; justify-content:space-between;
-      padding:4px 10px; background:rgba(58,122,176,.08); border:1px solid rgba(58,122,176,.2);
-      border-radius:var(--radius); font-family:var(--font-ui); font-size:9px; color:var(--blue);
-      letter-spacing:1px;
-    }
-    .result-cache-bar.visible { display:flex; }
-    .btn-rerun {
-      background:transparent; border:1px solid rgba(58,122,176,.35); color:var(--blue);
-      padding:3px 9px; border-radius:var(--radius); cursor:pointer; font-family:var(--font-ui);
-      font-size:8px; text-transform:uppercase; letter-spacing:1px; transition:all .18s;
-    }
-    .btn-rerun:hover { background:var(--blue); color:#fff; border-color:var(--blue); }
   </style>
 </head>
 <body>
@@ -311,7 +254,6 @@
     <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
     <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
     <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
-    <button class="btn-key" id="btn-history" onclick="openHistoryModal()" style="border-color:rgba(42,122,74,.4);color:#4a7a58;">⏱ Histórico</button>
   </div>
 </header>
 
@@ -382,26 +324,8 @@
           </div>
           <button class="btn btn-ghost btn-sm" id="btn-copy-prompt">⎘ Copiar prompt</button>
         </div>
-        <div class="result-cache-bar" id="result-cache-bar">
-          <span id="cache-info-text">Resultado guardado · Puedes re-ejecutar para obtener un nuevo análisis</span>
-          <button class="btn-rerun" id="btn-rerun" onclick="rerunCurrent()">↺ Re-ejecutar</button>
-        </div>
         <div class="result-box" id="result-box"></div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL HISTÓRICO -->
-<div class="modal-overlay" id="modal-history">
-  <div class="modal-box hist-modal-box">
-    <div class="modal-title">Histórico de análisis</div>
-    <div class="modal-subtitle">Resultados guardados por tipo de análisis · localStorage</div>
-    <div class="hist-tabs" id="hist-tabs"></div>
-    <div class="hist-list" id="hist-list"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-shrink:0;padding-top:12px;border-top:1px solid var(--border);">
-      <button class="btn btn-ghost" id="btn-hist-clear-step" onclick="histClearStep()" style="font-size:9px;padding:5px 11px;color:var(--red);border-color:var(--red);">✕ Borrar este análisis</button>
-      <button class="btn btn-ghost" onclick="closeHistoryModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
     </div>
   </div>
 </div>
@@ -698,72 +622,9 @@ function buildUserPrompt(template, texto, objetivo) {
     .replace(/\{\{objetivo\}\}/g, objetivo || '(no especificado)');
 }
 
-// ══════════════════════════════════════════════════════
-//  CACHÉ DE RESULTADOS (memoria de sesión + histórico)
-// ══════════════════════════════════════════════════════
-
-// Caché en memoria: clave = "perfil:idx"
-const resultCache = {};
-
-// Estado del análisis activo (para re-ejecutar)
-let activeAnalysis = null; // { idx, btnEl, perfil }
-
-function cacheKey(perfil, idx) { return perfil + ':' + idx; }
-
-function getCached(perfil, idx) { return resultCache[cacheKey(perfil, idx)] || null; }
-
-function setCached(perfil, idx, text) { resultCache[cacheKey(perfil, idx)] = text; }
-
-function clearCacheForProfile(perfil) {
-  Object.keys(resultCache).forEach(k => { if (k.startsWith(perfil + ':')) delete resultCache[k]; });
-}
-
-// Actualiza el punto indicador de caché en todos los botones
-function updateCacheIndicators() {
-  document.querySelectorAll('.btn-prompt').forEach(btn => {
-    const idx = parseInt(btn.getAttribute('data-idx'));
-    if (getCached(activeProfile, idx)) btn.classList.add('cached');
-    else btn.classList.remove('cached');
-  });
-}
-
-function showCacheBar(text) {
-  const bar = document.getElementById('result-cache-bar');
-  bar.classList.add('visible');
-}
-function hideCacheBar() {
-  document.getElementById('result-cache-bar').classList.remove('visible');
-}
-
-function rerunCurrent() {
-  if (!activeAnalysis) return;
-  // Borrar caché de este análisis y re-ejecutar
-  delete resultCache[cacheKey(activeAnalysis.perfil, activeAnalysis.idx)];
-  hideCacheBar();
-  generatePrompt(activeAnalysis.idx, activeAnalysis.btnEl, true);
-}
-
-function generatePrompt(idx, btnEl, forceRerun) {
+function generatePrompt(idx, btnEl) {
   const texto = document.getElementById('input-text').value.trim();
   if (!texto) { alert('Primero pega el texto de la sección.'); return; }
-
-  const p = settings[activeProfile].prompts[idx];
-
-  // Si hay resultado en caché y no es re-ejecución forzada, mostrar sin llamar a la API
-  const cached = getCached(activeProfile, idx);
-  if (cached && !forceRerun) {
-    activeAnalysis = { idx, btnEl, perfil: activeProfile };
-    document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-    if (btnEl) btnEl.classList.add('active');
-    document.getElementById('result-empty').style.display = 'none';
-    document.getElementById('result-content').classList.add('visible');
-    document.getElementById('result-badge').textContent = p.label;
-    document.getElementById('result-label-text').textContent = p.name;
-    setResultBox(cached);
-    showCacheBar();
-    updateCacheIndicators();
-    return;
-  }
 
   const api = document.body.dataset.api || activeApi;
   if (api === 'openrouter' && !OR_API_KEY) { setSyncStatus('err', 'Introduce la clave de OpenRouter primero.'); setTimeout(openOrKeyModal, 800); return; }
@@ -772,11 +633,10 @@ function generatePrompt(idx, btnEl, forceRerun) {
   if (api === 'mistral'    && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral primero.'); setTimeout(openMistralKeyModal, 800); return; }
   if (api === 'claude'     && !CLAUDE_API_KEY) { setSyncStatus('err', 'Introduce la clave de Claude primero.'); setTimeout(openClaudeKeyModal, 800); return; }
 
+  const p = settings[activeProfile].prompts[idx];
   const objetivo = document.getElementById('section-goal').value.trim();
   const systemMsg = buildSystemWithTono();
   const userMsg = buildUserPrompt(p.content, texto, objetivo);
-
-  activeAnalysis = { idx, btnEl, perfil: activeProfile };
 
   document.querySelectorAll('.btn-prompt').forEach(b => { b.classList.remove('active'); b.disabled = true; });
   if (btnEl) btnEl.classList.add('active');
@@ -791,155 +651,16 @@ function generatePrompt(idx, btnEl, forceRerun) {
   document.getElementById('result-content').classList.add('visible');
   document.getElementById('result-badge').textContent = p.label;
   document.getElementById('result-label-text').textContent = p.name;
-  hideCacheBar();
   const box = document.getElementById('result-box');
   box.innerHTML = '<span class="loading">… Analizando con ' + apiLabel + '</span>';
 
   callAPI(systemMsg, userMsg, modelId).then(respuesta => {
-    setCached(activeProfile, idx, respuesta);
-    histAdd(activeProfile, idx, p.label, respuesta);
     setResultBox(respuesta);
-    showCacheBar();
-    updateCacheIndicators();
   }).catch(err => {
     box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
   }).finally(() => {
     document.querySelectorAll('.btn-prompt').forEach(b => { b.disabled = false; });
-    updateCacheIndicators();
   });
-}
-
-// ══════════════════════════════════════════════════════
-//  HISTÓRICO DEL ANALIZADOR
-// ══════════════════════════════════════════════════════
-
-function histKeyAna(perfil, idx) { return 'castroverde_ana_hist_' + perfil + '_' + idx; }
-
-function histLoadAna(perfil, idx) {
-  try { return JSON.parse(localStorage.getItem(histKeyAna(perfil, idx)) || '[]'); } catch { return []; }
-}
-function histSaveAna(perfil, idx, arr) {
-  localStorage.setItem(histKeyAna(perfil, idx), JSON.stringify(arr));
-}
-function histAdd(perfil, idx, label, text) {
-  const arr = histLoadAna(perfil, idx);
-  arr.unshift({ ts: new Date().toISOString(), label, text });
-  if (arr.length > 30) arr.splice(30);
-  histSaveAna(perfil, idx, arr);
-}
-
-let histActiveProfile = 'narrativo';
-let histActiveIdx = 0;
-
-function openHistoryModal(perfil, idx) {
-  histActiveProfile = perfil || activeProfile;
-  histActiveIdx = (idx !== undefined) ? idx : 0;
-  document.getElementById('modal-history').classList.add('visible');
-  histRenderTabs();
-  histRenderList();
-}
-function closeHistoryModal() {
-  document.getElementById('modal-history').classList.remove('visible');
-}
-document.getElementById('modal-history').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal-history')) closeHistoryModal();
-});
-
-function histRenderTabs() {
-  const container = document.getElementById('hist-tabs');
-  const prompts = settings[histActiveProfile].prompts;
-  container.innerHTML = prompts.map((p, i) => {
-    const count = histLoadAna(histActiveProfile, i).length;
-    const active = i === histActiveIdx ? ' active' : '';
-    return `<button class="hist-tab-btn${active}" onclick="histSwitchTab(${i})">${p.label} <span style="opacity:.6">(${count})</span></button>`;
-  }).join('');
-  // Añadir selector de perfil
-  container.insertAdjacentHTML('beforeend',
-    `<div style="margin-left:auto;display:flex;gap:4px;align-items:center;">
-      <button class="hist-tab-btn${histActiveProfile==='narrativo'?' active':''}" onclick="histSwitchProfile('narrativo')" style="border-radius:3px;">📖 Narr.</button>
-      <button class="hist-tab-btn${histActiveProfile==='descriptivo'?' active':''}" onclick="histSwitchProfile('descriptivo')" style="border-radius:3px;">📐 Desc.</button>
-    </div>`
-  );
-}
-function histSwitchTab(i) { histActiveIdx = i; histRenderTabs(); histRenderList(); }
-function histSwitchProfile(p) { histActiveProfile = p; histActiveIdx = 0; histRenderTabs(); histRenderList(); }
-function histClearStep() {
-  const label = settings[histActiveProfile].prompts[histActiveIdx]?.label || histActiveIdx;
-  if (!confirm('¿Borrar todos los registros de "' + label + '" (' + histActiveProfile + ')?')) return;
-  localStorage.removeItem(histKeyAna(histActiveProfile, histActiveIdx));
-  histRenderTabs();
-  histRenderList();
-}
-function histDeleteEntry(i) {
-  const arr = histLoadAna(histActiveProfile, histActiveIdx);
-  arr.splice(i, 1);
-  histSaveAna(histActiveProfile, histActiveIdx, arr);
-  histRenderTabs();
-  histRenderList();
-}
-function histCopyEntry(i) {
-  const arr = histLoadAna(histActiveProfile, histActiveIdx);
-  if (!arr[i]) return;
-  navigator.clipboard.writeText(arr[i].text).then(() => setSyncStatus('ok', '✓ Registro copiado'));
-}
-function histRestoreEntry(i) {
-  const arr = histLoadAna(histActiveProfile, histActiveIdx);
-  if (!arr[i]) return;
-  const entry = arr[i];
-  const p = settings[histActiveProfile].prompts[histActiveIdx];
-  // Cargar en caché y mostrar
-  setCached(histActiveProfile, histActiveIdx, entry.text);
-  closeHistoryModal();
-  document.getElementById('result-empty').style.display = 'none';
-  document.getElementById('result-content').classList.add('visible');
-  document.getElementById('result-badge').textContent = p ? p.label : entry.label;
-  document.getElementById('result-label-text').textContent = p ? p.name : entry.label;
-  // Marcar botón activo si el perfil coincide con el activo
-  if (histActiveProfile === activeProfile) {
-    document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-    const btn = document.querySelector(`.btn-prompt[data-idx="${histActiveIdx}"]`);
-    if (btn) btn.classList.add('active');
-    activeAnalysis = { idx: histActiveIdx, btnEl: btn, perfil: histActiveProfile };
-  }
-  setResultBox(entry.text);
-  showCacheBar();
-  updateCacheIndicators();
-  setSyncStatus('ok', '✓ Registro restaurado como resultado activo');
-}
-function histToggleBody(el) {
-  const body = el.parentElement.nextElementSibling;
-  const arrow = el.querySelector('.hist-arrow');
-  const open = body.classList.toggle('open');
-  if (arrow) arrow.textContent = open ? '▴' : '▾';
-}
-function histRenderList() {
-  const list = document.getElementById('hist-list');
-  const arr = histLoadAna(histActiveProfile, histActiveIdx);
-  if (!arr.length) {
-    list.innerHTML = '<div class="hist-empty">Sin registros para este análisis.</div>';
-    return;
-  }
-  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  list.innerHTML = arr.map((entry, i) => {
-    const d = new Date(entry.ts);
-    const label = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})
-      + ' &nbsp;·&nbsp; ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    const snippet = entry.text.slice(0, 100).replace(/\n/g,' ') + (entry.text.length > 100 ? '…' : '');
-    return `<div class="hist-entry">
-  <div class="hist-entry-header" onclick="histToggleBody(this)">
-    <div class="hist-entry-date">
-      <span class="hist-arrow">▾</span>
-      <span>${label} — <span style="opacity:.7;font-style:italic;">${esc(snippet)}</span></span>
-    </div>
-    <div class="hist-entry-actions" onclick="event.stopPropagation()">
-      <button class="hist-btn-sm restore" onclick="histRestoreEntry(${i})" title="Cargar como resultado activo">Restaurar</button>
-      <button class="hist-btn-sm" onclick="histCopyEntry(${i})">Copiar</button>
-      <button class="hist-btn-sm del" onclick="histDeleteEntry(${i})">✕</button>
-    </div>
-  </div>
-  <div class="hist-entry-body">${esc(entry.text)}</div>
-</div>`;
-  }).join('');
 }
 
 // ══════════════════════════════════════════════════════
@@ -1111,11 +832,6 @@ function clearAll() {
   document.getElementById('result-empty').style.display = 'flex';
   document.getElementById('result-content').classList.remove('visible');
   document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-  hideCacheBar();
-  // Limpiar caché en memoria (el historial persistente se mantiene)
-  Object.keys(resultCache).forEach(k => delete resultCache[k]);
-  activeAnalysis = null;
-  updateCacheIndicators();
 }
 
 function actualizarContador() {
@@ -1137,7 +853,6 @@ function renderPromptButtons() {
     btn.addEventListener('click', () => generatePrompt(i, btn));
     grid.appendChild(btn);
   });
-  updateCacheIndicators();
 }
 
 function setActiveProfile(profile) {
