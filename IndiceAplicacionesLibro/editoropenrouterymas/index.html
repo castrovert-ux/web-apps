@@ -3,485 +3,1292 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Análisis · Castroverde (Narrativo / Descriptivo)</title>
+  <title>Editor · Castroverde · v2 (con Histórico)</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
-
-  <!-- Firebase SDK (opcional) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
   <style>
-    /* ESTILOS (igual que antes) */
     :root {
-      --bg:#f0fdf4; --surface:#e4f5e9; --card:#d2eeda; --border:#a8d4b4;
-      --text:#1a3a22; --muted:#4a7a58; --accent:#1e6b3a; --accent2:#2d9055;
-      --red:#c45a3a; --blue:#3a7ab0; --green:#1e6b3a;
-      --cloud:#4A90D9;
-      --font-h:'Playfair Display',Georgia,serif;
-      --font-body:'Source Serif 4',Georgia,serif;
-      --font-ui:'DM Mono',monospace;
-      --radius:3px;
+      --bg: #fdf0f0;
+      --surface: #f5e4e4;
+      --card: #eed8d8;
+      --border: #d4aaaa;
+      --text: #3a1a1a;
+      --muted: #8a5a5a;
+      --accent: #8a2a2a;
+      --accent2: #b05070;
+      --red: #c45a3a;
+      --green: #2a7a4a;
+      --blue: #3a7ab0;
+      --font-h: 'Playfair Display', Georgia, serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-ui: 'DM Mono', monospace;
+      --radius: 3px;
     }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    html,body{height:100%;overflow:hidden;}
-    body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.7;display:flex;flex-direction:column;}
 
-    /* Sync bar (igual) */
-    #sync-bar{
-      flex-shrink:0;background:var(--text);
-      display:flex;align-items:center;justify-content:flex-end;gap:10px;
-      padding:5px 18px;border-bottom:1px solid rgba(255,255,255,0.06);
-    }
-    .btn-sync{
-      background:none;border:1px solid rgba(74,144,217,0.4);color:#7eb8f0;
-      padding:4px 11px;border-radius:20px;cursor:pointer;
-      font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;
-      transition:background .2s,color .2s,border-color .2s;white-space:nowrap;
-      display:flex;align-items:center;gap:5px;
-    }
-    .btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud);}
-    .btn-sync.synced{border-color:rgba(42,122,74,0.5);color:#7ec87f;}
-    .btn-sync.synced:hover{background:var(--green);color:#fff;border-color:var(--green);}
-    .btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none;}
-    .sync-user-text{font-family:var(--font-ui);font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1px;}
-    .btn-signout{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;text-transform:uppercase;}
-    .btn-signout:hover{color:var(--red);background:rgba(196,90,58,.1);}
-    #sync-status{
-      flex-shrink:0;padding:5px 18px;font-family:var(--font-ui);font-size:9px;
-      letter-spacing:1px;text-transform:uppercase;display:none;
-      align-items:center;justify-content:space-between;gap:10px;
-    }
-    #sync-status.visible{display:flex;}
-    #sync-status.ok{background:rgba(42,122,74,.12);color:var(--green);}
-    #sync-status.err{background:rgba(196,90,58,.1);color:var(--red);}
-    #sync-status.info{background:rgba(74,144,217,.1);color:var(--cloud);}
-    .sync-status-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:12px;padding:0 3px;}
-    .sync-status-close:hover{opacity:1;}
-
-    /* Cabecera con selector de modo */
-    header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;overflow-x:auto;}
-    .logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
-    .logo span{color:var(--accent);font-style:italic;}
-    .logo small{display:block;font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
-    .header-actions{display:flex;gap:7px;align-items:center;}
-
-    .mode-selector {
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.7;
       display: flex;
-      gap: 6px;
-      background: var(--card);
-      padding: 3px;
-      border-radius: 30px;
-      border: 1px solid var(--border);
+      flex-direction: column;
     }
-    .mode-btn {
+
+    /* ── HEADER ── */
+    header {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .logo { font-family: var(--font-h); font-size: 18px; font-weight: 700; }
+    .logo span { color: var(--accent); font-style: italic; }
+    .logo small {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 8px;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── KEY BUTTON ── */
+    .btn-key {
+      background: none;
+      border: 1px solid rgba(74,144,217,0.4);
+      color: #7eb8f0;
+      padding: 4px 11px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .btn-key:hover { background: #4A90D9; color: #fff; border-color: #4A90D9; }
+
+    /* ── STATUS BAR ── */
+    #status-bar {
+      flex-shrink: 0;
+      padding: 5px 20px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #status-bar.visible { display: flex; }
+    #status-bar.ok { background: rgba(42,122,74,.12); color: var(--green); }
+    #status-bar.err { background: rgba(196,90,58,.1); color: var(--red); }
+    #status-bar.info { background: rgba(74,144,217,.1); color: #4A90D9; }
+    .status-close { background: none; border: none; cursor: pointer; color: inherit; opacity: .6; font-size: 12px; padding: 0 4px; }
+    .status-close:hover { opacity: 1; }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── LEFT PANEL ── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .panel-title {
+      flex-shrink: 0;
+      padding: 9px 15px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
+    .text-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    #input-text {
+      width: 100%;
+      height: 100%;
       background: transparent;
       border: none;
-      padding: 5px 12px;
-      border-radius: 30px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      line-height: 1.85;
+      padding: 14px 15px 28px;
+      resize: none;
+      outline: none;
+    }
+    .char-count {
+      position: absolute;
+      bottom: 5px;
+      right: 10px;
       font-family: var(--font-ui);
-      font-size: 10px;
+      font-size: 9px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .char-count.warn { color: var(--red); }
+    .panel-left-footer {
+      flex-shrink: 0;
+      padding: 9px 15px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* ── STEPS BAR ── */
+    .steps-bar {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .step-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--accent);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .step-btn:hover:not(:disabled) { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .step-btn:disabled { opacity: .45; cursor: default; }
+    .step-btn.running { opacity: .6; cursor: default; pointer-events: none; }
+    .step-btn.done { border-color: var(--green); color: var(--green); }
+    .step-num {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: currentColor;
+      color: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-btn.done .step-num { background: var(--green); }
+    .step-arrow {
+      color: var(--border);
+      font-size: 12px;
+      font-family: var(--font-ui);
+    }
+    .steps-bar-right { margin-left: auto; display: flex; gap: 7px; align-items: center; }
+
+    /* ── RESULT AREA ── */
+    .result-area {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      flex-shrink: 0;
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .tab {
+      padding: 9px 16px;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab:hover { color: var(--accent); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .tab-dot.done { background: var(--green); }
+    .tab-dot.running { background: #4A90D9; animation: pulse 1s ease-in-out infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── TAB PANELS ── */
+    .tab-panels { flex: 1; overflow: hidden; min-height: 0; position: relative; }
+    .tab-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      padding: 14px 18px;
+      gap: 10px;
+      overflow: hidden;
+    }
+    .tab-panel.active { display: flex; }
+
+    /* ── RESULT BOX ── */
+    .result-box {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.85;
+      color: var(--text);
+      overflow-y: auto;
+      font-family: var(--font-body);
+      min-height: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .result-box.editable { cursor: text; user-select: text; }
+    .result-box .empty-msg {
+      color: var(--muted);
+      font-style: italic;
+      font-size: 12px;
+    }
+    .result-box .loading-msg {
+      color: var(--muted);
+      font-style: italic;
+    }
+    .result-box .error-msg { color: var(--red); font-style: italic; }
+
+    /* Fidelidad: estilos especiales */
+    .fidelidad-ok {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(42,122,74,.08);
+      border: 1px solid rgba(42,122,74,.25);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--green);
+    }
+    .fidelidad-ok .fi-icon { font-size: 18px; flex-shrink: 0; }
+    .fidelidad-warn {
+      background: rgba(196,90,58,.07);
+      border: 1px solid rgba(196,90,58,.25);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text);
+    }
+    .fidelidad-warn .fi-label {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--red);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    /* ── PANEL ROW (label + actions) ── */
+    .panel-row {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .panel-label {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
+    .panel-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg); }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: .4; cursor: default; }
+    .btn-copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-copy:hover { border-color: var(--green); color: var(--green); }
+    .btn-copy.copied { border-color: var(--green); color: var(--green); background: rgba(42,122,74,.08); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(58,26,26,0.55);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 26px;
+      width: 420px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(58,26,26,.18);
+    }
+    .modal-title {
+      font-family: var(--font-h);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .modal-sub {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      border-radius: var(--radius);
+      outline: none;
+      margin-bottom: 8px;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-hint {
+      font-family: var(--font-ui);
+      font-size: 8px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+
+    /* ── API SELECTOR ── */
+    .api-selector {
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .api-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all .18s;
     }
-    .mode-btn.active {
+    .api-btn.active {
       background: var(--accent);
-      color: white;
+      color: var(--bg);
     }
-    .mode-btn:hover:not(.active) {
-      background: var(--border);
+    .api-btn:hover:not(.active) { color: var(--text); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── MODAL HISTÓRICO (todos los pasos) ── */
+    #modal-history .modal-box {
+      width: 820px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .hist-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .hist-tab-btn {
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .hist-tab-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .hist-tab-btn:hover:not(.active) { color: var(--accent); border-color: var(--accent); }
+    .hist-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 340px;
+      max-height: 55vh;
+    }
+    .hist-entry {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .hist-entry-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      background: var(--card);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .hist-entry-header:hover { color: var(--text); }
+    .hist-entry-date { flex: 1; }
+    .hist-entry-actions { display: flex; gap: 5px; flex-shrink: 0; }
+    .hist-btn-sm {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 2px 8px;
+      border-radius: 2px;
+      font-family: var(--font-ui);
+      font-size: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all .15s;
+    }
+    .hist-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .hist-btn-sm.del:hover { border-color: var(--red); color: var(--red); }
+    .hist-entry-body {
+      display: none;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.75;
       color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 280px;
+      overflow-y: auto;
+      font-family: var(--font-body);
+    }
+    .hist-entry-body.open { display: block; }
+    .hist-empty {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      padding: 40px;
+      letter-spacing: 1px;
     }
 
-    /* Layout principal */
-    .layout{flex:1;display:grid;grid-template-columns:370px 1fr;overflow:hidden;min-height:0;}
-    .panel-left{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
-    .panel-header{flex-shrink:0;padding:9px 15px;border-bottom:1px solid var(--border);background:var(--card);}
-    .panel-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
-    .input-section{flex-shrink:0;padding:10px 15px;border-bottom:1px solid var(--border);}
-    .input-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:5px;display:block;}
-    .input-field{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;line-height:1.5;}
-    .input-field:focus{border-color:var(--accent);}
-    .text-area-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
-    #input-text{width:100%;height:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.8;padding:14px 15px 24px;resize:none;outline:none;}
-    .char-count{position:absolute;bottom:5px;right:10px;font-family:var(--font-ui);font-size:9px;color:var(--muted);pointer-events:none;}
-    .char-count.warn{color:var(--red);}
-    .panel-footer{flex-shrink:0;padding:9px 15px;border-top:1px solid var(--border);background:var(--card);display:flex;gap:7px;}
-
-    .panel-right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-    .panel-right-bars{flex-shrink:0;overflow-y:auto;max-height:40%;}
-    .prompt-buttons-bar{flex-shrink:0;padding:8px 18px 7px;border-bottom:1px solid var(--border);background:var(--surface);}
-    .prompt-buttons-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:6px;display:block;}
-    .prompt-buttons-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
-    .btn-prompt{
-      padding:9px 6px;border:1px solid var(--border);border-radius:var(--radius);
-      background:var(--card);color:var(--accent);cursor:pointer;
-      font-family:var(--font-ui);font-size:9px;font-weight:500;
-      text-transform:uppercase;letter-spacing:1px;line-height:1.3;
-      transition:all 0.18s;text-align:center;
-    }
-    .btn-prompt:hover{background:var(--accent);color:var(--bg);border-color:var(--accent);}
-    .btn-prompt.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
-
-    .result-area{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:16px 20px;gap:10px;min-height:0;}
-    .result-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;color:var(--muted);gap:10px;}
-    .result-content{display:none;flex-direction:column;flex:1;gap:10px;min-height:0;}
-    .result-content.visible{display:flex;}
-    .result-header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
-    .result-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:8px;}
-    .result-badge{background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:var(--radius);font-size:8px;}
-    .result-box{
-      flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-      padding:16px 18px;font-size:13px;line-height:1.8;
-      color:var(--text);overflow-y:auto;font-family:var(--font-body);
-      min-height:0;cursor:text;user-select:text;
-    }
-    .result-box h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
-    .result-box h4{font-family:var(--font-h);font-size:13px;font-weight:700;margin:10px 0 4px;}
-    .result-box p{margin-bottom:9px;}
-    .result-box strong{font-weight:700;color:var(--accent2);}
-    .result-box em{font-style:italic;}
-    .result-box ol,.result-box ul{margin:6px 0 10px 20px;}
-    .result-box li{margin-bottom:4px;}
-    .result-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
-    .result-box .loading{color:var(--muted);font-style:italic;}
-
-    .btn{padding:7px 13px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.2s;white-space:nowrap;}
-    .btn-primary{background:var(--accent);color:var(--bg);}
-    .btn-primary:hover:not(:disabled){background:var(--accent2);}
-    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
-    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
-    .btn-sm{padding:4px 9px;font-size:9px;}
-
-    /* Modales */
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.55);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
-    .modal-overlay.visible{display:flex;}
-    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:760px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
-    .modal-box-sm{width:430px;}
-    .modal-title{font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;}
-    .modal-subtitle{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:22px;}
-    .modal-section{margin-bottom:20px;}
-    .modal-section-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
-    .modal-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;resize:vertical;line-height:1.6;min-height:80px;}
-    .modal-textarea.tall{min-height:140px;}
-    .modal-hint{font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:4px;line-height:1.6;}
-    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
-    .ptabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;}
-    .ptab{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;font-family:var(--font-ui);font-size:9px;color:var(--muted);cursor:pointer;transition:all 0.2s;}
-    .ptab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
-    .ppanel{display:none;}
-    .ppanel.visible{display:block;}
-    .btn-corrector{
-      padding:7px 16px;border:1px solid var(--blue);border-radius:var(--radius);
-      background:transparent;color:var(--blue);cursor:pointer;
-      font-family:var(--font-ui);font-size:10px;font-weight:500;
-      text-transform:uppercase;letter-spacing:1px;
-      transition:all 0.18s;white-space:nowrap;
-    }
-    .btn-corrector:hover:not(:disabled){background:var(--blue);color:#fff;}
-    .btn-corrector:disabled{opacity:.45;cursor:default;}
-    .btn-corrector.running{opacity:.6;cursor:default;pointer-events:none;}
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:transparent;}
-    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-
-    /* ── API SELECTOR ── */
-    .api-selector{display:flex;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:3px;}
-    .api-btn{background:transparent;border:none;padding:4px 12px;border-radius:20px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);cursor:pointer;transition:all .18s;}
-    .api-btn.active{background:var(--accent);color:var(--bg);}
-    .api-btn:hover:not(.active){color:var(--text);}
-
-    /* ── MODAL INPUT (claves de API adicionales) ── */
-    .modal-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-ui);font-size:12px;border-radius:var(--radius);outline:none;margin-bottom:8px;}
-    .modal-input:focus{border-color:var(--accent);}
-    .btn-key{background:none;border:1px solid rgba(30,107,58,0.35);color:var(--accent);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;}
-    .btn-key:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
   </style>
 </head>
 <body>
 
-<!-- SYNC BAR (igual) -->
-<div id="sync-bar">
-  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
-  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
-  <button class="btn-ghost btn-sm btn" id="btn-or-key" style="font-size:8px;padding:3px 9px;color:#4A90D9;border-color:rgba(74,144,217,0.3);">⚙ OpenRouter</button>
-  <button class="btn-ghost btn-sm btn" id="btn-groq-key" style="font-size:8px;padding:3px 9px;">⚙ Groq</button>
-  <button class="btn-ghost btn-sm btn" id="btn-fb-key" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
-  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
-    <span id="sync-icon">☁</span>
-    <span id="sync-label">Sincronizar</span>
-  </button>
-</div>
-<div id="sync-status">
-  <span id="sync-status-msg"></span>
-  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
-</div>
-
+<!-- HEADER -->
 <header>
-  <div class="logo">Análisis <span>Castroverde</span><small>Narrativo / Descriptivo</small></div>
-  <div class="header-actions">
-    <div class="mode-selector" id="mode-selector">
-      <button class="mode-btn" data-mode="narrativo">📖 Narrativo</button>
-      <button class="mode-btn" data-mode="descriptivo">📐 Descriptivo</button>
-    </div>
-    <!-- Selector de API (nuevo) -->
+  <div class="logo">
+    Editor <span>Castroverde</span>
+    <small>Corrección · Edición · Fidelidad histórica</small>
+  </div>
+  <div class="header-right">
     <div class="api-selector" id="api-selector">
-      <button class="api-btn active" data-api="openrouter" onclick="setApi('openrouter')">OpenRouter</button>
-      <button class="api-btn" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn active" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
       <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
       <button class="api-btn" data-api="mistral" onclick="setApi('mistral')">Mistral</button>
       <button class="api-btn" data-api="claude" onclick="setApi('claude')">Claude</button>
+      <button class="api-btn" data-api="openrouter" onclick="setApi('openrouter')">OpenRouter</button>
     </div>
-    <!-- Selector de modelo OpenRouter (solo visible cuando api=openrouter) -->
-    <select id="or-model-select" class="input-field" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);">
+    <button class="btn-key" id="btn-gemini-key">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
+    <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
+    <button class="btn-key" id="btn-openrouter-key" style="display:none;">⚙ OpenRouter</button>
+    <button class="btn-key" id="btn-history" onclick="openHistoryModal(1)" style="border-color:rgba(42,122,74,.4);color:#6ab88a;">⏱ Histórico</button>
+    <button class="btn-key" id="btn-prompts" onclick="openPromptsModal()" style="border-color:rgba(139,90,43,.4);color:#c8a87a;">✎ Prompts</button>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <span id="status-msg"></span>
+  <button class="status-close" onclick="closeStatus()">✕</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- PANEL IZQUIERDO: texto original -->
+  <div class="panel-left">
+    <div class="panel-title">✍ Texto original</div>
+    <div class="text-wrap">
+      <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto a procesar…&#10;&#10;Hasta 20.000 caracteres."></textarea>
+      <div class="char-count" id="char-count">0 / 20.000</div>
+    </div>
+    <div class="panel-left-footer">
+      <label class="btn btn-ghost" style="cursor:pointer;font-size:9px;padding:5px 10px;">
+        📄 .txt<input type="file" id="file-input" accept=".txt" style="display:none;">
+      </label>
+      <button class="btn btn-ghost" onclick="clearAll()" style="margin-left:auto;font-size:9px;padding:5px 10px;">✕ Limpiar</button>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO -->
+  <div class="panel-right">
+
+    <!-- BARRA DE PASOS -->
+    <div class="steps-bar">
+      <button class="step-btn" id="btn-step1" onclick="runStep1()">
+        <span class="step-num">1</span>
+        Corrección previa
+      </button>
+      <span class="step-arrow">→</span>
+      <button class="step-btn" id="btn-step2" onclick="runStep2()" disabled>
+        <span class="step-num">2</span>
+        Edición literaria
+      </button>
+      <span class="step-arrow">→</span>
+      <button class="step-btn" id="btn-step3" onclick="runStep3()" disabled>
+        <span class="step-num">3</span>
+        Fidelidad histórica
+      </button>
+      <span class="step-arrow">→</span>
+      <button class="step-btn" id="btn-step4" onclick="runStep4()" disabled>
+        <span class="step-num">4</span>
+        Pulido coherencia
+      </button>
+      <span class="step-arrow">→</span>
+      <button class="step-btn" id="btn-step5" onclick="runStep5()" disabled>
+        <span class="step-num">5</span>
+        Pulido final
+      </button>
+      <span class="step-arrow">→</span>
+      <button class="step-btn" id="btn-step6" onclick="runStep6()" disabled>
+        <span class="step-num">6</span>
+        Análisis final
+      </button>
+      <div class="steps-bar-right">
+        <button class="btn btn-ghost" id="btn-prev" onclick="navStep(-1)" style="font-size:11px;padding:5px 10px;" title="Paso anterior">←</button>
+        <button class="btn btn-ghost" id="btn-next" onclick="navStep(+1)" style="font-size:11px;padding:5px 10px;" title="Paso siguiente">→</button>
+        <button class="btn btn-ghost" id="btn-run-all" onclick="runAll()" style="font-size:9px;padding:5px 12px;">▶ Todo en cadena</button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" id="tab-1" onclick="switchTab(1)">
+        <span class="tab-dot" id="dot-1"></span>
+        Paso 1 · Corrección
+      </button>
+      <button class="tab" id="tab-2" onclick="switchTab(2)">
+        <span class="tab-dot" id="dot-2"></span>
+        Paso 2 · Edición
+      </button>
+      <button class="tab" id="tab-3" onclick="switchTab(3)">
+        <span class="tab-dot" id="dot-3"></span>
+        Paso 3 · Fidelidad
+      </button>
+      <button class="tab" id="tab-4" onclick="switchTab(4)">
+        <span class="tab-dot" id="dot-4"></span>
+        Paso 4 · Coherencia
+      </button>
+      <button class="tab" id="tab-5" onclick="switchTab(5)">
+        <span class="tab-dot" id="dot-5"></span>
+        Paso 5 · Pulido
+      </button>
+      <button class="tab" id="tab-6" onclick="switchTab(6)">
+        <span class="tab-dot" id="dot-6"></span>
+        Paso 6 · Análisis
+      </button>
+    </div>
+
+    <!-- TAB PANELS -->
+    <div class="tab-panels">
+
+      <!-- Panel 1 -->
+      <div class="tab-panel active" id="panel-1">
+        <div class="panel-row">
+          <span class="panel-label">Texto corregido (salida del Paso 1)</span>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-1" onclick="showPrompt(1)">Ver prompt</button>
+            <button class="btn btn-copy" id="copy-1" onclick="copyResult(1)" disabled>Copiar</button>
+          </div>
+        </div>
+        <div class="result-box editable" id="result-1">
+          <span class="empty-msg">Ejecuta el Paso 1 para ver el resultado de la corrección técnica previa.</span>
+        </div>
+      </div>
+
+      <!-- Panel 2 -->
+      <div class="tab-panel" id="panel-2">
+        <div class="panel-row">
+          <span class="panel-label">Texto editado (salida del Paso 2)</span>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-2" onclick="showPrompt(2)">Ver prompt</button>
+            <button class="btn btn-copy" id="copy-2" onclick="copyResult(2)" disabled>Copiar</button>
+          </div>
+        </div>
+        <div class="result-box editable" id="result-2">
+          <span class="empty-msg">El Paso 2 tomará el resultado del Paso 1 como entrada.</span>
+        </div>
+      </div>
+
+      <!-- Panel 3 -->
+      <div class="tab-panel" id="panel-3">
+        <div class="panel-row">
+          <span class="panel-label">Revisión de fidelidad histórica (original vs. editado)</span>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-3" onclick="showPrompt(3)">Ver prompt</button>
+          </div>
+        </div>
+        <div id="result-3-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
+          <div class="result-box" id="result-3" style="flex:1;">
+            <span class="empty-msg">El Paso 3 compara el texto original con el resultado del Paso 2.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 4 -->
+      <div class="tab-panel" id="panel-4">
+        <div class="panel-row">
+          <span class="panel-label">Texto pulido — coherencia y redundancia (Paso 4)</span>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-4" onclick="showPrompt(4)">Ver prompt</button>
+            <button class="btn btn-copy" id="copy-4" onclick="copyResult(4)" disabled>Copiar</button>
+          </div>
+        </div>
+        <div class="result-box editable" id="result-4">
+          <span class="empty-msg">El Paso 4 toma el resultado del Paso 2 como entrada.</span>
+        </div>
+      </div>
+
+      <!-- Panel 5 -->
+      <div class="tab-panel" id="panel-5">
+        <div class="panel-row">
+          <span class="panel-label">Texto con pulido final de lectura (Paso 5)</span>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-5" onclick="showPrompt(5)">Ver prompt</button>
+            <button class="btn btn-copy" id="copy-5" onclick="copyResult(5)" disabled>Copiar</button>
+          </div>
+        </div>
+        <div class="result-box editable" id="result-5">
+          <span class="empty-msg">El Paso 5 toma el resultado del Paso 4 como entrada.</span>
+        </div>
+      </div>
+
+      <!-- Panel 6 -->
+      <div class="tab-panel" id="panel-6">
+        <div class="panel-row">
+          <span class="panel-label">Análisis comparativo — Original vs. resultado final (Paso 5)</span>
+          <div class="panel-actions">
+            <button class="btn btn-copy" id="show-prompt-6" onclick="showPrompt(6)">Ver prompt</button>
+            <button class="btn btn-copy" id="copy-report-6" onclick="copyReport6()" disabled>Copiar informe</button>
+          </div>
+        </div>
+        <!-- Vista normal -->
+        <div id="result-6-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
+          <div class="result-box" id="result-6" style="flex:1;overflow-y:auto;">
+            <span class="empty-msg">El Paso 6 compara el texto original con el resultado final del Paso 5.</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-panels -->
+  </div><!-- /panel-right -->
+</div><!-- /main -->
+
+<!-- MODAL HISTÓRICO -->
+<div class="modal-overlay" id="modal-history">
+  <div class="modal-box" style="width:820px;max-height:88vh;display:flex;flex-direction:column;">
+    <div class="modal-title">Histórico de ejecuciones</div>
+    <div class="modal-sub">Registros guardados en localStorage · Borrado individual o completo por paso</div>
+    <div class="hist-tabs" id="hist-tabs"></div>
+    <div class="hist-list" id="hist-list"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-shrink:0;">
+      <button class="btn btn-ghost" id="btn-hist-clear-step" onclick="histClearStep()" style="font-size:9px;padding:5px 11px;color:var(--red);border-color:var(--red);">✕ Borrar este paso</button>
+      <button class="btn btn-ghost" onclick="closeHistoryModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- MODAL CONFIGURACIÓN PROMPTS -->
+<div class="modal-overlay" id="modal-prompts-config">
+  <div class="modal-box" style="width:780px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-title">Configuración de prompts</div>
+    <div class="modal-sub">Los cambios se guardan en localStorage. Los prompts por defecto se restauran con el botón correspondiente.</div>
+
+    <!-- Selector de paso -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="api-btn active" id="pcfg-tab-1" onclick="switchPromptTab(1)">1 · Corrección</button>
+      <button class="api-btn" id="pcfg-tab-2" onclick="switchPromptTab(2)">2 · Edición</button>
+      <button class="api-btn" id="pcfg-tab-3" onclick="switchPromptTab(3)">3 · Fidelidad</button>
+      <button class="api-btn" id="pcfg-tab-4" onclick="switchPromptTab(4)">4 · Coherencia</button>
+      <button class="api-btn" id="pcfg-tab-5" onclick="switchPromptTab(5)">5 · Pulido final</button>
+      <button class="api-btn" id="pcfg-tab-6" onclick="switchPromptTab(6)">6 · Análisis</button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span id="pcfg-label" style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);">System prompt activo</span>
+      <button class="btn btn-ghost" onclick="restoreDefaultPrompt()" style="font-size:9px;padding:4px 10px;">↺ Restaurar por defecto</button>
+    </div>
+
+    <!-- Contexto compartido (solo lectura) -->
+    <div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:4px;">Contexto compartido · todas las capas (solo lectura)</div>
+    <textarea readonly id="pcfg-context-display"
+      style="width:100%;height:110px;background:var(--surface);border:1px solid var(--border);
+             color:var(--muted);padding:8px 10px;font-family:var(--font-ui);font-size:10px;
+             line-height:1.6;border-radius:var(--radius);outline:none;resize:none;
+             overflow-y:auto;margin-bottom:10px;opacity:0.85;"></textarea>
+
+    <div style="font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:4px;">Prompt específico de la capa (editable)</div>
+    <textarea id="pcfg-textarea"
+      style="flex:1;min-height:280px;background:var(--bg);border:1px solid var(--border);
+             color:var(--text);padding:10px 12px;font-family:var(--font-ui);font-size:11px;
+             line-height:1.65;border-radius:var(--radius);outline:none;resize:none;
+             overflow-y:auto;"></textarea>
+
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closePromptsModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePromptConfig()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROMPT -->
+<div class="modal-overlay" id="modal-prompt">
+  <div class="modal-box" style="width:680px;">
+    <div class="modal-title" id="modal-prompt-title">Prompt</div>
+    <div class="modal-sub">System prompt + mensaje de usuario enviado a Gemini</div>
+    <textarea id="modal-prompt-text" readonly
+      style="width:100%;height:340px;background:var(--bg);border:1px solid var(--border);
+             color:var(--text);padding:10px 12px;font-family:var(--font-ui);font-size:11px;
+             line-height:1.6;border-radius:var(--radius);outline:none;resize:none;
+             overflow-y:auto;"></textarea>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closePromptModal()">Cerrar</button>
+      <button class="btn btn-primary" id="copy-prompt-modal" onclick="copyPromptModal()">Copiar todo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE GEMINI -->
+<div class="modal-overlay" id="modal-gemini">
+  <div class="modal-box">
+    <div class="modal-title">Clave Gemini (AI Studio)</div>
+    <div class="modal-sub">Google AI Studio · generativelanguage.googleapis.com</div>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por AIzaSy.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="forgetGeminiKey()">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeGeminiModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGeminiKey()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL CLAVE GROQ -->
+<div class="modal-overlay" id="modal-groq">
+  <div class="modal-box">
+    <div class="modal-title">Clave Groq</div>
+    <div class="modal-sub">api.groq.com · modelo llama-3.3-70b-versatile</div>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por gsk_.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="forgetGroqKey()">Olvidar</button>
+      <button class="btn btn-ghost" onclick="closeGroqModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGroqKey()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL CLAVE CLAUDE -->
+<div class="modal-overlay" id="modal-claude">
+  <div class="modal-box">
+    <div class="modal-title">Clave API Claude</div>
+    <div class="modal-sub">api.anthropic.com · modelo claude-sonnet-4-6 · temperatura 0.3</div>
+    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="new-password">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="clearClaudeKey()">Borrar clave</button>
+      <button class="btn btn-run" onclick="saveClaudeKey()">Guardar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL CLAVE MISTRAL -->
+<div class="modal-overlay" id="modal-mistral">
+  <div class="modal-box">
+    <div class="modal-title">Clave API Mistral</div>
+    <div class="modal-sub">api.mistral.ai · modelo mistral-large-latest · temperatura 1.0</div>
+    <input class="modal-input" id="mistral-key-input" type="password" placeholder="..." autocomplete="new-password">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="clearMistralKey()">Borrar clave</button>
+      <button class="btn btn-run" onclick="saveMistralKey()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE OPENROUTER -->
+<div class="modal-overlay" id="modal-openrouter">
+  <div class="modal-box">
+    <div class="modal-title">Clave API OpenRouter</div>
+    <div class="modal-sub">openrouter.ai · acceso a múltiples modelos</div>
+    <input class="modal-input" id="openrouter-key-input" type="password" placeholder="sk-or-v1-…" autocomplete="new-password">
+    <div class="modal-hint">La clave se guarda en localStorage y nunca sale del navegador. Debe empezar por sk-or-.</div>
+    <label style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:5px;margin-top:10px;">Modelo</label>
+    <select class="modal-input" id="openrouter-model-select" style="font-family:var(--font-ui);font-size:11px;cursor:pointer;">
+      <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+      <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
       <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
       <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5</option>
-      <option value="google/gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
-      <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
       <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
       <option value="openai/gpt-4.1">GPT-4.1</option>
       <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
       <option value="mistralai/mistral-small-3.2-24b">Mistral Small 3.2</option>
       <option value="deepseek/deepseek-r1-0528">DeepSeek R1</option>
     </select>
-    <!-- Botones de clave API contextuales (nuevo) -->
-    <button class="btn-key" id="btn-or-key-header">⚙ OpenRouter</button>
-    <button class="btn-key" id="btn-gemini-key" style="display:none;">⚙ Gemini</button>
-    <button class="btn-key" id="btn-groq-key-header" style="display:none;">⚙ Groq</button>
-    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
-    <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
-    <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
-  </div>
-</header>
-
-<div class="layout">
-  <div class="panel-left">
-    <div class="panel-header"><span class="panel-title">✍ Sección / Capítulo</span></div>
-    <div class="input-section">
-      <label class="input-label" for="section-name">Nombre de la sección o capítulo</label>
-      <input class="input-field" id="section-name" type="text" placeholder="Ej: Cap. 3 · Época medieval" maxlength="80">
-    </div>
-    <div class="input-section">
-      <label class="input-label" for="section-goal">Objetivo de esta sección/capítulo</label>
-      <textarea class="input-field" id="section-goal" rows="3" maxlength="600" style="resize:none;line-height:1.6;" placeholder="Qué quieres conseguir, qué época o tema aborda, qué debe transmitir al lector…"></textarea>
-    </div>
-    <div class="input-section">
-      <label class="input-label" for="ana-parte-libro">Parte del libro</label>
-      <select class="input-field" id="ana-parte-libro">
-        <option value="primera">Primera parte — narrativa divulgativa</option>
-        <option value="segunda">Segunda parte — temática y formal</option>
-      </select>
-    </div>
-    <div class="text-area-wrap">
-      <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto de la sección o capítulo…&#10;&#10;Hasta 10 páginas aproximadamente."></textarea>
-      <div class="char-count" id="char-count">0 / 20.000</div>
-    </div>
-    <div class="panel-footer">
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">📄 .txt<input type="file" id="file-input" accept=".txt" style="display:none;"></label>
-      <button class="btn btn-ghost btn-sm" onclick="clearAll()" style="margin-left:auto;">✕ Limpiar</button>
-    </div>
-  </div>
-
-  <div class="panel-right">
-    <div class="panel-right-bars">
-    <div class="prompt-buttons-bar">
-      <span class="prompt-buttons-label">Paso 0 · Corrección técnica previa</span>
-      <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-corrector" id="btn-corrector" onclick="runCorrector()">
-          ✦ Corrector técnico
-        </button>
-        <span id="corrector-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
-      </div>
-    </div>
-    <div class="prompt-buttons-bar" style="border-top:none;padding-top:4px;">
-      <span class="prompt-buttons-label">Paso 0b · Aplicar plan de acción</span>
-      <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-aplicar-plan btn-corrector" id="btn-aplicar-plan" onclick="aplicarPlan()">
-          ✦ Aplicar plan
-        </button>
-        <span id="aplicar-plan-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;">Genera primero el Plan en los pasos de análisis</span>
-      </div>
-    </div>
-    <div class="prompt-buttons-bar" style="border-top:none;padding-top:4px;">
-      <span class="prompt-buttons-label">Selecciona el análisis · <span id="active-model-label">Gemini 2.5 Flash</span></span>
-      <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
-    </div>
-    </div>
-    <div class="result-area">
-      <div class="result-empty" id="result-empty">
-        <div class="big-char">❦</div>
-        <p>Pega el texto y pulsa un botón de análisis</p>
-        <p>Modo activo: <span id="active-mode-label">Narrativo</span></p>
-      </div>
-      <div class="result-content" id="result-content">
-        <div class="result-header">
-          <div class="result-title">
-            <span class="result-badge" id="result-badge">—</span>
-            <span id="result-label-text">—</span>
-          </div>
-          <button class="btn btn-ghost btn-sm" id="btn-copy-prompt">⎘ Copiar prompt</button>
-        </div>
-        <div class="result-box" id="result-box"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL AJUSTES -->
-<div class="modal-overlay" id="modal-settings">
-  <div class="modal-box">
-    <div class="modal-title">Ajustes de perfiles</div>
-    <div class="modal-subtitle">Personaliza el system prompt y los análisis para cada modo</div>
-    <div class="ptabs" id="settings-ptabs">
-      <button class="ptab active" data-profile="narrativo">📖 Narrativo</button>
-      <button class="ptab" data-profile="descriptivo">📐 Descriptivo</button>
-    </div>
-    <div id="settings-panels">
-      <div class="ppanel visible" data-profile="narrativo">
-        <div class="modal-section">
-          <div class="modal-section-title">System prompt (Narrativo)</div>
-          <textarea class="modal-textarea tall" id="system-narrativo" rows="10"></textarea>
-        </div>
-        <div class="modal-section">
-          <div class="modal-section-title">Perfil tonal (común a ambos modos)</div>
-          <textarea class="modal-textarea tall" id="tono-comun" rows="6"></textarea>
-        </div>
-        <div class="modal-section">
-          <div class="modal-section-title">Prompts de análisis (Narrativo)</div>
-          <div class="modal-hint" style="margin-bottom:10px;">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
-          <div id="ptabs-narrativo" class="ptabs"></div>
-          <div id="ppanels-narrativo"></div>
-        </div>
-      </div>
-      <div class="ppanel" data-profile="descriptivo">
-        <div class="modal-section">
-          <div class="modal-section-title">System prompt (Descriptivo)</div>
-          <textarea class="modal-textarea tall" id="system-descriptivo" rows="10"></textarea>
-        </div>
-        <div class="modal-section">
-          <div class="modal-section-title">Perfil tonal (común)</div>
-          <div class="modal-hint">El mismo texto que en Narrativo se guarda automáticamente.</div>
-        </div>
-        <div class="modal-section">
-          <div class="modal-section-title">Prompts de análisis (Descriptivo)</div>
-          <div class="modal-hint">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
-          <div id="ptabs-descriptivo" class="ptabs"></div>
-          <div id="ppanels-descriptivo"></div>
-        </div>
-      </div>
-    </div>
     <div class="modal-actions">
-      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
-      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL OPENROUTER KEY -->
-<div class="modal-overlay" id="modal-orkey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de OpenRouter</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis de texto. Permite usar múltiples modelos de IA. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="modal-label">OpenRouter API Key</label>
-    <input class="modal-input" id="or-key-input" type="password" placeholder="sk-or-v1-…" autocomplete="off">
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="or-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="or-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="or-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL GROQ KEY -->
-<div class="modal-overlay" id="modal-groqkey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Groq</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para el corrector técnico automático. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="modal-label">Groq API Key</label>
-    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="off">
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="groq-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="groq-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="groq-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL FIREBASE KEY -->
-<div class="modal-overlay" id="modal-fbkey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Firebase</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para sincronización en la nube. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="modal-label">Firebase API Key</label>
-    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL GEMINI KEY -->
-<div class="modal-overlay" id="modal-geminikey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Gemini</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Gemini (Google AI Studio). Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="input-label">Gemini API Key</label>
-    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
-    <div class="modal-hint">Debe empezar por AIzaSy. Obtenla en aistudio.google.com</div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="gemini-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="gemini-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="gemini-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL MISTRAL KEY -->
-<div class="modal-overlay" id="modal-mistralkey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Mistral</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Mistral Large. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="input-label">Mistral API Key</label>
-    <input class="modal-input" id="mistral-key-input" type="password" placeholder="…" autocomplete="off">
-    <div class="modal-hint">Obtenla en console.mistral.ai</div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="mistral-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="mistral-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="mistral-btn-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CLAUDE KEY -->
-<div class="modal-overlay" id="modal-claudekey">
-  <div class="modal-box modal-box-sm">
-    <div class="modal-title">Clave API de Claude</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Claude Sonnet. Se guarda <strong>solo en este navegador</strong>.</p>
-    <label class="input-label">Anthropic API Key</label>
-    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="off">
-    <div class="modal-hint">Debe empezar por sk-ant-. Obtenla en console.anthropic.com</div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="claude-btn-forget">Olvidar</button>
-      <button class="btn btn-ghost" id="claude-btn-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="claude-btn-save">Guardar</button>
+      <button class="btn btn-ghost" onclick="clearOpenRouterKey()">Borrar clave</button>
+      <button class="btn btn-ghost" onclick="closeOpenRouterModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOpenRouterKey()">Guardar</button>
     </div>
   </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════════════════
-//  PERFILES NARRATIVO / DESCRIPTIVO (VALORES POR DEFECTO MEJORADOS)
+//  CLAVE GEMINI
 // ══════════════════════════════════════════════════════
+let GEMINI_API_KEY = localStorage.getItem('castroverde_editor_gemini_key') || '';
 
-const DEFAULT_NARRATIVO = {
-  system: `ROL
-Eres un editor de historia local y divulgación histórica castellana. Trabajas sobre los borradores del libro Castroverde de Cerrato. No eres el autor: no sustituyas su voz por la tuya.
+function openGeminiModal() {
+  document.getElementById('gemini-key-input').value = GEMINI_API_KEY;
+  document.getElementById('modal-gemini').classList.add('visible');
+  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
+}
+function closeGeminiModal() {
+  document.getElementById('modal-gemini').classList.remove('visible');
+}
+function saveGeminiKey() {
+  const val = document.getElementById('gemini-key-input').value.trim();
+  if (!val || !val.startsWith('AIzaSy')) {
+    showStatus('err', 'La clave debe empezar por AIzaSy');
+    return;
+  }
+  GEMINI_API_KEY = val;
+  localStorage.setItem('castroverde_editor_gemini_key', val);
+  closeGeminiModal();
+  showStatus('ok', '✓ Clave guardada');
+}
+function forgetGeminiKey() {
+  if (!confirm('¿Borrar la clave de Gemini?')) return;
+  GEMINI_API_KEY = '';
+  localStorage.removeItem('castroverde_editor_gemini_key');
+  document.getElementById('gemini-key-input').value = '';
+  closeGeminiModal();
+}
+document.getElementById('btn-gemini-key').addEventListener('click', openGeminiModal);
+document.getElementById('modal-gemini').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-gemini')) closeGeminiModal();
+});
+
+
+// ══════════════════════════════════════════════════════
+//  CLAVE GROQ
+// ══════════════════════════════════════════════════════
+let GROQ_API_KEY = localStorage.getItem('castroverde_editor_groq_key') || '';
+
+function openGroqModal() {
+  document.getElementById('groq-key-input').value = GROQ_API_KEY;
+  document.getElementById('modal-groq').classList.add('visible');
+  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
+}
+function closeGroqModal() {
+  document.getElementById('modal-groq').classList.remove('visible');
+}
+function saveGroqKey() {
+  const val = document.getElementById('groq-key-input').value.trim();
+  if (!val || !val.startsWith('gsk_')) {
+    showStatus('err', 'La clave de Groq debe empezar por gsk_');
+    return;
+  }
+  GROQ_API_KEY = val;
+  localStorage.setItem('castroverde_editor_groq_key', val);
+  closeGroqModal();
+  showStatus('ok', '✓ Clave Groq guardada');
+}
+function forgetGroqKey() {
+  if (!confirm('¿Borrar la clave de Groq?')) return;
+  GROQ_API_KEY = '';
+  localStorage.removeItem('castroverde_editor_groq_key');
+  document.getElementById('groq-key-input').value = '';
+  closeGroqModal();
+}
+document.getElementById('btn-groq-key').addEventListener('click', openGroqModal);
+document.getElementById('modal-groq').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-groq')) closeGroqModal();
+});
+
+
+// ══════════════════════════════════════════════════════
+//  CLAVE CLAUDE
+// ══════════════════════════════════════════════════════
+let CLAUDE_API_KEY = localStorage.getItem('castroverde_editor_claude_key') || '';
+function openClaudeModal() {
+  document.getElementById('claude-key-input').value = CLAUDE_API_KEY;
+  document.getElementById('modal-claude').classList.add('visible');
+  setTimeout(() => document.getElementById('claude-key-input').focus(), 80);
+}
+function closeClaudeModal() {
+  document.getElementById('modal-claude').classList.remove('visible');
+}
+function saveClaudeKey() {
+  const val = document.getElementById('claude-key-input').value.trim();
+  if (!val) { clearClaudeKey(); return; }
+  CLAUDE_API_KEY = val;
+  localStorage.setItem('castroverde_editor_claude_key', val);
+  closeClaudeModal();
+  showStatus('ok', '✓ Clave Claude guardada');
+}
+function clearClaudeKey() {
+  CLAUDE_API_KEY = '';
+  localStorage.removeItem('castroverde_editor_claude_key');
+  document.getElementById('claude-key-input').value = '';
+  showStatus('ok', 'Clave Claude eliminada');
+}
+document.getElementById('btn-claude-key').addEventListener('click', openClaudeModal);
+document.getElementById('modal-claude').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-claude')) closeClaudeModal();
+});
+// ══════════════════════════════════════════════════════
+//  CLAVE MISTRAL
+// ══════════════════════════════════════════════════════
+let MISTRAL_API_KEY = localStorage.getItem('castroverde_editor_mistral_key') || '';
+function openMistralModal() {
+  document.getElementById('mistral-key-input').value = MISTRAL_API_KEY;
+  document.getElementById('modal-mistral').classList.add('visible');
+  setTimeout(() => document.getElementById('mistral-key-input').focus(), 80);
+}
+function closeMistralModal() {
+  document.getElementById('modal-mistral').classList.remove('visible');
+}
+function saveMistralKey() {
+  const val = document.getElementById('mistral-key-input').value.trim();
+  if (!val) { clearMistralKey(); return; }
+  MISTRAL_API_KEY = val;
+  localStorage.setItem('castroverde_editor_mistral_key', val);
+  closeMistralModal();
+  showStatus('ok', '✓ Clave Mistral guardada');
+}
+function clearMistralKey() {
+  MISTRAL_API_KEY = '';
+  localStorage.removeItem('castroverde_editor_mistral_key');
+  document.getElementById('mistral-key-input').value = '';
+  showStatus('ok', 'Clave Mistral eliminada');
+}
+document.getElementById('btn-mistral-key').addEventListener('click', openMistralModal);
+document.getElementById('modal-mistral').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-mistral')) closeMistralModal();
+});
+
+// ══════════════════════════════════════════════════════
+//  CLAVE OPENROUTER
+// ══════════════════════════════════════════════════════
+let OR_API_KEY = localStorage.getItem('castroverde_editor_or_key') || '';
+let OR_MODEL   = localStorage.getItem('castroverde_editor_or_model') || 'google/gemini-2.5-flash';
+
+function openOpenRouterModal() {
+  document.getElementById('openrouter-key-input').value = OR_API_KEY;
+  const sel = document.getElementById('openrouter-model-select');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === OR_MODEL) { sel.selectedIndex = i; break; }
+  }
+  document.getElementById('modal-openrouter').classList.add('visible');
+  setTimeout(() => document.getElementById('openrouter-key-input').focus(), 80);
+}
+function closeOpenRouterModal() {
+  document.getElementById('modal-openrouter').classList.remove('visible');
+}
+function saveOpenRouterKey() {
+  const val = document.getElementById('openrouter-key-input').value.trim();
+  if (!val || !val.startsWith('sk-or-')) {
+    showStatus('err', 'La clave de OpenRouter debe empezar por sk-or-');
+    return;
+  }
+  OR_API_KEY = val;
+  OR_MODEL   = document.getElementById('openrouter-model-select').value;
+  localStorage.setItem('castroverde_editor_or_key', val);
+  localStorage.setItem('castroverde_editor_or_model', OR_MODEL);
+  closeOpenRouterModal();
+  showStatus('ok', '✓ Clave OpenRouter guardada');
+}
+function clearOpenRouterKey() {
+  OR_API_KEY = '';
+  localStorage.removeItem('castroverde_editor_or_key');
+  document.getElementById('openrouter-key-input').value = '';
+  showStatus('ok', 'Clave OpenRouter eliminada');
+}
+document.getElementById('btn-openrouter-key').addEventListener('click', openOpenRouterModal);
+document.getElementById('modal-openrouter').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-openrouter')) closeOpenRouterModal();
+});
+
+// ══════════════════════════════════════════════════════
+//  SELECTOR DE API
+// ══════════════════════════════════════════════════════
+let activeApi = localStorage.getItem('castroverde_editor_api') || 'gemini';
+
+function setApi(api) {
+  activeApi = api;
+  localStorage.setItem('castroverde_editor_api', api);
+  document.body.dataset.api = api;  // redundant truth source
+  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
+  document.getElementById('btn-gemini-key').style.display      = api === 'gemini'      ? '' : 'none';
+  document.getElementById('btn-groq-key').style.display        = api === 'groq'        ? '' : 'none';
+  document.getElementById('btn-mistral-key').style.display     = api === 'mistral'     ? '' : 'none';
+  document.getElementById('btn-claude-key').style.display      = api === 'claude'      ? '' : 'none';
+  document.getElementById('btn-openrouter-key').style.display  = api === 'openrouter'  ? '' : 'none';
+  // Actualizar subtítulo del modal de prompt
+  const sub = document.querySelector('#modal-prompt .modal-sub');
+  if (sub) sub.textContent = api === 'gemini'
+    ? 'System prompt + mensaje de usuario enviado a Gemini'
+    : api === 'mistral'
+    ? 'System prompt + mensaje de usuario enviado a Mistral'
+    : api === 'claude'
+    ? 'System prompt + mensaje de usuario enviado a Claude (claude-sonnet-4-6)'
+    : api === 'openrouter'
+    ? 'System prompt + mensaje de usuario enviado a OpenRouter'
+    : 'System prompt + mensaje de usuario enviado a Groq';
+}
+
+// ══════════════════════════════════════════════════════
+//  STATUS BAR
+// ══════════════════════════════════════════════════════
+let statusTimer = null;
+function showStatus(type, msg) {
+  const bar = document.getElementById('status-bar');
+  document.getElementById('status-msg').textContent = msg;
+  bar.className = 'visible ' + type;
+  if (statusTimer) clearTimeout(statusTimer);
+  if (type === 'ok') statusTimer = setTimeout(() => bar.className = '', 4000);
+}
+function closeStatus() { document.getElementById('status-bar').className = ''; }
+
+// ══════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════
+let activeTab = 1;
+function switchTab(n) {
+  activeTab = n;
+  [1,2,3,4,5,6].forEach(i => {
+    document.getElementById('tab-' + i).classList.toggle('active', i === n);
+    document.getElementById('panel-' + i).classList.toggle('active', i === n);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TAB DOT STATE
+// ══════════════════════════════════════════════════════
+function setDot(step, state) {
+  // state: '' | 'running' | 'done'
+  const dot = document.getElementById('dot-' + step);
+  dot.className = 'tab-dot' + (state ? ' ' + state : '');
+}
+
+// ══════════════════════════════════════════════════════
+//  TEXTAREA / FILE
+// ══════════════════════════════════════════════════════
+document.getElementById('input-text').addEventListener('input', () => { updateCount(); updatePromptButtons(); });
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('input-text').value = ev.target.result.substring(0, 20000);
+    updateCount();
+    updatePromptButtons();
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+});
+function updateCount() {
+  const l = document.getElementById('input-text').value.length;
+  const el = document.getElementById('char-count');
+  el.textContent = l.toLocaleString('es') + ' / 20.000';
+  el.className = 'char-count' + (l > 18000 ? ' warn' : '');
+}
+function clearAll() {
+  document.getElementById('input-text').value = '';
+  updateCount();
+  [1,2,3].forEach(i => {
+    setResultEmpty(i);
+    setDot(i, '');
+  });
+  document.getElementById('btn-step2').disabled = true;
+  document.getElementById('btn-step3').disabled = true;
+  document.getElementById('copy-1').disabled = true;
+  document.getElementById('copy-2').disabled = true;
+  step1Result = ''; step2Result = ''; step3Result = ''; step4Result = ''; step5Result = ''; step6Result = '';
+  step1Prompt = ''; step2Prompt = ''; step3Prompt = ''; step4Prompt = ''; step5Prompt = ''; step6Prompt = '';
+  ['show-prompt-1','show-prompt-2','show-prompt-3','show-prompt-4','show-prompt-5'].forEach(id => { document.getElementById(id).disabled = true; });
+  ['copy-4','copy-5'].forEach(id => { document.getElementById(id).disabled = true; });
+  [4,5,6].forEach(i => { setResultEmpty(i); setDot(i,''); });
+  ['show-prompt-6','copy-report-6'].forEach(id => { const el=document.getElementById(id); if(el) el.disabled=true; });
+}
+
+// ══════════════════════════════════════════════════════
+//  RESULT HELPERS
+// ══════════════════════════════════════════════════════
+const EMPTY_MSGS = {
+  1: 'Ejecuta el Paso 1 para ver el resultado de la corrección técnica previa.',
+  2: 'El Paso 2 tomará el resultado del Paso 1 como entrada.',
+  3: 'El Paso 3 compara el texto original con el resultado del Paso 2.',
+  4: 'El Paso 4 toma el resultado del Paso 2 como entrada.',
+  5: 'El Paso 5 toma el resultado del Paso 4 como entrada.',
+  6: 'El Paso 6 compara el texto original con el resultado final del Paso 5.'
+};
+function setResultEmpty(n) {
+  const box = document.getElementById('result-' + n);
+  box.innerHTML = '<span class="empty-msg">' + EMPTY_MSGS[n] + '</span>';
+}
+function setResultLoading(n, msg) {
+  document.getElementById('result-' + n).innerHTML = '<span class="loading-msg">… ' + msg + '</span>';
+}
+function setResultError(n, msg) {
+  document.getElementById('result-' + n).innerHTML = '<span class="error-msg">✗ ' + msg + '</span>';
+}
+function setResultText(n, text) {
+  // Plain text: preserve line breaks
+  const box = document.getElementById('result-' + n);
+  box.textContent = text;
+}
+function setFidelidadResult(text) {
+  const box = document.getElementById('result-3');
+  const trimmed = text.trim();
+  if (!trimmed) {
+    box.innerHTML = '<span class="error-msg">Respuesta vacía del modelo.</span>';
+    return;
+  }
+  const isOk = /^ok\b/i.test(trimmed);
+  if (isOk) {
+    box.innerHTML = `<div class="fidelidad-ok"><span class="fi-icon">✓</span><div><strong>OK</strong> — No se detecta pérdida significativa de matiz histórico.</div></div>`;
+  } else {
+    const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const lines = trimmed.split('\n').map(l => l.trim()).filter(Boolean);
+    const firstIsLabel = /p[eé]rdida/i.test(lines[0]);
+    const parts = lines.map((l, i) =>
+      (i === 0 && firstIsLabel)
+        ? `<span class="fi-label">${escape(l)}</span>`
+        : `<p style="margin-bottom:6px;">${escape(l)}</p>`
+    ).join('');
+    box.innerHTML = `<div class="fidelidad-warn">${parts}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  CONTEXTO COMPARTIDO (voz del autor — igual que el Analizador)
+// ══════════════════════════════════════════════════════
+const CONTEXT_SYSTEM = `CONTEXTO DEL PROYECTO
+Trabajas sobre los borradores del libro "Castroverde de Cerrato", historia local del municipio de Castroverde de Cerrato (comarca del Cerrato vallisoletano, frontera con Palencia). No eres el autor: no sustituyas su voz por la tuya.
 
 PRINCIPIO ABSOLUTO
 Intervención mínima. Antes de modificar una frase, pregúntate: ¿realmente dificulta la lectura, o simplemente no es como yo la escribiría? Si funciona y transmite autenticidad, no se toca.
@@ -489,210 +1296,195 @@ Intervención mínima. Antes de modificar una frase, pregúntate: ¿realmente di
 RESTRICCIÓN ABSOLUTA
 No añadir información histórica nueva. No inventar escenas, pensamientos, emociones, diálogos ni interpretaciones ausentes en el original. Lo que no está en el borrador, no existe.
 
-OBJETIVO
-Convertir pasajes densos o compactos en narración accesible y continua, sin perder rigor ni autenticidad. El lector debe sentir que recorre la historia de un territorio real, no que lee una enciclopedia ni una novela histórica.
+VOZ Y ESTILO DE REFERENCIA
+El texto debe conservar la sensación de estar escrito por alguien vinculado al territorio y a sus fuentes. La emoción, si aparece, debe nacer de los hechos, no del adorno. El tono de referencia es el de la buena divulgación histórica local: sobrio, claro, humano, sin rigidez académica ni artificio literario.
+Evita formulaciones abstractas como "según cobrara mayor importancia" o "en función del peso relativo de"; sustitúyelas por construcciones concretas cuando sea posible sin forzar el texto.
+Conserva el léxico característico del autor aunque no sea el que tú elegirías.
 
-QUÉ PUEDES HACER
-- Corregir ortografía, puntuación y gramática
-- Dividir frases excesivamente largas o densas
-- Si un párrafo concentra varios tipos de información heterogénea, dividirlo en dos buscando el corte en una frase que ya exista en el original. No comprimir ni eliminar contenido como alternativa a la división.
-- Si el texto contiene la marca [//], introducir ahí un punto y aparte. No moverla ni ignorarla.
-- Mejorar la continuidad entre párrafos
-- Cuando el contexto lo permita, cerrar bloques temáticos con una referencia a la vida cotidiana o al uso concreto del territorio: es el recurso que mejor ancla la historia local sin caer en literaturismo.
-- Convertir acumulaciones de datos en secuencias legibles
-- Reordenar frases si mejora la comprensión
-- Reducir repeticiones y perífrasis innecesarias
-- Simplificar definiciones técnicas que rompen el ritmo
-- Añadir transiciones suaves solo si nacen directamente de datos ya presentes en el texto
-
-QUÉ NO DEBES HACER
+QUÉ NO DEBES HACER NUNCA
 - Prosa literaria, lenguaje épico, metáforas decorativas
 - Expresiones de folleto turístico o divulgación genérica
 - Adjetivos innecesarios o formulaciones abstractas
 - Reescribir frases correctas solo porque podrían sonar "mejor"
 - Sustituir expresiones naturales del autor por giros estándar impersonales
-- Comenzar párrafos con "La historia de…", "A lo largo del tiempo…", "La situación no era solo…" u otros arranques impersonales salvo que estén en el original
+- Comenzar párrafos con "La historia de…", "A lo largo del tiempo…" u otros arranques impersonales salvo que estén en el original
 - Añadir frases de apertura o cierre que no estén en el original
-
-VOZ Y ESTILO
-El texto debe conservar la sensación de estar escrito por alguien vinculado al territorio y a sus fuentes. La emoción, si aparece, debe nacer de los hechos, no del adorno. El tono de referencia es el de la buena divulgación histórica local: sobrio, claro, humano, sin rigidez académica ni artificio literario.
-Evita formulaciones abstractas como "según cobrara mayor importancia" o "en función del peso relativo de"; sustitúyelas por construcciones concretas cuando sea posible sin forzar el texto.
-Conserva el léxico característico del autor aunque no sea el que tú elegirías.
-
-EXTENSIÓN
-Similar al original (±10%). Si el texto no necesita intervención, puede ser menor.
-
-FORMATO DE SALIDA
-1. DIAGNÓSTICO — Qué problemas concretos se han corregido y qué tipo de intervención se ha realizado. Breve y específico: nombra las frases o construcciones modificadas, no hagas valoraciones generales.
-2. TEXTO EDITADO
 
 CONTEXTO HISTÓRICO FIJO
 - Primer documento conservado: 916 d.C. (Ordoño II, "Castro Viride")
 - Orden de Santiago · Cerrato vallisoletano · Valle del Esgueva · Frontera con Palencia
-- 676 habitantes en 1950 · 189 habitantes en la actualidad
-
-PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
-  prompts: [
-    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura global: ritmo, progresión emocional y capacidad de enganchar.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Tono', label:'Tono', content:'Evalúa el tono narrativo. ¿Es evocador? ¿Hay pasajes fríos?\nObjetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Lector', label:'Lector', content:'Como lector sin conocimientos previos: ¿qué engancha? ¿Dónde se pierde el interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno: cita el original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial. Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
-  ]
-};
-
-const DEFAULT_DESCRIPTIVO = {
-  system: `Eres un editor técnico especializado en claridad expositiva y precisión. Tu objetivo es evaluar y mejorar la estructura lógica, la coherencia interna y la comprensibilidad del texto, eliminando ambigüedades y redundancias.
-
-VOZ DE REFERENCIA (Descriptivo):
-"El texto debe ser claro, ordenado y preciso. Cada idea debe exponerse de manera que el lector la entienda sin esfuerzo."
-
-REGLAS DESCRIPTIVAS:
-- Prioriza la organización lógica y la coherencia.
-- Elimina ambigüedades y repeticiones innecesarias.
-- Usa conectores y marcadores estructurales cuando sea necesario.
-- La extensión puede ajustarse para mayor claridad, pero sin omitir información.
-- Evita el lirismo y las metáforas que oscurezcan el significado.
-
-RESTRICCIONES:
-- No añadir hechos no explicitados en el texto
-- No eliminar información relevante
-- Evitar juicios de valor no justificados
-
-CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
-
-PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
-  prompts: [
-    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Tono', label:'Tono', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado?\nObjetivo: {{objetivo}}\n\nSeñala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo desde la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Lector', label:'Lector', content:'Como lector no experto: ¿qué partes se entienden con facilidad? ¿Dónde se pierde el hilo? ¿Qué necesita mejor explicación?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos confusos o mal estructurados. Para cada uno: cita el original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
-  ]
-};
-
-let activeProfile = 'narrativo';
-let settings = {
-  narrativo: JSON.parse(JSON.stringify(DEFAULT_NARRATIVO)),
-  descriptivo: JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO))
-};
-
-function loadSettings() {
-  try {
-    const saved = localStorage.getItem('castroverde_profiles_ana');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.narrativo && parsed.descriptivo) settings = parsed;
-    }
-  } catch(e) {}
-  if (!settings.narrativo.prompts) settings.narrativo.prompts = DEFAULT_NARRATIVO.prompts.map(p=>({...p}));
-  if (!settings.descriptivo.prompts) settings.descriptivo.prompts = DEFAULT_DESCRIPTIVO.prompts.map(p=>({...p}));
-}
-function saveSettings() {
-  localStorage.setItem('castroverde_profiles_ana', JSON.stringify(settings));
-  localStorage.setItem('castroverde_ana_settings_ts', Date.now());
-}
-
-const TONO_KEY = 'castroverde_ana_tono';
-function getTonoProfile() { return localStorage.getItem(TONO_KEY) || ''; }
-function saveTonoProfile(val) { localStorage.setItem(TONO_KEY, val); }
-
-function getParteLabel() {
-  const el = document.getElementById('ana-parte-libro');
-  return el.value === 'segunda' ? 'SEGUNDA PARTE (temática y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
-}
-
-function buildSystemWithTono() {
-  const base = settings[activeProfile].system;
-  const parte = getParteLabel();
-  const tono = getTonoProfile().trim();
-  let result = base.replace(/\{\{parte_libro\}\}/g, parte);
-  if (tono) result += '\n\nINSTRUCCIONES ADICIONALES DE TONO:\n' + tono;
-  result += '\n\nREGLA DE FORMATO: No reproduzcas el texto completo del autor en tu respuesta. Cita solo los fragmentos estrictamente necesarios para ilustrar un punto concreto (máximo 2-3 frases por cita). Tu respuesta es un análisis editorial, no una reescritura completa.';
-  return result;
-}
-
-function buildUserPrompt(template, texto, objetivo) {
-  return template
-    .replace(/\{\{texto\}\}/g, texto)
-    .replace(/\{\{objetivo\}\}/g, objetivo || '(no especificado)');
-}
-
-function generatePrompt(idx, btnEl) {
-  const texto = document.getElementById('input-text').value.trim();
-  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
-
-  const api = document.body.dataset.api || activeApi;
-  if (api === 'openrouter' && !OR_API_KEY) { setSyncStatus('err', 'Introduce la clave de OpenRouter primero.'); setTimeout(openOrKeyModal, 800); return; }
-  if (api === 'gemini'     && !GEMINI_API_KEY) { setSyncStatus('err', 'Introduce la clave de Gemini primero.'); setTimeout(openGeminiKeyModal, 800); return; }
-  if (api === 'groq'       && !GROQ_API_KEY) { setSyncStatus('err', 'Introduce la clave de Groq primero.'); setTimeout(openGroqKeyModal, 800); return; }
-  if (api === 'mistral'    && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral primero.'); setTimeout(openMistralKeyModal, 800); return; }
-  if (api === 'claude'     && !CLAUDE_API_KEY) { setSyncStatus('err', 'Introduce la clave de Claude primero.'); setTimeout(openClaudeKeyModal, 800); return; }
-
-  const p = settings[activeProfile].prompts[idx];
-  const objetivo = document.getElementById('section-goal').value.trim();
-  const systemMsg = buildSystemWithTono();
-  const userMsg = buildUserPrompt(p.content, texto, objetivo);
-
-  document.querySelectorAll('.btn-prompt').forEach(b => { b.classList.remove('active'); b.disabled = true; });
-  if (btnEl) btnEl.classList.add('active');
-
-  const modelSelect = document.getElementById('or-model-select');
-  const modelId = modelSelect.value;
-  const apiLabel = api === 'openrouter'
-    ? modelSelect.options[modelSelect.selectedIndex].text
-    : api.charAt(0).toUpperCase() + api.slice(1);
-
-  document.getElementById('result-empty').style.display = 'none';
-  document.getElementById('result-content').classList.add('visible');
-  document.getElementById('result-badge').textContent = p.label;
-  document.getElementById('result-label-text').textContent = p.name;
-  const box = document.getElementById('result-box');
-  box.innerHTML = '<span class="loading">… Analizando con ' + apiLabel + '</span>';
-
-  callAPI(systemMsg, userMsg, modelId).then(respuesta => {
-    setResultBox(respuesta);
-  }).catch(err => {
-    box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
-  }).finally(() => {
-    document.querySelectorAll('.btn-prompt').forEach(b => { b.disabled = false; });
-  });
-}
+- 676 habitantes en 1950 · 189 habitantes en la actualidad`;
 
 // ══════════════════════════════════════════════════════
-//  DISPATCHER DE API
+//  PROMPTS
 // ══════════════════════════════════════════════════════
-async function callAPI(systemPrompt, userPrompt, modelId) {
+const PROMPT_1_SYSTEM = `ROL
+Eres un corrector de textos históricos.
+
+OBJETIVO
+Corregir y clarificar el texto sin cambiar su estilo ni su contenido.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información nueva ni cambiar el significado.
+
+QUÉ PUEDES HACER
+- corregir ortografía y puntuación
+- dividir frases demasiado largas
+- ordenar ligeramente frases dentro del mismo párrafo si es necesario
+- eliminar repeticiones evidentes
+
+QUÉ NO DEBES HACER
+- no reescribir el estilo
+- no embellecer el texto
+- no añadir explicaciones
+- no cambiar el tono
+
+SALIDA
+Devuelve solo el texto corregido.`;
+
+const PROMPT_2_SYSTEM = `ROL
+Eres un editor literario especializado en historia local castellana. Trabajas sobre borradores del libro "Castroverde de Cerrato". No eres el autor.
+
+OBJETIVO
+Mejorar la claridad, fluidez y estructura del texto, manteniendo fielmente su contenido, significado, jerarquía informativa y voz original.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información nueva bajo ninguna circunstancia.
+No inventar hechos, interpretaciones, matices, contexto ni explicaciones implícitas.
+No ampliar ni reducir el significado del texto.
+
+INVARIANTES EDITORIALES (OBLIGATORIOS)
+Debes respetar siempre:
+- Orden de los hechos y su secuencia interna
+- Jerarquía de la información dentro de cada frase
+- Grado de certeza histórica (posibilidad, duda, hipótesis, afirmación)
+- Información geográfica y espacial completa
+- Tono sobrio y documental
+- Nivel de detalle original
+
+PRINCIPIO EDITORIAL
+El texto puede ajustarse solo a nivel local (frases y párrafos). No se permite reestructuración global ni reconstrucción del texto bajo ningún concepto.
+
+QUÉ PUEDES HACER
+- Corregir ortografía, puntuación y gramática
+- Dividir frases largas si dificultan la lectura
+- Reordenar frases dentro de un mismo párrafo solo si es estrictamente necesario para evitar ambigüedad inmediata, sin alterar el énfasis ni la jerarquía informativa original
+- Unir frases cortas si mejora la continuidad sin eliminar información
+- Reducir repeticiones claras de expresión (no de contenido)
+- Simplificar estructuras sintácticas densas solo si afectan a la comprensión literal
+- Introducir transiciones solo si son imprescindibles para resolver ambigüedad inmediata y ya están implícitas en el texto
+
+PROTECCIONES CRÍTICAS (NO NEGOCIABLES)
+
+1. Protección de jerarquía informativa
+No se puede eliminar, degradar ni reinterpretar información geográfica, espacial o contextual aunque parezca redundante.
+
+2. Protección de modalidad histórica (certeza)
+No se puede modificar el grado de certeza del texto.
+Esto incluye no transformar:
+- hipótesis en afirmaciones
+- prudencia en seguridad
+- relaciones débiles en causales directas
+- ni viceversa
+
+3. Protección de causalidad histórica
+No se puede cambiar el nivel de relación causal expresado en el texto.
+Expresiones de posibilidad, influencia o relación indirecta deben mantenerse exactamente en su grado de incertidumbre.
+
+QUÉ NO DEBES HACER
+- No reinterpretar el contenido
+- No modernizar el lenguaje si altera el matiz histórico
+- No embellecer ni literaturizar el estilo
+- No añadir contexto, explicaciones ni inferencias
+- No reescribir el texto como si fuera nuevo
+- No reorganizar globalmente el contenido
+- No simplificar eliminando información
+- No alterar el grado de certeza o causalidad
+
+CONTROL DE CONECTORES Y TRANSICIONES
+- Utilizar conectores de forma mínima y funcional
+- Evitar sobreestructuración del texto
+- Mantener transiciones implícitas cuando ya estén sugeridas
+- Usar conectores solo si son estrictamente necesarios para evitar ambigüedad inmediata
+Evitar especialmente:
+- "en cambio"
+- "sin embargo" salvo necesidad clara
+- "en aquel contexto"
+- "por otro lado" como recurso estilístico
+- conectores añadidos solo por fluidez
+
+PRINCIPIO CLAVE
+El texto debe leerse como un desarrollo natural de ideas históricas, no como un texto reorganizado por un editor moderno.
+
+FORMATO DE SALIDA (OBLIGATORIO)
+Devuelve únicamente el texto reescrito.
+No incluyas explicaciones, diagnósticos, resúmenes ni comentarios.`
+
+const PROMPT_3_SYSTEM = `ROL
+Eres un revisor de fidelidad histórica textual.
+
+TAREA
+Compara el TEXTO ORIGINAL con el TEXTO EDITADO y evalúa si se han perdido o debilitado explicaciones históricas, relaciones causales o matices de proceso.
+
+QUÉ DEBES DETECTAR
+- Eliminación de causas o explicaciones
+- Simplificación de procesos históricos
+- Pérdida de conectores causales (por, debido a, según, lo que explica que…)
+- Reducción de relaciones entre hechos
+- Transformación de explicaciones en afirmaciones simples
+
+QUÉ NO DEBES HACER
+- No reescribir el texto
+- No corregir estilo
+- No mejorar redacción
+- No añadir información nueva
+
+SALIDA
+Responde SOLO con:
+1. OK (si no hay pérdida significativa)
+o
+2. PÉRDIDA DE MATIZ (si detectas cambios relevantes)
+y en ese caso lista brevemente qué se ha perdido.`;
+
+// ══════════════════════════════════════════════════════
+//  API CALL (Gemini o Groq según selector)
+// ══════════════════════════════════════════════════════
+async function callAPI(systemPrompt, userPrompt, opts={}) {
   const api = document.body.dataset.api || activeApi;
-  if (api === 'groq')    return callGroq(systemPrompt, userPrompt);
-  if (api === 'mistral') return callMistral(systemPrompt, userPrompt);
-  if (api === 'claude')  return callClaude(systemPrompt, userPrompt);
-  if (api === 'gemini')  return callGemini(systemPrompt, userPrompt);
-  return callOpenRouter(systemPrompt, userPrompt, modelId);
+  if (api === 'groq')        return callGroq(systemPrompt, userPrompt, opts);
+  if (api === 'mistral')     return callMistral(systemPrompt, userPrompt, opts);
+  if (api === 'claude')      return callClaude(systemPrompt, userPrompt, opts);
+  if (api === 'openrouter')  return callOpenRouter(systemPrompt, userPrompt, opts);
+  return callGemini(systemPrompt, userPrompt, opts);
 }
 
-async function callOpenRouter(systemPrompt, userPrompt, modelId) {
-  if (!OR_API_KEY) { openOrKeyModal(); throw new Error('Introduce la clave de OpenRouter primero.'); }
+async function callOpenRouter(systemPrompt, userPrompt, opts={}) {
+  if (!OR_API_KEY) {
+    openOpenRouterModal();
+    throw new Error('Introduce la clave de OpenRouter primero.');
+  }
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + OR_API_KEY,
       'HTTP-Referer': 'https://castrovert-ux.github.io',
-      'X-Title': 'Análisis Castroverde'
+      'X-Title': 'Editor Castroverde'
     },
     body: JSON.stringify({
-      model: modelId,
-      max_tokens: 8000,
-      temperature: 0.4,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+      model: OR_MODEL,
+      max_tokens: opts.maxTokens || 8192,
+      temperature: opts.temperature !== undefined ? opts.temperature : 0.3,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt }
+      ]
     })
   });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error ' + resp.status); }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error OpenRouter ' + resp.status);
+  }
   const data = await resp.json();
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Respuesta vacía de OpenRouter');
@@ -700,68 +1492,129 @@ async function callOpenRouter(systemPrompt, userPrompt, modelId) {
 }
 
 async function callGemini(systemPrompt, userPrompt) {
-  if (!GEMINI_API_KEY) { openGeminiKeyModal(); throw new Error('Introduce la clave de Gemini primero.'); }
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 16000,
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  };
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 8000, thinkingConfig: { thinkingBudget: 0 } }
-    })
+    body: JSON.stringify(body)
   });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Gemini ' + resp.status); }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Gemini ' + resp.status);
+  }
   const data = await resp.json();
-  const parts = data.candidates?.[0]?.content?.parts || [];
+  const candidate = data.candidates?.[0];
+  const finishReason = candidate?.finishReason;
+  const parts = candidate?.content?.parts || [];
   let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
   if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
-  if (!text) throw new Error('Respuesta vacía de Gemini');
+  if (!text) throw new Error('Respuesta vacía de Gemini (finishReason: ' + finishReason + ')');
+  if (finishReason && finishReason !== 'STOP') {
+    return text + '\n\n⚠ Respuesta truncada (finishReason: ' + finishReason + ')';
+  }
   return text;
 }
 
-async function callGroq(systemPrompt, userPrompt) {
-  if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
+async function callGroq(systemPrompt, userPrompt, opts={}) {
   const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + GROQ_API_KEY
+    },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile', max_tokens: 8000, temperature: 0.4,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: opts.maxTokens || 8192,
+      temperature: opts.temperature !== undefined ? opts.temperature : 0.3,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt }
+      ]
     })
   });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Groq ' + resp.status); }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Error Groq ' + resp.status);
+  }
   const data = await resp.json();
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Respuesta vacía de Groq');
   return text;
 }
 
-async function callMistral(systemPrompt, userPrompt, _retry=0) {
-  if (!MISTRAL_API_KEY) { openMistralKeyModal(); throw new Error('Introduce la clave de Mistral primero.'); }
+async function callMistral(systemPrompt, userPrompt, opts={}, _retry=0) {
   const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MISTRAL_API_KEY },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + MISTRAL_API_KEY
+    },
     body: JSON.stringify({
-      model: 'mistral-large-latest', max_tokens: 8000, temperature: 1.0,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+      model: 'mistral-large-latest',
+      max_tokens: opts.maxTokens || 8192,
+      temperature: opts.temperature !== undefined ? opts.temperature : 1.0,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt }
+      ]
     })
   });
-  if (resp.status === 429 && _retry < 3) {
-    const wait = (_retry + 1) * 15;
-    setSyncStatus('info', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s…`);
-    await new Promise(r => setTimeout(r, wait * 1000));
-    return callMistral(systemPrompt, userPrompt, _retry + 1);
+  if (resp.status === 429) {
+    if (_retry < 3) {
+      const wait = ((_retry + 1) * 15);
+      showStatus('warn', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s… (${_retry+1}/3)`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(systemPrompt, userPrompt, opts, _retry + 1);
+    }
+    throw new Error('Mistral: límite de peticiones alcanzado (429). Espera un minuto e inténtalo de nuevo, o cambia a Gemini/Groq.');
   }
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.message || err.error?.message || 'Error Mistral ' + resp.status); }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err.message || err.error?.message || '';
+    if (resp.status === 401) throw new Error('Mistral: clave API incorrecta o inválida.');
+    if (resp.status === 402) throw new Error('Mistral: créditos agotados. Revisa tu plan en console.mistral.ai');
+    throw new Error(msg || 'Error Mistral ' + resp.status);
+  }
   const data = await resp.json();
+  // Mistral sometimes returns 200 with an error object instead of choices
+  if (data.object === 'error' || data.type === 'error') {
+    const msg = data.message || data.error || 'Error desconocido de Mistral';
+    if (/rate|limit|exceed/i.test(msg)) {
+      if (_retry < 3) {
+        const wait = ((_retry + 1) * 20);
+        showStatus('warn', `⏳ Mistral: límite de tokens/peticiones. Reintentando en ${wait}s… (${_retry+1}/3)`);
+        await new Promise(r => setTimeout(r, wait * 1000));
+        return callMistral(systemPrompt, userPrompt, opts, _retry + 1);
+      }
+      throw new Error('Mistral: límite de uso alcanzado. Espera unos minutos o cambia a Gemini/Groq.');
+    }
+    throw new Error('Mistral: ' + msg);
+  }
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Respuesta vacía de Mistral');
+  // Detect error message sneaked into content
+  if (/text rate exceeded|rate limit|token limit/i.test(text)) {
+    if (_retry < 3) {
+      const wait = ((_retry + 1) * 20);
+      showStatus('warn', `⏳ Mistral: límite alcanzado. Reintentando en ${wait}s… (${_retry+1}/3)`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callMistral(systemPrompt, userPrompt, opts, _retry + 1);
+    }
+    throw new Error('Mistral: límite de uso alcanzado. Espera unos minutos o cambia a Gemini/Groq.');
+  }
   return text;
 }
 
-async function callClaude(systemPrompt, userPrompt) {
-  if (!CLAUDE_API_KEY) { openClaudeKeyModal(); throw new Error('Introduce la clave de Claude primero.'); }
+async function callClaude(systemPrompt, userPrompt, opts={}) {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -771,774 +1624,940 @@ async function callClaude(systemPrompt, userPrompt) {
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.4,
+      model: 'claude-sonnet-4-6',
+      max_tokens: opts.maxTokens || 8192,
+      temperature: opts.temperature !== undefined ? opts.temperature : 0.3,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }]
     })
   });
-  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Claude ' + resp.status); }
+  if (resp.status === 429) {
+    if ((opts._retry || 0) < 3) {
+      const wait = ((opts._retry || 0) + 1) * 15;
+      showStatus('warn', `⏳ Claude: límite de peticiones. Reintentando en ${wait}s… (${(opts._retry||0)+1}/3)`);
+      await new Promise(r => setTimeout(r, wait * 1000));
+      return callClaude(systemPrompt, userPrompt, {...opts, _retry: (opts._retry||0)+1});
+    }
+    throw new Error('Claude: límite de peticiones alcanzado. Espera un momento e inténtalo de nuevo.');
+  }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err.error?.message || '';
+    if (resp.status === 401) throw new Error('Claude: clave API incorrecta o inválida.');
+    if (resp.status === 403) throw new Error('Claude: acceso denegado. Verifica tu clave en console.anthropic.com');
+    throw new Error(msg || 'Error Claude ' + resp.status);
+  }
   const data = await resp.json();
   const text = data.content?.[0]?.text?.trim();
   if (!text) throw new Error('Respuesta vacía de Claude');
   return text;
 }
 
-function parseMarkdown(md) {
-  return md
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    // Bloques
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^\*\*\*\s*$/gm,'<hr>')
-    .replace(/^---\s*$/gm,'<hr>')
-    // Inline
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    // Listas numeradas
-    .replace(/^\d+\.\s+(.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ol>' + m + '</ol>')
-    // Listas con guión/asterisco
-    .replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, m => {
-      if (m.includes('<ol>')) return m;
-      return '<ul>' + m + '</ul>';
-    })
-    // Párrafos: líneas sueltas separadas por \n\n
-    .split(/\n{2,}/)
-    .map(block => {
-      block = block.trim();
-      if (!block) return '';
-      if (/^<(h[234]|hr|ol|ul)/.test(block)) return block;
-      return '<p>' + block.replace(/\n/g,' ') + '</p>';
-    })
-    .join('\n');
-}
-
-function setResultBox(text) {
-  const box = document.getElementById('result-box');
-  box.innerHTML = parseMarkdown(text);
-  box.scrollTop = 0;
-}
-
-function getResultBoxText() {
-  return document.getElementById('result-box').innerText;
-}
-
-function clearAll() {
-  document.getElementById('section-name').value = '';
-  document.getElementById('section-goal').value = '';
-  document.getElementById('input-text').value = '';
-  actualizarContador();
-  document.getElementById('result-empty').style.display = 'flex';
-  document.getElementById('result-content').classList.remove('visible');
-  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-}
-
-function actualizarContador() {
-  const l = document.getElementById('input-text').value.length;
-  const el = document.getElementById('char-count');
-  el.textContent = l.toLocaleString() + ' / 20.000';
-  el.className = 'char-count' + (l > 18000 ? ' warn' : '');
-}
-
-function renderPromptButtons() {
-  const grid = document.getElementById('prompt-buttons-grid');
-  grid.innerHTML = '';
-  settings[activeProfile].prompts.forEach((p, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'btn-prompt';
-    btn.textContent = p.label;
-    btn.title = p.name;
-    btn.setAttribute('data-idx', i);
-    btn.addEventListener('click', () => generatePrompt(i, btn));
-    grid.appendChild(btn);
-  });
-}
-
-function setActiveProfile(profile) {
-  activeProfile = profile;
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    if (btn.getAttribute('data-mode') === profile) btn.classList.add('active');
-    else btn.classList.remove('active');
-  });
-  document.getElementById('active-mode-label').innerText = profile === 'narrativo' ? 'Narrativo' : 'Descriptivo';
-  renderPromptButtons();
-  localStorage.setItem('castroverde_active_profile_ana', profile);
-}
+// ══════════════════════════════════════════════════════
+//  STATE  (caché por sesión)
+// ══════════════════════════════════════════════════════
+let step1Result = '';
+let step2Result = '';
+let step3Result = '';   // raw text de fidelidad
+let step4Result = '';
+let step5Result = '';
+let step6Result = '';
 
 // ══════════════════════════════════════════════════════
-//  MODAL DE AJUSTES (con pestañas principales funcionales)
+//  VALIDACIÓN
 // ══════════════════════════════════════════════════════
-
-function generarPanelesPrompts(perfil, promptsArray) {
-  const tabsContainer = document.getElementById(`ptabs-${perfil}`);
-  const panelsContainer = document.getElementById(`ppanels-${perfil}`);
-  if (!tabsContainer) return;
-  tabsContainer.innerHTML = '';
-  panelsContainer.innerHTML = '';
-  promptsArray.forEach((p, idx) => {
-    const tab = document.createElement('button');
-    tab.className = 'ptab' + (idx === 0 ? ' active' : '');
-    tab.textContent = p.label;
-    tab.setAttribute('data-idx', idx);
-    tab.addEventListener('click', () => {
-      tabsContainer.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      panelsContainer.querySelectorAll('.ppanel').forEach(panel => panel.classList.remove('visible'));
-      document.getElementById(`pp-${perfil}-${idx}`).classList.add('visible');
-    });
-    tabsContainer.appendChild(tab);
-
-    const panel = document.createElement('div');
-    panel.className = 'ppanel' + (idx === 0 ? ' visible' : '');
-    panel.id = `pp-${perfil}-${idx}`;
-    panel.innerHTML = `
-      <label class="modal-label">Nombre completo</label>
-      <input class="modal-input pp-name" data-perfil="${perfil}" data-idx="${idx}" value="${escapeHtml(p.name)}">
-      <label class="modal-label">Etiqueta del botón</label>
-      <input class="modal-input pp-label" data-perfil="${perfil}" data-idx="${idx}" value="${escapeHtml(p.label)}">
-      <label class="modal-label">Contenido del prompt</label>
-      <textarea class="modal-textarea tall pp-content" data-perfil="${perfil}" data-idx="${idx}" rows="10">${escapeHtml(p.content)}</textarea>
-    `;
-    panelsContainer.appendChild(panel);
-  });
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function openSettings() {
-  // Cargar valores actuales
-  document.getElementById('system-narrativo').value = settings.narrativo.system;
-  document.getElementById('system-descriptivo').value = settings.descriptivo.system;
-  const tono = getTonoProfile();
-  document.getElementById('tono-comun').value = tono;
-
-  generarPanelesPrompts('narrativo', settings.narrativo.prompts);
-  generarPanelesPrompts('descriptivo', settings.descriptivo.prompts);
-
-  // Mostrar la pestaña correspondiente al perfil activo por defecto
-  const activeTabProfile = activeProfile;
-  const mainTabs = document.querySelectorAll('#settings-ptabs .ptab');
-  const mainPanels = document.querySelectorAll('#settings-panels .ppanel');
-  mainTabs.forEach(tab => {
-    if (tab.getAttribute('data-profile') === activeTabProfile) {
-      tab.classList.add('active');
-    } else {
-      tab.classList.remove('active');
-    }
-  });
-  mainPanels.forEach(panel => {
-    if (panel.getAttribute('data-profile') === activeTabProfile) {
-      panel.classList.add('visible');
-    } else {
-      panel.classList.remove('visible');
-    }
-  });
-
-  document.getElementById('modal-settings').classList.add('visible');
-}
-
-function closeSettings() {
-  document.getElementById('modal-settings').classList.remove('visible');
-}
-
-function saveSettingsFromModal() {
-  settings.narrativo.system = document.getElementById('system-narrativo').value;
-  settings.descriptivo.system = document.getElementById('system-descriptivo').value;
-  const tonoVal = document.getElementById('tono-comun').value;
-  saveTonoProfile(tonoVal);
-
-  // Guardar prompts de Narrativo
-  document.querySelectorAll('#ppanels-narrativo .pp-name').forEach(inp => {
-    const idx = parseInt(inp.getAttribute('data-idx'));
-    settings.narrativo.prompts[idx].name = inp.value;
-  });
-  document.querySelectorAll('#ppanels-narrativo .pp-label').forEach(inp => {
-    const idx = parseInt(inp.getAttribute('data-idx'));
-    settings.narrativo.prompts[idx].label = inp.value;
-  });
-  document.querySelectorAll('#ppanels-narrativo .pp-content').forEach(ta => {
-    const idx = parseInt(ta.getAttribute('data-idx'));
-    settings.narrativo.prompts[idx].content = ta.value;
-  });
-  // Guardar prompts de Descriptivo
-  document.querySelectorAll('#ppanels-descriptivo .pp-name').forEach(inp => {
-    const idx = parseInt(inp.getAttribute('data-idx'));
-    settings.descriptivo.prompts[idx].name = inp.value;
-  });
-  document.querySelectorAll('#ppanels-descriptivo .pp-label').forEach(inp => {
-    const idx = parseInt(inp.getAttribute('data-idx'));
-    settings.descriptivo.prompts[idx].label = inp.value;
-  });
-  document.querySelectorAll('#ppanels-descriptivo .pp-content').forEach(ta => {
-    const idx = parseInt(ta.getAttribute('data-idx'));
-    settings.descriptivo.prompts[idx].content = ta.value;
-  });
-
-  saveSettings();
-  renderPromptButtons();
-  closeSettings();
-}
-
-function resetSettings() {
-  if (!confirm('¿Restaurar todos los ajustes a los valores por defecto para ambos perfiles?')) return;
-  settings.narrativo = JSON.parse(JSON.stringify(DEFAULT_NARRATIVO));
-  settings.descriptivo = JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO));
-  // Restaurar también el perfil tonal por defecto mejorado
-  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
-  saveSettings();
-  renderPromptButtons();
-  openSettings(); // refrescar modal
-}
-
-// ══════════════════════════════════════════════════════
-//  OPENROUTER KEY
-// ══════════════════════════════════════════════════════
-let OR_API_KEY = localStorage.getItem('castroverde_or_key') || '';
-let GEMINI_API_KEY  = localStorage.getItem('castroverde_ana_gemini_key')  || '';
-let MISTRAL_API_KEY = localStorage.getItem('castroverde_ana_mistral_key') || '';
-let CLAUDE_API_KEY  = localStorage.getItem('castroverde_ana_claude_key')  || '';
-let activeApi = localStorage.getItem('castroverde_ana_api') || 'openrouter';
-
-function openOrKeyModal() {
-  document.getElementById('or-key-input').value = OR_API_KEY || '';
-  document.getElementById('modal-orkey').classList.add('visible');
-  setTimeout(() => document.getElementById('or-key-input').focus(), 80);
-}
-function closeOrKeyModal() { document.getElementById('modal-orkey').classList.remove('visible'); }
-function saveOrKey(val) {
-  if (!val || !val.startsWith('sk-or-')) { alert('La clave de OpenRouter debe empezar por sk-or-'); return false; }
-  OR_API_KEY = val;
-  localStorage.setItem('castroverde_or_key', val);
-  closeOrKeyModal();
+function checkKey() {
+  if (activeApi === 'groq' && !GROQ_API_KEY) {
+    showStatus('err', 'Introduce primero la clave de Groq.');
+    setTimeout(openGroqModal, 700);
+    return false;
+  }
+  if (activeApi === 'mistral' && !MISTRAL_API_KEY) {
+    showStatus('err', 'Introduce primero la clave de Mistral.');
+    setTimeout(openMistralModal, 700);
+    return false;
+  }
+  if (activeApi === 'claude' && !CLAUDE_API_KEY) {
+    showStatus('err', 'Introduce primero la clave de Claude.');
+    setTimeout(openClaudeModal, 700);
+    return false;
+  }
+  if (activeApi === 'gemini' && !GEMINI_API_KEY) {
+    showStatus('err', 'Introduce primero la clave de Gemini.');
+    setTimeout(openGeminiModal, 700);
+    return false;
+  }
   return true;
 }
 
-
 // ══════════════════════════════════════════════════════
-//  PASO 0b — APLICAR PLAN DE ACCIÓN (usa la API activa)
+//  NAVEGACIÓN ← →
 // ══════════════════════════════════════════════════════
-async function aplicarPlan() {
-  const texto = document.getElementById('input-text').value.trim();
-  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+function navStep(delta) {
+  const target = activeTab + delta;
+  if (target < 1 || target > 6) return;
 
-  const planTexto = getResultBoxText().trim();
-  if (!planTexto) {
-    alert('Primero genera el Plan de intervención (botón "Plan") en los pasos de análisis.');
-    return;
+  // Al avanzar, ejecutar el paso si no tiene resultado aún
+  if (delta > 0) {
+    if (target === 2) { runStep2(); return; }
+    if (target === 3) { runStep3(); return; }
+    if (target === 4) { runStep4(); return; }
+    if (target === 5) { runStep5(); return; }
+    if (target === 6) { runStep6(); return; }
   }
 
-  const api = document.body.dataset.api || activeApi;
-  if (api === 'openrouter' && !OR_API_KEY)      { setSyncStatus('err', 'Introduce la clave de OpenRouter primero.'); setTimeout(openOrKeyModal, 800); return; }
-  if (api === 'gemini'     && !GEMINI_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Gemini primero.'); setTimeout(openGeminiKeyModal, 800); return; }
-  if (api === 'groq'       && !GROQ_API_KEY)    { setSyncStatus('err', 'Introduce la clave de Groq primero.'); setTimeout(openGroqKeyModal, 800); return; }
-  if (api === 'mistral'    && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral primero.'); setTimeout(openMistralKeyModal, 800); return; }
-  if (api === 'claude'     && !CLAUDE_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Claude primero.'); setTimeout(openClaudeKeyModal, 800); return; }
+  // Al retroceder (o avanzar con caché), solo mostrar
+  switchTab(target);
+  updateNavButtons();
+}
 
-  const APLICAR_SYSTEM = `ROL
-Eres un corrector de textos históricos.
+function updateNavButtons() {
+  document.getElementById('btn-prev').disabled = (activeTab === 1);
+  document.getElementById('btn-next').disabled = (activeTab === 6);
+}
+
+// ══════════════════════════════════════════════════════
+//  BLOQUEO GLOBAL durante llamadas
+// ══════════════════════════════════════════════════════
+function lockUI(on) {
+  ['btn-step1','btn-step2','btn-step3','btn-step4','btn-step5','btn-step6','btn-run-all','btn-prev','btn-next']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = on ? true : false;
+    });
+  if (!on) restoreStepButtons(); // rehabilitar según estado real
+}
+
+function restoreStepButtons() {
+  document.getElementById('btn-step2').disabled = !step1Result;
+  document.getElementById('btn-step3').disabled = !step2Result;
+  document.getElementById('btn-step4').disabled = !step2Result;
+  document.getElementById('btn-step5').disabled = !step4Result;
+  document.getElementById('btn-step6').disabled = !step5Result;
+  updateNavButtons();
+}
+
+const PROMPT_6_SYSTEM = `ROL
+Eres un analista textual especializado en edición de textos históricos. Comparas dos versiones de un mismo texto: una versión original y una versión editada.
 
 OBJETIVO
-Aplicar los cambios indicados en el plan de acción sin alterar el estilo ni la voz del autor.
+Detectar con precisión cualquier cambio de significado, pérdida de información, alteración de matiz histórico, modificación de certeza, cambio en la causalidad, en la jerarquía informativa o en la voz del texto.
 
-RESTRICCIÓN ABSOLUTA
-No añadir información nueva ni cambiar el significado. No reescribir lo que no está señalado en el plan.
+ENTRADAS
+Te proporcionaré:
+* TEXTO ORIGINAL
+* TEXTO EDITADO
 
-QUÉ PUEDES HACER
-- Aplicar cada intervención del plan en el orden indicado
-- Corregir ortografía y puntuación si el plan lo señala
-- Dividir frases largas si el plan lo señala
-- Eliminar repeticiones si el plan lo señala
-- Reordenar ligeramente frases dentro del mismo párrafo si el plan lo señala
+RESTRICCIÓN FUNDAMENTAL
+No debes reescribir los textos. No debes proponer mejoras. No debes corregir el texto editado. Solo comparar.
+
+QUÉ DEBES DETECTAR
+Debes identificar y listar de forma clara:
+
+1. Pérdida de información
+Elementos presentes en el original que han desaparecido, se han reducido o se han debilitado.
+
+2. Añadidos no presentes en el original
+Cualquier palabra, conector o formulación que introduzca explicación, énfasis o interpretación no presente en el original.
+
+3. Cambios de significado
+Frases donde el sentido ha sido modificado, aunque parezca similar.
+
+4. Cambios de grado de certeza (modalidad)
+Alteraciones en el nivel de seguridad del texto, por ejemplo:
+* hipótesis → afirmación
+* duda → seguridad
+* posibilidad → relación más firme
+
+5. Cambios de causalidad
+Si una relación sugerida o abierta se convierte en una relación más directa o explicativa, o al revés.
+
+6. Cambios de jerarquía informativa
+Si algún dato pierde peso, se desplaza o se presenta con menor o mayor relevancia que en el original.
+
+7. Simplificaciones con pérdida de matiz
+Reducciones que eliminan precisión histórica, geográfica o contextual.
+
+8. Cambios en la voz del historiador (MUY IMPORTANTE)
+Detectar si cambia la posición del autor en el texto, por ejemplo:
+* de implicación directa ("encontramos", "vemos") a formulación impersonal ("se encuentra")
+* de voz vinculada a la investigación a voz neutra o expositiva
+
+9. Cambios en el grado de explicitación
+Detectar si el texto editado:
+* explica más de lo que el original sugería
+* introduce conectores ("por ejemplo", "ya que", etc.) que guían la interpretación
+* hace explícitas relaciones que en el original eran implícitas
 
 QUÉ NO DEBES HACER
-- No reescribir el estilo
-- No embellecer el texto
-- No añadir explicaciones ni transiciones no pedidas
-- No cambiar el tono
-- No tocar lo que el plan no menciona
-
-SALIDA
-Devuelve solo el texto corregido, sin comentarios ni explicaciones.`;
-
-  const userMsg = `PLAN DE ACCIÓN:\n\n${planTexto}\n\n${'─'.repeat(60)}\n\nTEXTO ORIGINAL:\n\n"""\n${texto}\n"""`;
-
-  const btn = document.getElementById('btn-aplicar-plan');
-  const status = document.getElementById('aplicar-plan-status');
-  btn.classList.add('running');
-  btn.textContent = '… Aplicando';
-
-  const modelSelect = document.getElementById('or-model-select');
-  const apiLabel = api === 'openrouter'
-    ? modelSelect.options[modelSelect.selectedIndex].text
-    : api.charAt(0).toUpperCase() + api.slice(1);
-  status.textContent = 'Llamando a ' + apiLabel + '…';
-
-  document.getElementById('result-empty').style.display = 'none';
-  document.getElementById('result-content').classList.add('visible');
-  document.getElementById('result-badge').textContent = 'Plan';
-  document.getElementById('result-label-text').textContent = 'Texto con plan aplicado';
-  const box = document.getElementById('result-box');
-  box.innerHTML = '<span class="loading">… Aplicando plan con ' + apiLabel + '</span>';
-  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-
-  try {
-    const modelId = modelSelect.value;
-    const respuesta = await callAPI(APLICAR_SYSTEM, userMsg, modelId);
-    setResultBox(respuesta);
-    status.textContent = '✓ Listo';
-    setTimeout(() => { status.textContent = 'Genera primero el Plan en los pasos de análisis'; }, 4000);
-  } catch(e) {
-    box.innerHTML = '<span class="loading">✗ Error: ' + e.message + '</span>';
-    status.textContent = '✗ ' + e.message;
-    setTimeout(() => { status.textContent = 'Genera primero el Plan en los pasos de análisis'; }, 6000);
-  } finally {
-    btn.classList.remove('running');
-    btn.textContent = '✦ Aplicar plan';
-  }
-}
-
-// ══════════════════════════════════════════════════════
-//  GROQ KEY + CORRECTOR TÉCNICO
-// ══════════════════════════════════════════════════════
-let GROQ_API_KEY = localStorage.getItem('castroverde_groq_key') || '';
-
-function openGroqKeyModal() {
-  document.getElementById('groq-key-input').value = GROQ_API_KEY || '';
-  document.getElementById('modal-groqkey').classList.add('visible');
-  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
-}
-function closeGroqKeyModal() { document.getElementById('modal-groqkey').classList.remove('visible'); }
-function saveGroqKey(val) {
-  if (!val || !val.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return false; }
-  GROQ_API_KEY = val;
-  localStorage.setItem('castroverde_groq_key', val);
-  closeGroqKeyModal();
-  return true;
-}
-
-const CORRECTOR_SYSTEM = `Eres un corrector técnico. Tu trabajo es limpiar el texto de problemas formales sin tocar la voz del autor ni reescribir nada.
-
-REGLA ABSOLUTA
-No reescribas frases. No mejores el estilo. No suavices ni amplifiques. Si una frase te parece mejorable estilísticamente, déjala exactamente como está.
-
-QUÉ PUEDES CORREGIR
-- Errores ortográficos
-- Errores de puntuación (comas, puntos, mayúsculas)
-- Errores gramaticales evidentes (concordancia, tiempos verbales)
-- Espacios dobles o mal colocados
-- Mayúsculas incorrectas en nombres propios o términos históricos
-- Paréntesis o comillas mal cerrados
-
-QUÉ TIENES PROHIBIDO
-- Cambiar el orden de las palabras
-- Sustituir palabras por sinónimos
-- Añadir o eliminar frases
-- Reorganizar párrafos
-- Suavizar o reforzar cualquier afirmación
-- Añadir conectores o transiciones
+* No editar los textos
+* No reescribir versiones alternativas
+* No valorar si el texto es mejor o peor
+* No introducir conocimiento externo
 
 FORMATO DE SALIDA
-Devuelve únicamente el texto corregido, sin comentarios, sin explicaciones, sin listar los cambios. Solo el texto limpio.`;
 
-async function runCorrector() {
+RESUMEN GENERAL
+Diagnóstico global breve (2-4 líneas)
+
+CAMBIOS DETECTADOS
+
+1. Pérdida de información
+* ...
+
+2. Añadidos no presentes en el original
+* ...
+
+3. Cambios de significado
+* ...
+
+4. Cambios de certeza o modalidad
+* ...
+
+5. Cambios de causalidad
+* ...
+
+6. Cambios de jerarquía informativa
+* ...
+
+7. Simplificaciones con pérdida de matiz
+* ...
+
+8. Cambios en la voz del historiador
+* ...
+
+9. Cambios en el grado de explicitación
+* ...
+
+CONCLUSIÓN FINAL
+Valoración breve del nivel de fidelidad del texto editado respecto al original.`;
+
+const PROMPT_4_SYSTEM = `=== SYSTEM PROMPT ===
+
+ROL
+Eres un editor literario de estilo intermedio especializado en textos históricos locales.
+Trabajas sobre borradores ya corregidos estructuralmente.
+
+OBJETIVO
+Mejorar la fluidez, el ritmo de lectura y la cohesión del texto, eliminando redundancias
+y repeticiones innecesarias sin alterar su contenido histórico ni su lógica argumental.
+
+QUE PUEDES HACER
+- Eliminar repeticiones de la misma idea o redundancias léxicas y conceptuales
+- Mejorar la fluidez entre frases equivalentes
+- Ajustar puntuación para mejorar el ritmo de lectura
+- Reordenar elementos dentro de una frase solo si mejora la claridad sin alterar el significado
+- Suavizar transiciones cuando la relación entre ideas ya esté implícita
+- Unificar formulaciones repetitivas sin alterar matices históricos
+
+QUE NO PUEDES HACER
+- Añadir información nueva
+- Eliminar hechos históricos, fechas, ejemplos o referencias documentales
+- Cambiar el orden de los acontecimientos ni su lógica interna
+- Simplificar procesos históricos en afirmaciones generales
+- Fusionar ideas históricas distintas aunque parezcan similares
+- Resumir o condensar contenido informativo
+- Reescribir el texto como si fuera nuevo
+- Embellecer ni literaturizar el estilo
+- Reorganizar la estructura argumental
+
+FORMATO DE SALIDA
+Devuelve únicamente el texto revisado. Sin comentarios ni explicaciones.`;
+
+const PROMPT_5_SYSTEM = `=== SYSTEM PROMPT (Capa 3: Pulido final de lectura) ===
+
+ROL
+Eres un editor literario de estilo final especializado en textos históricos ya corregidos.
+Trabajas sobre un texto correcto en contenido, estructura y cohesión.
+
+OBJETIVO
+Mejorar el ritmo de lectura, la naturalidad del castellano escrito y la fluidez superficial,
+sin modificar contenido, estructura ni lógica interna.
+
+REGLA DE INTERVENCIÓN MÍNIMA
+Solo puedes modificar una frase si existe al menos una de estas condiciones:
+- Dificultad real de lectura o comprensión
+- Problema de puntuación que afecte a la comprensión
+- Repetición léxica o sintáctica dentro de la propia frase
+
+Si ninguna condición se cumple: NO TOCAR.
+No debes suavizar, modernizar ni homogeneizar el estilo si la frase ya es correcta,
+aunque resulte densa o de registro antiguo.
+
+QUE PUEDES HACER (solo bajo la regla anterior)
+- Ajustar puntuación para mejorar ritmo y claridad
+- Suavizar construcciones que dificulten la lectura
+- Corregir repeticiones léxicas cercanas (no de ideas)
+- Mejorar cohesión dentro de una misma frase
+- Facilitar la lectura en voz alta sin alterar contenido
+
+QUE NO PUEDES HACER
+- Añadir ni eliminar información
+- Modificar la estructura de párrafos ni reordenar ideas entre frases
+- Cambiar la lógica o progresión del texto
+- Introducir conectores o explicaciones con valor histórico o estructural
+- Eliminar ideas repetidas (eso pertenece a una capa anterior)
+- Resumir, condensar ni reinterpretar el estilo
+- Reescribir el texto como si fuera nuevo
+
+PRESERVAR SIEMPRE
+- Sentido exacto del texto
+- Tono sobrio y documental
+- Densidad informativa original
+- Marcas de prudencia histórica ("es probable que", "según", etc.)
+- Variación natural del estilo del autor
+
+FORMATO DE SALIDA
+Devuelve únicamente el texto revisado. Sin explicaciones ni comentarios.`;
+
+// ══════════════════════════════════════════════════════
+//  PASO 1
+// ══════════════════════════════════════════════════════
+async function runStep1() {
   const texto = document.getElementById('input-text').value.trim();
-  if (!texto) { alert('Primero pega el texto a corregir.'); return; }
-  if (!GROQ_API_KEY) {
-    setSyncStatus('err', 'Introduce la clave de Groq primero.');
-    setTimeout(openGroqKeyModal, 800);
+  if (!texto) { showStatus('err', 'Pega primero el texto a procesar.'); return; }
+
+  // Si ya hay resultado en caché, solo mostrar
+  if (step1Result) {
+    setResultText(1, step1Result);
+    switchTab(1);
+    updateNavButtons();
     return;
   }
-  const btn = document.getElementById('btn-corrector');
-  const status = document.getElementById('corrector-status');
-  btn.classList.add('running');
-  btn.textContent = '… Corrigiendo';
-  status.textContent = 'Llamando a Groq…';
+
+  if (!checkKey()) return;
+
+  lockUI(true);
+  setDot(1, 'running');
+  switchTab(1);
+  setResultLoading(1, 'Corrección técnica con ' + (document.body.dataset.api || activeApi).charAt(0).toUpperCase() + (document.body.dataset.api || activeApi).slice(1) + '…');
+  document.getElementById('copy-1').disabled = true;
 
   try {
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 4096,
-        temperature: 0.1,
-        messages: [
-          { role: 'system', content: CORRECTOR_SYSTEM },
-          { role: 'user', content: 'Corrige técnicamente el siguiente texto:\n\n"""\n' + texto + '\n"""' }
-        ]
-      })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'Error ' + resp.status);
-    }
-    const data = await resp.json();
-    const textoCorregido = data.choices?.[0]?.message?.content?.trim();
-    if (!textoCorregido) throw new Error('Respuesta vacía de Groq');
-
-    document.getElementById('input-text').value = textoCorregido;
-    actualizarContador();
-    status.textContent = '✓ Texto actualizado';
-    setTimeout(() => { status.textContent = ''; }, 4000);
+    const user1 = 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""'; const P1 = getPrompt(1);
+    step1Prompt = buildFullPrompt(P1, user1);
+    const result = await callAPI(P1, user1);
+    step1Result = result.trim();
+    histAdd(1, step1Result);
+    setResultText(1, step1Result);
+    setDot(1, 'done');
+    document.getElementById('copy-1').disabled = false;
+    document.getElementById('show-prompt-1').disabled = false;
+    showStatus('ok', '✓ Paso 1 completado');
+    updatePromptButtons();
   } catch(e) {
-    status.textContent = '✗ ' + e.message;
-    setTimeout(() => { status.textContent = ''; }, 6000);
+    setResultError(1, e.message);
+    setDot(1, '');
+    showStatus('err', 'Error en Paso 1: ' + e.message);
   } finally {
-    btn.classList.remove('running');
-    btn.textContent = '✦ Corrector técnico';
+    lockUI(false);
   }
 }
 
 // ══════════════════════════════════════════════════════
-//  FIREBASE (misma lógica, simplificada)
+//  PASO 2
 // ══════════════════════════════════════════════════════
-let FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
-let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+async function runStep2() {
+  if (!step1Result) { showStatus('err', 'Ejecuta el Paso 1 primero.'); return; }
 
-function initFirebase(apiKey) {
-  if (!apiKey) return;
+  // Si ya hay resultado en caché, solo mostrar
+  if (step2Result) {
+    setResultText(2, step2Result);
+    switchTab(2);
+    updateNavButtons();
+    return;
+  }
+
+  if (!checkKey()) return;
+
+  lockUI(true);
+  setDot(2, 'running');
+  switchTab(2);
+  setResultLoading(2, 'Edición literaria con ' + (document.body.dataset.api || activeApi).charAt(0).toUpperCase() + (document.body.dataset.api || activeApi).slice(1) + '…');
+  document.getElementById('copy-2').disabled = true;
+
   try {
-    if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey));
-    else startFirebase(apiKey);
-  } catch(e) {}
-}
-function startFirebase(apiKey) {
-  const config = {
-    apiKey: apiKey,
-    authDomain: "castroverde-apps.firebaseapp.com",
-    projectId: "castroverde-apps",
-    storageBucket: "castroverde-apps.firebasestorage.app",
-    messagingSenderId: "371026533141",
-    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
-  };
-  firebase.initializeApp(config);
-  fbAuth = firebase.auth();
-  fbDb = firebase.firestore();
-  fbProvider = new firebase.auth.GoogleAuthProvider();
-  fbAuth.onAuthStateChanged(user => { fbUser = user; updateSyncUI(); });
-}
-if (FB_API_KEY) initFirebase(FB_API_KEY);
-
-function updateSyncUI() {
-  const btn = document.getElementById('btn-sync');
-  const icon = document.getElementById('sync-icon');
-  const label = document.getElementById('sync-label');
-  const userEl = document.getElementById('sync-user-text');
-  const signout = document.getElementById('btn-signout');
-  if (fbUser) {
-    btn.classList.add('synced');
-    icon.textContent = '✓';
-    label.textContent = 'Sincronizado';
-    userEl.textContent = fbUser.email;
-    userEl.style.display = 'inline';
-    signout.style.display = 'inline';
-  } else {
-    btn.classList.remove('synced');
-    icon.textContent = '☁';
-    label.textContent = 'Sincronizar';
-    userEl.style.display = 'none';
-    signout.style.display = 'none';
+    const user2 = 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""'; const P2 = getPrompt(2);
+    step2Prompt = buildFullPrompt(P2, user2);
+    const result = await callAPI(P2, user2);
+    step2Result = result.trim();
+    histAdd(2, step2Result);
+    setResultText(2, step2Result);
+    setDot(2, 'done');
+    document.getElementById('copy-2').disabled = false;
+    document.getElementById('show-prompt-2').disabled = false;
+    showStatus('ok', '✓ Paso 2 completado');
+    updatePromptButtons();
+  } catch(e) {
+    setResultError(2, e.message);
+    setDot(2, '');
+    showStatus('err', 'Error en Paso 2: ' + e.message);
+  } finally {
+    lockUI(false);
   }
 }
-function handleSync() {
-  if (!fbAuth) { setSyncStatus('err', 'Introduce clave de Firebase.'); setTimeout(openFbKeyModal, 800); return; }
-  if (!fbUser) {
-    setSyncStatus('info', 'Iniciando sesión…');
-    fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(err => setSyncStatus('err', err.message));
-  } else { doSync(); }
+
+// ══════════════════════════════════════════════════════
+//  PASO 3
+// ══════════════════════════════════════════════════════
+async function runStep3() {
+  if (!step2Result) { showStatus('err', 'Ejecuta los pasos 1 y 2 primero.'); return; }
+
+  // Si ya hay resultado en caché, solo mostrar
+  if (step3Result) {
+    setFidelidadResult(step3Result);
+    switchTab(3);
+    updateNavButtons();
+    return;
+  }
+
+  const textoOriginal = document.getElementById('input-text').value.trim();
+  if (!textoOriginal) { showStatus('err', 'No hay texto original.'); return; }
+
+  if (!checkKey()) return;
+
+  lockUI(true);
+  setDot(3, 'running');
+  switchTab(3);
+  document.getElementById('result-3').innerHTML = '<span class="loading-msg">… Revisando fidelidad histórica con Gemini…</span>';
+
+  const userMsg = `TEXTO ORIGINAL:\n"""\n${textoOriginal}\n"""\n\nTEXTO EDITADO:\n"""\n${step2Result}\n"""`;
+  const P3 = getPrompt(3);
+  step3Prompt = buildFullPrompt(P3, userMsg);
+
+  try {
+    const result = await callAPI(P3, userMsg);
+    step3Result = result.trim();
+    histAdd(3, step3Result);
+    setFidelidadResult(step3Result);
+    setDot(3, 'done');
+    document.getElementById('show-prompt-3').disabled = false;
+    showStatus('ok', '✓ Revisión de fidelidad completada');
+    updatePromptButtons();
+  } catch(e) {
+    document.getElementById('result-3').innerHTML = '<span class="error-msg">✗ ' + e.message + '</span>';
+    setDot(3, '');
+    showStatus('err', 'Error en Paso 3: ' + e.message);
+  } finally {
+    lockUI(false);
+  }
 }
-function doSync() {
-  if (!fbUser || !fbDb) return;
-  setSyncStatus('info', 'Sincronizando…');
-  document.getElementById('btn-sync').classList.add('syncing');
-  const docRef = fbDb.collection('analizador').doc(fbUser.uid);
-  docRef.get().then(snap => {
-    const localSettings = JSON.parse(JSON.stringify(settings));
-    const localTs = parseInt(localStorage.getItem('castroverde_ana_settings_ts') || '0');
-    if (snap.exists && snap.data().settings && snap.data().settingsUpdatedAt > localTs) {
-      settings = snap.data().settings;
-      saveSettings();
-      localStorage.setItem('castroverde_ana_settings_ts', snap.data().settingsUpdatedAt);
-      renderPromptButtons();
+
+// ══════════════════════════════════════════════════════
+//  PASO 4
+// ══════════════════════════════════════════════════════
+async function runStep4() {
+  if (!step2Result) { showStatus('err', 'Ejecuta los pasos 1 y 2 primero.'); return; }
+
+  if (step4Result) {
+    setResultText(4, step4Result);
+    switchTab(4);
+    updateNavButtons();
+    return;
+  }
+
+  if (!checkKey()) return;
+
+  lockUI(true);
+  setDot(4, 'running');
+  switchTab(4);
+  setResultLoading(4, 'Pulido de coherencia y redundancia…');
+  document.getElementById('copy-4').disabled = true;
+
+  try {
+    const user4 = `Revisa el siguiente texto:\n\n"""\n` + step2Result + `\n"""`;
+    const P4 = getPrompt(4);
+    step4Prompt = buildFullPrompt(P4, user4);
+    const result = await callAPI(P4, user4);
+    step4Result = result.trim();
+    histAdd(4, step4Result);
+    setResultText(4, step4Result);
+    setDot(4, 'done');
+    document.getElementById('copy-4').disabled = false;
+    document.getElementById('show-prompt-4').disabled = false;
+    document.getElementById('btn-step5').disabled = false;
+    showStatus('ok', '✓ Paso 4 completado');
+    updatePromptButtons();
+  } catch(e) {
+    setResultError(4, e.message);
+    setDot(4, '');
+    showStatus('err', 'Error en Paso 4: ' + e.message);
+  } finally {
+    lockUI(false);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  PASO 5
+// ══════════════════════════════════════════════════════
+async function runStep5() {
+  if (!step4Result) { showStatus('err', 'Ejecuta el Paso 4 primero.'); return; }
+
+  if (step5Result) {
+    setResultText(5, step5Result);
+    switchTab(5);
+    updateNavButtons();
+    return;
+  }
+
+  if (!checkKey()) return;
+
+  lockUI(true);
+  setDot(5, 'running');
+  switchTab(5);
+  setResultLoading(5, 'Pulido final de lectura…');
+  document.getElementById('copy-5').disabled = true;
+
+  try {
+    const user5 = `Aplica el pulido final al siguiente texto:\n\n"""\n` + step4Result + `\n"""`;
+    const P5 = getPrompt(5);
+    step5Prompt = buildFullPrompt(P5, user5);
+    const result = await callAPI(P5, user5);
+    step5Result = result.trim();
+    histAdd(5, step5Result);
+    setResultText(5, step5Result);
+    setDot(5, 'done');
+    document.getElementById('copy-5').disabled = false;
+    document.getElementById('show-prompt-5').disabled = false;
+    showStatus('ok', '✓ Paso 5 completado — texto listo');
+    updatePromptButtons();
+  } catch(e) {
+    setResultError(5, e.message);
+    setDot(5, '');
+    showStatus('err', 'Error en Paso 5: ' + e.message);
+  } finally {
+    lockUI(false);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  PASO 6
+// ══════════════════════════════════════════════════════
+async function runStep6() {
+  if (!step5Result) { showStatus('err', 'Ejecuta el Paso 5 primero.'); return; }
+
+  if (step6Result) {
+    renderReport6(step6Result);
+    switchTab(6);
+    updateNavButtons();
+    return;
+  }
+
+  const textoOriginal = document.getElementById('input-text').value.trim();
+  if (!textoOriginal) { showStatus('err', 'No hay texto original.'); return; }
+  if (!checkKey()) return;
+
+  lockUI(true);
+  setDot(6, 'running');
+  switchTab(6);
+  document.getElementById('result-6').innerHTML = '<span class="loading-msg">… Analizando diferencias entre original y texto final…</span>';
+
+  const userMsg6 = `TEXTO ORIGINAL:\n"""\n${textoOriginal}\n"""\n\nTEXTO EDITADO:\n"""\n${step5Result}\n"""`;
+  const P6 = getPrompt(6);
+  step6Prompt = buildFullPrompt(P6, userMsg6);
+
+  try {
+    const result = await callAPI(P6, userMsg6, {temperature: 0.2, maxTokens: 8192});
+    step6Result = result.trim();
+    histAdd(6, step6Result);
+    renderReport6(step6Result);
+    setDot(6, 'done');
+    document.getElementById('show-prompt-6').disabled = false;
+    document.getElementById('copy-report-6').disabled = false;
+    showStatus('ok', '✓ Análisis final completado');
+    updatePromptButtons();
+  } catch(e) {
+    document.getElementById('result-6').innerHTML = '<span class="error-msg">✗ ' + e.message + '</span>';
+    setDot(6, '');
+    showStatus('err', 'Error en Paso 6: ' + e.message);
+  } finally {
+    lockUI(false);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  HISTÓRICO (todos los pasos)
+// ══════════════════════════════════════════════════════
+const HIST_STEP_LABELS = {
+  1: 'Corrección',
+  2: 'Edición',
+  3: 'Fidelidad',
+  4: 'Coherencia',
+  5: 'Pulido final',
+  6: 'Análisis final'
+};
+
+function histKey(n) { return 'castroverde_hist_' + n; }
+
+function histLoad(n) {
+  try { return JSON.parse(localStorage.getItem(histKey(n)) || '[]'); } catch { return []; }
+}
+function histSave(n, arr) {
+  localStorage.setItem(histKey(n), JSON.stringify(arr));
+}
+function histAdd(n, text) {
+  const arr = histLoad(n);
+  arr.unshift({ ts: new Date().toISOString(), text });
+  if (arr.length > 40) arr.splice(40);
+  histSave(n, arr);
+}
+
+let histActiveStep = 1;
+
+function openHistoryModal(step) {
+  histActiveStep = step || 1;
+  document.getElementById('modal-history').classList.add('visible');
+  histRenderTabs();
+  histRenderList();
+}
+function closeHistoryModal() {
+  document.getElementById('modal-history').classList.remove('visible');
+}
+document.getElementById('modal-history').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-history')) closeHistoryModal();
+});
+
+function histRenderTabs() {
+  const container = document.getElementById('hist-tabs');
+  container.innerHTML = [1,2,3,4,5,6].map(n => {
+    const count = histLoad(n).length;
+    const active = n === histActiveStep ? ' active' : '';
+    return `<button class="hist-tab-btn${active}" onclick="histSwitchTab(${n})">${n} · ${HIST_STEP_LABELS[n]} <span style="opacity:.6">(${count})</span></button>`;
+  }).join('');
+}
+function histSwitchTab(n) {
+  histActiveStep = n;
+  histRenderTabs();
+  histRenderList();
+}
+function histClearStep() {
+  if (!confirm('¿Borrar todos los registros del Paso ' + histActiveStep + ' (' + HIST_STEP_LABELS[histActiveStep] + ')?')) return;
+  localStorage.removeItem(histKey(histActiveStep));
+  histRenderTabs();
+  histRenderList();
+}
+function histDeleteEntry(n, idx) {
+  const arr = histLoad(n);
+  arr.splice(idx, 1);
+  histSave(n, arr);
+  histRenderTabs();
+  histRenderList();
+}
+function histCopyEntry(n, idx) {
+  const arr = histLoad(n);
+  if (!arr[idx]) return;
+  navigator.clipboard.writeText(arr[idx].text).then(() => showStatus('ok', '✓ Registro copiado'));
+}
+function histToggleBody(el) {
+  const body = el.parentElement.nextElementSibling;
+  const arrow = el.querySelector('.hist-arrow');
+  const open = body.classList.toggle('open');
+  if (arrow) arrow.textContent = open ? '▴' : '▾';
+}
+
+function histRenderList() {
+  const list = document.getElementById('hist-list');
+  const arr = histLoad(histActiveStep);
+  if (!arr.length) {
+    list.innerHTML = '<div class="hist-empty">Sin registros para este paso.</div>';
+    return;
+  }
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  list.innerHTML = arr.map((entry, i) => {
+    const d = new Date(entry.ts);
+    const label = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})
+      + ' &nbsp;·&nbsp; ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    const snippet = entry.text.slice(0, 100).replace(/\n/g,' ') + (entry.text.length > 100 ? '…' : '');
+    return `<div class="hist-entry">
+  <div class="hist-entry-header">
+    <div class="hist-entry-date" onclick="histToggleBody(this)" style="cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+      <span class="hist-arrow">▾</span>
+      <span>${label} — <span style="opacity:.7;font-style:italic;text-transform:none;">${esc(snippet)}</span></span>
+    </div>
+    <div class="hist-entry-actions">
+      <button class="hist-btn-sm" onclick="histCopyEntry(${histActiveStep},${i})">Copiar</button>
+      <button class="hist-btn-sm del" onclick="histDeleteEntry(${histActiveStep},${i})">✕</button>
+    </div>
+  </div>
+  <div class="hist-entry-body">${esc(entry.text)}</div>
+</div>`;
+  }).join('');
+}
+
+// Mantener compatibilidad con llamada anterior (addToHistory6 → histAdd 6)
+function addToHistory6(text) { histAdd(6, text); }
+
+function renderReport6(text) {
+  const box = document.getElementById('result-6');
+  if (!text.trim()) { box.innerHTML = '<span class="error-msg">Respuesta vacía.</span>'; return; }
+
+  const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = text.split('\n');
+  let html = '';
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { html += '<div style="height:8px;"></div>'; continue; }
+
+    // Sección principal (RESUMEN GENERAL, CAMBIOS DETECTADOS, CONCLUSIÓN FINAL)
+    if (/^(RESUMEN GENERAL|CAMBIOS DETECTADOS|CONCLUSI[ÓO]N FINAL)$/i.test(t)) {
+      const isConclusion = /^CONCLUSI/i.test(t);
+      html += `<div style="font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:${isConclusion ? 'var(--blue)' : 'var(--accent)'};margin:${isConclusion ? '18px' : '14px'} 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px;">${escape(t)}</div>`;
     }
-    return docRef.set({
-      settings: localSettings,
-      settingsUpdatedAt: Date.now(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }).then(() => {
-    document.getElementById('btn-sync').classList.remove('syncing');
-    setSyncStatus('ok', '✓ Ajustes sincronizados');
-  }).catch(err => {
-    document.getElementById('btn-sync').classList.remove('syncing');
-    setSyncStatus('err', 'Error: ' + err.message);
-  });
-}
-function setSyncStatus(type, msg) {
-  const el = document.getElementById('sync-status');
-  document.getElementById('sync-status-msg').textContent = msg;
-  el.className = 'visible ' + type;
-  if (type === 'ok') setTimeout(() => el.className = '', 4000);
-}
-function closeSyncStatus() { document.getElementById('sync-status').className = ''; updateSyncUI(); }
-function fbSignOut() { if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
-
-// MODALES Firebase
-function openFbKeyModal() {
-  document.getElementById('fb-key-input').value = FB_API_KEY || '';
-  document.getElementById('modal-fbkey').classList.add('visible');
-  setTimeout(() => document.getElementById('fb-key-input').focus(), 80);
-}
-function closeFbKeyModal() { document.getElementById('modal-fbkey').classList.remove('visible'); }
-function saveFbKey(val) {
-  if (!val || !val.startsWith('AIzaSy')) { alert('La clave debe empezar por AIzaSy'); return false; }
-  FB_API_KEY = val;
-  localStorage.setItem('castroverde_fb_key', val);
-  initFirebase(val);
-  closeFbKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  GEMINI KEY
-// ══════════════════════════════════════════════════════
-function openGeminiKeyModal() {
-  document.getElementById('gemini-key-input').value = GEMINI_API_KEY || '';
-  document.getElementById('modal-geminikey').classList.add('visible');
-  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
-}
-function closeGeminiKeyModal() { document.getElementById('modal-geminikey').classList.remove('visible'); }
-function saveGeminiKey(val) {
-  if (!val || !val.startsWith('AIzaSy')) { alert('La clave de Gemini debe empezar por AIzaSy'); return false; }
-  GEMINI_API_KEY = val;
-  localStorage.setItem('castroverde_ana_gemini_key', val);
-  closeGeminiKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  MISTRAL KEY
-// ══════════════════════════════════════════════════════
-function openMistralKeyModal() {
-  document.getElementById('mistral-key-input').value = MISTRAL_API_KEY || '';
-  document.getElementById('modal-mistralkey').classList.add('visible');
-  setTimeout(() => document.getElementById('mistral-key-input').focus(), 80);
-}
-function closeMistralKeyModal() { document.getElementById('modal-mistralkey').classList.remove('visible'); }
-function saveMistralKey(val) {
-  if (!val) { alert('Introduce una clave de Mistral válida'); return false; }
-  MISTRAL_API_KEY = val;
-  localStorage.setItem('castroverde_ana_mistral_key', val);
-  closeMistralKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  CLAUDE KEY
-// ══════════════════════════════════════════════════════
-function openClaudeKeyModal() {
-  document.getElementById('claude-key-input').value = CLAUDE_API_KEY || '';
-  document.getElementById('modal-claudekey').classList.add('visible');
-  setTimeout(() => document.getElementById('claude-key-input').focus(), 80);
-}
-function closeClaudeKeyModal() { document.getElementById('modal-claudekey').classList.remove('visible'); }
-function saveClaudeKey(val) {
-  if (!val || !val.startsWith('sk-ant-')) { alert('La clave de Claude debe empezar por sk-ant-'); return false; }
-  CLAUDE_API_KEY = val;
-  localStorage.setItem('castroverde_ana_claude_key', val);
-  closeClaudeKeyModal();
-  return true;
-}
-
-// ══════════════════════════════════════════════════════
-//  SELECTOR DE API
-// ══════════════════════════════════════════════════════
-function setApi(api) {
-  activeApi = api;
-  localStorage.setItem('castroverde_ana_api', api);
-  document.body.dataset.api = api;
-  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
-  // Mostrar/ocultar selector de modelo OR y botones de clave
-  document.getElementById('or-model-select').style.display      = api === 'openrouter' ? '' : 'none';
-  document.getElementById('btn-or-key-header').style.display    = api === 'openrouter' ? '' : 'none';
-  document.getElementById('btn-gemini-key').style.display       = api === 'gemini'     ? '' : 'none';
-  document.getElementById('btn-groq-key-header').style.display  = api === 'groq'       ? '' : 'none';
-  document.getElementById('btn-mistral-key').style.display      = api === 'mistral'    ? '' : 'none';
-  document.getElementById('btn-claude-key').style.display       = api === 'claude'     ? '' : 'none';
-  // Actualizar etiqueta del modelo activo
-  const apiLabels = { openrouter: null, gemini: 'Gemini 2.5 Flash', groq: 'Llama 3.3 70B', mistral: 'Mistral Large', claude: 'Claude Sonnet 4.6' };
-  if (api === 'openrouter') {
-    const sel = document.getElementById('or-model-select');
-    document.getElementById('active-model-label').textContent = sel.options[sel.selectedIndex].text;
-  } else {
-    document.getElementById('active-model-label').textContent = apiLabels[api] || api;
-  }
-}
-
-// ══════════════════════════════════════════════════════
-//  EVENTOS Y ARRANQUE
-// ══════════════════════════════════════════════════════
-document.getElementById('btn-or-key').addEventListener('click', openOrKeyModal);
-document.getElementById('btn-or-key-header').addEventListener('click', openOrKeyModal);
-document.getElementById('or-btn-save').addEventListener('click', () => saveOrKey(document.getElementById('or-key-input').value.trim()));
-document.getElementById('or-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de OpenRouter?')) {
-    OR_API_KEY = '';
-    localStorage.removeItem('castroverde_or_key');
-    document.getElementById('or-key-input').value = '';
-    closeOrKeyModal();
-  }
-});
-document.getElementById('or-btn-cancel').addEventListener('click', closeOrKeyModal);
-document.getElementById('modal-orkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-orkey')) closeOrKeyModal(); });
-
-// Gemini key modal events
-document.getElementById('btn-gemini-key').addEventListener('click', openGeminiKeyModal);
-document.getElementById('gemini-btn-save').addEventListener('click', () => saveGeminiKey(document.getElementById('gemini-key-input').value.trim()));
-document.getElementById('gemini-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Gemini?')) { GEMINI_API_KEY = ''; localStorage.removeItem('castroverde_ana_gemini_key'); document.getElementById('gemini-key-input').value = ''; closeGeminiKeyModal(); }
-});
-document.getElementById('gemini-btn-cancel').addEventListener('click', closeGeminiKeyModal);
-document.getElementById('modal-geminikey').addEventListener('click', e => { if (e.target === document.getElementById('modal-geminikey')) closeGeminiKeyModal(); });
-
-// Mistral key modal events
-document.getElementById('btn-mistral-key').addEventListener('click', openMistralKeyModal);
-document.getElementById('mistral-btn-save').addEventListener('click', () => saveMistralKey(document.getElementById('mistral-key-input').value.trim()));
-document.getElementById('mistral-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Mistral?')) { MISTRAL_API_KEY = ''; localStorage.removeItem('castroverde_ana_mistral_key'); document.getElementById('mistral-key-input').value = ''; closeMistralKeyModal(); }
-});
-document.getElementById('mistral-btn-cancel').addEventListener('click', closeMistralKeyModal);
-document.getElementById('modal-mistralkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-mistralkey')) closeMistralKeyModal(); });
-
-// Claude key modal events
-document.getElementById('btn-claude-key').addEventListener('click', openClaudeKeyModal);
-document.getElementById('claude-btn-save').addEventListener('click', () => saveClaudeKey(document.getElementById('claude-key-input').value.trim()));
-document.getElementById('claude-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Claude?')) { CLAUDE_API_KEY = ''; localStorage.removeItem('castroverde_ana_claude_key'); document.getElementById('claude-key-input').value = ''; closeClaudeKeyModal(); }
-});
-document.getElementById('claude-btn-cancel').addEventListener('click', closeClaudeKeyModal);
-document.getElementById('modal-claudekey').addEventListener('click', e => { if (e.target === document.getElementById('modal-claudekey')) closeClaudeKeyModal(); });
-// btn-groq-key-header (en la sync-bar sigue siendo para el corrector, pero el header usa btn-groq-key-header)
-document.getElementById('btn-groq-key-header').addEventListener('click', openGroqKeyModal);
-// Restaurar modelo seleccionado
-const savedModel = localStorage.getItem('castroverde_or_model');
-if (savedModel) {
-  const sel = document.getElementById('or-model-select');
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === savedModel) {
-      sel.selectedIndex = i;
-      document.getElementById('active-model-label').textContent = sel.options[i].text;
-      break;
+    // Subsección numerada (1. Pérdida de información, etc.)
+    else if (/^\d+\.\s/.test(t)) {
+      html += `<div style="font-family:var(--font-ui);font-size:10px;font-weight:500;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:1px;">${escape(t)}</div>`;
+    }
+    // Item de lista
+    else if (t.startsWith('- ') || t.startsWith('* ') || t.startsWith('• ')) {
+      const item = t.slice(2);
+      html += `<div style="padding:3px 0 3px 14px;border-left:2px solid var(--border);margin:3px 0;font-size:13px;line-height:1.6;">${escape(item)}</div>`;
+    }
+    // "Ninguna detectada" etc.
+    else if (/^ningún|^ninguna/i.test(t)) {
+      html += `<div style="color:var(--green);font-style:italic;font-size:12px;padding:2px 0 2px 14px;">${escape(t)}</div>`;
+    }
+    // Párrafo normal (resumen / conclusión)
+    else {
+      html += `<div style="font-size:13px;line-height:1.75;margin:3px 0;">${escape(t)}</div>`;
     }
   }
+  box.innerHTML = html;
 }
-document.getElementById('or-model-select').addEventListener('change', function() {
-  const label = this.options[this.selectedIndex].text;
-  document.getElementById('active-model-label').textContent = label;
-  localStorage.setItem('castroverde_or_model', this.value);
-});
-document.getElementById('btn-groq-key').addEventListener('click', openGroqKeyModal);
-document.getElementById('groq-btn-save').addEventListener('click', () => saveGroqKey(document.getElementById('groq-key-input').value.trim()));
-document.getElementById('groq-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Groq?')) {
-    GROQ_API_KEY = '';
-    localStorage.removeItem('castroverde_groq_key');
-    document.getElementById('groq-key-input').value = '';
-    closeGroqKeyModal();
-  }
-});
-document.getElementById('groq-btn-cancel').addEventListener('click', closeGroqKeyModal);
-document.getElementById('modal-groqkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-groqkey')) closeGroqKeyModal(); });
-document.getElementById('btn-settings').addEventListener('click', openSettings);
-document.getElementById('settings-save').addEventListener('click', saveSettingsFromModal);
-document.getElementById('settings-cancel').addEventListener('click', closeSettings);
-document.getElementById('settings-reset').addEventListener('click', resetSettings);
-document.getElementById('modal-settings').addEventListener('click', e => { if (e.target === document.getElementById('modal-settings')) closeSettings(); });
-document.getElementById('btn-fb-key').addEventListener('click', openFbKeyModal);
-document.getElementById('fb-btn-save').addEventListener('click', () => saveFbKey(document.getElementById('fb-key-input').value.trim()));
-document.getElementById('fb-btn-forget').addEventListener('click', () => {
-  if (confirm('¿Borrar la clave de Firebase?')) {
-    FB_API_KEY = '';
-    localStorage.removeItem('castroverde_fb_key');
-    document.getElementById('fb-key-input').value = '';
-    closeFbKeyModal();
-  }
-});
-document.getElementById('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
-document.getElementById('modal-fbkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-fbkey')) closeFbKeyModal(); });
-document.getElementById('btn-copy-prompt').addEventListener('click', () => {
-  const text = getResultBoxText();
-  if (text) navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('btn-copy-prompt');
+
+function copyReport6() {
+  if (!step6Result) return;
+  navigator.clipboard.writeText(step6Result).then(() => {
+    const btn = document.getElementById('copy-report-6');
     const orig = btn.textContent;
     btn.textContent = '✓ Copiado';
-    setTimeout(() => btn.textContent = orig, 1800);
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
   });
-});
-document.getElementById('input-text').addEventListener('input', actualizarContador);
-document.getElementById('file-input').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('input-text').value = ev.target.result.substring(0, 20000);
-    actualizarContador();
-    if (!document.getElementById('section-name').value) document.getElementById('section-name').value = file.name.replace('.txt', '');
-  };
-  reader.readAsText(file, 'UTF-8');
-  e.target.value = '';
-});
-
-// Selección de modo principal
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => setActiveProfile(btn.getAttribute('data-mode')));
-});
-
-// Pestañas principales del modal de ajustes
-document.querySelectorAll('#settings-ptabs .ptab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const profile = tab.getAttribute('data-profile');
-    document.querySelectorAll('#settings-ptabs .ptab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('#settings-panels .ppanel').forEach(panel => {
-      if (panel.getAttribute('data-profile') === profile) panel.classList.add('visible');
-      else panel.classList.remove('visible');
-    });
-  });
-});
-
-// Inicialización
-loadSettings();
-if (!getTonoProfile()) {
-  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
 }
-const savedProfile = localStorage.getItem('castroverde_active_profile_ana');
-if (savedProfile === 'narrativo' || savedProfile === 'descriptivo') setActiveProfile(savedProfile);
-else setActiveProfile('narrativo');
-actualizarContador();
-// Aplicar selector de API guardado
-setApi(activeApi);
-// Restaurar modelo OR seleccionado
-const _savedModel = localStorage.getItem('castroverde_or_model');
-if (_savedModel) {
-  const sel = document.getElementById('or-model-select');
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === _savedModel) { sel.selectedIndex = i; break; }
+
+// ══════════════════════════════════════════════════════
+//  TODO EN CADENA
+// ══════════════════════════════════════════════════════
+async function runAll() {
+  await runStep1();
+  if (!step1Result) return;
+  await runStep2();
+  if (!step2Result) return;
+  await runStep3();
+  await runStep4();
+  if (!step4Result) return;
+  await runStep5();
+  if (!step5Result) return;
+  await runStep6();
+}
+
+// ══════════════════════════════════════════════════════
+//  COPIAR
+// ══════════════════════════════════════════════════════
+function copyResult(n) {
+  const map = { 1: step1Result, 2: step2Result, 4: step4Result, 5: step5Result };
+  const text = map[n];
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-' + n);
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+
+
+// ══════════════════════════════════════════════════════
+//  PROMPTS CONFIGURABLES (localStorage)
+// ══════════════════════════════════════════════════════
+
+// Prompts por defecto (referencia inmutable)
+const DEFAULT_PROMPTS = {};
+
+function initDefaultPrompts() {
+  DEFAULT_PROMPTS[1] = PROMPT_1_SYSTEM;
+  DEFAULT_PROMPTS[2] = PROMPT_2_SYSTEM;
+  DEFAULT_PROMPTS[3] = PROMPT_3_SYSTEM;
+  DEFAULT_PROMPTS[4] = PROMPT_4_SYSTEM;
+  DEFAULT_PROMPTS[5] = PROMPT_5_SYSTEM;
+  DEFAULT_PROMPTS[6] = PROMPT_6_SYSTEM;
+}
+
+// Prompts activos (pueden ser editados)
+const ACTIVE_PROMPTS = {};
+
+function loadActivePrompts() {
+  [1,2,3,4,5,6].forEach(n => {
+    const saved = localStorage.getItem('castroverde_prompt_' + n);
+    ACTIVE_PROMPTS[n] = saved || DEFAULT_PROMPTS[n];
+  });
+}
+
+function getPrompt(n) { return CONTEXT_SYSTEM + '\n\n' + ACTIVE_PROMPTS[n]; }
+
+// ── Modal de configuración ───────────────────────────
+let currentPromptTab = 1;
+
+function openPromptsModal() {
+  currentPromptTab = 1;
+  renderPromptTab(1);
+  document.getElementById('modal-prompts-config').classList.add('visible');
+}
+
+function closePromptsModal() {
+  document.getElementById('modal-prompts-config').classList.remove('visible');
+}
+
+function switchPromptTab(n) {
+  // Guardar el textarea actual antes de cambiar
+  ACTIVE_PROMPTS[currentPromptTab] = document.getElementById('pcfg-textarea').value;
+  currentPromptTab = n;
+  renderPromptTab(n);
+}
+
+function renderPromptTab(n) {
+  [1,2,3,4,5,6].forEach(i => {
+    document.getElementById('pcfg-tab-' + i).classList.toggle('active', i === n);
+  });
+  const labels = {1:'Paso 1 · Corrección previa', 2:'Paso 2 · Edición literaria', 3:'Paso 3 · Fidelidad histórica', 4:'Paso 4 · Pulido coherencia', 5:'Paso 5 · Pulido final', 6:'Paso 6 · Análisis comparativo final'};
+  document.getElementById('pcfg-label').textContent = labels[n];
+  document.getElementById('pcfg-context-display').value = CONTEXT_SYSTEM;
+  document.getElementById('pcfg-textarea').value = ACTIVE_PROMPTS[n];
+}
+
+function restoreDefaultPrompt() {
+  if (!confirm('¿Restaurar el prompt por defecto para este paso? Se perderán los cambios no guardados.')) return;
+  ACTIVE_PROMPTS[currentPromptTab] = DEFAULT_PROMPTS[currentPromptTab];
+  document.getElementById('pcfg-textarea').value = DEFAULT_PROMPTS[currentPromptTab];
+}
+
+function savePromptConfig() {
+  // Guardar el textarea actual también
+  ACTIVE_PROMPTS[currentPromptTab] = document.getElementById('pcfg-textarea').value;
+  [1,2,3,4,5,6].forEach(n => {
+    const val = ACTIVE_PROMPTS[n].trim();
+    if (val && val !== DEFAULT_PROMPTS[n]) {
+      localStorage.setItem('castroverde_prompt_' + n, val);
+    } else {
+      localStorage.removeItem('castroverde_prompt_' + n);
+    }
+  });
+  closePromptsModal();
+  showStatus('ok', '✓ Prompts guardados');
+}
+
+document.getElementById('modal-prompts-config').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-prompts-config')) closePromptsModal();
+});
+
+// ══════════════════════════════════════════════════════
+//  CACHÉ DE PROMPTS ENVIADOS
+// ══════════════════════════════════════════════════════
+let step1Prompt = '';
+let step2Prompt = '';
+let step3Prompt = '';
+let step4Prompt = '';
+let step5Prompt = '';
+let step6Prompt = '';
+
+function buildFullPrompt(systemPrompt, userPrompt) {
+  return '=== SYSTEM ===\n' + systemPrompt + '\n\n=== USER ===\n' + userPrompt;
+}
+
+function updatePromptButtons() {
+  const texto = document.getElementById('input-text').value.trim();
+  const has = {
+    1: !!texto,
+    2: !!step1Result,
+    3: !!(texto && (step2Result || step1Result || texto)),
+    4: !!step2Result,
+    5: !!step4Result,
+    6: !!(texto && (step5Result || step4Result || step2Result))
+  };
+  [1,2,3,4,5,6].forEach(n => {
+    const btn = document.getElementById('show-prompt-' + n);
+    if (btn) btn.disabled = !has[n];
+  });
+}
+
+function buildPromptPreview(n) {
+  const texto = document.getElementById('input-text').value.trim();
+  const P = getPrompt(n);
+  switch (n) {
+    case 1:
+      if (!texto) return null;
+      return buildFullPrompt(P, 'Corrige el siguiente texto:\n\n"""\n' + texto + '\n"""');
+    case 2:
+      if (!step1Result) return null;
+      return buildFullPrompt(P, 'Edita el siguiente texto:\n\n"""\n' + step1Result + '\n"""');
+    case 3: {
+      const src = step2Result || step1Result || texto;
+      if (!src) return null;
+      const orig = texto || src;
+      return buildFullPrompt(P, 'TEXTO ORIGINAL:\n"""\n' + orig + '\n"""\n\nTEXTO EDITADO:\n"""\n' + src + '\n"""');
+    }
+    case 4:
+      if (!step2Result) return null;
+      return buildFullPrompt(P, 'Revisa el siguiente texto:\n\n"""\n' + step2Result + '\n"""');
+    case 5:
+      if (!step4Result) return null;
+      return buildFullPrompt(P, 'Revisa y pule el siguiente texto:\n\n"""\n' + step4Result + '\n"""');
+    case 6: {
+      const final = step5Result || step4Result || step2Result;
+      if (!final || !texto) return null;
+      return buildFullPrompt(P, 'TEXTO ORIGINAL:\n"""\n' + texto + '\n"""\n\nTEXTO EDITADO:\n"""\n' + final + '\n"""');
+    }
+    default: return null;
   }
 }
-// Si falta Firebase, pedirla; luego pedir la clave de la API activa si falta
-if (!FB_API_KEY) setTimeout(openFbKeyModal, 500);
-if (activeApi === 'openrouter' && !OR_API_KEY)      setTimeout(openOrKeyModal,      FB_API_KEY ? 300 : 900);
-if (activeApi === 'gemini'     && !GEMINI_API_KEY)  setTimeout(openGeminiKeyModal,  FB_API_KEY ? 300 : 900);
-if (activeApi === 'groq'       && !GROQ_API_KEY)    setTimeout(openGroqKeyModal,    FB_API_KEY ? 300 : 900);
-if (activeApi === 'mistral'    && !MISTRAL_API_KEY) setTimeout(openMistralKeyModal, FB_API_KEY ? 300 : 900);
-if (activeApi === 'claude'     && !CLAUDE_API_KEY)  setTimeout(openClaudeKeyModal,  FB_API_KEY ? 300 : 900);
+
+function showPrompt(n) {
+  const cached = { 1: step1Prompt, 2: step2Prompt, 3: step3Prompt, 4: step4Prompt, 5: step5Prompt, 6: step6Prompt };
+  const titles  = { 1: 'Prompt Paso 1 · Corrección', 2: 'Prompt Paso 2 · Edición', 3: 'Prompt Paso 3 · Fidelidad', 4: 'Prompt Paso 4 · Coherencia', 5: 'Prompt Paso 5 · Pulido final', 6: 'Prompt Paso 6 · Análisis final' };
+  const text = cached[n] || buildPromptPreview(n);
+  if (!text) return;
+  const isPreview = !cached[n];
+  document.getElementById('modal-prompt-title').textContent = titles[n] + (isPreview ? ' · Vista previa' : '');
+  document.getElementById('modal-prompt-text').value = text;
+  document.getElementById('copy-prompt-modal').textContent = 'Copiar todo';
+  document.getElementById('copy-prompt-modal').classList.remove('copied');
+  document.getElementById('modal-prompt').classList.add('visible');
+}
+
+function closePromptModal() {
+  document.getElementById('modal-prompt').classList.remove('visible');
+}
+
+function copyPromptModal() {
+  const text = document.getElementById('modal-prompt-text').value;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-prompt-modal');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.textContent = 'Copiar todo'; }, 2000);
+  });
+}
+
+document.getElementById('modal-prompt').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-prompt')) closePromptModal();
+});
+
+// ══════════════════════════════════════════════════════
+//  ARRANQUE
+// ══════════════════════════════════════════════════════
+initDefaultPrompts();
+loadActivePrompts();
+updateCount();
+updateNavButtons();
+updatePromptButtons();
+setApi(activeApi);
+if (activeApi === 'gemini'      && !GEMINI_API_KEY)  setTimeout(openGeminiModal,      500);
+if (activeApi === 'groq'        && !GROQ_API_KEY)    setTimeout(openGroqModal,        500);
+if (activeApi === 'mistral'     && !MISTRAL_API_KEY) setTimeout(openMistralModal,     500);
+if (activeApi === 'claude'      && !CLAUDE_API_KEY)  setTimeout(openClaudeModal,      500);
+if (activeApi === 'openrouter'  && !OR_API_KEY)      setTimeout(openOpenRouterModal,  500);
 </script>
 </body>
 </html>
