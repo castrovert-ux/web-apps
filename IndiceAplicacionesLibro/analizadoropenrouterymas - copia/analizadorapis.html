@@ -60,7 +60,7 @@
     .sync-status-close:hover{opacity:1;}
 
     /* Cabecera con selector de modo */
-    header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;overflow-x:auto;}
+    header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
     .logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
     .logo span{color:var(--accent);font-style:italic;}
     .logo small{display:block;font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
@@ -112,9 +112,8 @@
     .panel-footer{flex-shrink:0;padding:9px 15px;border-top:1px solid var(--border);background:var(--card);display:flex;gap:7px;}
 
     .panel-right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-    .panel-right-bars{flex-shrink:0;overflow-y:auto;max-height:40%;}
-    .prompt-buttons-bar{flex-shrink:0;padding:8px 18px 7px;border-bottom:1px solid var(--border);background:var(--surface);}
-    .prompt-buttons-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:6px;display:block;}
+    .prompt-buttons-bar{flex-shrink:0;padding:14px 18px 12px;border-bottom:1px solid var(--border);background:var(--surface);}
+    .prompt-buttons-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:10px;display:block;}
     .prompt-buttons-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
     .btn-prompt{
       padding:9px 6px;border:1px solid var(--border);border-radius:var(--radius);
@@ -286,7 +285,6 @@
   </div>
 
   <div class="panel-right">
-    <div class="panel-right-bars">
     <div class="prompt-buttons-bar">
       <span class="prompt-buttons-label">Paso 0 · Corrección técnica previa</span>
       <div style="display:flex;gap:7px;align-items:center;">
@@ -296,19 +294,9 @@
         <span id="corrector-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
       </div>
     </div>
-    <div class="prompt-buttons-bar" style="border-top:none;padding-top:4px;">
-      <span class="prompt-buttons-label">Paso 0b · Aplicar plan de acción</span>
-      <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-aplicar-plan btn-corrector" id="btn-aplicar-plan" onclick="aplicarPlan()">
-          ✦ Aplicar plan
-        </button>
-        <span id="aplicar-plan-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;">Genera primero el Plan en los pasos de análisis</span>
-      </div>
-    </div>
-    <div class="prompt-buttons-bar" style="border-top:none;padding-top:4px;">
+    <div class="prompt-buttons-bar" style="border-top:none;padding-top:6px;">
       <span class="prompt-buttons-label">Selecciona el análisis · <span id="active-model-label">Gemini 2.5 Flash</span></span>
       <div class="prompt-buttons-grid" id="prompt-buttons-grid"></div>
-    </div>
     </div>
     <div class="result-area">
       <div class="result-empty" id="result-empty">
@@ -1014,90 +1002,6 @@ function saveOrKey(val) {
   localStorage.setItem('castroverde_or_key', val);
   closeOrKeyModal();
   return true;
-}
-
-
-// ══════════════════════════════════════════════════════
-//  PASO 0b — APLICAR PLAN DE ACCIÓN (usa la API activa)
-// ══════════════════════════════════════════════════════
-async function aplicarPlan() {
-  const texto = document.getElementById('input-text').value.trim();
-  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
-
-  const planTexto = getResultBoxText().trim();
-  if (!planTexto) {
-    alert('Primero genera el Plan de intervención (botón "Plan") en los pasos de análisis.');
-    return;
-  }
-
-  const api = document.body.dataset.api || activeApi;
-  if (api === 'openrouter' && !OR_API_KEY)      { setSyncStatus('err', 'Introduce la clave de OpenRouter primero.'); setTimeout(openOrKeyModal, 800); return; }
-  if (api === 'gemini'     && !GEMINI_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Gemini primero.'); setTimeout(openGeminiKeyModal, 800); return; }
-  if (api === 'groq'       && !GROQ_API_KEY)    { setSyncStatus('err', 'Introduce la clave de Groq primero.'); setTimeout(openGroqKeyModal, 800); return; }
-  if (api === 'mistral'    && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral primero.'); setTimeout(openMistralKeyModal, 800); return; }
-  if (api === 'claude'     && !CLAUDE_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Claude primero.'); setTimeout(openClaudeKeyModal, 800); return; }
-
-  const APLICAR_SYSTEM = `ROL
-Eres un corrector de textos históricos.
-
-OBJETIVO
-Aplicar los cambios indicados en el plan de acción sin alterar el estilo ni la voz del autor.
-
-RESTRICCIÓN ABSOLUTA
-No añadir información nueva ni cambiar el significado. No reescribir lo que no está señalado en el plan.
-
-QUÉ PUEDES HACER
-- Aplicar cada intervención del plan en el orden indicado
-- Corregir ortografía y puntuación si el plan lo señala
-- Dividir frases largas si el plan lo señala
-- Eliminar repeticiones si el plan lo señala
-- Reordenar ligeramente frases dentro del mismo párrafo si el plan lo señala
-
-QUÉ NO DEBES HACER
-- No reescribir el estilo
-- No embellecer el texto
-- No añadir explicaciones ni transiciones no pedidas
-- No cambiar el tono
-- No tocar lo que el plan no menciona
-
-SALIDA
-Devuelve solo el texto corregido, sin comentarios ni explicaciones.`;
-
-  const userMsg = `PLAN DE ACCIÓN:\n\n${planTexto}\n\n${'─'.repeat(60)}\n\nTEXTO ORIGINAL:\n\n"""\n${texto}\n"""`;
-
-  const btn = document.getElementById('btn-aplicar-plan');
-  const status = document.getElementById('aplicar-plan-status');
-  btn.classList.add('running');
-  btn.textContent = '… Aplicando';
-
-  const modelSelect = document.getElementById('or-model-select');
-  const apiLabel = api === 'openrouter'
-    ? modelSelect.options[modelSelect.selectedIndex].text
-    : api.charAt(0).toUpperCase() + api.slice(1);
-  status.textContent = 'Llamando a ' + apiLabel + '…';
-
-  document.getElementById('result-empty').style.display = 'none';
-  document.getElementById('result-content').classList.add('visible');
-  document.getElementById('result-badge').textContent = 'Plan';
-  document.getElementById('result-label-text').textContent = 'Texto con plan aplicado';
-  const box = document.getElementById('result-box');
-  box.innerHTML = '<span class="loading">… Aplicando plan con ' + apiLabel + '</span>';
-  document.querySelectorAll('.btn-prompt').forEach(b => b.classList.remove('active'));
-
-  try {
-    const modelId = modelSelect.value;
-    const respuesta = await callAPI(APLICAR_SYSTEM, userMsg, modelId);
-    setResultBox(respuesta);
-    status.textContent = '✓ Listo';
-    setTimeout(() => { status.textContent = 'Genera primero el Plan en los pasos de análisis'; }, 4000);
-  } catch(e) {
-    box.innerHTML = '<span class="loading">✗ Error: ' + e.message + '</span>';
-    status.textContent = '✗ ' + e.message;
-    setTimeout(() => { status.textContent = 'Genera primero el Plan en los pasos de análisis'; }, 6000);
-  } finally {
-    btn.classList.remove('running');
-    btn.textContent = '✦ Aplicar plan';
-  }
 }
 
 // ══════════════════════════════════════════════════════
