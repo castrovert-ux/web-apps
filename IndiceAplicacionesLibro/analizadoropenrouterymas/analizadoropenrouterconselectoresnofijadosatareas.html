@@ -199,24 +199,6 @@
     .modal-input:focus{border-color:var(--accent);}
     .btn-key{background:none;border:1px solid rgba(30,107,58,0.35);color:var(--accent);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;}
     .btn-key:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
-    /* ── Histórico ── */
-    #ana-modal-history .modal-box { width:820px; max-height:88vh; display:flex; flex-direction:column; }
-    .hist-tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
-    .hist-tab-btn { padding:5px 13px; border-radius:20px; border:1px solid var(--border); background:var(--card); color:var(--muted); font-family:var(--font-ui); font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; transition:all .15s; }
-    .hist-tab-btn.active { background:var(--accent); color:var(--bg); border-color:var(--accent); }
-    .hist-tab-btn:hover:not(.active) { color:var(--accent); border-color:var(--accent); }
-    .hist-list { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; min-height:340px; max-height:55vh; }
-    .hist-entry { border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); overflow:hidden; flex-shrink:0; }
-    .hist-entry-header { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--card); cursor:pointer; font-family:var(--font-ui); font-size:9px; letter-spacing:1px; color:var(--muted); }
-    .hist-entry-header:hover { color:var(--text); }
-    .hist-entry-date { flex:1; }
-    .hist-entry-actions { display:flex; gap:5px; flex-shrink:0; }
-    .hist-btn-sm { background:transparent; border:1px solid var(--border); color:var(--muted); padding:2px 8px; border-radius:2px; font-family:var(--font-ui); font-size:8px; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all .15s; }
-    .hist-btn-sm:hover { border-color:var(--accent); color:var(--accent); }
-    .hist-btn-sm.del:hover { border-color:var(--red); color:var(--red); }
-    .hist-entry-body { display:none; padding:10px 14px; font-size:12px; line-height:1.75; color:var(--text); white-space:pre-wrap; word-break:break-word; max-height:280px; overflow-y:auto; font-family:var(--font-body); }
-    .hist-entry-body.open { display:block; }
-    .hist-empty { font-family:var(--font-ui); font-size:10px; color:var(--muted); text-align:center; padding:40px; letter-spacing:1px; }
   </style>
 </head>
 <body>
@@ -271,7 +253,6 @@
     <button class="btn-key" id="btn-groq-key-header" style="display:none;">⚙ Groq</button>
     <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
     <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
-    <button class="btn-key" id="btn-historico" onclick="anaOpenHistoryModal()" style="border-color:rgba(42,122,74,.4);color:#6ab88a;">⏱ Histórico</button>
     <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
   </div>
 </header>
@@ -309,9 +290,8 @@
     <div class="prompt-buttons-bar">
       <span class="prompt-buttons-label">Paso 0 · Corrección técnica previa</span>
       <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-corrector" id="btn-corrector" onclick="runCorrector()" style="display:flex;flex-direction:column;align-items:center;gap:1px;">
-          <span>✦ Corrector técnico</span>
-          <span style="font-size:7px;opacity:0.65;letter-spacing:0.5px;" id="corrector-api-label">Groq</span>
+        <button class="btn-corrector" id="btn-corrector" onclick="runCorrector()">
+          ✦ Corrector técnico
         </button>
         <span id="corrector-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;"></span>
       </div>
@@ -319,9 +299,8 @@
     <div class="prompt-buttons-bar" style="border-top:none;padding-top:4px;">
       <span class="prompt-buttons-label">Paso 0b · Aplicar plan de acción</span>
       <div style="display:flex;gap:7px;align-items:center;">
-        <button class="btn-aplicar-plan btn-corrector" id="btn-aplicar-plan" onclick="aplicarPlan()" style="display:flex;flex-direction:column;align-items:center;gap:1px;">
-          <span>✦ Aplicar plan</span>
-          <span style="font-size:7px;opacity:0.65;letter-spacing:0.5px;">Mistral Small</span>
+        <button class="btn-aplicar-plan btn-corrector" id="btn-aplicar-plan" onclick="aplicarPlan()">
+          ✦ Aplicar plan
         </button>
         <span id="aplicar-plan-status" style="font-family:var(--font-ui);font-size:9px;color:var(--muted);letter-spacing:1px;">Genera primero el Plan en los pasos de análisis</span>
       </div>
@@ -588,13 +567,13 @@ CONTEXTO HISTÓRICO FIJO
 
 PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   prompts: [
-    {name:'Estructura', label:'Estructura', llm:'gemini', llmLabel:'Gemini 2.5 Flash', content:'Evalúa la estructura global: ritmo, progresión emocional y capacidad de enganchar.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Tono', label:'Tono', llm:'mistral', llmLabel:'Mistral Small', content:'Evalúa el tono narrativo. ¿Es evocador? ¿Hay pasajes fríos?\nObjetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Ritmo', label:'Ritmo', llm:'mistral', llmLabel:'Mistral Small', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Lector', label:'Lector', llm:'mistral', llmLabel:'Mistral Small', content:'Como lector sin conocimientos previos: ¿qué engancha? ¿Dónde se pierde el interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Síntesis', label:'Síntesis', llm:'mistral', llmLabel:'Mistral Small', content:'Los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Cirugía', label:'Cirugía', llm:'claude', llmLabel:'Claude Sonnet 4.6', content:'Señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno: cita el original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Plan editorial', label:'Plan editorial', llm:'mistral', llmLabel:'Mistral Small', content:'Plan de intervención secuencial. Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura global: ritmo, progresión emocional y capacidad de enganchar.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', content:'Evalúa el tono narrativo. ¿Es evocador? ¿Hay pasajes fríos?\nObjetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', content:'Como lector sin conocimientos previos: ¿qué engancha? ¿Dónde se pierde el interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno: cita el original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial. Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
   ]
 };
 
@@ -620,13 +599,13 @@ CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, 
 
 PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
   prompts: [
-    {name:'Estructura', label:'Estructura', llm:'gemini', llmLabel:'Gemini 2.5 Flash', content:'Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Tono', label:'Tono', llm:'mistral', llmLabel:'Mistral Small', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado?\nObjetivo: {{objetivo}}\n\nSeñala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Ritmo', label:'Ritmo', llm:'mistral', llmLabel:'Mistral Small', content:'Analiza el ritmo desde la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Lector', label:'Lector', llm:'mistral', llmLabel:'Mistral Small', content:'Como lector no experto: ¿qué partes se entienden con facilidad? ¿Dónde se pierde el hilo? ¿Qué necesita mejor explicación?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Síntesis', label:'Síntesis', llm:'mistral', llmLabel:'Mistral Small', content:'Los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Cirugía', label:'Cirugía', llm:'claude', llmLabel:'Claude Sonnet 4.6', content:'Señala 3 fragmentos confusos o mal estructurados. Para cada uno: cita el original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
-    {name:'Plan editorial', label:'Plan editorial', llm:'mistral', llmLabel:'Mistral Small', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+    {name:'Estructura', label:'Estructura', content:'Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado?\nObjetivo: {{objetivo}}\n\nSeñala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', content:'Analiza el ritmo desde la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', content:'Como lector no experto: ¿qué partes se entienden con facilidad? ¿Dónde se pierde el hilo? ¿Qué necesita mejor explicación?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', content:'Los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', content:'Señala 3 fragmentos confusos o mal estructurados. Para cada uno: cita el original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan', label:'Plan', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
   ]
 };
 
@@ -681,18 +660,14 @@ function generatePrompt(idx, btnEl) {
   const texto = document.getElementById('input-text').value.trim();
   if (!texto) { alert('Primero pega el texto de la sección.'); return; }
 
-  const p = settings[activeProfile].prompts[idx];
-
-  // Usar LLM preferido del prompt si existe, o el selector global
-  const preferredApi = p.llm || null;
-  const api = preferredApi || document.body.dataset.api || activeApi;
-
+  const api = document.body.dataset.api || activeApi;
   if (api === 'openrouter' && !OR_API_KEY) { setSyncStatus('err', 'Introduce la clave de OpenRouter primero.'); setTimeout(openOrKeyModal, 800); return; }
   if (api === 'gemini'     && !GEMINI_API_KEY) { setSyncStatus('err', 'Introduce la clave de Gemini primero.'); setTimeout(openGeminiKeyModal, 800); return; }
   if (api === 'groq'       && !GROQ_API_KEY) { setSyncStatus('err', 'Introduce la clave de Groq primero.'); setTimeout(openGroqKeyModal, 800); return; }
   if (api === 'mistral'    && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral primero.'); setTimeout(openMistralKeyModal, 800); return; }
   if (api === 'claude'     && !CLAUDE_API_KEY) { setSyncStatus('err', 'Introduce la clave de Claude primero.'); setTimeout(openClaudeKeyModal, 800); return; }
 
+  const p = settings[activeProfile].prompts[idx];
   const objetivo = document.getElementById('section-goal').value.trim();
   const systemMsg = buildSystemWithTono();
   const userMsg = buildUserPrompt(p.content, texto, objetivo);
@@ -702,25 +677,19 @@ function generatePrompt(idx, btnEl) {
 
   const modelSelect = document.getElementById('or-model-select');
   const modelId = modelSelect.value;
-  // Etiqueta del modelo a mostrar
-  const apiLabelMap = { gemini: 'Gemini 2.5 Flash', groq: 'Llama 3.3 70B', mistral: 'Mistral Small', claude: 'Claude Sonnet 4.6' };
   const apiLabel = api === 'openrouter'
     ? modelSelect.options[modelSelect.selectedIndex].text
-    : (apiLabelMap[api] || api);
+    : api.charAt(0).toUpperCase() + api.slice(1);
 
   document.getElementById('result-empty').style.display = 'none';
   document.getElementById('result-content').classList.add('visible');
   document.getElementById('result-badge').textContent = p.label;
-  document.getElementById('result-label-text').textContent = p.name + ' · ' + apiLabel;
+  document.getElementById('result-label-text').textContent = p.name;
   const box = document.getElementById('result-box');
   box.innerHTML = '<span class="loading">… Analizando con ' + apiLabel + '</span>';
 
-  // Guardar para histórico
-  const sectionName = document.getElementById('section-name').value.trim() || '(sin título)';
-
-  callAPI(systemMsg, userMsg, modelId, api).then(respuesta => {
+  callAPI(systemMsg, userMsg, modelId).then(respuesta => {
     setResultBox(respuesta);
-    anaHistAdd(p.name, respuesta, sectionName, apiLabel);
   }).catch(err => {
     box.innerHTML = '<span class="loading">✗ Error: ' + err.message + '</span>';
   }).finally(() => {
@@ -912,13 +881,9 @@ function renderPromptButtons() {
   settings[activeProfile].prompts.forEach((p, i) => {
     const btn = document.createElement('button');
     btn.className = 'btn-prompt';
+    btn.textContent = p.label;
+    btn.title = p.name;
     btn.setAttribute('data-idx', i);
-    // Label principal + badge LLM si está definido
-    const llmBadge = p.llmLabel
-      ? `<span style="display:block;font-size:7px;opacity:0.65;margin-top:2px;letter-spacing:0.5px;">${p.llmLabel}</span>`
-      : '';
-    btn.innerHTML = `<span>${p.label}</span>${llmBadge}`;
-    btn.title = p.name + (p.llmLabel ? ' · ' + p.llmLabel : '');
     btn.addEventListener('click', () => generatePrompt(i, btn));
     grid.appendChild(btn);
   });
@@ -1060,7 +1025,6 @@ function saveSettingsFromModal() {
 
   saveSettings();
   renderPromptButtons();
-  updateCorrectorApiLabel();
   closeSettings();
 }
 
@@ -1164,7 +1128,7 @@ async function aplicarPlan() {
   const btn = document.getElementById('btn-aplicar-plan');
   const status = document.getElementById('aplicar-plan-status');
   btn.classList.add('running');
-  btn.querySelector('span').textContent = '… Aplicando';
+  btn.textContent = '… Aplicando';
 
   const modelSelect = document.getElementById('or-model-select');
   const apiLabels = { groq:'Groq', gemini:'Gemini', openrouter:'OpenRouter', mistral:'Mistral', claude:'Claude' };
@@ -1185,8 +1149,6 @@ async function aplicarPlan() {
     const modelId = modelSelect.value;
     const respuesta = await callAPI(systemPrompt, userMsg, modelId, api);
     setResultBox(respuesta);
-    const sectionName = document.getElementById('section-name').value.trim() || '(sin título)';
-    anaHistAdd('Aplicar plan', respuesta, sectionName, apiLabel);
     status.textContent = '✓ Listo';
     setTimeout(() => { status.textContent = 'Genera primero el Plan en los pasos de análisis'; }, 4000);
   } catch(e) {
@@ -1195,7 +1157,7 @@ async function aplicarPlan() {
     setTimeout(() => { status.textContent = 'Genera primero el Plan en los pasos de análisis'; }, 6000);
   } finally {
     btn.classList.remove('running');
-    btn.querySelector('span').textContent = '✦ Aplicar plan';
+    btn.textContent = '✦ Aplicar plan';
   }
 }
 
@@ -1263,7 +1225,7 @@ async function runCorrector() {
   const btn = document.getElementById('btn-corrector');
   const status = document.getElementById('corrector-status');
   btn.classList.add('running');
-  btn.querySelector('span').textContent = '… Corrigiendo';
+  btn.textContent = '… Corrigiendo';
 
   const apiLabels = { groq:'Groq', gemini:'Gemini', openrouter:'OpenRouter', mistral:'Mistral', claude:'Claude' };
   status.textContent = 'Llamando a ' + (apiLabels[corrApi] || corrApi) + '…';
@@ -1290,8 +1252,6 @@ async function runCorrector() {
     if (!textoCorregido) throw new Error('Respuesta vacía');
     document.getElementById('input-text').value = textoCorregido;
     actualizarContador();
-    const sectionName = document.getElementById('section-name').value.trim() || '(sin título)';
-    anaHistAdd('Corrector técnico', textoCorregido, sectionName, ANA_CORRECTOR_API_LABELS[corrApi] || corrApi);
     status.textContent = '✓ Texto actualizado';
     setTimeout(() => { status.textContent = ''; }, 4000);
   } catch(e) {
@@ -1299,7 +1259,7 @@ async function runCorrector() {
     setTimeout(() => { status.textContent = ''; }, 6000);
   } finally {
     btn.classList.remove('running');
-    btn.querySelector('span').textContent = '✦ Corrector técnico';
+    btn.textContent = '✦ Corrector técnico';
   }
 }
 
@@ -1647,142 +1607,6 @@ if (activeApi === 'gemini'     && !GEMINI_API_KEY)  setTimeout(openGeminiKeyModa
 if (activeApi === 'groq'       && !GROQ_API_KEY)    setTimeout(openGroqKeyModal,    FB_API_KEY ? 300 : 900);
 if (activeApi === 'mistral'    && !MISTRAL_API_KEY) setTimeout(openMistralKeyModal, FB_API_KEY ? 300 : 900);
 if (activeApi === 'claude'     && !CLAUDE_API_KEY)  setTimeout(openClaudeKeyModal,  FB_API_KEY ? 300 : 900);
-
-// ══════════════════════════════════════════════════════
-//  ETIQUETA DINÁMICA DEL CORRECTOR TÉCNICO
-// ══════════════════════════════════════════════════════
-const ANA_CORRECTOR_API_LABELS = {
-  groq: 'Groq · Llama 3.3 70B',
-  gemini: 'Gemini 2.5 Flash',
-  openrouter: 'OpenRouter',
-  mistral: 'Mistral Small',
-  claude: 'Claude Sonnet 4.6'
-};
-function updateCorrectorApiLabel() {
-  const el = document.getElementById('corrector-api-label');
-  if (!el) return;
-  const api = getCorrectorApi();
-  el.textContent = ANA_CORRECTOR_API_LABELS[api] || api;
-}
-updateCorrectorApiLabel();
-
-// ══════════════════════════════════════════════════════
-//  HISTÓRICO DEL ANALIZADOR
-// ══════════════════════════════════════════════════════
-const ANA_HIST_LABELS = ['Estructura','Tono','Ritmo','Lector','Síntesis','Cirugía','Plan editorial','Corrector técnico','Aplicar plan'];
-
-function anaHistKey(name) { return 'castroverde_ana_hist_' + name.replace(/\s+/g,'_'); }
-function anaHistLoad(name) {
-  try { return JSON.parse(localStorage.getItem(anaHistKey(name)) || '[]'); } catch { return []; }
-}
-function anaHistSave(name, arr) {
-  localStorage.setItem(anaHistKey(name), JSON.stringify(arr));
-}
-function anaHistAdd(stepName, text, sectionName, apiLabel) {
-  const arr = anaHistLoad(stepName);
-  arr.unshift({ ts: new Date().toISOString(), text, section: sectionName || '', api: apiLabel || '' });
-  if (arr.length > 40) arr.splice(40);
-  anaHistSave(stepName, arr);
-}
-
-let anaHistActiveStep = ANA_HIST_LABELS[0];
-
-function anaOpenHistoryModal(step) {
-  anaHistActiveStep = step || ANA_HIST_LABELS[0];
-  document.getElementById('ana-modal-history').classList.add('visible');
-  anaHistRenderTabs();
-  anaHistRenderList();
-}
-function anaCloseHistoryModal() {
-  document.getElementById('ana-modal-history').classList.remove('visible');
-}
-document.getElementById('ana-modal-history').addEventListener('click', e => {
-  if (e.target === document.getElementById('ana-modal-history')) anaCloseHistoryModal();
-});
-
-function anaHistRenderTabs() {
-  const container = document.getElementById('ana-hist-tabs');
-  container.innerHTML = ANA_HIST_LABELS.map(name => {
-    const count = anaHistLoad(name).length;
-    const active = name === anaHistActiveStep ? ' active' : '';
-    return `<button class="hist-tab-btn${active}" onclick="anaHistSwitchTab('${name}')">${name} <span style="opacity:.6">(${count})</span></button>`;
-  }).join('');
-}
-function anaHistSwitchTab(name) {
-  anaHistActiveStep = name;
-  anaHistRenderTabs();
-  anaHistRenderList();
-}
-function anaHistClearStep() {
-  if (!confirm('¿Borrar todos los registros de "' + anaHistActiveStep + '"?')) return;
-  localStorage.removeItem(anaHistKey(anaHistActiveStep));
-  anaHistRenderTabs();
-  anaHistRenderList();
-}
-function anaHistDeleteEntry(name, idx) {
-  const arr = anaHistLoad(name);
-  arr.splice(idx, 1);
-  anaHistSave(name, arr);
-  anaHistRenderTabs();
-  anaHistRenderList();
-}
-function anaHistCopyEntry(name, idx) {
-  const arr = anaHistLoad(name);
-  if (!arr[idx]) return;
-  navigator.clipboard.writeText(arr[idx].text).then(() => setSyncStatus('ok', '✓ Registro copiado'));
-}
-function anaHistToggleBody(el) {
-  const body = el.parentElement.nextElementSibling;
-  const arrow = el.querySelector('.hist-arrow');
-  const open = body.classList.toggle('open');
-  if (arrow) arrow.textContent = open ? '▴' : '▾';
-}
-
-function anaHistRenderList() {
-  const list = document.getElementById('ana-hist-list');
-  const arr = anaHistLoad(anaHistActiveStep);
-  if (!arr.length) {
-    list.innerHTML = '<div class="hist-empty">Sin registros para este análisis.</div>';
-    return;
-  }
-  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  list.innerHTML = arr.map((entry, i) => {
-    const d = new Date(entry.ts);
-    const dateLabel = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})
-      + ' &nbsp;·&nbsp; ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    const sectionInfo = entry.section ? ` &nbsp;·&nbsp; <em>${esc(entry.section)}</em>` : '';
-    const apiInfo = entry.api ? ` &nbsp;·&nbsp; ${esc(entry.api)}` : '';
-    const snippet = entry.text.slice(0, 100).replace(/\n/g,' ') + (entry.text.length > 100 ? '…' : '');
-    const nameEsc = anaHistActiveStep.replace(/'/g,"\\'");
-    return `<div class="hist-entry">
-  <div class="hist-entry-header">
-    <div class="hist-entry-date" onclick="anaHistToggleBody(this)" style="cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
-      <span class="hist-arrow">▾</span>
-      <span>${dateLabel}${sectionInfo}${apiInfo} — <span style="opacity:.7;font-style:italic;text-transform:none;">${esc(snippet)}</span></span>
-    </div>
-    <div class="hist-entry-actions">
-      <button class="hist-btn-sm" onclick="anaHistCopyEntry('${nameEsc}',${i})">Copiar</button>
-      <button class="hist-btn-sm del" onclick="anaHistDeleteEntry('${nameEsc}',${i})">✕</button>
-    </div>
-  </div>
-  <div class="hist-entry-body">${esc(entry.text)}</div>
-</div>`;
-  }).join('');
-}
 </script>
-<!-- MODAL HISTÓRICO -->
-<div class="modal-overlay" id="ana-modal-history">
-  <div class="modal-box" style="width:820px;max-height:88vh;display:flex;flex-direction:column;">
-    <div class="modal-title">Histórico de análisis</div>
-    <div class="modal-sub">Registros guardados en localStorage · Borrado individual o completo por paso</div>
-    <div class="hist-tabs" id="ana-hist-tabs"></div>
-    <div class="hist-list" id="ana-hist-list"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-shrink:0;">
-      <button class="btn btn-ghost" onclick="anaHistClearStep()" style="font-size:9px;padding:5px 11px;color:var(--red);border-color:var(--red);">✕ Borrar este paso</button>
-      <button class="btn btn-ghost" onclick="anaCloseHistoryModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
