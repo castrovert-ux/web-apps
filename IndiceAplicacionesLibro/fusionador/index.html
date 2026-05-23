@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fusionador — Castroverde de Cerrato</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: rgba(0,0,0,0.12);
+  --border-mid: rgba(0,0,0,0.22);
+  --text: #1a1917;
+  --text-muted: #6b6a65;
+  --text-hint: #9e9d99;
+  --accent: #3b3a35;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141412;
+    --surface: #1e1d1b;
+    --surface2: #272622;
+    --border: rgba(255,255,255,0.10);
+    --border-mid: rgba(255,255,255,0.20);
+    --text: #e8e6e0;
+    --text-muted: #9a9890;
+    --text-hint: #6b6a65;
+    --accent: #c8c6be;
+  }
+}
+
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 2rem 1rem 4rem;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 2rem;
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 1.25rem;
+}
+
+header h1 {
+  font-size: 26px;
+  font-weight: normal;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-style: italic;
+}
+
+header p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 5px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-style: normal;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 600px) {
+  .cols { grid-template-columns: 1fr; }
+}
+
+.col-label {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+textarea {
+  width: 100%;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  line-height: 1.7;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+  min-height: 170px;
+  transition: border-color 0.15s;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--border-mid);
+}
+
+.char-counter {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  color: var(--text-hint);
+  text-align: right;
+  margin-top: 4px;
+}
+
+.prompt-section {
+  margin-bottom: 14px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface2);
+  border-bottom: 0.5px solid var(--border);
+}
+
+.prompt-header:hover { background: var(--bg); }
+
+.prompt-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-hint);
+  border: 0.5px solid var(--border);
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.toggle-lbl {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.prompt-body {
+  display: none;
+  padding: 0;
+}
+
+.prompt-body.open { display: block; }
+
+.prompt-area {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  font-family: 'Courier New', Courier, monospace;
+  line-height: 1.65;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+  min-height: 240px;
+}
+
+.prompt-area:focus { outline: none; }
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13.5px;
+  cursor: pointer;
+  border: 0.5px solid var(--border-mid);
+  background: var(--surface);
+  color: var(--text);
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: -0.01em;
+}
+
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.35; }
+
+.btn-sm {
+  padding: 7px 12px;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.result-section {
+  display: none;
+}
+
+.result-section.visible { display: block; }
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.result-label {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.result-box {
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  font-size: 14.5px;
+  line-height: 1.85;
+  background: var(--surface);
+  color: var(--text);
+  white-space: pre-wrap;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  min-height: 60px;
+}
+
+.result-box.streaming {
+  border-color: var(--border-mid);
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--border); }
+  50% { border-color: var(--border-mid); }
+}
+
+.error-box {
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  background: #fff0f0;
+  color: #a83232;
+  border: 0.5px solid #f5c0c0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error-box { background: #2a1414; color: #f09090; border-color: #5a2020; }
+}
+
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-top-color: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-primary .spinner { border-color: rgba(0,0,0,0.25); border-top-color: rgba(0,0,0,0.75); }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* API key section */
+.apikey-section {
+  margin-bottom: 14px;
+}
+
+.apikey-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.apikey-input {
+  flex: 1;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'Courier New', Courier, monospace;
+  background: var(--surface);
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+
+.apikey-input:focus { outline: none; border-color: var(--border-mid); }
+
+.apikey-note {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  color: var(--text-hint);
+  margin-top: 5px;
+}
+
+.apikey-note a { color: var(--text-muted); }
+
+.divider {
+  border: none;
+  border-top: 0.5px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+.model-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.model-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.model-btn:hover { background: var(--surface2); }
+
+.model-btn.active {
+  border-color: var(--border-mid);
+  background: var(--surface2);
+  box-shadow: inset 0 0 0 0.5px var(--border-mid);
+}
+
+.model-name {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.model-sub {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  color: var(--text-hint);
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Fusionador</h1>
+    <p>Combina texto original y versión editada preservando la voz del autor · Castroverde de Cerrato</p>
+  </header>
+
+  <div class="apikey-section">
+    <div class="col-label" style="margin-bottom:8px">Modelo</div>
+    <div class="model-selector" id="modelSelector">
+      <button class="model-btn active" data-provider="anthropic" id="btnModelAnthropic">
+        <span class="model-name">Claude Sonnet 4</span>
+        <span class="model-sub">Anthropic</span>
+      </button>
+      <button class="model-btn" data-provider="mistral" id="btnModelMistral">
+        <span class="model-name">Mistral Small 3.2</span>
+        <span class="model-sub">Mistral AI</span>
+      </button>
+    </div>
+
+    <div id="keyAnthropicBlock">
+      <div class="col-label" style="margin-bottom:6px; margin-top:12px">API Key — Anthropic</div>
+      <div class="apikey-row">
+        <input type="password" class="apikey-input" id="apiKeyAnthropic" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+        <button class="btn btn-sm" id="btnSaveAnthropic" style="margin-left:0">Guardar</button>
+        <button class="btn btn-sm" id="btnClearAnthropic" style="margin-left:0; display:none">Limpiar</button>
+      </div>
+      <p class="apikey-note">La clave se guarda solo en tu navegador. Consíguela en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.</p>
+    </div>
+
+    <div id="keyMistralBlock" style="display:none">
+      <div class="col-label" style="margin-bottom:6px; margin-top:12px">API Key — Mistral</div>
+      <div class="apikey-row">
+        <input type="password" class="apikey-input" id="apiKeyMistral" placeholder="…" autocomplete="off" spellcheck="false">
+        <button class="btn btn-sm" id="btnSaveMistral" style="margin-left:0">Guardar</button>
+        <button class="btn btn-sm" id="btnClearMistral" style="margin-left:0; display:none">Limpiar</button>
+      </div>
+      <p class="apikey-note">La clave se guarda solo en tu navegador. Consíguela en <a href="https://console.mistral.ai" target="_blank">console.mistral.ai</a>.</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="cols">
+    <div>
+      <div class="col-label">Texto 1 — original</div>
+      <textarea id="txt1" placeholder="Pega aquí el texto original del autor…"></textarea>
+      <div class="char-counter" id="c1">0 caracteres</div>
+    </div>
+    <div>
+      <div class="col-label">Texto 2 — editado</div>
+      <textarea id="txt2" placeholder="Pega aquí la versión editada (mejor redacción, posible pérdida de voz)…"></textarea>
+      <div class="char-counter" id="c2">0 caracteres</div>
+    </div>
+  </div>
+
+  <div class="prompt-section">
+    <div class="prompt-header" id="promptToggle">
+      <div class="prompt-header-left">
+        Prompt del sistema
+        <span class="badge">editable</span>
+      </div>
+      <span class="toggle-lbl" id="toggleLbl">▾ mostrar</span>
+    </div>
+    <div class="prompt-body" id="promptBody">
+      <textarea class="prompt-area" id="systemPrompt"></textarea>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btnFuse">
+      ⇌ Fusionar
+    </button>
+    <button class="btn btn-sm" id="btnCopy" style="display:none; margin-left:0">
+      ⎘ Copiar resultado
+    </button>
+    <button class="btn btn-sm" id="btnReset" style="display:none">
+      ↺ Nueva fusión
+    </button>
+  </div>
+
+  <div class="result-section" id="resultSection">
+    <div class="result-header">
+      <div class="result-label" id="resultLabel">Texto fusionado</div>
+    </div>
+    <div class="result-box" id="resultBox"></div>
+  </div>
+
+</div>
+
+<script>
+const DEFAULT_PROMPT = `CONTEXTO DEL PROYECTO
+Trabajas sobre los borradores del libro "Castroverde de Cerrato", historia local del municipio de Castroverde de Cerrato (comarca del Cerrato vallisoletano, frontera con Palencia). No eres el autor: no sustituyas su voz por la tuya.
+
+PRINCIPIO ABSOLUTO
+Intervención mínima. Antes de modificar una frase, evalúa si realmente dificulta la lectura o simplemente no coincide con tu estilo. Si funciona y transmite autenticidad, no se toca.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información histórica nueva. No inventar escenas, pensamientos, emociones, diálogos ni interpretaciones ausentes en el original. Lo que no está en el borrador, no existe.
+
+VOZ Y ESTILO DE REFERENCIA
+El texto debe conservar la sensación de autor local vinculado a las fuentes. La emoción debe surgir de los hechos, no del embellecimiento. Tono de divulgación histórica local: sobrio, claro, humano, sin artificio literario ni rigidez académica.
+Evitar formulaciones abstractas o burocráticas. Sustituirlas por expresiones concretas cuando sea posible sin alterar el sentido.
+Conservar el léxico propio del autor aunque no sea el más estándar.
+
+QUÉ NO DEBES HACER NUNCA
+- No usar prosa literaria, épica o metafórica
+- No emplear lenguaje turístico o divulgativo genérico
+- No añadir adjetivos innecesarios
+- No reescribir frases correctas solo por estilo
+- No sustituir giros naturales del autor por formas impersonales
+- No introducir frases de apertura o cierre no presentes en el original
+- No inventar contenido nuevo
+
+CONTEXTO HISTÓRICO FIJO
+- Primer documento: 916 d.C. (Ordoño II, Castro Viride)
+- Orden de Santiago · Cerrato vallisoletano · Valle del Esgueva · frontera con Palencia
+- 676 habitantes en 1950 · 189 habitantes en la actualidad
+
+SALIDA ESPERADA
+Un único texto final: coherente, fiel al original, corregido solo cuando mejora claridad o gramática, sin pérdida de voz del autor.
+Responde ÚNICAMENTE con el texto fusionado, sin explicaciones, sin preámbulos, sin comentarios al margen.`;
+
+// --- DOM refs ---
+const sysPEl = document.getElementById('systemPrompt');
+const promptToggle = document.getElementById('promptToggle');
+const promptBody = document.getElementById('promptBody');
+const toggleLbl = document.getElementById('toggleLbl');
+const btnFuse = document.getElementById('btnFuse');
+const btnCopy = document.getElementById('btnCopy');
+const btnReset = document.getElementById('btnReset');
+const resultSection = document.getElementById('resultSection');
+const resultBox = document.getElementById('resultBox');
+const resultLabel = document.getElementById('resultLabel');
+const txt1 = document.getElementById('txt1');
+const txt2 = document.getElementById('txt2');
+const btnModelAnthropic = document.getElementById('btnModelAnthropic');
+const btnModelMistral = document.getElementById('btnModelMistral');
+const keyAnthropicBlock = document.getElementById('keyAnthropicBlock');
+const keyMistralBlock = document.getElementById('keyMistralBlock');
+
+// --- Provider selector ---
+let activeProvider = localStorage.getItem('fusionador_provider') || 'anthropic';
+
+function setProvider(p) {
+  activeProvider = p;
+  localStorage.setItem('fusionador_provider', p);
+  btnModelAnthropic.classList.toggle('active', p === 'anthropic');
+  btnModelMistral.classList.toggle('active', p === 'mistral');
+  keyAnthropicBlock.style.display = p === 'anthropic' ? 'block' : 'none';
+  keyMistralBlock.style.display = p === 'mistral' ? 'block' : 'none';
+}
+setProvider(activeProvider);
+btnModelAnthropic.addEventListener('click', () => setProvider('anthropic'));
+btnModelMistral.addEventListener('click', () => setProvider('mistral'));
+
+// --- API keys ---
+function initKey(inputId, saveId, clearId, storageKey) {
+  const input = document.getElementById(inputId);
+  const btnSave = document.getElementById(saveId);
+  const btnClear = document.getElementById(clearId);
+  const saved = localStorage.getItem(storageKey) || '';
+  if (saved) { input.value = saved; btnClear.style.display = 'inline-flex'; }
+  btnSave.addEventListener('click', () => {
+    const k = input.value.trim();
+    if (!k) return;
+    localStorage.setItem(storageKey, k);
+    btnClear.style.display = 'inline-flex';
+    btnSave.textContent = '✓ Guardada';
+    setTimeout(() => { btnSave.textContent = 'Guardar'; }, 1800);
+  });
+  btnClear.addEventListener('click', () => {
+    localStorage.removeItem(storageKey);
+    input.value = '';
+    btnClear.style.display = 'none';
+  });
+}
+initKey('apiKeyAnthropic', 'btnSaveAnthropic', 'btnClearAnthropic', 'fusionador_apikey_anthropic');
+initKey('apiKeyMistral', 'btnSaveMistral', 'btnClearMistral', 'fusionador_apikey_mistral');
+
+// --- Prompt ---
+const savedPrompt = localStorage.getItem('fusionador_prompt');
+sysPEl.value = savedPrompt || DEFAULT_PROMPT;
+
+let promptVisible = false;
+promptToggle.addEventListener('click', () => {
+  promptVisible = !promptVisible;
+  promptBody.classList.toggle('open', promptVisible);
+  toggleLbl.textContent = promptVisible ? '▴ ocultar' : '▾ mostrar';
+});
+sysPEl.addEventListener('input', () => {
+  localStorage.setItem('fusionador_prompt', sysPEl.value);
+});
+
+// --- Char counters ---
+function counter(el, out) {
+  el.addEventListener('input', () => {
+    out.textContent = el.value.length.toLocaleString('es') + ' caracteres';
+  });
+}
+counter(txt1, document.getElementById('c1'));
+counter(txt2, document.getElementById('c2'));
+
+// --- Streaming helpers ---
+async function streamAnthropic(apiKey, sysPrompt, userMsg, onChunk) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      stream: true,
+      system: sysPrompt,
+      messages: [{ role: 'user', content: userMsg }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Error Anthropic ${resp.status}`);
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(data);
+        if (evt.type === 'content_block_delta' && evt.delta?.text) onChunk(evt.delta.text);
+      } catch (_) {}
+    }
+  }
+}
+
+async function streamMistral(apiKey, sysPrompt, userMsg, onChunk) {
+  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'mistral-small-2506',
+      max_tokens: 8192,
+      stream: true,
+      messages: [
+        { role: 'system', content: sysPrompt },
+        { role: 'user', content: userMsg }
+      ]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.message || `Error Mistral ${resp.status}`);
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(data);
+        const chunk = evt.choices?.[0]?.delta?.content;
+        if (chunk) onChunk(chunk);
+      } catch (_) {}
+    }
+  }
+}
+
+// --- Fuse ---
+btnFuse.addEventListener('click', async () => {
+  const t1 = txt1.value.trim();
+  const t2 = txt2.value.trim();
+  if (!t1 || !t2) { alert('Introduce los dos textos antes de fusionar.'); return; }
+
+  let apiKey;
+  if (activeProvider === 'anthropic') {
+    apiKey = (localStorage.getItem('fusionador_apikey_anthropic') || document.getElementById('apiKeyAnthropic').value).trim();
+    if (!apiKey) { alert('Introduce y guarda una API key de Anthropic.'); return; }
+  } else {
+    apiKey = (localStorage.getItem('fusionador_apikey_mistral') || document.getElementById('apiKeyMistral').value).trim();
+    if (!apiKey) { alert('Introduce y guarda una API key de Mistral.'); return; }
+  }
+
+  const sysPrompt = sysPEl.value.trim() || DEFAULT_PROMPT;
+  const userMsg = `TEXTO 1 (ORIGINAL — preservar voz):\n${t1}\n\nTEXTO 2 (EDITADO — aprovechar solo mejoras claras):\n${t2}`;
+
+  btnFuse.disabled = true;
+  btnFuse.innerHTML = '<span class="spinner"></span> Fusionando\u2026';
+  btnCopy.style.display = 'none';
+  btnReset.style.display = 'none';
+  resultSection.classList.add('visible');
+  resultLabel.textContent = 'Texto fusionado';
+  resultBox.className = 'result-box streaming';
+  resultBox.textContent = '';
+
+  let fullText = '';
+  const onChunk = (chunk) => { fullText += chunk; resultBox.textContent = fullText; };
+
+  try {
+    if (activeProvider === 'anthropic') {
+      await streamAnthropic(apiKey, sysPrompt, userMsg, onChunk);
+    } else {
+      await streamMistral(apiKey, sysPrompt, userMsg, onChunk);
+    }
+    resultBox.className = 'result-box';
+    btnCopy.style.display = 'inline-flex';
+    btnReset.style.display = 'inline-flex';
+  } catch (err) {
+    resultBox.className = '';
+    resultBox.innerHTML = `<div class="error-box">\u26a0 ${err.message}</div>`;
+  }
+
+  btnFuse.disabled = false;
+  btnFuse.innerHTML = '\u21cc Fusionar';
+});
+
+// --- Copy ---
+btnCopy.addEventListener('click', () => {
+  const text = resultBox.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btnCopy.innerHTML;
+    btnCopy.innerHTML = '\u2713 Copiado';
+    setTimeout(() => { btnCopy.innerHTML = orig; }, 2000);
+  });
+});
+
+// --- Reset ---
+btnReset.addEventListener('click', () => {
+  resultSection.classList.remove('visible');
+  resultBox.textContent = '';
+  btnCopy.style.display = 'none';
+  btnReset.style.display = 'none';
+  txt1.focus();
+});
+</script>
+</body>
+</html>
