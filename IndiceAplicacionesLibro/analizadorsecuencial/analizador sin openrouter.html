@@ -249,15 +249,7 @@
     .result-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
     .result-box .loading{color:var(--muted);font-style:italic;}
 
-    .step-or-select{
-      flex-shrink:0;background:var(--bg);border:1px solid var(--border);
-      color:var(--muted);font-family:var(--font-ui);font-size:8px;
-      padding:3px 5px;border-radius:var(--radius);outline:none;cursor:pointer;
-      letter-spacing:0.3px;max-width:130px;display:none;
-    }
-    .step-or-select:focus{border-color:var(--accent);}
-    .step-row.or-active .step-or-select{display:block;}
-
+    .btn{padding:7px 13px;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.2s;white-space:nowrap;}
     .btn-primary{background:var(--accent);color:var(--bg);}
     .btn-primary:hover:not(:disabled){background:var(--accent2);}
     .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
@@ -981,35 +973,21 @@ function renderPromptButtons() {
 //  PIPELINE VERTICAL — DEFINICIÓN DE PASOS
 // ══════════════════════════════════════════════════════
 
-// LLMs disponibles por paso
+// LLMs disponibles por paso (excluimos openrouter según spec)
 const PIPELINE_LLMS = [
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'groq',       label: 'Groq · Llama 70B' },
-  { value: 'gemini',     label: 'Gemini 2.5 Flash' },
-  { value: 'mistral',    label: 'Mistral Small' },
-  { value: 'claude',     label: 'Claude Sonnet' },
+  { value: 'groq',    label: 'Groq · Llama 70B' },
+  { value: 'gemini',  label: 'Gemini 2.5 Flash' },
+  { value: 'mistral', label: 'Mistral Small' },
+  { value: 'claude',  label: 'Claude Sonnet' },
 ];
 
-// Modelos OpenRouter disponibles (mismos que el selector global)
-const OR_MODELS = [
-  { value: 'anthropic/claude-sonnet-4-5',        label: 'Claude Sonnet 4.5' },
-  { value: 'anthropic/claude-haiku-4-5',         label: 'Claude Haiku 4.5' },
-  { value: 'google/gemini-2.5-flash',            label: 'Gemini 2.5 Flash' },
-  { value: 'google/gemini-2.5-pro',              label: 'Gemini 2.5 Pro' },
-  { value: 'openai/gpt-4.1-mini',                label: 'GPT-4.1 Mini' },
-  { value: 'openai/gpt-4.1',                     label: 'GPT-4.1' },
-  { value: 'meta-llama/llama-4-maverick',        label: 'Llama 4 Maverick' },
-  { value: 'mistralai/mistral-small-3.2-24b',    label: 'Mistral Small 3.2' },
-  { value: 'deepseek/deepseek-r1-0528',          label: 'DeepSeek R1' },
-];
-const OR_DEFAULT_MODEL = 'google/gemini-2.5-flash';
-
-// Estado del pipeline
+// Estado del pipeline: resultados de cada paso
+// pasos: 0=corrector, 1-7=prompts[0..6], 8=aplicarPlan
 const TOTAL_STEPS = 9;
-let pipelineResults   = new Array(TOTAL_STEPS).fill(null);
-let pipelineStatus    = new Array(TOTAL_STEPS).fill('pending');
-let pipelineLlms      = [];
-let pipelineOrModels  = []; // modelo OR seleccionado por paso
+let pipelineResults   = new Array(TOTAL_STEPS).fill(null);  // texto resultado
+let pipelineStatus    = new Array(TOTAL_STEPS).fill('pending'); // pending|running|done|error
+// LLM seleccionado por paso (se inicializa al renderizar)
+let pipelineLlms = [];
 
 // Construir la definición de pasos a partir del perfil activo
 function getPipelineStepDefs() {
@@ -1038,8 +1016,7 @@ function renderPipeline() {
 
   // Inicializar LLMs si es la primera vez o si cambia el número de pasos
   if (pipelineLlms.length !== TOTAL_STEPS) {
-    pipelineLlms     = defs.map(d => d.defaultLlm);
-    pipelineOrModels = new Array(TOTAL_STEPS).fill(OR_DEFAULT_MODEL);
+    pipelineLlms = defs.map(d => d.defaultLlm);
   }
 
   container.innerHTML = '';
@@ -1071,31 +1048,8 @@ function renderPipeline() {
       if (llm.value === (pipelineLlms[i] || def.defaultLlm)) opt.selected = true;
       sel.appendChild(opt);
     });
-
-    // Selector modelo OR (visible solo cuando se elige OpenRouter)
-    const selOr = document.createElement('select');
-    selOr.className = 'step-or-select';
-    selOr.id = 'step-or-model-' + i;
-    OR_MODELS.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.value;
-      opt.textContent = m.label;
-      if (m.value === (pipelineOrModels[i] || OR_DEFAULT_MODEL)) opt.selected = true;
-      selOr.appendChild(opt);
-    });
-    selOr.addEventListener('change', () => { pipelineOrModels[i] = selOr.value; });
-
-    sel.addEventListener('change', () => {
-      pipelineLlms[i] = sel.value;
-      // Mostrar/ocultar selector OR
-      if (sel.value === 'openrouter') row.classList.add('or-active');
-      else row.classList.remove('or-active');
-    });
-    // Estado inicial
-    if ((pipelineLlms[i] || def.defaultLlm) === 'openrouter') row.classList.add('or-active');
-
+    sel.addEventListener('change', () => { pipelineLlms[i] = sel.value; });
     row.appendChild(sel);
-    row.appendChild(selOr);
 
     // Estado
     const statusEl = document.createElement('div');
@@ -1193,15 +1147,19 @@ async function runStep(i) {
   try {
     let result;
     if (i === 0) {
-      result = await runCorrectorStep(texto, llm, i);
+      // Corrector técnico
+      result = await runCorrectorStep(texto, llm);
       result = stripCodeFences(result);
+      // Actualizar el textarea con el texto corregido
       document.getElementById('input-text').value = result;
       actualizarContador();
     } else if (i >= 1 && i <= 7) {
+      // Pasos de análisis (prompts[0..6])
       const pIdx = i - 1;
-      result = await runPromptStep(pIdx, texto, llm, i);
+      result = await runPromptStep(pIdx, texto, llm);
       result = stripCodeFences(result);
     } else if (i === 8) {
+      // Aplicar plan: necesita resultado del paso 7 (plan editorial)
       const planTexto = pipelineResults[7];
       if (!planTexto) {
         alert('Genera primero el Plan editorial (paso 8) antes de aplicarlo.');
@@ -1209,8 +1167,9 @@ async function runStep(i) {
         if (btnRun) { btnRun.classList.remove('running'); btnRun.textContent = '▶'; }
         return;
       }
+      // Usa el texto corregido si existe, si no el original
       const textoBase = pipelineResults[0] || texto;
-      result = await runAplicarPlanStep(textoBase, planTexto, llm, i);
+      result = await runAplicarPlanStep(textoBase, planTexto, llm);
       result = stripCodeFences(result);
     }
 
@@ -1234,9 +1193,7 @@ async function runStep(i) {
     };
     const sectionName = document.getElementById('section-name').value.trim() || '(sin título)';
     const stepName = STEP_TO_HIST[i] || def.label;
-    const llmLabel = llm === 'openrouter'
-      ? (OR_MODELS.find(m => m.value === (pipelineOrModels[i] || OR_DEFAULT_MODEL))?.label || 'OpenRouter')
-      : (PIPELINE_LLMS.find(l => l.value === llm)?.label || llm);
+    const llmLabel = PIPELINE_LLMS.find(l => l.value === llm)?.label || llm;
     anaHistAdd(stepName, result, sectionName, llmLabel);
 
   } catch(e) {
@@ -1265,13 +1222,9 @@ async function runAllSteps() {
 }
 
 // ── Lógica interna de cada tipo de paso ──
-async function runCorrectorStep(texto, llm, stepIdx) {
+async function runCorrectorStep(texto, llm) {
   const systemPrompt = getCorrectorSystem();
   const userMsg = 'Corrige técnicamente el siguiente texto:\n\n"""\n' + texto + '\n"""';
-  if (llm === 'openrouter') {
-    const modelId = pipelineOrModels[stepIdx] || OR_DEFAULT_MODEL;
-    return callOpenRouter(systemPrompt, userMsg, modelId);
-  }
   if (llm === 'groq') {
     if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -1290,33 +1243,24 @@ async function runCorrectorStep(texto, llm, stepIdx) {
   return callAPI(systemPrompt, userMsg, modelId, llm);
 }
 
-async function runPromptStep(pIdx, texto, llm, stepIdx) {
+async function runPromptStep(pIdx, texto, llm) {
   const p = settings[activeProfile].prompts[pIdx];
   if (!p) throw new Error('Prompt no encontrado: índice ' + pIdx);
   const objetivo = document.getElementById('section-goal').value.trim();
   const systemMsg = buildSystemWithTono();
   const userMsg = buildUserPrompt(p.content, texto, objetivo);
-  if (llm === 'openrouter') {
-    const modelId = pipelineOrModels[stepIdx] || OR_DEFAULT_MODEL;
-    return callOpenRouter(systemMsg, userMsg, modelId);
-  }
   const modelId = document.getElementById('or-model-select').value;
   return callAPI(systemMsg, userMsg, modelId, llm);
 }
 
-async function runAplicarPlanStep(textoBase, planTexto, llm, stepIdx) {
+async function runAplicarPlanStep(textoBase, planTexto, llm) {
   const systemPrompt = getAplicarSystem();
   const userMsg = `PLAN DE ACCIÓN:\n\n${planTexto}\n\n${'─'.repeat(60)}\n\nTEXTO ORIGINAL:\n\n"""\n${textoBase}\n"""`;
-  if (llm === 'openrouter') {
-    const modelId = pipelineOrModels[stepIdx] || OR_DEFAULT_MODEL;
-    return callOpenRouter(systemPrompt, userMsg, modelId);
-  }
   const modelId = document.getElementById('or-model-select').value;
   return callAPI(systemPrompt, userMsg, modelId, llm);
 }
 
 function checkApiKey(llm) {
-  if (llm === 'openrouter' && !OR_API_KEY)    { setSyncStatus('err', 'Introduce la clave de OpenRouter.'); setTimeout(openOrKeyModal, 600); return false; }
   if (llm === 'groq'    && !GROQ_API_KEY)    { setSyncStatus('err', 'Introduce la clave de Groq.'); setTimeout(openGroqKeyModal, 600); return false; }
   if (llm === 'gemini'  && !GEMINI_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Gemini.'); setTimeout(openGeminiKeyModal, 600); return false; }
   if (llm === 'mistral' && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral.'); setTimeout(openMistralKeyModal, 600); return false; }
