@@ -428,7 +428,7 @@
     <div class="result-final-area">
       <div class="result-final-header">
         <span class="result-final-label" id="result-final-label">Resultado · último paso ejecutado</span>
-        <button class="btn btn-ghost btn-sm" id="btn-copy-final" disabled>⎘ Copiar</button>
+        <button class="btn btn-ghost btn-sm" id="btn-copy-final" disabled onclick="copyFinalResult()">⎘ Copiar</button>
       </div>
       <div class="result-final-box" id="result-final-box">
         <span class="result-final-empty">Ejecuta uno o varios pasos para ver el resultado aquí</span>
@@ -1122,6 +1122,12 @@ function setFinalResult(text, label) {
   }
 }
 
+// ── Limpia comillas triples que algunos modelos añaden al devolver texto ──
+function stripCodeFences(text) {
+  if (!text) return text;
+  return text.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
+}
+
 // ── Ejecutar un paso individual ──
 async function runStep(i) {
   const texto = document.getElementById('input-text').value.trim();
@@ -1143,6 +1149,7 @@ async function runStep(i) {
     if (i === 0) {
       // Corrector técnico
       result = await runCorrectorStep(texto, llm);
+      result = stripCodeFences(result);
       // Actualizar el textarea con el texto corregido
       document.getElementById('input-text').value = result;
       actualizarContador();
@@ -1150,6 +1157,7 @@ async function runStep(i) {
       // Pasos de análisis (prompts[0..6])
       const pIdx = i - 1;
       result = await runPromptStep(pIdx, texto, llm);
+      result = stripCodeFences(result);
     } else if (i === 8) {
       // Aplicar plan: necesita resultado del paso 7 (plan editorial)
       const planTexto = pipelineResults[7];
@@ -1162,6 +1170,7 @@ async function runStep(i) {
       // Usa el texto corregido si existe, si no el original
       const textoBase = pipelineResults[0] || texto;
       result = await runAplicarPlanStep(textoBase, planTexto, llm);
+      result = stripCodeFences(result);
     }
 
     pipelineResults[i] = result;
@@ -2015,34 +2024,36 @@ function anaHistRenderList() {
   }).join('');
 }
 
-// ── Event listeners del pipeline (deben ir al final, cuando el DOM ya está completo) ──
+// ── Funciones de copia (globales, llamadas desde onclick) ──
+function copyFinalResult() {
+  const text = document.getElementById('result-final-box').innerText;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-final');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+function copyStepResult() {
+  const text = document.getElementById('step-result-modal-body').innerText;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-step-result-copy');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+
+// ── Event listeners del pipeline ──
 document.addEventListener('DOMContentLoaded', () => {
   const modalStepResult = document.getElementById('modal-step-result');
   if (modalStepResult) {
     modalStepResult.addEventListener('click', e => {
       if (e.target === modalStepResult) closeStepResultModal();
-    });
-  }
-  const btnStepCopy = document.getElementById('btn-step-result-copy');
-  if (btnStepCopy) {
-    btnStepCopy.addEventListener('click', () => {
-      const text = document.getElementById('step-result-modal-body').innerText;
-      if (text) navigator.clipboard.writeText(text).then(() => {
-        const orig = btnStepCopy.textContent;
-        btnStepCopy.textContent = '✓ Copiado';
-        setTimeout(() => btnStepCopy.textContent = orig, 1800);
-      });
-    });
-  }
-  const btnCopyFinal = document.getElementById('btn-copy-final');
-  if (btnCopyFinal) {
-    btnCopyFinal.addEventListener('click', () => {
-      const text = document.getElementById('result-final-box').innerText;
-      if (text) navigator.clipboard.writeText(text).then(() => {
-        const orig = btnCopyFinal.textContent;
-        btnCopyFinal.textContent = '✓ Copiado';
-        setTimeout(() => btnCopyFinal.textContent = orig, 1800);
-      });
     });
   }
 });
@@ -2066,7 +2077,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-subtitle" id="step-result-modal-sub">—</div>
     <div class="step-result-body" id="step-result-modal-body"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-shrink:0;">
-      <button class="btn btn-ghost" id="btn-step-result-copy" style="font-size:9px;padding:5px 11px;">⎘ Copiar texto</button>
+      <button class="btn btn-ghost" id="btn-step-result-copy" onclick="copyStepResult()" style="font-size:9px;padding:5px 11px;">⎘ Copiar texto</button>
       <button class="btn btn-ghost" onclick="closeStepResultModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
     </div>
   </div>
