@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análisis · Castroverde (Narrativo / Descriptivo)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDK (opcional) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ESTILOS (igual que antes) */
+    :root {
+      --bg:#f0fdf4; --surface:#e4f5e9; --card:#d2eeda; --border:#a8d4b4;
+      --text:#1a3a22; --muted:#4a7a58; --accent:#1e6b3a; --accent2:#2d9055;
+      --red:#c45a3a; --blue:#3a7ab0; --green:#1e6b3a;
+      --cloud:#4A90D9;
+      --font-h:'Playfair Display',Georgia,serif;
+      --font-body:'Source Serif 4',Georgia,serif;
+      --font-ui:'DM Mono',monospace;
+      --radius:3px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;overflow:hidden;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.7;display:flex;flex-direction:column;}
+
+    /* Sync bar (igual) */
+    #sync-bar{
+      flex-shrink:0;background:var(--text);
+      display:flex;align-items:center;justify-content:flex-end;gap:10px;
+      padding:5px 18px;border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .btn-sync{
+      background:none;border:1px solid rgba(74,144,217,0.4);color:#7eb8f0;
+      padding:4px 11px;border-radius:20px;cursor:pointer;
+      font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;
+      transition:background .2s,color .2s,border-color .2s;white-space:nowrap;
+      display:flex;align-items:center;gap:5px;
+    }
+    .btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud);}
+    .btn-sync.synced{border-color:rgba(42,122,74,0.5);color:#7ec87f;}
+    .btn-sync.synced:hover{background:var(--green);color:#fff;border-color:var(--green);}
+    .btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none;}
+    .sync-user-text{font-family:var(--font-ui);font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1px;}
+    .btn-signout{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;text-transform:uppercase;}
+    .btn-signout:hover{color:var(--red);background:rgba(196,90,58,.1);}
+    #sync-status{
+      flex-shrink:0;padding:5px 18px;font-family:var(--font-ui);font-size:9px;
+      letter-spacing:1px;text-transform:uppercase;display:none;
+      align-items:center;justify-content:space-between;gap:10px;
+    }
+    #sync-status.visible{display:flex;}
+    #sync-status.ok{background:rgba(42,122,74,.12);color:var(--green);}
+    #sync-status.err{background:rgba(196,90,58,.1);color:var(--red);}
+    #sync-status.info{background:rgba(74,144,217,.1);color:var(--cloud);}
+    .sync-status-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:12px;padding:0 3px;}
+    .sync-status-close:hover{opacity:1;}
+
+    /* Cabecera con selector de modo */
+    header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;overflow-x:auto;}
+    .logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
+    .logo span{color:var(--accent);font-style:italic;}
+    .logo small{display:block;font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
+    .header-actions{display:flex;gap:7px;align-items:center;}
+
+    .mode-selector {
+      display: flex;
+      gap: 6px;
+      background: var(--card);
+      padding: 3px;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+    }
+    .mode-btn {
+      background: transparent;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 30px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    .mode-btn:hover:not(.active) {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    /* Layout principal */
+    .layout{flex:1;display:grid;grid-template-columns:370px 1fr;overflow:hidden;min-height:0;}
+    .panel-left{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
+    .panel-header{flex-shrink:0;padding:9px 15px;border-bottom:1px solid var(--border);background:var(--card);}
+    .panel-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+    .input-section{flex-shrink:0;padding:10px 15px;border-bottom:1px solid var(--border);}
+    .input-label{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:5px;display:block;}
+    .input-field{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;line-height:1.5;}
+    .input-field:focus{border-color:var(--accent);}
+    .text-area-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+    #input-text{width:100%;height:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.8;padding:14px 15px 24px;resize:none;outline:none;}
+    .char-count{position:absolute;bottom:5px;right:10px;font-family:var(--font-ui);font-size:9px;color:var(--muted);pointer-events:none;}
+    .char-count.warn{color:var(--red);}
+    .panel-footer{flex-shrink:0;padding:9px 15px;border-top:1px solid var(--border);background:var(--card);display:flex;gap:7px;}
+
+    /* ── PANEL DERECHO: PIPELINE VERTICAL ── */
+    .panel-right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+
+    /* Cabecera del pipeline */
+    .pipeline-header{
+      flex-shrink:0;padding:8px 16px;border-bottom:1px solid var(--border);
+      background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:10px;
+    }
+    .pipeline-title{font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+    .pipeline-actions{display:flex;align-items:center;gap:8px;}
+
+    /* Barra de progreso */
+    .progress-bar-wrap{height:3px;background:var(--card);flex-shrink:0;}
+    .progress-bar-fill{height:3px;background:var(--accent);width:0%;transition:width .4s;}
+
+    /* Lista de pasos */
+    .pipeline-steps{flex-shrink:0;overflow-y:auto;border-bottom:1px solid var(--border);}
+
+    .step-row{
+      display:flex;align-items:center;gap:0;
+      border-bottom:1px solid var(--border);background:var(--surface);
+      transition:background .15s;
+    }
+    .step-row:last-child{border-bottom:none;}
+    .step-row:hover{background:var(--card);}
+
+    /* Número y nombre */
+    .step-num{
+      flex-shrink:0;width:28px;text-align:center;
+      font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:1px;
+      padding:10px 0;
+    }
+    .step-name{
+      flex:1;font-family:var(--font-ui);font-size:10px;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px;color:var(--text);
+      padding:10px 6px 10px 0;
+    }
+    .step-name small{
+      display:block;font-size:7.5px;color:var(--muted);letter-spacing:0.5px;
+      text-transform:none;font-weight:400;margin-top:1px;
+    }
+
+    /* Selector LLM */
+    .step-llm-select{
+      flex-shrink:0;background:var(--bg);border:1px solid var(--border);
+      color:var(--muted);font-family:var(--font-ui);font-size:8px;
+      padding:3px 5px;border-radius:var(--radius);outline:none;cursor:pointer;
+      letter-spacing:0.3px;max-width:110px;
+    }
+    .step-llm-select:focus{border-color:var(--accent);}
+
+    /* Estado del paso */
+    .step-status{
+      flex-shrink:0;width:22px;text-align:center;font-size:11px;
+      padding:0 4px;
+    }
+
+    /* Botones de acción del paso */
+    .step-btns{flex-shrink:0;display:flex;gap:4px;padding:0 8px;}
+    .step-btn-run{
+      padding:4px 10px;border:1px solid var(--accent);border-radius:var(--radius);
+      background:transparent;color:var(--accent);cursor:pointer;
+      font-family:var(--font-ui);font-size:8px;font-weight:500;
+      text-transform:uppercase;letter-spacing:0.8px;
+      transition:all .15s;white-space:nowrap;
+    }
+    .step-btn-run:hover:not(:disabled){background:var(--accent);color:var(--bg);}
+    .step-btn-run:disabled{opacity:.35;cursor:default;}
+    .step-btn-run.running{opacity:.55;cursor:default;pointer-events:none;}
+    .step-btn-ver{
+      padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);
+      background:transparent;color:var(--muted);cursor:pointer;
+      font-family:var(--font-ui);font-size:8px;
+      text-transform:uppercase;letter-spacing:0.8px;
+      transition:all .15s;white-space:nowrap;
+    }
+    .step-btn-ver:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+    .step-btn-ver:disabled{opacity:.25;cursor:default;pointer-events:none;}
+
+    /* Separador visual entre grupos */
+    .step-row.step-separator{border-top:2px solid var(--border);}
+
+    /* Estado: iconos */
+    .status-pending{color:var(--muted);font-size:9px;}
+    .status-running{color:var(--blue);}
+    .status-done{color:var(--green);}
+    .status-error{color:var(--red);}
+
+    /* Área de resultado final */
+    .result-final-area{
+      flex:1;display:flex;flex-direction:column;padding:12px 16px;gap:8px;min-height:0;overflow:hidden;
+    }
+    .result-final-header{
+      flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    }
+    .result-final-label{
+      font-family:var(--font-ui);font-size:8px;text-transform:uppercase;
+      letter-spacing:2px;color:var(--muted);
+    }
+    .result-final-box{
+      flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:14px 16px;font-size:13px;line-height:1.8;
+      color:var(--text);overflow-y:auto;font-family:var(--font-body);
+      min-height:0;cursor:text;user-select:text;
+    }
+    .result-final-box h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
+    .result-final-box h4{font-family:var(--font-h);font-size:13px;font-weight:700;margin:10px 0 4px;}
+    .result-final-box p{margin-bottom:9px;}
+    .result-final-box strong{font-weight:700;color:var(--accent2);}
+    .result-final-box em{font-style:italic;}
+    .result-final-box ol,.result-final-box ul{margin:6px 0 10px 20px;}
+    .result-final-box li{margin-bottom:4px;}
+    .result-final-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .result-final-box .loading{color:var(--muted);font-style:italic;}
+    .result-final-empty{color:var(--muted);font-family:var(--font-ui);font-size:10px;letter-spacing:1px;text-align:center;padding:30px 0;}
+
+    /* Modal de resultado de paso */
+    .step-result-modal .modal-box{width:780px;max-height:86vh;display:flex;flex-direction:column;}
+    .step-result-body{flex:1;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:13px;line-height:1.8;font-family:var(--font-body);color:var(--text);min-height:200px;max-height:60vh;white-space:pre-wrap;word-break:break-word;}
+    .step-result-body h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
+    .step-result-body p{margin-bottom:9px;}
+    .step-result-body strong{font-weight:700;color:var(--accent2);}
+    .step-result-body em{font-style:italic;}
+    .step-result-body ol,.step-result-body ul{margin:6px 0 10px 20px;}
+    .step-result-body li{margin-bottom:4px;}
+    .step-result-body hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+
+    /* Compatibilidad: mantener result-box para el modal de histórico */
+    .result-box{font-size:13px;line-height:1.8;color:var(--text);font-family:var(--font-body);}
+    .result-box h3{font-family:var(--font-h);font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--accent);}
+    .result-box p{margin-bottom:9px;}
+    .result-box strong{font-weight:700;color:var(--accent2);}
+    .result-box em{font-style:italic;}
+    .result-box ol,.result-box ul{margin:6px 0 10px 20px;}
+    .result-box li{margin-bottom:4px;}
+    .result-box hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .result-box .loading{color:var(--muted);font-style:italic;}
+
+    .step-or-select{
+      flex-shrink:0;background:var(--bg);border:1px solid var(--border);
+      color:var(--muted);font-family:var(--font-ui);font-size:8px;
+      padding:3px 5px;border-radius:var(--radius);outline:none;cursor:pointer;
+      letter-spacing:0.3px;max-width:130px;display:none;
+    }
+    .step-or-select:focus{border-color:var(--accent);}
+    .step-row.or-active .step-or-select{display:block;}
+
+    .btn-primary{background:var(--accent);color:var(--bg);}
+    .btn-primary:hover:not(:disabled){background:var(--accent2);}
+    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-sm{padding:4px 9px;font-size:9px;}
+
+    /* Modales */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.55);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+    .modal-overlay.visible{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:760px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
+    .modal-box-sm{width:430px;}
+    .modal-title{font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;}
+    .modal-subtitle{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:22px;}
+    .modal-section{margin-bottom:20px;}
+    .modal-section-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+    .modal-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;resize:vertical;line-height:1.6;min-height:80px;}
+    .modal-textarea.tall{min-height:140px;}
+    .modal-hint{font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:4px;line-height:1.6;}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+    .ptabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;}
+    .ptab{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;font-family:var(--font-ui);font-size:9px;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+    .ptab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+    .ppanel{display:none;}
+    .ppanel.visible{display:block;}
+    .btn-corrector{
+      padding:7px 16px;border:1px solid var(--blue);border-radius:var(--radius);
+      background:transparent;color:var(--blue);cursor:pointer;
+      font-family:var(--font-ui);font-size:10px;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px;
+      transition:all 0.18s;white-space:nowrap;
+    }
+    .btn-corrector:hover:not(:disabled){background:var(--blue);color:#fff;}
+    .btn-corrector:disabled{opacity:.45;cursor:default;}
+    .btn-corrector.running{opacity:.6;cursor:default;pointer-events:none;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+    /* ── API SELECTOR ── */
+    .api-selector{display:flex;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:3px;}
+    .api-btn{background:transparent;border:none;padding:4px 12px;border-radius:20px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);cursor:pointer;transition:all .18s;}
+    .api-btn.active{background:var(--accent);color:var(--bg);}
+    .api-btn:hover:not(.active){color:var(--text);}
+
+    /* ── MODAL INPUT (claves de API adicionales) ── */
+    .modal-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-ui);font-size:12px;border-radius:var(--radius);outline:none;margin-bottom:8px;}
+    .modal-input:focus{border-color:var(--accent);}
+    .btn-key{background:none;border:1px solid rgba(30,107,58,0.35);color:var(--accent);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;}
+    .btn-key:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+    /* ── Histórico ── */
+    #ana-modal-history .modal-box { width:820px; max-height:88vh; display:flex; flex-direction:column; }
+    .hist-tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+    .hist-tab-btn { padding:5px 13px; border-radius:20px; border:1px solid var(--border); background:var(--card); color:var(--muted); font-family:var(--font-ui); font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; transition:all .15s; }
+    .hist-tab-btn.active { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+    .hist-tab-btn:hover:not(.active) { color:var(--accent); border-color:var(--accent); }
+    .hist-list { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; min-height:340px; max-height:55vh; }
+    .hist-entry { border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); overflow:hidden; flex-shrink:0; }
+    .hist-entry-header { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--card); cursor:pointer; font-family:var(--font-ui); font-size:9px; letter-spacing:1px; color:var(--muted); }
+    .hist-entry-header:hover { color:var(--text); }
+    .hist-entry-date { flex:1; }
+    .hist-entry-actions { display:flex; gap:5px; flex-shrink:0; }
+    .hist-btn-sm { background:transparent; border:1px solid var(--border); color:var(--muted); padding:2px 8px; border-radius:2px; font-family:var(--font-ui); font-size:8px; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all .15s; }
+    .hist-btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+    .hist-btn-sm.del:hover { border-color:var(--red); color:var(--red); }
+    .hist-entry-body { display:none; padding:10px 14px; font-size:12px; line-height:1.75; color:var(--text); white-space:pre-wrap; word-break:break-word; max-height:280px; overflow-y:auto; font-family:var(--font-body); }
+    .hist-entry-body.open { display:block; }
+    .hist-empty { font-family:var(--font-ui); font-size:10px; color:var(--muted); text-align:center; padding:40px; letter-spacing:1px; }
+  </style>
+</head>
+<body>
+
+<!-- SYNC BAR (igual) -->
+<div id="sync-bar">
+  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
+  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-ghost btn-sm btn" id="btn-or-key" style="font-size:8px;padding:3px 9px;color:#4A90D9;border-color:rgba(74,144,217,0.3);">⚙ OpenRouter</button>
+  <button class="btn-ghost btn-sm btn" id="btn-groq-key" style="font-size:8px;padding:3px 9px;">⚙ Groq</button>
+  <button class="btn-ghost btn-sm btn" id="btn-fb-key" style="font-size:8px;padding:3px 9px;">⚿ Firebase</button>
+  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar</span>
+  </button>
+</div>
+<div id="sync-status">
+  <span id="sync-status-msg"></span>
+  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
+</div>
+
+<header>
+  <div class="logo">Análisis <span>Castroverde</span><small>Narrativo / Descriptivo</small></div>
+  <div class="header-actions">
+    <div class="mode-selector" id="mode-selector">
+      <button class="mode-btn" data-mode="narrativo">📖 Narrativo</button>
+      <button class="mode-btn" data-mode="descriptivo">📐 Descriptivo</button>
+    </div>
+    <!-- Selector de API (nuevo) -->
+    <div class="api-selector" id="api-selector">
+      <button class="api-btn active" data-api="openrouter" onclick="setApi('openrouter')">OpenRouter</button>
+      <button class="api-btn" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
+      <button class="api-btn" data-api="mistral" onclick="setApi('mistral')">Mistral</button>
+      <button class="api-btn" data-api="claude" onclick="setApi('claude')">Claude</button>
+    </div>
+    <!-- Selector de modelo OpenRouter (solo visible cuando api=openrouter) -->
+    <select id="or-model-select" class="input-field" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);">
+      <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
+      <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5</option>
+      <option value="google/gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+      <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+      <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+      <option value="openai/gpt-4.1">GPT-4.1</option>
+      <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
+      <option value="mistralai/mistral-small-3.2-24b">Mistral Small 3.2</option>
+      <option value="deepseek/deepseek-r1-0528">DeepSeek R1</option>
+    </select>
+    <!-- Botones de clave API contextuales (nuevo) -->
+    <button class="btn-key" id="btn-or-key-header">⚙ OpenRouter</button>
+    <button class="btn-key" id="btn-gemini-key" style="display:none;">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key-header" style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
+    <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
+    <button class="btn-key" id="btn-historico" onclick="anaOpenHistoryModal()" style="border-color:rgba(42,122,74,.4);color:#6ab88a;">⏱ Histórico</button>
+    <button class="btn btn-ghost" id="btn-settings">✦ Ajustes</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="panel-left">
+    <div class="panel-header"><span class="panel-title">✍ Sección / Capítulo</span></div>
+    <div class="input-section">
+      <label class="input-label" for="section-name">Nombre de la sección o capítulo</label>
+      <input class="input-field" id="section-name" type="text" placeholder="Ej: Cap. 3 · Época medieval" maxlength="80">
+    </div>
+    <div class="input-section">
+      <label class="input-label" for="section-goal">Objetivo de esta sección/capítulo</label>
+      <textarea class="input-field" id="section-goal" rows="3" maxlength="600" style="resize:none;line-height:1.6;" placeholder="Qué quieres conseguir, qué época o tema aborda, qué debe transmitir al lector…"></textarea>
+    </div>
+    <div class="input-section">
+      <label class="input-label" for="ana-parte-libro">Parte del libro</label>
+      <select class="input-field" id="ana-parte-libro">
+        <option value="primera">Primera parte — narrativa divulgativa</option>
+        <option value="segunda">Segunda parte — temática y formal</option>
+      </select>
+    </div>
+    <div class="text-area-wrap">
+      <textarea id="input-text" maxlength="20000" placeholder="Pega aquí el texto de la sección o capítulo…&#10;&#10;Hasta 10 páginas aproximadamente."></textarea>
+      <div class="char-count" id="char-count">0 / 20.000</div>
+    </div>
+    <div class="panel-footer">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">📄 .txt<input type="file" id="file-input" accept=".txt" style="display:none;"></label>
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()" style="margin-left:auto;">✕ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="panel-right">
+
+    <!-- Cabecera del pipeline -->
+    <div class="pipeline-header">
+      <div>
+        <span class="pipeline-title">Pipeline · <span id="active-mode-label">Narrativo</span> · <span id="active-model-label" style="color:var(--accent);">—</span></span>
+      </div>
+      <div class="pipeline-actions">
+        <span id="pipeline-progress-label" style="font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:1px;">0 / 9</span>
+        <button class="btn btn-primary btn-sm" id="btn-run-all" onclick="runAllSteps()">▶ Ejecutar todo</button>
+      </div>
+    </div>
+    <!-- Barra de progreso -->
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar-fill"></div></div>
+
+    <!-- Lista vertical de pasos -->
+    <div class="pipeline-steps" id="pipeline-steps">
+      <!-- Se genera dinámicamente por JS -->
+    </div>
+
+    <!-- Resultado final -->
+    <div class="result-final-area">
+      <div class="result-final-header">
+        <span class="result-final-label" id="result-final-label">Resultado · último paso ejecutado</span>
+        <button class="btn btn-ghost btn-sm" id="btn-copy-final" disabled onclick="copyFinalResult()">⎘ Copiar</button>
+      </div>
+      <div class="result-final-box" id="result-final-box">
+        <span class="result-final-empty">Ejecuta uno o varios pasos para ver el resultado aquí</span>
+      </div>
+    </div>
+
+    <!-- Nodo fantasma para compatibilidad con código existente (result-box, result-badge, etc.) -->
+    <div style="display:none;">
+      <div id="result-empty"></div>
+      <div id="result-content"><div id="result-badge"></div><span id="result-label-text"></span><div id="result-box"></div></div>
+      <div id="prompt-buttons-grid"></div>
+      <span id="corrector-status"></span>
+      <span id="aplicar-plan-status"></span>
+      <button id="btn-copy-prompt"></button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL AJUSTES -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal-box">
+    <div class="modal-title">Ajustes de perfiles</div>
+    <div class="modal-subtitle">Personaliza el system prompt y los análisis para cada modo</div>
+    <div class="ptabs" id="settings-ptabs">
+      <button class="ptab active" data-profile="narrativo">📖 Narrativo</button>
+      <button class="ptab" data-profile="descriptivo">📐 Descriptivo</button>
+      <button class="ptab" data-profile="herramientas">🔧 Herramientas</button>
+    </div>
+    <div id="settings-panels">
+      <div class="ppanel visible" data-profile="narrativo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Narrativo)</div>
+          <textarea class="modal-textarea tall" id="system-narrativo" rows="10"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Perfil tonal (común a ambos modos)</div>
+          <textarea class="modal-textarea tall" id="tono-comun" rows="6"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompts de análisis (Narrativo)</div>
+          <div class="modal-hint" style="margin-bottom:10px;">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
+          <div id="ptabs-narrativo" class="ptabs"></div>
+          <div id="ppanels-narrativo"></div>
+        </div>
+      </div>
+      <div class="ppanel" data-profile="descriptivo">
+        <div class="modal-section">
+          <div class="modal-section-title">System prompt (Descriptivo)</div>
+          <textarea class="modal-textarea tall" id="system-descriptivo" rows="10"></textarea>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Perfil tonal (común)</div>
+          <div class="modal-hint">El mismo texto que en Narrativo se guarda automáticamente.</div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Prompts de análisis (Descriptivo)</div>
+          <div class="modal-hint">Variables: <code>{{texto}}</code> · <code>{{objetivo}}</code> · <code>{{contexto}}</code></div>
+          <div id="ptabs-descriptivo" class="ptabs"></div>
+          <div id="ppanels-descriptivo"></div>
+        </div>
+      </div>
+      <div class="ppanel" data-profile="herramientas">
+
+        <div class="modal-section">
+          <div class="modal-section-title">Corrector técnico</div>
+          <div class="modal-hint" style="margin-bottom:10px;">Limpia errores formales sin tocar el estilo. Reemplaza el texto del panel izquierdo con el resultado.</div>
+          <label class="modal-label">API a usar</label>
+          <select class="modal-input" id="corrector-api-select" style="font-family:var(--font-ui);font-size:11px;">
+            <option value="groq">Groq (llama-3.3-70b-versatile) — por defecto</option>
+            <option value="gemini">Gemini 2.5 Flash</option>
+            <option value="openrouter">OpenRouter (modelo activo)</option>
+            <option value="mistral">Mistral Large</option>
+            <option value="claude">Claude Sonnet</option>
+          </select>
+          <label class="modal-label" style="margin-top:12px;">System prompt</label>
+          <textarea class="modal-textarea tall" id="corrector-system-textarea" rows="12"></textarea>
+        </div>
+
+        <div class="modal-section" style="margin-top:18px;">
+          <div class="modal-section-title">Aplicar plan de acción</div>
+          <div class="modal-hint" style="margin-bottom:10px;">Toma el plan generado en el panel derecho y lo aplica sobre el texto original. Usa la API activa del selector principal — excepto si se especifica una aquí.</div>
+          <label class="modal-label">API a usar</label>
+          <select class="modal-input" id="aplicar-api-select" style="font-family:var(--font-ui);font-size:11px;">
+            <option value="activa">API activa del selector principal — por defecto</option>
+            <option value="groq">Groq (llama-3.3-70b-versatile)</option>
+            <option value="gemini">Gemini 2.5 Flash</option>
+            <option value="openrouter">OpenRouter (modelo activo)</option>
+            <option value="mistral">Mistral Large</option>
+            <option value="claude">Claude Sonnet</option>
+          </select>
+          <label class="modal-label" style="margin-top:12px;">System prompt</label>
+          <textarea class="modal-textarea tall" id="aplicar-system-textarea" rows="12"></textarea>
+        </div>
+
+      </div>
+    </div>
+      <button class="btn btn-danger" id="settings-reset">Restaurar por defecto</button>
+      <button class="btn btn-ghost" id="settings-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="settings-save">Guardar ajustes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OPENROUTER KEY -->
+<div class="modal-overlay" id="modal-orkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de OpenRouter</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis de texto. Permite usar múltiples modelos de IA. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">OpenRouter API Key</label>
+    <input class="modal-input" id="or-key-input" type="password" placeholder="sk-or-v1-…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="or-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="or-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="or-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GROQ KEY -->
+<div class="modal-overlay" id="modal-groqkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Groq</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para el corrector técnico automático. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">Groq API Key</label>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="groq-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="groq-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="groq-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FIREBASE KEY -->
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para sincronización en la nube. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="modal-label">Firebase API Key</label>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="fb-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="fb-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="fb-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GEMINI KEY -->
+<div class="modal-overlay" id="modal-geminikey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Gemini</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Gemini (Google AI Studio). Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="input-label">Gemini API Key</label>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…" autocomplete="off">
+    <div class="modal-hint">Debe empezar por AIzaSy. Obtenla en aistudio.google.com</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="gemini-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="gemini-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="gemini-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MISTRAL KEY -->
+<div class="modal-overlay" id="modal-mistralkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Mistral</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Mistral Large. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="input-label">Mistral API Key</label>
+    <input class="modal-input" id="mistral-key-input" type="password" placeholder="…" autocomplete="off">
+    <div class="modal-hint">Obtenla en console.mistral.ai</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="mistral-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="mistral-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="mistral-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLAUDE KEY -->
+<div class="modal-overlay" id="modal-claudekey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Claude</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">Necesaria para los análisis usando Claude Sonnet. Se guarda <strong>solo en este navegador</strong>.</p>
+    <label class="input-label">Anthropic API Key</label>
+    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…" autocomplete="off">
+    <div class="modal-hint">Debe empezar por sk-ant-. Obtenla en console.anthropic.com</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="claude-btn-forget">Olvidar</button>
+      <button class="btn btn-ghost" id="claude-btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="claude-btn-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  PERFILES NARRATIVO / DESCRIPTIVO (VALORES POR DEFECTO MEJORADOS)
+// ══════════════════════════════════════════════════════
+
+const DEFAULT_NARRATIVO = {
+  system: `ROL
+Eres un editor de historia local y divulgación histórica castellana. Trabajas sobre los borradores del libro Castroverde de Cerrato. No eres el autor: no sustituyas su voz por la tuya.
+
+PRINCIPIO ABSOLUTO
+Intervención mínima. Antes de modificar una frase, pregúntate: ¿realmente dificulta la lectura, o simplemente no es como yo la escribiría? Si funciona y transmite autenticidad, no se toca.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información histórica nueva. No inventar escenas, pensamientos, emociones, diálogos ni interpretaciones ausentes en el original. Lo que no está en el borrador, no existe.
+
+OBJETIVO
+Convertir pasajes densos o compactos en narración accesible y continua, sin perder rigor ni autenticidad. El lector debe sentir que recorre la historia de un territorio real, no que lee una enciclopedia ni una novela histórica.
+
+QUÉ PUEDES HACER
+- Corregir ortografía, puntuación y gramática
+- Dividir frases excesivamente largas o densas
+- Si un párrafo concentra varios tipos de información heterogénea, dividirlo en dos buscando el corte en una frase que ya exista en el original. No comprimir ni eliminar contenido como alternativa a la división.
+- Si el texto contiene la marca [//], introducir ahí un punto y aparte. No moverla ni ignorarla.
+- Mejorar la continuidad entre párrafos
+- Cuando el contexto lo permita, cerrar bloques temáticos con una referencia a la vida cotidiana o al uso concreto del territorio: es el recurso que mejor ancla la historia local sin caer en literaturismo.
+- Convertir acumulaciones de datos en secuencias legibles
+- Reordenar frases si mejora la comprensión
+- Reducir repeticiones y perífrasis innecesarias
+- Simplificar definiciones técnicas que rompen el ritmo
+- Añadir transiciones suaves solo si nacen directamente de datos ya presentes en el texto
+
+QUÉ NO DEBES HACER
+- Prosa literaria, lenguaje épico, metáforas decorativas
+- Expresiones de folleto turístico o divulgación genérica
+- Adjetivos innecesarios o formulaciones abstractas
+- Reescribir frases correctas solo porque podrían sonar "mejor"
+- Sustituir expresiones naturales del autor por giros estándar impersonales
+- Comenzar párrafos con "La historia de…", "A lo largo del tiempo…", "La situación no era solo…" u otros arranques impersonales salvo que estén en el original
+- Añadir frases de apertura o cierre que no estén en el original
+
+VOZ Y ESTILO
+El texto debe conservar la sensación de estar escrito por alguien vinculado al territorio y a sus fuentes. La emoción, si aparece, debe nacer de los hechos, no del adorno. El tono de referencia es el de la buena divulgación histórica local: sobrio, claro, humano, sin rigidez académica ni artificio literario.
+Evita formulaciones abstractas como "según cobrara mayor importancia" o "en función del peso relativo de"; sustitúyelas por construcciones concretas cuando sea posible sin forzar el texto.
+Conserva el léxico característico del autor aunque no sea el que tú elegirías.
+
+EXTENSIÓN
+Similar al original (±10%). Si el texto no necesita intervención, puede ser menor.
+
+FORMATO DE SALIDA
+1. DIAGNÓSTICO — Qué problemas concretos se han corregido y qué tipo de intervención se ha realizado. Breve y específico: nombra las frases o construcciones modificadas, no hagas valoraciones generales.
+2. TEXTO EDITADO
+
+CONTEXTO HISTÓRICO FIJO
+- Primer documento conservado: 916 d.C. (Ordoño II, "Castro Viride")
+- Orden de Santiago · Cerrato vallisoletano · Valle del Esgueva · Frontera con Palencia
+- 676 habitantes en 1950 · 189 habitantes en la actualidad
+
+PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
+  prompts: [
+    {name:'Estructura', label:'Estructura', llm:'gemini', llmLabel:'Gemini 2.5 Flash', content:'Evalúa la estructura global: ritmo, progresión emocional y capacidad de enganchar.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Resumen estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', llm:'mistral', llmLabel:'Mistral Small', content:'Evalúa el tono narrativo. ¿Es evocador? ¿Hay pasajes fríos?\nObjetivo: {{objetivo}}\n\nIndica 3 aciertos, 3 problemas y cómo mejorar el equilibrio.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', llm:'mistral', llmLabel:'Mistral Small', content:'Analiza el ritmo: frases largas/cortas, densidad, variación. Señala partes lentas y ágiles. Propón mejoras concretas.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', llm:'mistral', llmLabel:'Mistral Small', content:'Como lector sin conocimientos previos: ¿qué engancha? ¿Dónde se pierde el interés? ¿Qué cuesta entender?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', llm:'mistral', llmLabel:'Mistral Small', content:'Los 2 cambios que más mejorarían la sección, qué no tocar, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información histórica nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', llm:'claude', llmLabel:'Claude Sonnet 4.6', content:'Señala 3 fragmentos que podrían reescribirse para ganar fluidez. Para cada uno: cita el original, explica el problema y propone alternativa.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan editorial', label:'Plan editorial', llm:'mistral', llmLabel:'Mistral Small', content:'Plan de intervención secuencial. Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+  ]
+};
+
+const DEFAULT_DESCRIPTIVO = {
+  system: `Eres un editor técnico especializado en claridad expositiva y precisión. Tu objetivo es evaluar y mejorar la estructura lógica, la coherencia interna y la comprensibilidad del texto, eliminando ambigüedades y redundancias.
+
+VOZ DE REFERENCIA (Descriptivo):
+"El texto debe ser claro, ordenado y preciso. Cada idea debe exponerse de manera que el lector la entienda sin esfuerzo."
+
+REGLAS DESCRIPTIVAS:
+- Prioriza la organización lógica y la coherencia.
+- Elimina ambigüedades y repeticiones innecesarias.
+- Usa conectores y marcadores estructurales cuando sea necesario.
+- La extensión puede ajustarse para mayor claridad, pero sin omitir información.
+- Evita el lirismo y las metáforas que oscurezcan el significado.
+
+RESTRICCIONES:
+- No añadir hechos no explicitados en el texto
+- No eliminar información relevante
+- Evitar juicios de valor no justificados
+
+CONTEXTO HISTÓRICO: Primer documento 916, Orden de Santiago, 676 hab. en 1950, hoy 189.
+
+PARTE DEL LIBRO: Esta sección pertenece a la {{parte_libro}}.`,
+  prompts: [
+    {name:'Estructura', label:'Estructura', llm:'gemini', llmLabel:'Gemini 2.5 Flash', content:'Evalúa la estructura lógica: organización de párrafos, jerarquía de ideas, transiciones.\nObjetivo: {{objetivo}}\n\nProporciona:\n1. Esquema estructural\n2. 3 puntos fuertes\n3. 3 debilidades\n4. 3 mejoras concretas\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Tono', label:'Tono', llm:'mistral', llmLabel:'Mistral Small', content:'Evalúa el tono por su claridad y precisión. ¿Hay ambigüedades? ¿El registro es adecuado?\nObjetivo: {{objetivo}}\n\nSeñala 3 aciertos, 3 problemas y cómo mejorarlos.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Ritmo', label:'Ritmo', llm:'mistral', llmLabel:'Mistral Small', content:'Analiza el ritmo desde la legibilidad: longitud de frases, densidad informativa, pausas. Propón ajustes para mejorar la fluidez expositiva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Lector', label:'Lector', llm:'mistral', llmLabel:'Mistral Small', content:'Como lector no experto: ¿qué partes se entienden con facilidad? ¿Dónde se pierde el hilo? ¿Qué necesita mejor explicación?\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Síntesis', label:'Síntesis', llm:'mistral', llmLabel:'Mistral Small', content:'Los 2 cambios que más mejorarían la claridad, qué partes están bien, veredicto LISTO / REVISIÓN MENOR / MAYOR. No sugieras añadir información nueva.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Cirugía', label:'Cirugía', llm:'claude', llmLabel:'Claude Sonnet 4.6', content:'Señala 3 fragmentos confusos o mal estructurados. Para cada uno: cita el original, explica el problema y propone una versión más clara.\n\nTEXTO:\n"""\n{{texto}}\n"""'},
+    {name:'Plan editorial', label:'Plan editorial', llm:'mistral', llmLabel:'Mistral Small', content:'Plan de intervención secuencial (estructura y claridad). Formato: [ubicación] | [acción] | [PRIORIDAD]\n\nTEXTO:\n"""\n{{texto}}\n"""'}
+  ]
+};
+
+let activeProfile = 'narrativo';
+let settings = {
+  narrativo: JSON.parse(JSON.stringify(DEFAULT_NARRATIVO)),
+  descriptivo: JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO))
+};
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('castroverde_profiles_ana');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.narrativo && parsed.descriptivo) settings = parsed;
+    }
+  } catch(e) {}
+  if (!settings.narrativo.prompts) settings.narrativo.prompts = DEFAULT_NARRATIVO.prompts.map(p=>({...p}));
+  if (!settings.descriptivo.prompts) settings.descriptivo.prompts = DEFAULT_DESCRIPTIVO.prompts.map(p=>({...p}));
+}
+function saveSettings() {
+  localStorage.setItem('castroverde_profiles_ana', JSON.stringify(settings));
+  localStorage.setItem('castroverde_ana_settings_ts', Date.now());
+}
+
+const TONO_KEY = 'castroverde_ana_tono';
+function getTonoProfile() { return localStorage.getItem(TONO_KEY) || ''; }
+function saveTonoProfile(val) { localStorage.setItem(TONO_KEY, val); }
+
+function getParteLabel() {
+  const el = document.getElementById('ana-parte-libro');
+  return el.value === 'segunda' ? 'SEGUNDA PARTE (temática y formal)' : 'PRIMERA PARTE (narrativa divulgativa)';
+}
+
+function buildSystemWithTono() {
+  const base = settings[activeProfile].system;
+  const parte = getParteLabel();
+  const tono = getTonoProfile().trim();
+  let result = base.replace(/\{\{parte_libro\}\}/g, parte);
+  if (tono) result += '\n\nINSTRUCCIONES ADICIONALES DE TONO:\n' + tono;
+  result += '\n\nREGLA DE FORMATO: No reproduzcas el texto completo del autor en tu respuesta. Cita solo los fragmentos estrictamente necesarios para ilustrar un punto concreto (máximo 2-3 frases por cita). Tu respuesta es un análisis editorial, no una reescritura completa.';
+  return result;
+}
+
+function buildUserPrompt(template, texto, objetivo) {
+  return template
+    .replace(/\{\{texto\}\}/g, texto)
+    .replace(/\{\{objetivo\}\}/g, objetivo || '(no especificado)');
+}
+
+function generatePrompt(idx, btnEl) {
+  // En el nuevo diseño, los prompts son pasos 1-7 del pipeline
+  runStep(idx + 1);
+}
+
+// ══════════════════════════════════════════════════════
+//  DISPATCHER DE API
+// ══════════════════════════════════════════════════════
+async function callAPI(systemPrompt, userPrompt, modelId, apiOverride) {
+  const api = apiOverride || document.body.dataset.api || activeApi;
+  if (api === 'groq')    return callGroq(systemPrompt, userPrompt);
+  if (api === 'mistral') return callMistral(systemPrompt, userPrompt);
+  if (api === 'claude')  return callClaude(systemPrompt, userPrompt);
+  if (api === 'gemini')  return callGemini(systemPrompt, userPrompt);
+  return callOpenRouter(systemPrompt, userPrompt, modelId);
+}
+
+async function callOpenRouter(systemPrompt, userPrompt, modelId) {
+  if (!OR_API_KEY) { openOrKeyModal(); throw new Error('Introduce la clave de OpenRouter primero.'); }
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + OR_API_KEY,
+      'HTTP-Referer': 'https://castrovert-ux.github.io',
+      'X-Title': 'Análisis Castroverde'
+    },
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: 8000,
+      temperature: 0.4,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error ' + resp.status); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de OpenRouter');
+  return text;
+}
+
+async function callGemini(systemPrompt, userPrompt) {
+  if (!GEMINI_API_KEY) { openGeminiKeyModal(); throw new Error('Introduce la clave de Gemini primero.'); }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 8000, thinkingConfig: { thinkingBudget: 0 } }
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Gemini ' + resp.status); }
+  const data = await resp.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
+  if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
+  if (!text) throw new Error('Respuesta vacía de Gemini');
+  return text;
+}
+
+async function callGroq(systemPrompt, userPrompt) {
+  if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile', max_tokens: 8000, temperature: 0.4,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Groq ' + resp.status); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Groq');
+  return text;
+}
+
+async function callMistral(systemPrompt, userPrompt, _retry=0) {
+  if (!MISTRAL_API_KEY) { openMistralKeyModal(); throw new Error('Introduce la clave de Mistral primero.'); }
+  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MISTRAL_API_KEY },
+    body: JSON.stringify({
+      model: 'mistral-small-latest', max_tokens: 8000, temperature: 1.0,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+    })
+  });
+  if (resp.status === 429 && _retry < 3) {
+    const wait = (_retry + 1) * 15;
+    setSyncStatus('info', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s…`);
+    await new Promise(r => setTimeout(r, wait * 1000));
+    return callMistral(systemPrompt, userPrompt, _retry + 1);
+  }
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.message || err.error?.message || 'Error Mistral ' + resp.status); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Mistral');
+  return text;
+}
+
+async function callClaude(systemPrompt, userPrompt) {
+  if (!CLAUDE_API_KEY) { openClaudeKeyModal(); throw new Error('Introduce la clave de Claude primero.'); }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.4,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Claude ' + resp.status); }
+  const data = await resp.json();
+  const text = data.content?.[0]?.text?.trim();
+  if (!text) throw new Error('Respuesta vacía de Claude');
+  return text;
+}
+
+function parseMarkdown(md) {
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // Bloques
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\*\*\*\s*$/gm,'<hr>')
+    .replace(/^---\s*$/gm,'<hr>')
+    // Inline
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    // Listas numeradas
+    .replace(/^\d+\.\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ol>' + m + '</ol>')
+    // Listas con guión/asterisco
+    .replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => {
+      if (m.includes('<ol>')) return m;
+      return '<ul>' + m + '</ul>';
+    })
+    // Párrafos: líneas sueltas separadas por \n\n
+    .split(/\n{2,}/)
+    .map(block => {
+      block = block.trim();
+      if (!block) return '';
+      if (/^<(h[234]|hr|ol|ul)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g,' ') + '</p>';
+    })
+    .join('\n');
+}
+
+function setResultBox(text) {
+  const box = document.getElementById('result-box');
+  box.innerHTML = parseMarkdown(text);
+  box.scrollTop = 0;
+}
+
+function getResultBoxText() {
+  return document.getElementById('result-box').innerText;
+}
+
+function clearAll() {
+  document.getElementById('section-name').value = '';
+  document.getElementById('section-goal').value = '';
+  document.getElementById('input-text').value = '';
+  actualizarContador();
+  // Resetear pipeline
+  pipelineResults  = new Array(TOTAL_STEPS).fill(null);
+  pipelineStatus   = new Array(TOTAL_STEPS).fill('pending');
+  renderPipeline();
+  const box = document.getElementById('result-final-box');
+  if (box) box.innerHTML = '<span class="result-final-empty">Ejecuta uno o varios pasos para ver el resultado aquí</span>';
+  const btn = document.getElementById('btn-copy-final');
+  if (btn) btn.disabled = true;
+  const lbl = document.getElementById('result-final-label');
+  if (lbl) lbl.textContent = 'Resultado · último paso ejecutado';
+}
+
+function actualizarContador() {
+  const l = document.getElementById('input-text').value.length;
+  const el = document.getElementById('char-count');
+  el.textContent = l.toLocaleString() + ' / 20.000';
+  el.className = 'char-count' + (l > 18000 ? ' warn' : '');
+}
+
+function renderPromptButtons() {
+  // En el nuevo diseño, renderizar el pipeline completo
+  renderPipeline();
+}
+
+// ══════════════════════════════════════════════════════
+//  PIPELINE VERTICAL — DEFINICIÓN DE PASOS
+// ══════════════════════════════════════════════════════
+
+// LLMs disponibles por paso
+const PIPELINE_LLMS = [
+  { value: 'openrouter', label: 'OpenRouter' },
+  { value: 'groq',       label: 'Groq · Llama 70B' },
+  { value: 'gemini',     label: 'Gemini 2.5 Flash' },
+  { value: 'mistral',    label: 'Mistral Small' },
+  { value: 'claude',     label: 'Claude Sonnet' },
+];
+
+// Modelos OpenRouter disponibles (mismos que el selector global)
+const OR_MODELS = [
+  { value: 'anthropic/claude-sonnet-4-5',        label: 'Claude Sonnet 4.5' },
+  { value: 'anthropic/claude-haiku-4-5',         label: 'Claude Haiku 4.5' },
+  { value: 'google/gemini-2.5-flash',            label: 'Gemini 2.5 Flash' },
+  { value: 'google/gemini-2.5-pro',              label: 'Gemini 2.5 Pro' },
+  { value: 'openai/gpt-4.1-mini',                label: 'GPT-4.1 Mini' },
+  { value: 'openai/gpt-4.1',                     label: 'GPT-4.1' },
+  { value: 'meta-llama/llama-4-maverick',        label: 'Llama 4 Maverick' },
+  { value: 'mistralai/mistral-small-3.2-24b',    label: 'Mistral Small 3.2' },
+  { value: 'deepseek/deepseek-r1-0528',          label: 'DeepSeek R1' },
+];
+const OR_DEFAULT_MODEL = 'google/gemini-2.5-flash';
+
+// Estado del pipeline
+const TOTAL_STEPS = 9;
+let pipelineResults   = new Array(TOTAL_STEPS).fill(null);
+let pipelineStatus    = new Array(TOTAL_STEPS).fill('pending');
+let pipelineLlms      = [];
+let pipelineOrModels  = []; // modelo OR seleccionado por paso
+
+// Construir la definición de pasos a partir del perfil activo
+function getPipelineStepDefs() {
+  const prompts = settings[activeProfile].prompts; // 7 prompts
+  const corrApi = getCorrectorApi();
+  const aplApi  = getAplicarApi();
+  const aplLabel = aplApi === 'activa' ? (activeApi || 'groq') : aplApi;
+
+  return [
+    { key: 'corrector',    label: 'Corrector técnico',  sub: 'Limpieza formal · sustituye el texto origen', defaultLlm: corrApi },
+    { key: 'prompt_0',     label: prompts[0]?.label || 'Estructura',     sub: 'Análisis de estructura',     defaultLlm: prompts[0]?.llm || 'gemini' },
+    { key: 'prompt_1',     label: prompts[1]?.label || 'Tono',           sub: 'Análisis de tono',           defaultLlm: prompts[1]?.llm || 'mistral' },
+    { key: 'prompt_2',     label: prompts[2]?.label || 'Ritmo',          sub: 'Análisis de ritmo',          defaultLlm: prompts[2]?.llm || 'mistral' },
+    { key: 'prompt_3',     label: prompts[3]?.label || 'Lector',         sub: 'Perspectiva del lector',     defaultLlm: prompts[3]?.llm || 'mistral' },
+    { key: 'prompt_4',     label: prompts[4]?.label || 'Síntesis',       sub: 'Síntesis editorial',         defaultLlm: prompts[4]?.llm || 'mistral' },
+    { key: 'prompt_5',     label: prompts[5]?.label || 'Cirugía',        sub: 'Fragmentos a reescribir',    defaultLlm: prompts[5]?.llm || 'claude'  },
+    { key: 'prompt_6',     label: prompts[6]?.label || 'Plan editorial', sub: 'Plan de intervención',       defaultLlm: prompts[6]?.llm || 'mistral' },
+    { key: 'aplicar_plan', label: 'Aplicar plan',       sub: 'Aplica el plan sobre el texto corregido',    defaultLlm: aplLabel === 'activa' ? 'mistral' : aplLabel },
+  ];
+}
+
+function renderPipeline() {
+  const defs = getPipelineStepDefs();
+  const container = document.getElementById('pipeline-steps');
+  if (!container) return;
+
+  // Inicializar LLMs si es la primera vez o si cambia el número de pasos
+  if (pipelineLlms.length !== TOTAL_STEPS) {
+    pipelineLlms     = defs.map(d => d.defaultLlm);
+    pipelineOrModels = new Array(TOTAL_STEPS).fill(OR_DEFAULT_MODEL);
+  }
+
+  container.innerHTML = '';
+  defs.forEach((def, i) => {
+    const row = document.createElement('div');
+    row.className = 'step-row' + (i === 8 ? ' step-separator' : '');
+    row.id = 'step-row-' + i;
+
+    // Número
+    const numEl = document.createElement('div');
+    numEl.className = 'step-num';
+    numEl.textContent = i + 1;
+    row.appendChild(numEl);
+
+    // Nombre + sub
+    const nameEl = document.createElement('div');
+    nameEl.className = 'step-name';
+    nameEl.innerHTML = def.label + '<small>' + def.sub + '</small>';
+    row.appendChild(nameEl);
+
+    // Selector LLM
+    const sel = document.createElement('select');
+    sel.className = 'step-llm-select';
+    sel.id = 'step-llm-' + i;
+    PIPELINE_LLMS.forEach(llm => {
+      const opt = document.createElement('option');
+      opt.value = llm.value;
+      opt.textContent = llm.label;
+      if (llm.value === (pipelineLlms[i] || def.defaultLlm)) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    // Selector modelo OR (visible solo cuando se elige OpenRouter)
+    const selOr = document.createElement('select');
+    selOr.className = 'step-or-select';
+    selOr.id = 'step-or-model-' + i;
+    OR_MODELS.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.value;
+      opt.textContent = m.label;
+      if (m.value === (pipelineOrModels[i] || OR_DEFAULT_MODEL)) opt.selected = true;
+      selOr.appendChild(opt);
+    });
+    selOr.addEventListener('change', () => { pipelineOrModels[i] = selOr.value; });
+
+    sel.addEventListener('change', () => {
+      pipelineLlms[i] = sel.value;
+      // Mostrar/ocultar selector OR
+      if (sel.value === 'openrouter') row.classList.add('or-active');
+      else row.classList.remove('or-active');
+    });
+    // Estado inicial
+    if ((pipelineLlms[i] || def.defaultLlm) === 'openrouter') row.classList.add('or-active');
+
+    row.appendChild(sel);
+    row.appendChild(selOr);
+
+    // Estado
+    const statusEl = document.createElement('div');
+    statusEl.className = 'step-status';
+    statusEl.id = 'step-status-' + i;
+    statusEl.innerHTML = stepStatusIcon('pending');
+    row.appendChild(statusEl);
+
+    // Botones
+    const btnsEl = document.createElement('div');
+    btnsEl.className = 'step-btns';
+
+    const btnRun = document.createElement('button');
+    btnRun.className = 'step-btn-run';
+    btnRun.id = 'step-btn-run-' + i;
+    btnRun.textContent = '▶';
+    btnRun.title = 'Ejecutar ' + def.label;
+    btnRun.addEventListener('click', () => runStep(i));
+    btnsEl.appendChild(btnRun);
+
+    const btnVer = document.createElement('button');
+    btnVer.className = 'step-btn-ver';
+    btnVer.id = 'step-btn-ver-' + i;
+    btnVer.textContent = 'Ver';
+    btnVer.disabled = !pipelineResults[i];
+    btnVer.addEventListener('click', () => openStepResultModal(i));
+    btnsEl.appendChild(btnVer);
+
+    row.appendChild(btnsEl);
+    container.appendChild(row);
+  });
+
+  updateProgressBar();
+}
+
+function stepStatusIcon(status) {
+  if (status === 'pending') return '<span class="status-pending" title="Pendiente">○</span>';
+  if (status === 'running') return '<span class="status-running" title="Procesando">⚙</span>';
+  if (status === 'done')    return '<span class="status-done"    title="Completado">✓</span>';
+  if (status === 'error')   return '<span class="status-error"   title="Error">✗</span>';
+  return '';
+}
+
+function setStepStatus(i, status) {
+  pipelineStatus[i] = status;
+  const el = document.getElementById('step-status-' + i);
+  if (el) el.innerHTML = stepStatusIcon(status);
+  updateProgressBar();
+}
+
+function updateProgressBar() {
+  const done = pipelineStatus.filter(s => s === 'done').length;
+  const pct = Math.round((done / TOTAL_STEPS) * 100);
+  const fill = document.getElementById('progress-bar-fill');
+  if (fill) fill.style.width = pct + '%';
+  const lbl = document.getElementById('pipeline-progress-label');
+  if (lbl) lbl.textContent = done + ' / ' + TOTAL_STEPS;
+}
+
+function setFinalResult(text, label) {
+  const box = document.getElementById('result-final-box');
+  const lbl = document.getElementById('result-final-label');
+  const btn = document.getElementById('btn-copy-final');
+  if (!box) return;
+  if (text) {
+    box.innerHTML = parseMarkdown(text);
+    box.scrollTop = 0;
+    if (lbl) lbl.textContent = 'Resultado · ' + (label || 'último paso');
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── Limpia comillas triples que algunos modelos añaden al devolver texto ──
+function stripCodeFences(text) {
+  if (!text) return text;
+  return text.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
+}
+
+// ── Ejecutar un paso individual ──
+async function runStep(i) {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+
+  const defs = getPipelineStepDefs();
+  const def  = defs[i];
+  const llm  = pipelineLlms[i] || def.defaultLlm;
+
+  // Verificar clave
+  if (!checkApiKey(llm)) return;
+
+  const btnRun = document.getElementById('step-btn-run-' + i);
+  if (btnRun) { btnRun.classList.add('running'); btnRun.textContent = '…'; }
+  setStepStatus(i, 'running');
+
+  try {
+    let result;
+    if (i === 0) {
+      result = await runCorrectorStep(texto, llm, i);
+      result = stripCodeFences(result);
+      document.getElementById('input-text').value = result;
+      actualizarContador();
+    } else if (i >= 1 && i <= 7) {
+      const pIdx = i - 1;
+      result = await runPromptStep(pIdx, texto, llm, i);
+      result = stripCodeFences(result);
+    } else if (i === 8) {
+      const planTexto = pipelineResults[7];
+      if (!planTexto) {
+        alert('Genera primero el Plan editorial (paso 8) antes de aplicarlo.');
+        setStepStatus(i, 'pending');
+        if (btnRun) { btnRun.classList.remove('running'); btnRun.textContent = '▶'; }
+        return;
+      }
+      const textoBase = pipelineResults[0] || texto;
+      result = await runAplicarPlanStep(textoBase, planTexto, llm, i);
+      result = stripCodeFences(result);
+    }
+
+    pipelineResults[i] = result;
+    setStepStatus(i, 'done');
+
+    // Actualizar botón Ver
+    const btnVer = document.getElementById('step-btn-ver-' + i);
+    if (btnVer) btnVer.disabled = false;
+
+    // Mostrar en resultado final
+    setFinalResult(result, def.label);
+
+    // Guardar en histórico — usar mapa fijo para garantizar coincidencia con ANA_HIST_LABELS
+    // ANA_HIST_LABELS = ['Estructura','Tono','Ritmo','Lector','Síntesis','Cirugía','Plan editorial','Corrector técnico','Aplicar plan']
+    const STEP_TO_HIST = {
+      0: 'Corrector técnico',
+      1: 'Estructura', 2: 'Tono', 3: 'Ritmo', 4: 'Lector',
+      5: 'Síntesis', 6: 'Cirugía', 7: 'Plan editorial',
+      8: 'Aplicar plan'
+    };
+    const sectionName = document.getElementById('section-name').value.trim() || '(sin título)';
+    const stepName = STEP_TO_HIST[i] || def.label;
+    const llmLabel = llm === 'openrouter'
+      ? (OR_MODELS.find(m => m.value === (pipelineOrModels[i] || OR_DEFAULT_MODEL))?.label || 'OpenRouter')
+      : (PIPELINE_LLMS.find(l => l.value === llm)?.label || llm);
+    anaHistAdd(stepName, result, sectionName, llmLabel);
+
+  } catch(e) {
+    setStepStatus(i, 'error');
+    setFinalResult('✗ Error en paso ' + (i+1) + ' (' + def.label + '): ' + e.message, def.label + ' — Error');
+  } finally {
+    if (btnRun) { btnRun.classList.remove('running'); btnRun.textContent = '▶'; }
+  }
+}
+
+// ── Ejecutar todos los pasos secuencialmente ──
+async function runAllSteps() {
+  const texto = document.getElementById('input-text').value.trim();
+  if (!texto) { alert('Primero pega el texto de la sección.'); return; }
+
+  const btn = document.getElementById('btn-run-all');
+  if (btn) { btn.disabled = true; btn.textContent = '… Ejecutando'; }
+
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    await runStep(i);
+    // Pequeña pausa entre llamadas para no saturar APIs
+    if (i < TOTAL_STEPS - 1) await new Promise(r => setTimeout(r, 400));
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '▶ Ejecutar todo'; }
+}
+
+// ── Lógica interna de cada tipo de paso ──
+async function runCorrectorStep(texto, llm, stepIdx) {
+  const systemPrompt = getCorrectorSystem();
+  const userMsg = 'Corrige técnicamente el siguiente texto:\n\n"""\n' + texto + '\n"""';
+  if (llm === 'openrouter') {
+    const modelId = pipelineOrModels[stepIdx] || OR_DEFAULT_MODEL;
+    return callOpenRouter(systemPrompt, userMsg, modelId);
+  }
+  if (llm === 'groq') {
+    if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: 4096, temperature: 0.1,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }] })
+    });
+    if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error ' + resp.status); }
+    const data = await resp.json();
+    const t = data.choices?.[0]?.message?.content?.trim();
+    if (!t) throw new Error('Respuesta vacía de Groq');
+    return t;
+  }
+  const modelId = document.getElementById('or-model-select').value;
+  return callAPI(systemPrompt, userMsg, modelId, llm);
+}
+
+async function runPromptStep(pIdx, texto, llm, stepIdx) {
+  const p = settings[activeProfile].prompts[pIdx];
+  if (!p) throw new Error('Prompt no encontrado: índice ' + pIdx);
+  const objetivo = document.getElementById('section-goal').value.trim();
+  const systemMsg = buildSystemWithTono();
+  const userMsg = buildUserPrompt(p.content, texto, objetivo);
+  if (llm === 'openrouter') {
+    const modelId = pipelineOrModels[stepIdx] || OR_DEFAULT_MODEL;
+    return callOpenRouter(systemMsg, userMsg, modelId);
+  }
+  const modelId = document.getElementById('or-model-select').value;
+  return callAPI(systemMsg, userMsg, modelId, llm);
+}
+
+async function runAplicarPlanStep(textoBase, planTexto, llm, stepIdx) {
+  const systemPrompt = getAplicarSystem();
+  const userMsg = `PLAN DE ACCIÓN:\n\n${planTexto}\n\n${'─'.repeat(60)}\n\nTEXTO ORIGINAL:\n\n"""\n${textoBase}\n"""`;
+  if (llm === 'openrouter') {
+    const modelId = pipelineOrModels[stepIdx] || OR_DEFAULT_MODEL;
+    return callOpenRouter(systemPrompt, userMsg, modelId);
+  }
+  const modelId = document.getElementById('or-model-select').value;
+  return callAPI(systemPrompt, userMsg, modelId, llm);
+}
+
+function checkApiKey(llm) {
+  if (llm === 'openrouter' && !OR_API_KEY)    { setSyncStatus('err', 'Introduce la clave de OpenRouter.'); setTimeout(openOrKeyModal, 600); return false; }
+  if (llm === 'groq'    && !GROQ_API_KEY)    { setSyncStatus('err', 'Introduce la clave de Groq.'); setTimeout(openGroqKeyModal, 600); return false; }
+  if (llm === 'gemini'  && !GEMINI_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Gemini.'); setTimeout(openGeminiKeyModal, 600); return false; }
+  if (llm === 'mistral' && !MISTRAL_API_KEY) { setSyncStatus('err', 'Introduce la clave de Mistral.'); setTimeout(openMistralKeyModal, 600); return false; }
+  if (llm === 'claude'  && !CLAUDE_API_KEY)  { setSyncStatus('err', 'Introduce la clave de Claude.'); setTimeout(openClaudeKeyModal, 600); return false; }
+  return true;
+}
+
+// ── Modal de resultado de paso ──
+function openStepResultModal(i) {
+  if (!pipelineResults[i]) return;
+  const defs = getPipelineStepDefs();
+  document.getElementById('step-result-modal-title').textContent = defs[i].label;
+  const llmLabel = PIPELINE_LLMS.find(l => l.value === pipelineLlms[i])?.label || pipelineLlms[i] || '—';
+  document.getElementById('step-result-modal-sub').textContent = 'Paso ' + (i+1) + ' · ' + llmLabel;
+  const body = document.getElementById('step-result-modal-body');
+  body.innerHTML = parseMarkdown(pipelineResults[i]);
+  document.getElementById('modal-step-result').classList.add('visible');
+}
+function closeStepResultModal() {
+  document.getElementById('modal-step-result').classList.remove('visible');
+}
+
+
+
+function setActiveProfile(profile) {
+  activeProfile = profile;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    if (btn.getAttribute('data-mode') === profile) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+  const lbl = document.getElementById('active-mode-label');
+  if (lbl) lbl.innerText = profile === 'narrativo' ? 'Narrativo' : 'Descriptivo';
+  renderPipeline();
+  localStorage.setItem('castroverde_active_profile_ana', profile);
+}
+
+// ══════════════════════════════════════════════════════
+//  MODAL DE AJUSTES (con pestañas principales funcionales)
+// ══════════════════════════════════════════════════════
+
+function generarPanelesPrompts(perfil, promptsArray) {
+  const tabsContainer = document.getElementById(`ptabs-${perfil}`);
+  const panelsContainer = document.getElementById(`ppanels-${perfil}`);
+  if (!tabsContainer) return;
+  tabsContainer.innerHTML = '';
+  panelsContainer.innerHTML = '';
+  promptsArray.forEach((p, idx) => {
+    const tab = document.createElement('button');
+    tab.className = 'ptab' + (idx === 0 ? ' active' : '');
+    tab.textContent = p.label;
+    tab.setAttribute('data-idx', idx);
+    tab.addEventListener('click', () => {
+      tabsContainer.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      panelsContainer.querySelectorAll('.ppanel').forEach(panel => panel.classList.remove('visible'));
+      document.getElementById(`pp-${perfil}-${idx}`).classList.add('visible');
+    });
+    tabsContainer.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'ppanel' + (idx === 0 ? ' visible' : '');
+    panel.id = `pp-${perfil}-${idx}`;
+    panel.innerHTML = `
+      <label class="modal-label">Nombre completo</label>
+      <input class="modal-input pp-name" data-perfil="${perfil}" data-idx="${idx}" value="${escapeHtml(p.name)}">
+      <label class="modal-label">Etiqueta del botón</label>
+      <input class="modal-input pp-label" data-perfil="${perfil}" data-idx="${idx}" value="${escapeHtml(p.label)}">
+      <label class="modal-label">Contenido del prompt</label>
+      <textarea class="modal-textarea tall pp-content" data-perfil="${perfil}" data-idx="${idx}" rows="10">${escapeHtml(p.content)}</textarea>
+    `;
+    panelsContainer.appendChild(panel);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function openSettings() {
+  // Cargar valores actuales
+  document.getElementById('system-narrativo').value = settings.narrativo.system;
+  document.getElementById('system-descriptivo').value = settings.descriptivo.system;
+  const tono = getTonoProfile();
+  document.getElementById('tono-comun').value = tono;
+
+  generarPanelesPrompts('narrativo', settings.narrativo.prompts);
+  generarPanelesPrompts('descriptivo', settings.descriptivo.prompts);
+
+  // Cargar Herramientas
+  document.getElementById('corrector-system-textarea').value = getCorrectorSystem();
+  document.getElementById('corrector-api-select').value = getCorrectorApi();
+  document.getElementById('aplicar-system-textarea').value = getAplicarSystem();
+  document.getElementById('aplicar-api-select').value = getAplicarApi();
+
+  // Mostrar la pestaña correspondiente al perfil activo por defecto
+  const activeTabProfile = activeProfile;
+  const mainTabs = document.querySelectorAll('#settings-ptabs .ptab');
+  const mainPanels = document.querySelectorAll('#settings-panels .ppanel');
+  mainTabs.forEach(tab => {
+    if (tab.getAttribute('data-profile') === activeTabProfile) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+  mainPanels.forEach(panel => {
+    if (panel.getAttribute('data-profile') === activeTabProfile) {
+      panel.classList.add('visible');
+    } else {
+      panel.classList.remove('visible');
+    }
+  });
+
+  document.getElementById('modal-settings').classList.add('visible');
+}
+
+function closeSettings() {
+  document.getElementById('modal-settings').classList.remove('visible');
+}
+
+function saveSettingsFromModal() {
+  settings.narrativo.system = document.getElementById('system-narrativo').value;
+  settings.descriptivo.system = document.getElementById('system-descriptivo').value;
+  const tonoVal = document.getElementById('tono-comun').value;
+  saveTonoProfile(tonoVal);
+
+  // Guardar prompts de Narrativo
+  document.querySelectorAll('#ppanels-narrativo .pp-name').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].name = inp.value;
+  });
+  document.querySelectorAll('#ppanels-narrativo .pp-label').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].label = inp.value;
+  });
+  document.querySelectorAll('#ppanels-narrativo .pp-content').forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-idx'));
+    settings.narrativo.prompts[idx].content = ta.value;
+  });
+  // Guardar prompts de Descriptivo
+  document.querySelectorAll('#ppanels-descriptivo .pp-name').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].name = inp.value;
+  });
+  document.querySelectorAll('#ppanels-descriptivo .pp-label').forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].label = inp.value;
+  });
+  document.querySelectorAll('#ppanels-descriptivo .pp-content').forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-idx'));
+    settings.descriptivo.prompts[idx].content = ta.value;
+  });
+
+  // Guardar Herramientas
+  localStorage.setItem('castroverde_corrector_system', document.getElementById('corrector-system-textarea').value);
+  localStorage.setItem('castroverde_corrector_api',    document.getElementById('corrector-api-select').value);
+  localStorage.setItem('castroverde_aplicar_system',   document.getElementById('aplicar-system-textarea').value);
+  localStorage.setItem('castroverde_aplicar_api',      document.getElementById('aplicar-api-select').value);
+
+  saveSettings();
+  renderPipeline();
+  closeSettings();
+}
+
+function resetSettings() {
+  if (!confirm('¿Restaurar todos los ajustes a los valores por defecto para ambos perfiles?')) return;
+  settings.narrativo = JSON.parse(JSON.stringify(DEFAULT_NARRATIVO));
+  settings.descriptivo = JSON.parse(JSON.stringify(DEFAULT_DESCRIPTIVO));
+  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
+  localStorage.removeItem('castroverde_corrector_system');
+  localStorage.removeItem('castroverde_corrector_api');
+  localStorage.removeItem('castroverde_aplicar_system');
+  localStorage.removeItem('castroverde_aplicar_api');
+  saveSettings();
+  renderPromptButtons();
+  openSettings(); // refrescar modal
+}
+
+// ══════════════════════════════════════════════════════
+//  OPENROUTER KEY
+// ══════════════════════════════════════════════════════
+let OR_API_KEY = localStorage.getItem('castroverde_or_key') || '';
+let GEMINI_API_KEY  = localStorage.getItem('castroverde_ana_gemini_key')  || '';
+let MISTRAL_API_KEY = localStorage.getItem('castroverde_ana_mistral_key') || '';
+let CLAUDE_API_KEY  = localStorage.getItem('castroverde_ana_claude_key')  || '';
+let activeApi = localStorage.getItem('castroverde_ana_api') || 'openrouter';
+
+function openOrKeyModal() {
+  document.getElementById('or-key-input').value = OR_API_KEY || '';
+  document.getElementById('modal-orkey').classList.add('visible');
+  setTimeout(() => document.getElementById('or-key-input').focus(), 80);
+}
+function closeOrKeyModal() { document.getElementById('modal-orkey').classList.remove('visible'); }
+function saveOrKey(val) {
+  if (!val || !val.startsWith('sk-or-')) { alert('La clave de OpenRouter debe empezar por sk-or-'); return false; }
+  OR_API_KEY = val;
+  localStorage.setItem('castroverde_or_key', val);
+  closeOrKeyModal();
+  return true;
+}
+
+
+const DEFAULT_APLICAR_SYSTEM = `ROL
+Eres un editor de textos históricos que ejecuta un plan de intervención editorial.
+
+OBJETIVO
+Aplicar con fidelidad cada intervención indicada en el plan de acción, respetando en todo momento la voz y el estilo del autor.
+
+RESTRICCIÓN ABSOLUTA
+No añadir información nueva ni cambiar el significado de ningún enunciado. No intervenir en lo que el plan no menciona.
+
+QUÉ PUEDES Y DEBES HACER
+- Aplicar cada intervención del plan en el orden indicado
+- Si el plan indica reescribir un fragmento, reescríbelo
+- Si el plan indica reestructurar un párrafo, reestructúralo
+- Si el plan indica eliminar, fusionar, dividir o reordenar, hazlo
+- Corregir ortografía y puntuación donde el plan lo señale
+- En todos los casos, mantén la voz del autor: su léxico, su tono, su ritmo característico
+
+QUÉ NO DEBES HACER
+- Intervenir en fragmentos que el plan no menciona
+- Añadir información, explicaciones o transiciones no pedidas
+- Cambiar el registro o el tono general del texto
+- Embellecer o amplificar lo que el plan no señala
+
+SALIDA
+Devuelve solo el texto con el plan aplicado, sin comentarios ni explicaciones.`;
+
+
+function getAplicarSystem() {
+  return localStorage.getItem('castroverde_aplicar_system') || DEFAULT_APLICAR_SYSTEM;
+}
+function getAplicarApi() {
+  return localStorage.getItem('castroverde_aplicar_api') || 'activa';
+}
+
+// ══════════════════════════════════════════════════════
+//  PASO 0b — APLICAR PLAN DE ACCIÓN (legacy → pipeline)
+// ══════════════════════════════════════════════════════
+async function aplicarPlan() {
+  // Redirige al paso 8 del pipeline
+  await runStep(8);
+}
+
+
+// ══════════════════════════════════════════════════════
+//  GROQ KEY + CORRECTOR TÉCNICO
+// ══════════════════════════════════════════════════════
+let GROQ_API_KEY = localStorage.getItem('castroverde_groq_key') || '';
+
+function openGroqKeyModal() {
+  document.getElementById('groq-key-input').value = GROQ_API_KEY || '';
+  document.getElementById('modal-groqkey').classList.add('visible');
+  setTimeout(() => document.getElementById('groq-key-input').focus(), 80);
+}
+function closeGroqKeyModal() { document.getElementById('modal-groqkey').classList.remove('visible'); }
+function saveGroqKey(val) {
+  if (!val || !val.startsWith('gsk_')) { alert('La clave de Groq debe empezar por gsk_'); return false; }
+  GROQ_API_KEY = val;
+  localStorage.setItem('castroverde_groq_key', val);
+  closeGroqKeyModal();
+  return true;
+}
+
+const DEFAULT_CORRECTOR_SYSTEM = `Eres un corrector técnico. Tu trabajo es limpiar el texto de problemas formales sin tocar la voz del autor ni reescribir nada.
+
+REGLA ABSOLUTA
+No reescribas frases. No mejores el estilo. No suavices ni amplifiques. Si una frase te parece mejorable estilísticamente, déjala exactamente como está.
+
+QUÉ PUEDES CORREGIR
+- Errores ortográficos
+- Errores de puntuación (comas, puntos, mayúsculas)
+- Errores gramaticales evidentes (concordancia, tiempos verbales)
+- Espacios dobles o mal colocados
+- Mayúsculas incorrectas en nombres propios o términos históricos
+- Paréntesis o comillas mal cerrados
+
+QUÉ TIENES PROHIBIDO
+- Cambiar el orden de las palabras
+- Sustituir palabras por sinónimos
+- Añadir o eliminar frases
+- Reorganizar párrafos
+- Suavizar o reforzar cualquier afirmación
+- Añadir conectores o transiciones
+
+FORMATO DE SALIDA
+Devuelve únicamente el texto corregido, sin comentarios, sin explicaciones, sin listar los cambios. Solo el texto limpio.`;
+
+function getCorrectorSystem() {
+  return localStorage.getItem('castroverde_corrector_system') || DEFAULT_CORRECTOR_SYSTEM;
+}
+function getCorrectorApi() {
+  return localStorage.getItem('castroverde_corrector_api') || 'groq';
+}
+
+async function runCorrector() {
+  // Llamada legacy — redirige al paso 0 del pipeline
+  await runStep(0);
+}
+
+
+// ══════════════════════════════════════════════════════
+//  FIREBASE (misma lógica, simplificada)
+// ══════════════════════════════════════════════════════
+let FB_API_KEY = localStorage.getItem('castroverde_fb_key') || '';
+let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+
+function initFirebase(apiKey) {
+  if (!apiKey) return;
+  try {
+    if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey));
+    else startFirebase(apiKey);
+  } catch(e) {}
+}
+function startFirebase(apiKey) {
+  const config = {
+    apiKey: apiKey,
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(config);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(user => { fbUser = user; updateSyncUI(); });
+}
+if (FB_API_KEY) initFirebase(FB_API_KEY);
+
+function updateSyncUI() {
+  const btn = document.getElementById('btn-sync');
+  const icon = document.getElementById('sync-icon');
+  const label = document.getElementById('sync-label');
+  const userEl = document.getElementById('sync-user-text');
+  const signout = document.getElementById('btn-signout');
+  if (fbUser) {
+    btn.classList.add('synced');
+    icon.textContent = '✓';
+    label.textContent = 'Sincronizado';
+    userEl.textContent = fbUser.email;
+    userEl.style.display = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.classList.remove('synced');
+    icon.textContent = '☁';
+    label.textContent = 'Sincronizar';
+    userEl.style.display = 'none';
+    signout.style.display = 'none';
+  }
+}
+function handleSync() {
+  if (!fbAuth) { setSyncStatus('err', 'Introduce clave de Firebase.'); setTimeout(openFbKeyModal, 800); return; }
+  if (!fbUser) {
+    setSyncStatus('info', 'Iniciando sesión…');
+    fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(err => setSyncStatus('err', err.message));
+  } else { doSync(); }
+}
+function doSync() {
+  if (!fbUser || !fbDb) return;
+  setSyncStatus('info', 'Sincronizando…');
+  document.getElementById('btn-sync').classList.add('syncing');
+  const docRef = fbDb.collection('analizador').doc(fbUser.uid);
+  docRef.get().then(snap => {
+    const localSettings = JSON.parse(JSON.stringify(settings));
+    const localTs = parseInt(localStorage.getItem('castroverde_ana_settings_ts') || '0');
+    if (snap.exists && snap.data().settings && snap.data().settingsUpdatedAt > localTs) {
+      settings = snap.data().settings;
+      saveSettings();
+      localStorage.setItem('castroverde_ana_settings_ts', snap.data().settingsUpdatedAt);
+      renderPromptButtons();
+    }
+    return docRef.set({
+      settings: localSettings,
+      settingsUpdatedAt: Date.now(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(() => {
+    document.getElementById('btn-sync').classList.remove('syncing');
+    setSyncStatus('ok', '✓ Ajustes sincronizados');
+  }).catch(err => {
+    document.getElementById('btn-sync').classList.remove('syncing');
+    setSyncStatus('err', 'Error: ' + err.message);
+  });
+}
+function setSyncStatus(type, msg) {
+  const el = document.getElementById('sync-status');
+  document.getElementById('sync-status-msg').textContent = msg;
+  el.className = 'visible ' + type;
+  if (type === 'ok') setTimeout(() => el.className = '', 4000);
+}
+function closeSyncStatus() { document.getElementById('sync-status').className = ''; updateSyncUI(); }
+function fbSignOut() { if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
+
+// MODALES Firebase
+function openFbKeyModal() {
+  document.getElementById('fb-key-input').value = FB_API_KEY || '';
+  document.getElementById('modal-fbkey').classList.add('visible');
+  setTimeout(() => document.getElementById('fb-key-input').focus(), 80);
+}
+function closeFbKeyModal() { document.getElementById('modal-fbkey').classList.remove('visible'); }
+function saveFbKey(val) {
+  if (!val || !val.startsWith('AIzaSy')) { alert('La clave debe empezar por AIzaSy'); return false; }
+  FB_API_KEY = val;
+  localStorage.setItem('castroverde_fb_key', val);
+  initFirebase(val);
+  closeFbKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  GEMINI KEY
+// ══════════════════════════════════════════════════════
+function openGeminiKeyModal() {
+  document.getElementById('gemini-key-input').value = GEMINI_API_KEY || '';
+  document.getElementById('modal-geminikey').classList.add('visible');
+  setTimeout(() => document.getElementById('gemini-key-input').focus(), 80);
+}
+function closeGeminiKeyModal() { document.getElementById('modal-geminikey').classList.remove('visible'); }
+function saveGeminiKey(val) {
+  if (!val || !val.startsWith('AIzaSy')) { alert('La clave de Gemini debe empezar por AIzaSy'); return false; }
+  GEMINI_API_KEY = val;
+  localStorage.setItem('castroverde_ana_gemini_key', val);
+  closeGeminiKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  MISTRAL KEY
+// ══════════════════════════════════════════════════════
+function openMistralKeyModal() {
+  document.getElementById('mistral-key-input').value = MISTRAL_API_KEY || '';
+  document.getElementById('modal-mistralkey').classList.add('visible');
+  setTimeout(() => document.getElementById('mistral-key-input').focus(), 80);
+}
+function closeMistralKeyModal() { document.getElementById('modal-mistralkey').classList.remove('visible'); }
+function saveMistralKey(val) {
+  if (!val) { alert('Introduce una clave de Mistral válida'); return false; }
+  MISTRAL_API_KEY = val;
+  localStorage.setItem('castroverde_ana_mistral_key', val);
+  closeMistralKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  CLAUDE KEY
+// ══════════════════════════════════════════════════════
+function openClaudeKeyModal() {
+  document.getElementById('claude-key-input').value = CLAUDE_API_KEY || '';
+  document.getElementById('modal-claudekey').classList.add('visible');
+  setTimeout(() => document.getElementById('claude-key-input').focus(), 80);
+}
+function closeClaudeKeyModal() { document.getElementById('modal-claudekey').classList.remove('visible'); }
+function saveClaudeKey(val) {
+  if (!val || !val.startsWith('sk-ant-')) { alert('La clave de Claude debe empezar por sk-ant-'); return false; }
+  CLAUDE_API_KEY = val;
+  localStorage.setItem('castroverde_ana_claude_key', val);
+  closeClaudeKeyModal();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  SELECTOR DE API
+// ══════════════════════════════════════════════════════
+function setApi(api) {
+  activeApi = api;
+  localStorage.setItem('castroverde_ana_api', api);
+  document.body.dataset.api = api;
+  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
+  // Mostrar/ocultar selector de modelo OR y botones de clave
+  document.getElementById('or-model-select').style.display      = api === 'openrouter' ? '' : 'none';
+  document.getElementById('btn-or-key-header').style.display    = api === 'openrouter' ? '' : 'none';
+  document.getElementById('btn-gemini-key').style.display       = api === 'gemini'     ? '' : 'none';
+  document.getElementById('btn-groq-key-header').style.display  = api === 'groq'       ? '' : 'none';
+  document.getElementById('btn-mistral-key').style.display      = api === 'mistral'    ? '' : 'none';
+  document.getElementById('btn-claude-key').style.display       = api === 'claude'     ? '' : 'none';
+  // Actualizar etiqueta del modelo activo
+  const apiLabels = { openrouter: null, gemini: 'Gemini 2.5 Flash', groq: 'Llama 3.3 70B', mistral: 'Mistral Large', claude: 'Claude Sonnet 4.6' };
+  if (api === 'openrouter') {
+    const sel = document.getElementById('or-model-select');
+    document.getElementById('active-model-label').textContent = sel.options[sel.selectedIndex].text;
+  } else {
+    document.getElementById('active-model-label').textContent = apiLabels[api] || api;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  EVENTOS Y ARRANQUE
+// ══════════════════════════════════════════════════════
+document.getElementById('btn-or-key').addEventListener('click', openOrKeyModal);
+document.getElementById('btn-or-key-header').addEventListener('click', openOrKeyModal);
+document.getElementById('or-btn-save').addEventListener('click', () => saveOrKey(document.getElementById('or-key-input').value.trim()));
+document.getElementById('or-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de OpenRouter?')) {
+    OR_API_KEY = '';
+    localStorage.removeItem('castroverde_or_key');
+    document.getElementById('or-key-input').value = '';
+    closeOrKeyModal();
+  }
+});
+document.getElementById('or-btn-cancel').addEventListener('click', closeOrKeyModal);
+document.getElementById('modal-orkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-orkey')) closeOrKeyModal(); });
+
+// Gemini key modal events
+document.getElementById('btn-gemini-key').addEventListener('click', openGeminiKeyModal);
+document.getElementById('gemini-btn-save').addEventListener('click', () => saveGeminiKey(document.getElementById('gemini-key-input').value.trim()));
+document.getElementById('gemini-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Gemini?')) { GEMINI_API_KEY = ''; localStorage.removeItem('castroverde_ana_gemini_key'); document.getElementById('gemini-key-input').value = ''; closeGeminiKeyModal(); }
+});
+document.getElementById('gemini-btn-cancel').addEventListener('click', closeGeminiKeyModal);
+document.getElementById('modal-geminikey').addEventListener('click', e => { if (e.target === document.getElementById('modal-geminikey')) closeGeminiKeyModal(); });
+
+// Mistral key modal events
+document.getElementById('btn-mistral-key').addEventListener('click', openMistralKeyModal);
+document.getElementById('mistral-btn-save').addEventListener('click', () => saveMistralKey(document.getElementById('mistral-key-input').value.trim()));
+document.getElementById('mistral-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Mistral?')) { MISTRAL_API_KEY = ''; localStorage.removeItem('castroverde_ana_mistral_key'); document.getElementById('mistral-key-input').value = ''; closeMistralKeyModal(); }
+});
+document.getElementById('mistral-btn-cancel').addEventListener('click', closeMistralKeyModal);
+document.getElementById('modal-mistralkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-mistralkey')) closeMistralKeyModal(); });
+
+// Claude key modal events
+document.getElementById('btn-claude-key').addEventListener('click', openClaudeKeyModal);
+document.getElementById('claude-btn-save').addEventListener('click', () => saveClaudeKey(document.getElementById('claude-key-input').value.trim()));
+document.getElementById('claude-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Claude?')) { CLAUDE_API_KEY = ''; localStorage.removeItem('castroverde_ana_claude_key'); document.getElementById('claude-key-input').value = ''; closeClaudeKeyModal(); }
+});
+document.getElementById('claude-btn-cancel').addEventListener('click', closeClaudeKeyModal);
+document.getElementById('modal-claudekey').addEventListener('click', e => { if (e.target === document.getElementById('modal-claudekey')) closeClaudeKeyModal(); });
+// btn-groq-key-header (en la sync-bar sigue siendo para el corrector, pero el header usa btn-groq-key-header)
+document.getElementById('btn-groq-key-header').addEventListener('click', openGroqKeyModal);
+// Restaurar modelo seleccionado
+const savedModel = localStorage.getItem('castroverde_or_model');
+if (savedModel) {
+  const sel = document.getElementById('or-model-select');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === savedModel) {
+      sel.selectedIndex = i;
+      document.getElementById('active-model-label').textContent = sel.options[i].text;
+      break;
+    }
+  }
+}
+document.getElementById('or-model-select').addEventListener('change', function() {
+  const label = this.options[this.selectedIndex].text;
+  document.getElementById('active-model-label').textContent = label;
+  localStorage.setItem('castroverde_or_model', this.value);
+});
+document.getElementById('btn-groq-key').addEventListener('click', openGroqKeyModal);
+document.getElementById('groq-btn-save').addEventListener('click', () => saveGroqKey(document.getElementById('groq-key-input').value.trim()));
+document.getElementById('groq-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Groq?')) {
+    GROQ_API_KEY = '';
+    localStorage.removeItem('castroverde_groq_key');
+    document.getElementById('groq-key-input').value = '';
+    closeGroqKeyModal();
+  }
+});
+document.getElementById('groq-btn-cancel').addEventListener('click', closeGroqKeyModal);
+document.getElementById('modal-groqkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-groqkey')) closeGroqKeyModal(); });
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('settings-save').addEventListener('click', saveSettingsFromModal);
+document.getElementById('settings-cancel').addEventListener('click', closeSettings);
+document.getElementById('settings-reset').addEventListener('click', resetSettings);
+document.getElementById('modal-settings').addEventListener('click', e => { if (e.target === document.getElementById('modal-settings')) closeSettings(); });
+document.getElementById('btn-fb-key').addEventListener('click', openFbKeyModal);
+document.getElementById('fb-btn-save').addEventListener('click', () => saveFbKey(document.getElementById('fb-key-input').value.trim()));
+document.getElementById('fb-btn-forget').addEventListener('click', () => {
+  if (confirm('¿Borrar la clave de Firebase?')) {
+    FB_API_KEY = '';
+    localStorage.removeItem('castroverde_fb_key');
+    document.getElementById('fb-key-input').value = '';
+    closeFbKeyModal();
+  }
+});
+document.getElementById('fb-btn-cancel').addEventListener('click', closeFbKeyModal);
+document.getElementById('modal-fbkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-fbkey')) closeFbKeyModal(); });
+document.getElementById('btn-copy-prompt').addEventListener('click', () => {
+  const text = getResultBoxText();
+  if (text) navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-prompt');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+});
+document.getElementById('input-text').addEventListener('input', actualizarContador);
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('input-text').value = ev.target.result.substring(0, 20000);
+    actualizarContador();
+    if (!document.getElementById('section-name').value) document.getElementById('section-name').value = file.name.replace('.txt', '');
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+});
+
+// Selección de modo principal
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setActiveProfile(btn.getAttribute('data-mode')));
+});
+
+// Pestañas principales del modal de ajustes
+document.querySelectorAll('#settings-ptabs .ptab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const profile = tab.getAttribute('data-profile');
+    document.querySelectorAll('#settings-ptabs .ptab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('#settings-panels .ppanel').forEach(panel => {
+      if (panel.getAttribute('data-profile') === profile) panel.classList.add('visible');
+      else panel.classList.remove('visible');
+    });
+  });
+});
+
+// Inicialización
+loadSettings();
+if (!getTonoProfile()) {
+  saveTonoProfile('Perfil tonal de referencia: combina rigor histórico con divulgación. Frases claras, datos integrados, tono cercano. Evita academicismo excesivo y florituras vacías. Evita explicaciones técnicas que rompan la lectura. Si aparece un término técnico (ej. alfoz), intégralo sin definirlo a menos que sea imprescindible para la comprensión.');
+}
+const savedProfile = localStorage.getItem('castroverde_active_profile_ana');
+if (savedProfile === 'narrativo' || savedProfile === 'descriptivo') setActiveProfile(savedProfile);
+else setActiveProfile('narrativo');
+// El pipeline se renderiza dentro de setActiveProfile → renderPromptButtons → renderPipeline
+
+actualizarContador();
+// Aplicar selector de API guardado
+setApi(activeApi);
+// Restaurar modelo OR seleccionado
+const _savedModel = localStorage.getItem('castroverde_or_model');
+if (_savedModel) {
+  const sel = document.getElementById('or-model-select');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === _savedModel) { sel.selectedIndex = i; break; }
+  }
+}
+// Si falta Firebase, pedirla; luego pedir la clave de la API activa si falta
+if (!FB_API_KEY) setTimeout(openFbKeyModal, 500);
+if (activeApi === 'openrouter' && !OR_API_KEY)      setTimeout(openOrKeyModal,      FB_API_KEY ? 300 : 900);
+if (activeApi === 'gemini'     && !GEMINI_API_KEY)  setTimeout(openGeminiKeyModal,  FB_API_KEY ? 300 : 900);
+if (activeApi === 'groq'       && !GROQ_API_KEY)    setTimeout(openGroqKeyModal,    FB_API_KEY ? 300 : 900);
+if (activeApi === 'mistral'    && !MISTRAL_API_KEY) setTimeout(openMistralKeyModal, FB_API_KEY ? 300 : 900);
+if (activeApi === 'claude'     && !CLAUDE_API_KEY)  setTimeout(openClaudeKeyModal,  FB_API_KEY ? 300 : 900);
+
+// ══════════════════════════════════════════════════════
+//  ETIQUETA DINÁMICA DEL CORRECTOR TÉCNICO
+// ══════════════════════════════════════════════════════
+const ANA_CORRECTOR_API_LABELS = {
+  groq: 'Groq · Llama 3.3 70B',
+  gemini: 'Gemini 2.5 Flash',
+  openrouter: 'OpenRouter',
+  mistral: 'Mistral Small',
+  claude: 'Claude Sonnet 4.6'
+};
+function updateCorrectorApiLabel() {
+  const el = document.getElementById('corrector-api-label');
+  if (!el) return;
+  const api = getCorrectorApi();
+  el.textContent = ANA_CORRECTOR_API_LABELS[api] || api;
+}
+updateCorrectorApiLabel();
+
+// ══════════════════════════════════════════════════════
+//  HISTÓRICO DEL ANALIZADOR
+// ══════════════════════════════════════════════════════
+const ANA_HIST_LABELS = ['Estructura','Tono','Ritmo','Lector','Síntesis','Cirugía','Plan editorial','Corrector técnico','Aplicar plan'];
+
+function anaHistKey(name) { return 'castroverde_ana_hist_' + name.replace(/\s+/g,'_'); }
+function anaHistLoad(name) {
+  try { return JSON.parse(localStorage.getItem(anaHistKey(name)) || '[]'); } catch { return []; }
+}
+function anaHistSave(name, arr) {
+  localStorage.setItem(anaHistKey(name), JSON.stringify(arr));
+}
+function anaHistAdd(stepName, text, sectionName, apiLabel) {
+  const arr = anaHistLoad(stepName);
+  arr.unshift({ ts: new Date().toISOString(), text, section: sectionName || '', api: apiLabel || '' });
+  if (arr.length > 40) arr.splice(40);
+  anaHistSave(stepName, arr);
+}
+
+let anaHistActiveStep = ANA_HIST_LABELS[0];
+
+function anaOpenHistoryModal(step) {
+  anaHistActiveStep = step || ANA_HIST_LABELS[0];
+  document.getElementById('ana-modal-history').classList.add('visible');
+  anaHistRenderTabs();
+  anaHistRenderList();
+}
+function anaCloseHistoryModal() {
+  document.getElementById('ana-modal-history').classList.remove('visible');
+}
+document.getElementById('ana-modal-history').addEventListener('click', e => {
+  if (e.target === document.getElementById('ana-modal-history')) anaCloseHistoryModal();
+});
+
+function anaHistRenderTabs() {
+  const container = document.getElementById('ana-hist-tabs');
+  container.innerHTML = ANA_HIST_LABELS.map(name => {
+    const count = anaHistLoad(name).length;
+    const active = name === anaHistActiveStep ? ' active' : '';
+    return `<button class="hist-tab-btn${active}" onclick="anaHistSwitchTab('${name}')">${name} <span style="opacity:.6">(${count})</span></button>`;
+  }).join('');
+}
+function anaHistSwitchTab(name) {
+  anaHistActiveStep = name;
+  anaHistRenderTabs();
+  anaHistRenderList();
+}
+function anaHistClearStep() {
+  if (!confirm('¿Borrar todos los registros de "' + anaHistActiveStep + '"?')) return;
+  localStorage.removeItem(anaHistKey(anaHistActiveStep));
+  anaHistRenderTabs();
+  anaHistRenderList();
+}
+function anaHistDeleteEntry(name, idx) {
+  const arr = anaHistLoad(name);
+  arr.splice(idx, 1);
+  anaHistSave(name, arr);
+  anaHistRenderTabs();
+  anaHistRenderList();
+}
+function anaHistCopyEntry(name, idx) {
+  const arr = anaHistLoad(name);
+  if (!arr[idx]) return;
+  navigator.clipboard.writeText(arr[idx].text).then(() => setSyncStatus('ok', '✓ Registro copiado'));
+}
+function anaHistToggleBody(el) {
+  const body = el.parentElement.nextElementSibling;
+  const arrow = el.querySelector('.hist-arrow');
+  const open = body.classList.toggle('open');
+  if (arrow) arrow.textContent = open ? '▴' : '▾';
+}
+
+function anaHistRenderList() {
+  const list = document.getElementById('ana-hist-list');
+  const arr = anaHistLoad(anaHistActiveStep);
+  if (!arr.length) {
+    list.innerHTML = '<div class="hist-empty">Sin registros para este análisis.</div>';
+    return;
+  }
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  list.innerHTML = arr.map((entry, i) => {
+    const d = new Date(entry.ts);
+    const dateLabel = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})
+      + ' &nbsp;·&nbsp; ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    const sectionInfo = entry.section ? ` &nbsp;·&nbsp; <em>${esc(entry.section)}</em>` : '';
+    const apiInfo = entry.api ? ` &nbsp;·&nbsp; ${esc(entry.api)}` : '';
+    const snippet = entry.text.slice(0, 100).replace(/\n/g,' ') + (entry.text.length > 100 ? '…' : '');
+    const nameEsc = anaHistActiveStep.replace(/'/g,"\\'");
+    return `<div class="hist-entry">
+  <div class="hist-entry-header">
+    <div class="hist-entry-date" onclick="anaHistToggleBody(this)" style="cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+      <span class="hist-arrow">▾</span>
+      <span>${dateLabel}${sectionInfo}${apiInfo} — <span style="opacity:.7;font-style:italic;text-transform:none;">${esc(snippet)}</span></span>
+    </div>
+    <div class="hist-entry-actions">
+      <button class="hist-btn-sm" onclick="anaHistCopyEntry('${nameEsc}',${i})">Copiar</button>
+      <button class="hist-btn-sm del" onclick="anaHistDeleteEntry('${nameEsc}',${i})">✕</button>
+    </div>
+  </div>
+  <div class="hist-entry-body">${esc(entry.text)}</div>
+</div>`;
+  }).join('');
+}
+
+// ── Funciones de copia (globales, llamadas desde onclick) ──
+function copyFinalResult() {
+  const text = document.getElementById('result-final-box').innerText;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-final');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+function copyStepResult() {
+  const text = document.getElementById('step-result-modal-body').innerText;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-step-result-copy');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+
+// ── Event listeners del pipeline ──
+document.addEventListener('DOMContentLoaded', () => {
+  const modalStepResult = document.getElementById('modal-step-result');
+  if (modalStepResult) {
+    modalStepResult.addEventListener('click', e => {
+      if (e.target === modalStepResult) closeStepResultModal();
+    });
+  }
+});
+</script>
+<div class="modal-overlay" id="ana-modal-history">
+  <div class="modal-box" style="width:820px;max-height:88vh;display:flex;flex-direction:column;">
+    <div class="modal-title">Histórico de análisis</div>
+    <div class="modal-sub">Registros guardados en localStorage · Borrado individual o completo por paso</div>
+    <div class="hist-tabs" id="ana-hist-tabs"></div>
+    <div class="hist-list" id="ana-hist-list"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="anaHistClearStep()" style="font-size:9px;padding:5px 11px;color:var(--red);border-color:var(--red);">✕ Borrar este paso</button>
+      <button class="btn btn-ghost" onclick="anaCloseHistoryModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL RESULTADO DE PASO -->
+<div class="modal-overlay step-result-modal" id="modal-step-result">
+  <div class="modal-box" style="width:780px;max-height:86vh;display:flex;flex-direction:column;">
+    <div class="modal-title" id="step-result-modal-title">—</div>
+    <div class="modal-subtitle" id="step-result-modal-sub">—</div>
+    <div class="step-result-body" id="step-result-modal-body"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-shrink:0;">
+      <button class="btn btn-ghost" id="btn-step-result-copy" onclick="copyStepResult()" style="font-size:9px;padding:5px 11px;">⎘ Copiar texto</button>
+      <button class="btn btn-ghost" onclick="closeStepResultModal()" style="font-size:9px;padding:5px 11px;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
