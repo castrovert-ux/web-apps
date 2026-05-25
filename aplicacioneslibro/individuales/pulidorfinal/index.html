@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Gestor de Prompts - Texto Origen</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 24px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1300px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            padding: 24px 28px 32px 28px;
+            transition: all 0.2s;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+        }
+
+        .sub {
+            color: #475569;
+            margin-bottom: 28px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 14px;
+            font-weight: 400;
+            font-size: 0.95rem;
+        }
+
+        /* grupo de texto origen */
+        .source-group {
+            margin-bottom: 32px;
+        }
+
+        .source-group label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            color: #0f172a;
+            font-size: 1rem;
+        }
+
+        #sourceText {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            background: #fefefe;
+            resize: vertical;
+            transition: 0.2s;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        #sourceText:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+
+        /* panel añadir registro */
+        .add-panel {
+            background: #f8fafc;
+            padding: 20px 20px;
+            border-radius: 24px;
+            margin-bottom: 32px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .add-panel h3 {
+            margin: 0 0 16px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-panel h3:before {
+            content: "➕";
+            font-size: 1.2rem;
+        }
+
+        .flex-fields {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .field {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .field input, .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 16px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .field input:focus, .field textarea:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        .btn-add {
+            background: #3b82f6;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .btn-add:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px -8px rgba(59,130,246,0.4);
+        }
+
+        /* tabla de registros */
+        .records-section {
+            margin-bottom: 32px;
+        }
+
+        .records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .records-header h3 {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .badge-count {
+            background: #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #e9edf2;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        .prompt-cell {
+            max-width: 320px;
+            white-space: pre-wrap;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            background: #fefce8;
+            color: #2d3a3f;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-execute, .btn-delete {
+            border: none;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-execute {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .btn-execute:hover {
+            background: #059669;
+            transform: scale(0.97);
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+            color: #991b1b;
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* area resultado */
+        .result-group {
+            background: #fef9f0;
+            border-radius: 24px;
+            padding: 6px 0 12px 0;
+            margin-top: 8px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .result-header label {
+            font-weight: 700;
+            color: #92400e;
+            font-size: 1rem;
+        }
+
+        #copyBtn {
+            background: #f59e0b;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-weight: 600;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #copyBtn:hover {
+            background: #d97706;
+            transform: translateY(-1px);
+        }
+
+        #resultText {
+            width: 100%;
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid #fed7aa;
+            background: #fffbf5;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            color: #2c3e2f;
+        }
+
+        hr {
+            margin: 24px 0 8px 0;
+            border: none;
+            border-top: 1px solid #eef2f6;
+        }
+
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 680px) {
+            .app-container {
+                padding: 18px;
+            }
+            .actions {
+                flex-direction: column;
+                gap: 6px;
+            }
+            .btn-execute, .btn-delete {
+                justify-content: center;
+            }
+            .prompt-cell {
+                max-width: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>✧ Editor de Prompts</h1>
+    <div class="sub">Añade reglas / instrucciones (prompts) y aplícalas al texto origen con un clic</div>
+
+    <!-- TEXTO ORIGEN -->
+    <div class="source-group">
+        <label>📄 Texto origen</label>
+        <textarea id="sourceText" rows="3" placeholder="Escribe o pega tu texto aquí...&#10;Ejemplo: 'La inteligencia artificial está transformando el mundo.'"></textarea>
+    </div>
+
+    <!-- PANEL PARA AÑADIR REGISTROS -->
+    <div class="add-panel">
+        <h3>Nuevo registro</h3>
+        <div class="flex-fields">
+            <div class="field">
+                <label>🏷️ Nombre del registro</label>
+                <input type="text" id="recordName" placeholder="Ej: Traductor, Resumen, Corrector..." autocomplete="off">
+            </div>
+            <div class="field">
+                <label>✍️ Prompt (texto a unir con el origen)</label>
+                <textarea id="recordPrompt" rows="2" placeholder="Ej: 'Traduce esto al inglés:' o 'Resume el siguiente texto:'"></textarea>
+            </div>
+        </div>
+        <button id="addRecordBtn" class="btn-add">➕ Añadir registro</button>
+    </div>
+
+    <!-- TABLA DE REGISTROS -->
+    <div class="records-section">
+        <div class="records-header">
+            <h3>📋 Lista de prompts</h3>
+            <span class="badge-count" id="recordsCount">0 registros</span>
+        </div>
+        <div class="table-wrapper">
+            <table id="recordsTable">
+                <thead>
+                <tr><th>Nombre</th><th>Prompt</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                <tr class="empty-row"><td colspan="3">No hay registros. Añade uno con el formulario.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RESULTADO FINAL: UNIÓN DEL PROMPT + TEXTO ORIGEN -->
+    <div class="result-group">
+        <div class="result-header">
+            <label>🔗 Unión (prompt + texto origen)</label>
+            <button id="copyBtn" title="Copiar resultado al portapapeles">📋 Copiar resultado</button>
+        </div>
+        <textarea id="resultText" rows="5" readonly placeholder="Presiona el botón 'Ejecutar' de algún registro para ver aquí la unión del prompt con el texto origen..."></textarea>
+    </div>
+    <div class="footer-note">
+        ⚡ Cada registro tiene su propio botón "Ejecutar". Al presionarlo, se une el prompt con el texto origen (actual) y se muestra el resultado abajo.
+    </div>
+</div>
+
+<script>
+    // ---------- MODELO DE DATOS ----------
+    let records = [];   // cada elemento: { id, name, prompt }
+
+    // ID incremental simple
+    let nextId = 1;
+
+    // Referencias DOM
+    const sourceTextArea = document.getElementById('sourceText');
+    const tableBody = document.getElementById('tableBody');
+    const recordsCountSpan = document.getElementById('recordsCount');
+    const resultTextArea = document.getElementById('resultText');
+    const addBtn = document.getElementById('addRecordBtn');
+    const recordNameInput = document.getElementById('recordName');
+    const recordPromptInput = document.getElementById('recordPrompt');
+    const copyBtn = document.getElementById('copyBtn');
+
+    // ---------- FUNCIONES AUXILIARES ----------
+    function updateRecordsCount() {
+        const count = records.length;
+        recordsCountSpan.textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
+    }
+
+    // Renderiza la tabla completa a partir del array records
+    function renderTable() {
+        if (!tableBody) return;
+
+        if (records.length === 0) {
+            tableBody.innerHTML = `<tr class="empty-row"><td colspan="3">✨ No hay registros. Añade uno con el formulario.</td></tr>`;
+            updateRecordsCount();
+            return;
+        }
+
+        let html = '';
+        for (const record of records) {
+            // Escape básico para prevenir XSS (texto plano seguro)
+            const safeName = escapeHtml(record.name);
+            const safePrompt = escapeHtml(record.prompt);
+            html += `
+                <tr data-record-id="${record.id}">
+                    <td style="font-weight: 500;">${safeName}</td>
+                    <td class="prompt-cell">${safePrompt}</td>
+                    <td class="actions">
+                        <button class="btn-execute" data-id="${record.id}" title="Unir este prompt con el texto origen">▶ Ejecutar</button>
+                        <button class="btn-delete" data-id="${record.id}" title="Eliminar este registro">🗑 Eliminar</button>
+                    </td>
+                </tr>
+            `;
+        }
+        tableBody.innerHTML = html;
+        updateRecordsCount();
+    }
+
+    // Pequeña función para escapar caracteres HTML (seguridad)
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // Añadir nuevo registro
+    function addRecord(name, prompt) {
+        // Validaciones: nombre y prompt no pueden estar vacíos o solo espacios
+        const trimmedName = name.trim();
+        const trimmedPrompt = prompt.trim();
+        if (trimmedName === '') {
+            alert('❌ El nombre del registro no puede estar vacío.');
+            return false;
+        }
+        if (trimmedPrompt === '') {
+            alert('❌ El prompt no puede estar vacío. Escribe algún texto para unir.');
+            return false;
+        }
+
+        const newRecord = {
+            id: nextId++,
+            name: trimmedName,
+            prompt: trimmedPrompt
+        };
+        records.push(newRecord);
+        renderTable();
+        return true;
+    }
+
+    // Eliminar registro por ID
+    function deleteRecordById(id) {
+        const initialLength = records.length;
+        records = records.filter(record => record.id !== id);
+        if (records.length !== initialLength) {
+            renderTable();
+            // Si eliminamos el registro que había mostrado su resultado en pantalla, podemos limpiar o dejar igual (opcional)
+            // No limpiamos el resultado automáticamente, pero el usuario puede ejecutar otro.
+        } else {
+            // no se encontró, no pasa nada
+        }
+    }
+
+    // EJECUTAR: unir el prompt de un registro con el texto origen actual
+    function executeRecordById(id) {
+        const record = records.find(r => r.id === id);
+        if (!record) {
+            alert('Registro no encontrado. Puede que haya sido eliminado.');
+            return;
+        }
+
+        const sourceText = sourceTextArea.value;
+        // Definimos la unión: prompt + "\n" + texto origen
+        // Para que sea claro y respete "unión del prompt al texto" (prompt primero, después el texto origen)
+        // Si el usuario desea un espacio o formato diferente, esto es transparente y se puede editar fácil.
+        // Uso un salto de línea para separar visualmente, pero mantiene la esencia de concatenación.
+        let unionResult = '';
+        if (record.prompt && sourceText !== undefined) {
+            // Si el texto origen está vacío, igual concatenamos el prompt (útil)
+            unionResult = record.prompt + '\n\n' + sourceText;
+        } else {
+            unionResult = record.prompt + (sourceText ? '\n\n' + sourceText : '');
+        }
+
+        // Mostrar en el textarea de resultado
+        resultTextArea.value = unionResult;
+    }
+
+    // Función para copiar el contenido del resultado al portapapeles
+    async function copyResultToClipboard() {
+        const resultContent = resultTextArea.value;
+        if (!resultContent || resultContent.trim() === '') {
+            alert('📭 No hay ningún resultado para copiar. Ejecuta primero algún prompt.');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(resultContent);
+            // feedback visual breve
+            const originalText = copyBtn.innerText;
+            copyBtn.innerText = '✅ ¡Copiado!';
+            setTimeout(() => {
+                copyBtn.innerText = originalText;
+            }, 1500);
+        } catch (err) {
+            console.error('Error al copiar: ', err);
+            alert('No se pudo copiar al portapapeles. Revisa permisos.');
+        }
+    }
+
+    // Manejar clics en botones dinámicos (delegación de eventos)
+    function handleTableActions(event) {
+        const target = event.target;
+        // Botón ejecutar
+        if (target.classList && target.classList.contains('btn-execute')) {
+            const idStr = target.getAttribute('data-id');
+            if (idStr) {
+                const id = parseInt(idStr, 10);
+                executeRecordById(id);
+            }
+        }
+        // Botón eliminar
+        else if (target.classList && target.classList.contains('btn-delete')) {
+            const idStr = target.getAttribute('data-id');
+            if (idStr) {
+                const id = parseInt(idStr, 10);
+                if (confirm('¿Eliminar este registro permanentemente?')) {
+                    deleteRecordById(id);
+                }
+            }
+        }
+    }
+
+    // Añadir registro desde el formulario
+    function onAddRecordClick() {
+        const name = recordNameInput.value;
+        const prompt = recordPromptInput.value;
+        const success = addRecord(name, prompt);
+        if (success) {
+            // Limpiar campos después de agregar exitosamente
+            recordNameInput.value = '';
+            recordPromptInput.value = '';
+            recordNameInput.focus();
+        }
+    }
+
+    // Inicializar con algunos ejemplos ilustrativos (opcional pero útil para demostrar)
+    function loadExampleRecords() {
+        // Solo si no hay registros, añadimos un par de ejemplos para que la aplicación no esté vacía.
+        if (records.length === 0) {
+            addRecord('📝 Traductor EN', 'Traduce el siguiente texto al inglés:');
+            addRecord('🔍 Resumen ejecutivo', 'Resume este texto en 2 líneas:');
+            addRecord('✨ Corrector formal', 'Convierte el texto a un tono profesional y formal:');
+        }
+    }
+
+    // Eventos y montaje inicial
+    function init() {
+        // Agregar evento al botón añadir
+        addBtn.addEventListener('click', onAddRecordClick);
+
+        // Delegación de eventos para la tabla (ejecutar/eliminar)
+        const tableContainer = document.getElementById('recordsTable');
+        if (tableContainer) {
+            tableContainer.addEventListener('click', handleTableActions);
+        }
+
+        // Evento copiar
+        copyBtn.addEventListener('click', copyResultToClipboard);
+
+        // Opcional: permitir que al presionar Enter en los campos no haga submit raro (pero no hay form)
+        const inputs = [recordNameInput, recordPromptInput];
+        inputs.forEach(input => {
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        onAddRecordClick();
+                    }
+                });
+            }
+        });
+
+        // Cargamos ejemplos solo para que el usuario vea la mecánica (si no hay datos)
+        loadExampleRecords();
+
+        // Sincronizar cualquier cambio en el texto origen no afecta resultado hasta ejecutar, pero todo ok
+        // Si se desea, se puede añadir un pequeño mensaje de bienvenida
+    }
+
+    // Llamar a init cuando DOM esté listo
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
