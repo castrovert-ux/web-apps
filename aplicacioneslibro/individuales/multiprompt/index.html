@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Gestor de Prompts - Texto Oc居多 + Edición</title>
+    <title>Gestor de Prompts - Con localStorage</title>
     <style>
         * {
             box-sizing: border-box;
@@ -47,7 +47,6 @@
             font-size: 0.95rem;
         }
 
-        /* texto origen */
         .source-group {
             margin-bottom: 32px;
         }
@@ -76,7 +75,6 @@
             box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
         }
 
-        /* panel añadir */
         .add-panel {
             background: #f8fafc;
             padding: 20px;
@@ -150,7 +148,6 @@
             transform: translateY(-1px);
         }
 
-        /* tabla */
         .records-section {
             margin-bottom: 32px;
         }
@@ -267,7 +264,6 @@
             color: #64748b;
         }
 
-        /* resultado */
         .result-group {
             background: #fef9f0;
             border-radius: 24px;
@@ -316,7 +312,6 @@
             resize: vertical;
         }
 
-        /* MODAL para editar prompt */
         .modal {
             display: none;
             position: fixed;
@@ -395,15 +390,13 @@
 <body>
 <div class="app-container">
     <h1>✧ Editor de Prompts Ocultos</h1>
-    <div class="sub">Los prompts están ocultos en la tabla. Usa el botón "✏️ Editar" para verlos y modificarlos.</div>
+    <div class="sub">Los prompts están ocultos en la tabla. Usa "✏️ Editar" para verlos/modificarlos. Todo se guarda automáticamente.</div>
 
-    <!-- Texto origen -->
     <div class="source-group">
         <label>📄 Texto origen</label>
-        <textarea id="sourceText" rows="3" placeholder="Escribe o pega tu texto aquí...&#10;Ejemplo: 'La inteligencia artificial está transformando el mundo.'"></textarea>
+        <textarea id="sourceText" rows="3" placeholder="Escribe o pega tu texto aquí..."></textarea>
     </div>
 
-    <!-- Añadir registro -->
     <div class="add-panel">
         <h3>➕ Nuevo registro</h3>
         <div class="flex-fields">
@@ -413,13 +406,12 @@
             </div>
             <div class="field">
                 <label>✍️ Prompt (secreto, solo editable después)</label>
-                <textarea id="recordPrompt" rows="2" placeholder="Ej: 'Traduce esto al inglés:' o 'Resume el siguiente texto:'"></textarea>
+                <textarea id="recordPrompt" rows="2" placeholder="Ej: 'Traduce esto al inglés:'"></textarea>
             </div>
         </div>
         <button id="addRecordBtn" class="btn-add">➕ Añadir registro</button>
     </div>
 
-    <!-- Tabla de registros (sin mostrar el prompt a simple vista) -->
     <div class="records-section">
         <div class="records-header">
             <h3>📋 Mis prompts</h3>
@@ -437,20 +429,18 @@
         </div>
     </div>
 
-    <!-- Resultado final -->
     <div class="result-group">
         <div class="result-header">
             <label>🔗 Unión (prompt + texto origen)</label>
             <button id="copyBtn">📋 Copiar resultado</button>
         </div>
-        <textarea id="resultText" rows="5" readonly placeholder="Presiona 'Ejecutar' en algún registro para unir su prompt con el texto origen..."></textarea>
+        <textarea id="resultText" rows="5" readonly placeholder="Presiona 'Ejecutar' en algún registro..."></textarea>
     </div>
     <div class="footer-note">
-        ⚡ Los prompts están ocultos. Haz clic en "✏️ Editar" para ver y modificar el contenido del prompt. Luego ejecuta.
+        💾 Los registros y el texto origen se guardan automáticamente en tu navegador (localStorage).
     </div>
 </div>
 
-<!-- MODAL PARA EDITAR PROMPT -->
 <div id="editModal" class="modal">
     <div class="modal-content">
         <h3 id="modalRecordName">Editar prompt</h3>
@@ -464,10 +454,10 @@
 </div>
 
 <script>
-    // ---------- MODELO ----------
-    let records = [];       // { id, name, prompt }
+    // ---------- MODELO CON PERSISTENCIA ----------
+    let records = [];
     let nextId = 1;
-    let currentEditingId = null;   // id del registro que se está editando en el modal
+    let currentEditingId = null;
 
     // DOM elements
     const sourceTextArea = document.getElementById('sourceText');
@@ -479,7 +469,7 @@
     const recordPromptInput = document.getElementById('recordPrompt');
     const copyBtn = document.getElementById('copyBtn');
 
-    // Modal elements
+    // Modal
     const editModal = document.getElementById('editModal');
     const modalPromptInput = document.getElementById('modalPromptInput');
     const modalRecordNameSpan = document.getElementById('modalRecordName');
@@ -497,13 +487,55 @@
         });
     }
 
-    // Actualizar contador
+    // Guardar todo en localStorage (records, nextId, sourceText)
+    function persistAll() {
+        try {
+            localStorage.setItem('promptRecords', JSON.stringify(records));
+            localStorage.setItem('nextId', nextId);
+            localStorage.setItem('sourceText', sourceTextArea.value);
+        } catch(e) { console.warn(e); }
+    }
+
+    // Cargar datos desde localStorage
+    function loadFromStorage() {
+        const storedRecords = localStorage.getItem('promptRecords');
+        if (storedRecords) {
+            try {
+                records = JSON.parse(storedRecords);
+                // Asegurar que cada registro tenga los campos necesarios
+                if (!Array.isArray(records)) records = [];
+            } catch(e) { records = []; }
+        } else {
+            records = [];
+        }
+
+        const storedNextId = localStorage.getItem('nextId');
+        if (storedNextId && !isNaN(parseInt(storedNextId, 10))) {
+            nextId = parseInt(storedNextId, 10);
+        } else {
+            // Calcular el máximo id existente para no colisionar
+            if (records.length > 0) {
+                const maxId = Math.max(...records.map(r => r.id), 0);
+                nextId = maxId + 1;
+            } else {
+                nextId = 1;
+            }
+        }
+
+        const storedSource = localStorage.getItem('sourceText');
+        if (storedSource !== null) {
+            sourceTextArea.value = storedSource;
+        } else {
+            sourceTextArea.value = '';
+        }
+    }
+
+    // Actualizar contador y guardar tras cualquier cambio
     function updateRecordsCount() {
         const count = records.length;
         recordsCountSpan.textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
     }
 
-    // Renderizar tabla (ocultando el prompt, mostrando solo un icono/placeholder)
     function renderTable() {
         if (!tableBody) return;
         if (records.length === 0) {
@@ -515,7 +547,6 @@
         let html = '';
         for (const record of records) {
             const safeName = escapeHtml(record.name);
-            // Columna de prompt oculto: mostramos un texto genérico y un candado
             const hiddenPromptDisplay = `<span style="background:#eef2ff; padding:4px 10px; border-radius:40px; font-size:0.7rem;">🔒 oculto · clic en ✏️</span>`;
             html += `
                 <tr data-record-id="${record.id}">
@@ -531,9 +562,10 @@
         }
         tableBody.innerHTML = html;
         updateRecordsCount();
+        persistAll(); // cada vez que se renderiza por cambios, guardamos (ya se llama desde operaciones, pero redundancia segura)
     }
 
-    // Añadir nuevo registro (el prompt se guarda pero no se muestra en la tabla)
+    // Añadir registro
     function addRecord(name, prompt) {
         const trimmedName = name.trim();
         const trimmedPrompt = prompt.trim();
@@ -551,19 +583,15 @@
             prompt: trimmedPrompt
         };
         records.push(newRecord);
-        renderTable();
+        renderTable();       // guarda automáticamente
         return true;
     }
 
-    // Eliminar registro
     function deleteRecordById(id) {
         records = records.filter(record => record.id !== id);
         renderTable();
-        // Si el resultado actual pertenecía a ese registro (no podemos saberlo), se deja igual o se podría limpiar
-        // pero no hay problema, el usuario puede ejecutar otro.
     }
 
-    // Ejecutar: unir prompt + texto origen
     function executeRecordById(id) {
         const record = records.find(r => r.id === id);
         if (!record) {
@@ -571,11 +599,12 @@
             return;
         }
         const source = sourceTextArea.value;
-        let union = record.prompt + '\n\n' + source;
+        const union = record.prompt + '\n\n' + source;
         resultTextArea.value = union;
+        // No es necesario guardar resultado, pero sí que el texto origen se guarda en persistAll ya al editar source?
+        // Guardamos también cuando se cambie sourceTextArea (evento input)
     }
 
-    // Mostrar modal para editar prompt (ver y modificar)
     function openEditModal(recordId) {
         const record = records.find(r => r.id === recordId);
         if (!record) {
@@ -588,7 +617,6 @@
         editModal.style.display = 'flex';
     }
 
-    // Guardar cambios del prompt desde el modal
     function savePromptEdit() {
         if (currentEditingId === null) return;
         const newPrompt = modalPromptInput.value;
@@ -599,9 +627,8 @@
         const recordIndex = records.findIndex(r => r.id === currentEditingId);
         if (recordIndex !== -1) {
             records[recordIndex].prompt = newPrompt.trim();
-            renderTable();       // refresca la tabla (sigue sin mostrar el texto)
-            // Opcional: mostrar un pequeño feedback
-            alert('✅ Prompt actualizado correctamente (sigue oculto en la tabla).');
+            renderTable();       // guarda automáticamente
+            alert('✅ Prompt actualizado correctamente.');
         } else {
             alert('Error: el registro ya no existe.');
         }
@@ -614,7 +641,6 @@
         modalPromptInput.value = '';
     }
 
-    // Copiar resultado
     async function copyResult() {
         const result = resultTextArea.value;
         if (!result || result.trim() === '') {
@@ -631,7 +657,6 @@
         }
     }
 
-    // Manejar clics en la tabla (ejecutar, editar, eliminar)
     function handleTableActions(event) {
         const target = event.target;
         if (target.classList.contains('btn-execute')) {
@@ -650,7 +675,6 @@
         }
     }
 
-    // Añadir desde formulario
     function onAddRecord() {
         const name = recordNameInput.value;
         const prompt = recordPromptInput.value;
@@ -661,35 +685,50 @@
         }
     }
 
-    // Ejemplos iniciales para que se vea funcionalidad (sin mostrar el prompt)
-    function loadExamples() {
+    // Guardar el texto origen cuando el usuario lo modifica (cada cambio)
+    function bindSourceAutoSave() {
+        sourceTextArea.addEventListener('input', () => {
+            persistAll();  // guarda solo el texto origen junto con todo (es seguro)
+        });
+    }
+
+    // Inicializar: cargar datos, renderizar, eventos
+    function init() {
+        loadFromStorage();
+        // Si no hay registros y queremos ejemplos solo la primera vez (si está vacío)
         if (records.length === 0) {
+            // Ejemplos ilustrativos (se guardarán tras añadirlos)
             addRecord('📝 Traductor EN', 'Traduce el siguiente texto al inglés:');
             addRecord('🔍 Resumen creativo', 'Haz un resumen creativo y atractivo de este texto:');
             addRecord('✨ Corrector gramatical', 'Corrige la gramática y ortografía del siguiente texto:');
+        } else {
+            // Solo renderizar lo cargado
+            renderTable();
         }
-    }
-
-    // Event listeners
-    function init() {
+        // Asegurar que la vista del texto origen refleje lo guardado (ya lo hace loadFromStorage)
+        // Pero si por algún casual el sourceTextArea no se actualizó bien:
+        if (sourceTextArea.value === '' && localStorage.getItem('sourceText') !== null) {
+            sourceTextArea.value = localStorage.getItem('sourceText');
+        }
+        
+        // Eventos
         addBtn.addEventListener('click', onAddRecord);
         const tableContainer = document.getElementById('recordsTable');
         if (tableContainer) tableContainer.addEventListener('click', handleTableActions);
         copyBtn.addEventListener('click', copyResult);
-
-        // Modal: guardar y cancelar
+        
         modalSaveBtn.addEventListener('click', savePromptEdit);
         modalCancelBtn.addEventListener('click', closeModal);
-        // Cerrar modal al hacer clic fuera del contenido
         editModal.addEventListener('click', (e) => {
             if (e.target === editModal) closeModal();
         });
-
-        // Permitir Enter en campos de añadir (sin shift)
+        
         recordNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onAddRecord(); } });
         recordPromptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); onAddRecord(); } });
-
-        loadExamples();
+        
+        bindSourceAutoSave();
+        // Guardado inicial por si acaso
+        persistAll();
     }
 
     document.addEventListener('DOMContentLoaded', init);
