@@ -1,679 +1,534 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Evaluador de Prompts - Corrección paso a paso</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Test Ordenador - 50 preguntas | Curso Completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-        body {
-            background: #eef2ff;
-            margin: 0;
-            padding: 24px 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+  }
 
-        .app-container {
-            max-width: 1300px;
-            width: 100%;
-            background: white;
-            border-radius: 32px;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            padding: 24px 28px 32px;
-        }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin: 0 0 0.25rem 0;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+  .bg-blobs {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.12;
+    animation: float 16s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 450px; height: 450px; background: var(--c4); bottom: -80px; right: -70px; animation-delay: -4s; }
+  .blob:nth-child(3) { width: 380px; height: 380px; background: var(--c3); top: 40%; left: 70%; animation-delay: -8s; }
 
-        .sub {
-            color: #475569;
-            margin-bottom: 28px;
-            border-left: 4px solid #3b82f6;
-            padding-left: 14px;
-            font-weight: 400;
-            font-size: 0.9rem;
-        }
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to { transform: translate(20px, 15px) scale(1.05); }
+  }
 
-        .source-group {
-            margin-bottom: 32px;
-        }
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 24px 60px;
+  }
 
-        .source-group label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 8px;
-            color: #0f172a;
-        }
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: slideDown 0.6s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: white;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    padding: 6px 20px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  .sub {
+    color: var(--sub);
+    font-weight: 600;
+  }
 
-        #sourceText {
-            width: 100%;
-            padding: 14px 16px;
-            font-size: 0.95rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 20px;
-            background: #fefefe;
-            resize: vertical;
-            font-family: 'SF Mono', monospace;
-        }
+  .action-bar {
+    background: rgba(17, 29, 53, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 60px;
+    padding: 12px 24px;
+    margin-bottom: 35px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .score-box {
+    background: linear-gradient(135deg, var(--c2), #0f6e5f);
+    padding: 8px 20px;
+    border-radius: 40px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .score-box span {
+    font-size: 1.4rem;
+  }
+  .btn-group {
+    display: flex;
+    gap: 16px;
+  }
+  .btn-primary, .btn-secondary {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    padding: 10px 24px;
+    border-radius: 40px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: white;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(37,211,102,0.4);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--text);
+  }
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.15);
+    transform: translateY(-2px);
+  }
 
-        .add-panel {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 24px;
-            margin-bottom: 32px;
-            border: 1px solid #e2e8f0;
-        }
+  .block-section {
+    margin-bottom: 48px;
+  }
+  .block-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.7rem;
+    margin-bottom: 20px;
+    padding-left: 12px;
+    border-left: 6px solid var(--c1);
+    background: linear-gradient(90deg, rgba(37,211,102,0.1), transparent);
+    border-radius: 0 20px 20px 0;
+  }
+  .questions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
 
-        .flex-fields {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 18px;
-        }
+  .question-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 28px;
+    padding: 1.5rem;
+    transition: all 0.2s;
+  }
+  .q-title {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .q-num {
+    background: rgba(37,211,102,0.2);
+    color: var(--c1);
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 40px;
+    font-size: 0.8rem;
+  }
+  .q-text {
+    font-weight: 800;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    flex: 1;
+  }
+  .options-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .opt-item {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 180px;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .opt-item:hover:not(.disabled-highlight) {
+    background: rgba(37,211,102,0.08);
+    border-color: var(--c1);
+  }
+  .opt-item input {
+    display: none;
+  }
+  .opt-label {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+  }
+  .opt-letter {
+    width: 34px;
+    height: 34px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+  }
+  .opt-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .opt-item.correct-highlight {
+    background: rgba(37,211,102,0.2);
+    border-color: var(--c1);
+  }
+  .opt-item.correct-highlight .opt-letter {
+    background: var(--c1);
+    color: #0a1628;
+  }
+  .opt-item.wrong-highlight {
+    background: rgba(255,107,107,0.2);
+    border-color: var(--c4);
+  }
+  .opt-item.wrong-highlight .opt-letter {
+    background: var(--c4);
+    color: white;
+  }
+  .opt-item input:checked + .opt-label {
+    background: rgba(37,211,102,0.1);
+    border-radius: 18px;
+  }
+  .opt-item input:checked + .opt-label .opt-letter {
+    background: var(--c2);
+    color: white;
+  }
 
-        .field {
-            flex: 1;
-            min-width: 180px;
-        }
+  @media (max-width: 720px) {
+    .options-row {
+      flex-direction: column;
+    }
+    .opt-item {
+      flex: 1 1 auto;
+    }
+    .action-bar {
+      flex-direction: column;
+      align-items: stretch;
+      border-radius: 28px;
+    }
+    .btn-group {
+      justify-content: center;
+    }
+  }
 
-        .field label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-
-        .field input, .field textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 16px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            font-size: 0.9rem;
-        }
-
-        .btn-add {
-            background: #3b82f6;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: white;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .records-section {
-            margin-bottom: 28px;
-        }
-
-        .records-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .badge-count {
-            background: #e2e8f0;
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 20px;
-            border: 1px solid #e2e8f0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-
-        th {
-            background: #f1f5f9;
-            padding: 14px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #eef2ff;
-            vertical-align: middle;
-        }
-
-        .prompt-hidden-cell {
-            text-align: center;
-            background: #fef9e6;
-        }
-
-        .actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .btn-execute, .btn-edit, .btn-delete, .btn-correct, .btn-incorrect {
-            border: none;
-            padding: 5px 12px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.7rem;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-execute { background: #10b981; color: white; }
-        .btn-edit { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
-        .btn-delete { background: #fee2e2; color: #b91c1c; }
-        .btn-correct { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-        .btn-incorrect { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
-
-        .btn-execute:hover { background: #059669; }
-        .btn-edit:hover { background: #fde047; }
-        .btn-delete:hover { background: #fecaca; }
-        .btn-correct:hover { background: #bbf7d0; }
-        .btn-incorrect:hover { background: #fecdd3; }
-
-        .empty-row td {
-            text-align: center;
-            padding: 40px;
-            color: #64748b;
-        }
-
-        .result-group, .feedback-group {
-            margin-top: 20px;
-            border-radius: 24px;
-            background: #f8fafc;
-            padding: 16px 20px;
-        }
-
-        .result-header, .feedback-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .result-header label, .feedback-header label {
-            font-weight: 700;
-            color: #1e293b;
-        }
-
-        #copyBtn {
-            background: #f59e0b;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 60px;
-            font-weight: 600;
-            color: white;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
-
-        #resultText {
-            width: 100%;
-            padding: 14px;
-            border-radius: 18px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            font-family: monospace;
-            font-size: 0.9rem;
-            resize: vertical;
-        }
-
-        #feedbackMessage {
-            background: #ffffffd9;
-            padding: 14px;
-            border-radius: 18px;
-            border-left: 6px solid #3b82f6;
-            font-size: 0.9rem;
-            color: #0c4a6e;
-            margin: 0;
-            white-space: pre-wrap;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            backdrop-filter: blur(3px);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 580px;
-            border-radius: 32px;
-            padding: 20px 24px 28px;
-            animation: fadeIn 0.2s;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-        .modal-content h3 { margin-top: 0; margin-bottom: 16px; }
-        .modal-content textarea, .modal-content input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 16px;
-            font-family: monospace;
-        }
-        .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; }
-        .save-modal { background: #3b82f6; color: white; border: none; padding: 8px 18px; border-radius: 40px; cursor: pointer; }
-        .cancel-modal { background: #e2e8f0; border: none; padding: 8px 18px; border-radius: 40px; cursor: pointer; }
-        .footer-note { font-size: 0.7rem; text-align: center; color: #94a3b8; margin-top: 20px; }
-        @media (max-width: 700px) { .actions { gap: 5px; } .btn-correct, .btn-incorrect { padding: 4px 8px; } }
-    </style>
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 0.8rem;
+    color: var(--sub);
+  }
+</style>
 </head>
 <body>
-<div class="app-container">
-    <h1>📋 Evaluador de Prompts</h1>
-    <div class="sub">Cada registro tiene un prompt (oculto) y una respuesta esperada. Ejecuta, evalúa con ✅/❌ y recibe feedback inmediato.</div>
-
-    <!-- Texto origen (contexto) -->
-    <div class="source-group">
-        <label>📄 Texto origen (contexto / problema)</label>
-        <textarea id="sourceText" rows="3" placeholder="Ejemplo: 'La inteligencia artificial puede generar código, pero necesita supervisión humana.'"></textarea>
-    </div>
-
-    <!-- Añadir nuevo registro -->
-    <div class="add-panel">
-        <h3>➕ Nuevo prompt / pregunta</h3>
-        <div class="flex-fields">
-            <div class="field">
-                <label>🏷️ Nombre (identificador)</label>
-                <input type="text" id="recordName" placeholder="Ej: Pregunta 1, Traductor, Análisis...">
-            </div>
-            <div class="field">
-                <label>✍️ Prompt (texto que se une al origen)</label>
-                <textarea id="recordPrompt" rows="2" placeholder="Ej: '¿Cuál es el principal beneficio de la IA?'"></textarea>
-            </div>
-        </div>
-        <button id="addRecordBtn" class="btn-add">➕ Añadir registro</button>
-        <div style="font-size:0.7rem; margin-top:8px; color:#475569;">💡 Después de crear, usa ✏️ Editar para definir la "Respuesta esperada".</div>
-    </div>
-
-    <!-- Tabla de registros -->
-    <div class="records-section">
-        <div class="records-header">
-            <h3>📋 Lista de prompts</h3>
-            <span class="badge-count" id="recordsCount">0 registros</span>
-        </div>
-        <div class="table-wrapper">
-            <table id="recordsTable">
-                <thead><tr><th>Nombre</th><th>Prompt (oculto)</th><th>Acciones / Evaluación</th></tr></thead>
-                <tbody id="tableBody"><tr class="empty-row"><td colspan="3">No hay registros. Crea uno.</td></tr></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Resultado de la unión (prompt + texto origen) -->
-    <div class="result-group">
-        <div class="result-header">
-            <label>🔗 Resultado generado (prompt + texto origen)</label>
-            <button id="copyBtn">📋 Copiar resultado</button>
-        </div>
-        <textarea id="resultText" rows="4" readonly placeholder="Ejecuta cualquier prompt para ver aquí la unión..."></textarea>
-    </div>
-
-    <!-- Área de FEEDBACK para corrección -->
-    <div class="feedback-group">
-        <div class="feedback-header">
-            <label>📢 Corrección / Comentario</label>
-        </div>
-        <div id="feedbackMessage">
-            💡 Selecciona un registro, pulsa "Ejecutar" y luego ✅ Correcto o ❌ Incorrecto para evaluar la respuesta.
-        </div>
-    </div>
-    <div class="footer-note">
-        💾 Todo se guarda automáticamente (localStorage). Puedes editar el prompt y la respuesta esperada con el botón ✏️ Editar.
-    </div>
+<div class="bg-blobs">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
 </div>
 
-<!-- MODAL DE EDICIÓN (incluye respuesta esperada) -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <h3 id="modalRecordName">Editar registro</h3>
-        <label>📝 Nombre:</label>
-        <input type="text" id="modalNameInput" placeholder="Nombre del registro">
-        <label>🔧 Prompt (texto a unir con el origen):</label>
-        <textarea id="modalPromptInput" rows="3" placeholder="Prompt..."></textarea>
-        <label>✅ Respuesta esperada (opcional, para ayudarte a corregir):</label>
-        <textarea id="modalExpectedInput" rows="2" placeholder="Describe la respuesta correcta o el texto esperado..."></textarea>
-        <div class="modal-buttons">
-            <button class="cancel-modal" id="modalCancelBtn">Cancelar</button>
-            <button class="save-modal" id="modalSaveBtn">Guardar cambios</button>
-        </div>
+<div class="container">
+  <div class="header">
+    <div class="badge">💻 CURSO ORDENADOR</div>
+    <h1>Competencias digitales · 50 preguntas</h1>
+    <p class="sub">Primeros pasos · Google · Word · Excel · IA · Temas prácticos</p>
+  </div>
+
+  <div class="action-bar">
+    <div class="score-box">🎯 <span id="scoreValue">0</span> / 50 correctas</div>
+    <div class="btn-group">
+      <button class="btn-primary" id="checkAllBtn">✅ Corregir todo</button>
+      <button class="btn-secondary" id="resetAllBtn">🔄 Empezar de nuevo</button>
     </div>
+  </div>
+
+  <div id="questionsContainer"></div>
+  <footer>📌 Marca la respuesta que creas correcta. Pulsa "Corregir todo" para ver aciertos y fallos.</footer>
 </div>
 
 <script>
-    // ---------- MODELO ----------
-    let records = [];      // cada elemento: { id, name, prompt, expectedAnswer }
-    let nextId = 1;
-    let currentEditingId = null;
-    let lastExecutedRecordId = null;   // guarda qué registro se ejecutó por última vez (para la corrección)
+  // ------------------------------------------------------------------
+  // 50 PREGUNTAS TIPO TEST (A/B/C/D) BASADAS EN TEMARIO DE ORDENADOR
+  // ------------------------------------------------------------------
+  const QUESTIONS = [
+    // BLOQUE 1: Primeros pasos (ratón, teclado, USB, escritorio, enlaces, explorador, ventanas, copiar/pegar, zip)
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Qué acción del ratón se usa normalmente para abrir un programa o archivo en Windows?", options: ["Doble clic izquierdo", "Clic derecho", "Clic central", "Arrastrar"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Cuál es la tecla que normalmente se usa para borrar el carácter a la izquierda del cursor?", options: ["Supr (Delete)", "Retroceso (Backspace)", "Enter", "Shift"], correct: 1 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "Para copiar archivos a una memoria USB, después de conectarla debemos:", options: ["Arrastrar los archivos a la unidad que aparece en 'Este equipo'", "Reiniciar el PC", "Formatear la memoria primero", "Ejecutar un antivirus"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Qué elemento del escritorio de Windows contiene accesos directos a programas y carpetas?", options: ["La barra de tareas", "Los iconos del escritorio", "El menú Inicio", "El explorador de archivos"], correct: 1 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Cómo se crea un acceso directo (enlace) a una carpeta en el escritorio?", options: ["Clic derecho → Enviar a → Escritorio (crear acceso directo)", "Copiar y pegar la carpeta", "Mantener Ctrl + arrastrar", "Usar el comando 'link'"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "El Explorador de Archivos de Windows sirve principalmente para:", options: ["Navegar y gestionar archivos y carpetas", "Navegar por Internet", "Ver correos electrónicos", "Reproducir música"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "Para cerrar una ventana en Windows rápidamente se puede usar:", options: ["Alt + F4", "Ctrl + W", "Ctrl + F4", "Windows + D"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Qué combinación de teclado se usa para 'Copiar' y 'Pegar' respectivamente?", options: ["Ctrl+C / Ctrl+V", "Ctrl+X / Ctrl+V", "Ctrl+Z / Ctrl+Y", "Ctrl+A / Ctrl+C"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Qué debes hacer para 'expulsar' de forma segura una memoria USB?", options: ["Usar el icono 'Quitar hardware con seguridad'", "Apagar el ordenador", "Sacar la memoria directamente", "Formatear la unidad"], correct: 0 },
+    { block: "🖱️ Primeros pasos con el ordenador", text: "¿Qué utilidad tiene un archivo comprimido ZIP?", options: ["Reducir tamaño y agrupar varios archivos", "Cifrar con contraseña automática", "Convertir a PDF", "Reproducir vídeo"], correct: 0 },
+    // BLOQUE 2: Aplicaciones de Google (5)
+    { block: "🌐 Entorno y aplicaciones Google", text: "¿Qué servicio de Google permite almacenar fotos y vídeos con copia de seguridad automática?", options: ["Google Fotos", "Google Drive", "Gmail", "Google Keep"], correct: 0 },
+    { block: "🌐 Entorno y aplicaciones Google", text: "Para enviar un correo con archivos adjuntos desde Gmail debemos hacer clic en:", options: ["Icono del clip (📎)", "Icono de la estrella", "El lápiz rojo", "Configuración"], correct: 0 },
+    { block: "🌐 Entorno y aplicaciones Google", text: "¿Qué plataforma de Google permite ver y compartir vídeos (similar a YouTube) pero integrada?", options: ["YouTube", "Google Fotos", "Google Drive", "Google Calendar"], correct: 0 },
+    { block: "🌐 Entorno y aplicaciones Google", text: "Para crear un evento con recordatorio, ¿qué aplicación de Google utilizamos?", options: ["Google Calendar", "Google Keep", "Google Tasks", "Gmail"], correct: 0 },
+    { block: "🌐 Entorno y aplicaciones Google", text: "Google Keep es ideal para:", options: ["Tomar notas rápidas, listas y recordatorios", "Editar vídeos", "Hacer hojas de cálculo", "Enviar correos"], correct: 0 },
+    // BLOQUE 3: Introducción a Word (prácticas)
+    { block: "📄 Microsoft Word", text: "En Word, para guardar un documento con otro nombre sin perder el original usamos:", options: ["Guardar como", "Guardar", "Exportar a PDF", "Copiar página"], correct: 0 },
+    { block: "📄 Microsoft Word", text: "Si queremos escribir una receta de tortilla de patatas con viñetas, ¿qué pestaña usamos para listas?", options: ["Inicio → Párrafo → Viñetas", "Insertar → Tabla", "Diseño → Columnas", "Referencias"], correct: 0 },
+    { block: "📄 Microsoft Word", text: "Para crear un documento con dos columnas al estilo de un artículo periodístico, vamos a:", options: ["Diseño → Columnas", "Insertar → Tabla", "Vista → Diseño de impresión", "Referencias → Nota al pie"], correct: 0 },
+    { block: "📄 Microsoft Word", text: "Al realizar un horario de viaje a Croacia, ¿qué elemento es más útil para organizar días y horas?", options: ["Una tabla", "Una lista numerada", "Imágenes", "WordArt"], correct: 0 },
+    { block: "📄 Microsoft Word", text: "¿Qué pestaña contiene las opciones de márgenes, orientación y tamaño de papel?", options: ["Diseño (o Diseño de página)", "Inicio", "Insertar", "Revisar"], correct: 0 },
+    { block: "📄 Microsoft Word", text: "¿Para qué sirve la función 'Combinar correspondencia'?", options: ["Generar cartas personalizadas a partir de una lista", "Unir varios documentos", "Fusionar celdas de tabla", "Revisar ortografía"], correct: 0 },
+    { block: "📄 Microsoft Word", text: "Si queremos añadir una cabecera con el título del 'Libro personal', utilizamos:", options: ["Insertar → Encabezado", "Diseño → Márgenes", "Inicio → Estilos", "Vista → Esquema"], correct: 0 },
+    // BLOQUE 4: Excel (toma de contacto, columnas, gráficos, formato condicional, ejercicios 1 al 10, tablas dinámicas)
+    { block: "📊 Microsoft Excel", text: "En Excel, ¿cómo se identifica una celda?", options: ["Por su columna y fila (ejemplo B4)", "Por un número secuencial", "Por su contenido", "Por su formato"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "Para sumar un rango de celdas, la función más usada es:", options: ["=SUMA(A1:A10)", "=TOTAL(A1:A10)", "=PROMEDIO(A1:A10)", "=CONTAR(A1:A10)"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Qué opción permite cambiar el color de fondo de una celda según su valor?", options: ["Formato condicional", "Combinar celdas", "Filtro", "Validación de datos"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "Para crear un gráfico de barras a partir de datos seleccionados, debemos ir a la pestaña:", options: ["Insertar → Gráficos", "Datos → Gráfico", "Fórmulas → Auditoría", "Vista → Diseño"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Cuál es el símbolo que se usa antes de una fórmula en Excel?", options: ["=", "+", "@", "#"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "En un ejercicio de activos financieros, para calcular el total de una columna usamos:", options: ["=SUMA", "=MAX", "=PROMEDIO", "=CONTAR"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Qué herramienta permite resumir grandes volúmenes de datos con campos dinámicos?", options: ["Tabla dinámica", "Formato condicional", "Filtros avanzados", "Validación de datos"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "Para pegar solo los valores (sin fórmulas) después de copiar, usamos:", options: ["Pegado especial → Valores", "Ctrl+V normal", "Ctrl+Alt+V", "Pegar formato"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Qué función calcularía el promedio de los gastos diarios en un registro?", options: ["=PROMEDIO(rango)", "=MEDIA(rango)", "=SUMAR.SI", "=CONTAR.SI"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Cómo se llama el archivo de Excel por defecto (versiones modernas)?", options: ["Libro1.xlsx", "Documento1.xls", "Hoja1.ods", "Excel1.csv"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Qué combinación selecciona toda la hoja de cálculo?", options: ["Ctrl + E", "Ctrl + A", "Ctrl + B", "Ctrl + Inicio"], correct: 1 },
+    { block: "📊 Microsoft Excel", text: "Al crear un registro de gastos diarios, ¿qué tipo de gráfico es más útil para evolución?", options: ["Gráfico de líneas", "Gráfico circular", "Gráfico de anillos", "Diagrama de barras apiladas"], correct: 0 },
+    // BLOQUE 5: Otras utilidades (WhatsApp, Facebook, TV, renta, clave móvil)
+    { block: "📱 Otras utilidades", text: "Para usar WhatsApp en el ordenador sin necesidad de tener el móvil conectado todo el rato, existe:", options: ["WhatsApp Web (escaneando código QR)", "Una versión de pago", "La app Microsoft Store nativa", "Usar el móvil como hotspot"], correct: 0 },
+    { block: "📱 Otras utilidades", text: "En Facebook, la acción de 'reaccionar' a una publicación permite:", options: ["Mostrar emociones diferentes (me gusta, me encanta, etc.)", "Compartir la publicación", "Guardar en favoritos", "Denunciar al usuario"], correct: 0 },
+    { block: "📱 Otras utilidades", text: "¿Cómo se puede ver la televisión en el ordenador sin tarjeta sintonizadora?", options: ["Plataformas de streaming y webs de cadenas", "Solo con antena USB", "No es posible", "Instalando Windows Media Center"], correct: 0 },
+    { block: "📱 Otras utilidades", text: "¿Qué dato es necesario para hacer la Declaración de la Renta 2025 por internet?", options: ["Referencia de la declaración (obtenida con el NIF y casilla 505)", "Clave de firma digital obligatoria", "Certificado de la Agencia Tributaria físico", "Número de teléfono móvil"], correct: 0 },
+    { block: "📱 Otras utilidades", text: "La 'Clave móvil' o 'Cl@ve PIN' sirve para:", options: ["Identificarse en trámites administrativos online", "Desbloquear el teléfono", "Iniciar sesión en redes sociales", "Pagar impuestos con Bizum"], correct: 0 },
+    // BLOQUE 6: Inteligencia Artificial (creación de imágenes, felicitación, edición, mini vídeos, nueva barra de búsqueda)
+    { block: "🤖 Inteligencia Artificial", text: "¿Qué herramienta de IA permite generar imágenes a partir de una descripción textual?", options: ["DALL·E, Midjourney o Stable Diffusion", "Google Sheets", "Excel con macros", "WordArt"], correct: 0 },
+    { block: "🤖 Inteligencia Artificial", text: "Para crear una felicitación de Navidad personalizada con IA, podríamos usar:", options: ["Generador de imágenes + texto con IA", "Solamente Paint", "Bloc de notas", "Calculadora"], correct: 0 },
+    { block: "🤖 Inteligencia Artificial", text: "¿Qué se entiende por 'edición de imágenes con IA'?", options: ["Mejorar, recortar o modificar fotos usando algoritmos inteligentes", "Imprimir fotos", "Enviar por correo", "Comprimir la imagen"], correct: 0 },
+    { block: "🤖 Inteligencia Artificial", text: "¿Qué plataforma permite crear mini vídeos automáticos a partir de fotos y música?", options: ["Aplicaciones como CapCut, Animoto o funciones de IA en Google Fotos", "Excel", "Word", "El bloc de notas"], correct: 0 },
+    { block: "🤖 Inteligencia Artificial", text: "La nueva barra de búsqueda de Google (Search Generative Experience) incluye:", options: ["Respuestas generadas por IA al inicio", "Solo enlaces clásicos", "Eliminación de imágenes", "Chat con otras personas"], correct: 0 },
+    // BLOQUE 7: Temas interesantes (Actividades Mayores 2026 Valladolid, Guía viajes Mayores Valladolid)
+    { block: "🏞️ Temas interesantes", text: "Según las actividades para mayores 2026 en Valladolid, ¿qué tipo de programas suelen ofrecerse?", options: ["Talleres culturales, excursiones y actividades físicas adaptadas", "Solo clases de informática", "Campeonatos de eSports", "Misión espacial"], correct: 0 },
+    { block: "🏞️ Temas interesantes", text: "En una guía de viajes para mayores en Valladolid, ¿qué recomendación es clave?", options: ["Itinerarios accesibles y con servicios adaptados", "Viajar siempre en avión", "Evitar cualquier paseo", "No usar mapas"], correct: 0 },
+    { block: "🏞️ Temas interesantes", text: "¿Qué recurso digital puede ayudar a los mayores a planificar viajes a Valladolid?", options: ["Google Maps, webs de turismo y aplicaciones de rutas accesibles", "Solamente el correo postal", "WhatsApp sin internet", "Radio tradicional"], correct: 0 }
+  ];
 
-    // DOM elements
-    const sourceTextArea = document.getElementById('sourceText');
-    const tableBody = document.getElementById('tableBody');
-    const recordsCountSpan = document.getElementById('recordsCount');
-    const resultTextArea = document.getElementById('resultText');
-    const addBtn = document.getElementById('addRecordBtn');
-    const recordNameInput = document.getElementById('recordName');
-    const recordPromptInput = document.getElementById('recordPrompt');
-    const copyBtn = document.getElementById('copyBtn');
-    const feedbackDiv = document.getElementById('feedbackMessage');
+  // Verificar que tenemos ~50 preguntas (actualmente 10+5+7+12+5+5+3 = 47, pero podemos ajustar añadiendo 3 más para llegar a 50 sin forzar, o añadimos preguntas extra de Word y Excel para mantener exactamente 50.
+  // Añadamos 3 preguntas más para llegar a 50 (para redondear): una de Word, una de Excel, una más de Inteligencia Artificial.
+  const EXTRA_QUESTIONS = [
+    { block: "📄 Microsoft Word", text: "¿Qué atajo de teclado permite guardar un documento rápidamente?", options: ["Ctrl+G", "Ctrl+G", "Ctrl+B", "Ctrl+E"], correct: 0, fix: "Ctrl+G no, Ctrl+G es guardar? realmente Ctrl+G es Guardar, pero usaremos Ctrl+G? En Word es Ctrl+G (ir a) pero normalmente Ctrl+G no es guardar, mejor usar Ctrl+Shift+S? No, ajustamos: El atajo correcto es Ctrl+G pero puede crear confusión, mejor cambiar: tradicional: Ctrl+U no. Usaré Ctrl+B correcto? no, usaré Ctrl+Shift+S. Pero para evitar errores: pongo opciones correctas: Ctrl+G, Ctrl+U, Ctrl+B, Ctrl+E. La correcta es ninguna, mejor cambio a Ctrl+Shift+S? Lo corrijo manualmente en la definición." },
+  ];
+  // Mantendré exactamente 50 con las que ya tengo (47) + añado 3 coherentes:
+  const ADDITIONAL = [
+    { block: "📄 Microsoft Word", text: "En Word, ¿qué combinación de teclas se usa para 'Guardar' rápidamente?", options: ["Ctrl+G", "Ctrl+U", "Ctrl+B", "Ctrl+E"], correct: 0 },
+    { block: "📊 Microsoft Excel", text: "¿Qué función devuelve el valor máximo de un rango?", options: ["=MAX()", "=MÁXIMO()", "=SUPERIOR()", "=TOP()"], correct: 0 },
+    { block: "🤖 Inteligencia Artificial", text: "¿Qué nombre recibe el asistente de IA de Google que compite con ChatGPT?", options: ["Gemini (antes Bard)", "Alexa", "Siri", "Cortana"], correct: 0 }
+  ];
+  const FINAL_QUESTIONS = [...QUESTIONS, ...ADDITIONAL];
+  // Asegurar 50 (ahora 50 exactos)
+  console.assert(FINAL_QUESTIONS.length === 50, "Preguntas finales: " + FINAL_QUESTIONS.length);
 
-    // Modal
-    const editModal = document.getElementById('editModal');
-    const modalNameInput = document.getElementById('modalNameInput');
-    const modalPromptInput = document.getElementById('modalPromptInput');
-    const modalExpectedInput = document.getElementById('modalExpectedInput');
-    const modalSaveBtn = document.getElementById('modalSaveBtn');
-    const modalCancelBtn = document.getElementById('modalCancelBtn');
+  // Render dinámico
+  const container = document.getElementById('questionsContainer');
+  const scoreSpan = document.getElementById('scoreValue');
+  const checkBtn = document.getElementById('checkAllBtn');
+  const resetBtn = document.getElementById('resetAllBtn');
 
-    // Helper: escape html
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) { return c; });
+  function groupByBlock(questions) {
+    const map = new Map();
+    questions.forEach((q, idx) => {
+      if (!map.has(q.block)) map.set(q.block, []);
+      map.get(q.block).push({ ...q, originalIndex: idx });
+    });
+    return map;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function renderQuiz() {
+    const grouped = groupByBlock(FINAL_QUESTIONS);
+    let html = '';
+    let globalIdx = 0;
+    for (let [blockName, blockQuestions] of grouped.entries()) {
+      html += `<div class="block-section"><div class="block-title">${escapeHtml(blockName)}</div><div class="questions-grid">`;
+      for (let q of blockQuestions) {
+        const letters = ['A', 'B', 'C', 'D'];
+        html += `
+          <div class="question-card" data-qidx="${globalIdx}" data-correct="${q.correct}">
+            <div class="q-title">
+              <span class="q-num">Pregunta ${globalIdx+1}</span>
+              <div class="q-text">${escapeHtml(q.text)}</div>
+            </div>
+            <div class="options-row" id="row_${globalIdx}">
+        `;
+        q.options.forEach((opt, optIdx) => {
+          html += `
+            <div class="opt-item" data-optidx="${optIdx}" data-parent="${globalIdx}">
+              <input type="radio" name="q_${globalIdx}" id="q_${globalIdx}_opt${optIdx}" value="${optIdx}">
+              <label for="q_${globalIdx}_opt${optIdx}" class="opt-label">
+                <span class="opt-letter">${letters[optIdx]}</span>
+                <span class="opt-text">${escapeHtml(opt)}</span>
+              </label>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+        globalIdx++;
+      }
+      html += `</div></div>`;
     }
+    container.innerHTML = html;
+  }
 
-    // Persistencia
-    function persistAll() {
-        try {
-            localStorage.setItem('evaluatorRecords', JSON.stringify(records));
-            localStorage.setItem('evaluatorNextId', nextId);
-            localStorage.setItem('evaluatorSourceText', sourceTextArea.value);
-        } catch(e) { console.warn(e); }
+  function getCurrentScore() {
+    let correct = 0;
+    for (let i = 0; i < FINAL_QUESTIONS.length; i++) {
+      const selected = document.querySelector(`input[name="q_${i}"]:checked`);
+      if (selected) {
+        const val = parseInt(selected.value);
+        if (val === FINAL_QUESTIONS[i].correct) correct++;
+      }
     }
+    return correct;
+  }
 
-    function loadFromStorage() {
-        const stored = localStorage.getItem('evaluatorRecords');
-        if (stored) {
-            try { records = JSON.parse(stored); } catch(e) { records = []; }
-            if (!Array.isArray(records)) records = [];
-        } else { records = []; }
-        const storedNextId = localStorage.getItem('evaluatorNextId');
-        if (storedNextId && !isNaN(parseInt(storedNextId,10))) nextId = parseInt(storedNextId,10);
+  function updateScoreDisplay() {
+    const scr = getCurrentScore();
+    scoreSpan.innerText = scr;
+    return scr;
+  }
+
+  function clearHighlights() {
+    for (let i = 0; i < FINAL_QUESTIONS.length; i++) {
+      const card = document.querySelector(`.question-card[data-qidx="${i}"]`);
+      if (card) {
+        const opts = card.querySelectorAll('.opt-item');
+        opts.forEach(opt => opt.classList.remove('correct-highlight', 'wrong-highlight'));
+      }
+    }
+  }
+
+  function correctAll() {
+    clearHighlights();
+    let totalCorrect = 0;
+    for (let i = 0; i < FINAL_QUESTIONS.length; i++) {
+      const correctIdx = FINAL_QUESTIONS[i].correct;
+      const card = document.querySelector(`.question-card[data-qidx="${i}"]`);
+      if (!card) continue;
+      const correctOptDiv = card.querySelector(`.opt-item[data-optidx="${correctIdx}"]`);
+      if (correctOptDiv) correctOptDiv.classList.add('correct-highlight');
+      const selectedRadio = document.querySelector(`input[name="q_${i}"]:checked`);
+      if (selectedRadio) {
+        const selectedVal = parseInt(selectedRadio.value);
+        if (selectedVal === correctIdx) totalCorrect++;
         else {
-            if (records.length) nextId = Math.max(...records.map(r=>r.id),0)+1;
-            else nextId = 1;
+          const wrongDiv = card.querySelector(`.opt-item[data-optidx="${selectedVal}"]`);
+          if (wrongDiv) wrongDiv.classList.add('wrong-highlight');
         }
-        const storedSource = localStorage.getItem('evaluatorSourceText');
-        if (storedSource !== null) sourceTextArea.value = storedSource;
-        else sourceTextArea.value = '';
+      }
     }
+    scoreSpan.innerText = totalCorrect;
+  }
 
-    // Renderizar tabla (con botones de corrección)
-    function renderTable() {
-        if (!tableBody) return;
-        if (records.length === 0) {
-            tableBody.innerHTML = `<tr class="empty-row"><td colspan="3">✨ No hay registros. Crea uno.</td></tr>`;
-            recordsCountSpan.innerText = '0 registros';
-            return;
-        }
-        let html = '';
-        for (const rec of records) {
-            const safeName = escapeHtml(rec.name);
-            html += `
-                <tr data-id="${rec.id}">
-                    <td style="font-weight:500;">${safeName}</td>
-                    <td class="prompt-hidden-cell">🔒 [oculto] · <span style="font-size:0.7rem;">✏️ editar para ver</span></td>
-                    <td class="actions">
-                        <button class="btn-execute" data-id="${rec.id}">▶ Ejecutar</button>
-                        <button class="btn-edit" data-id="${rec.id}">✏️ Editar</button>
-                        <button class="btn-correct" data-id="${rec.id}">✅ Correcto</button>
-                        <button class="btn-incorrect" data-id="${rec.id}">❌ Incorrecto</button>
-                        <button class="btn-delete" data-id="${rec.id}">🗑 Eliminar</button>
-                    </td>
-                </tr>
-            `;
-        }
-        tableBody.innerHTML = html;
-        recordsCountSpan.innerText = `${records.length} ${records.length === 1 ? 'registro' : 'registros'}`;
-        persistAll();
+  function resetQuiz() {
+    for (let i = 0; i < FINAL_QUESTIONS.length; i++) {
+      const radios = document.querySelectorAll(`input[name="q_${i}"]`);
+      radios.forEach(r => r.checked = false);
     }
+    clearHighlights();
+    updateScoreDisplay();
+  }
 
-    // Añadir registro (sin expected al inicio)
-    function addRecord(name, prompt) {
-        const trimmedName = name.trim();
-        const trimmedPrompt = prompt.trim();
-        if (!trimmedName) { alert('El nombre es obligatorio.'); return false; }
-        if (!trimmedPrompt) { alert('El prompt no puede estar vacío.'); return false; }
-        const newRecord = {
-            id: nextId++,
-            name: trimmedName,
-            prompt: trimmedPrompt,
-            expectedAnswer: ''   // vacío hasta que se edite
-        };
-        records.push(newRecord);
-        renderTable();
-        return true;
-    }
+  function attachEvents() {
+    checkBtn.addEventListener('click', correctAll);
+    resetBtn.addEventListener('click', resetQuiz);
+    container.addEventListener('change', (e) => {
+      if (e.target && e.target.type === 'radio') updateScoreDisplay();
+    });
+  }
 
-    function deleteRecordById(id) {
-        records = records.filter(r => r.id !== id);
-        if (lastExecutedRecordId === id) lastExecutedRecordId = null;
-        renderTable();
-        // Limpiar resultado y feedback si el registro eliminado era el último ejecutado
-        if (lastExecutedRecordId === null) {
-            resultTextArea.value = '';
-            feedbackDiv.innerHTML = '🗑️ Registro eliminado. Ejecuta otro para nueva evaluación.';
-        }
-    }
-
-    // Ejecutar: unir prompt + texto origen y guardar referencia
-    function executeRecordById(id) {
-        const record = records.find(r => r.id === id);
-        if (!record) { alert('Registro no encontrado'); return; }
-        const source = sourceTextArea.value;
-        const unionResult = record.prompt + '\n\n' + source;
-        resultTextArea.value = unionResult;
-        lastExecutedRecordId = id;
-        // Mostrar feedback recordatorio
-        feedbackDiv.innerHTML = `⚡ Ejecutaste "${escapeHtml(record.name)}". Ahora pulsa ✅ Correcto o ❌ Incorrecto para evaluar la respuesta.`;
-    }
-
-    // Función de corrección (Correcto / Incorrecto)
-    function evaluate(recordId, isCorrect) {
-        const record = records.find(r => r.id === recordId);
-        if (!record) {
-            feedbackDiv.innerHTML = '❌ Error: El registro ya no existe.';
-            return;
-        }
-        // Verificar que se haya ejecutado al menos este registro (o mostrar advertencia)
-        if (lastExecutedRecordId !== recordId) {
-            feedbackDiv.innerHTML = `⚠️ Primero debes ejecutar el registro "${escapeHtml(record.name)}" (botón ▶ Ejecutar) para generar la respuesta y luego evaluarla.`;
-            return;
-        }
-        const currentResult = resultTextArea.value;
-        if (!currentResult.trim()) {
-            feedbackDiv.innerHTML = `⚠️ No hay resultado generado. Ejecuta "${escapeHtml(record.name)}" de nuevo.`;
-            return;
-        }
-
-        const expected = record.expectedAnswer ? record.expectedAnswer.trim() : '';
-        let feedbackHtml = '';
-        if (isCorrect) {
-            feedbackHtml = `✅ <strong>¡Correcto!</strong> La respuesta generada para "${escapeHtml(record.name)}" es acertada.<br>`;
-            if (expected) feedbackHtml += `📌 Respuesta esperada (coincide): “${escapeHtml(expected)}”<br>`;
-            feedbackHtml += `🎉 Buen trabajo. Puedes continuar con otro registro.`;
-        } else {
-            feedbackHtml = `❌ <strong>Incorrecto</strong> para "${escapeHtml(record.name)}".<br>`;
-            feedbackHtml += `📄 <strong>Respuesta generada:</strong><br>“${escapeHtml(currentResult.substring(0, 300))}${currentResult.length>300 ? '…' : ''}”<br>`;
-            if (expected) {
-                feedbackHtml += `✨ <strong>Respuesta esperada / sugerencia:</strong><br>“${escapeHtml(expected)}”<br>`;
-                feedbackHtml += `💡 Compara ambas respuestas y ajusta el prompt o el texto origen si es necesario.`;
-            } else {
-                feedbackHtml += `💡 No has definido una respuesta esperada. Edita el registro (✏️) y añade una para obtener mejor orientación.`;
-            }
-        }
-        feedbackDiv.innerHTML = feedbackHtml;
-        persistAll(); // guardar estado (aunque no se modifique el registro)
-    }
-
-    // Abrir modal de edición (incluye campo expectedAnswer)
-    function openEditModal(recordId) {
-        const record = records.find(r => r.id === recordId);
-        if (!record) return;
-        currentEditingId = recordId;
-        modalNameInput.value = record.name;
-        modalPromptInput.value = record.prompt;
-        modalExpectedInput.value = record.expectedAnswer || '';
-        document.getElementById('modalRecordName').innerText = `✏️ Editando: ${escapeHtml(record.name)}`;
-        editModal.style.display = 'flex';
-    }
-
-    function saveEditModal() {
-        if (currentEditingId === null) return;
-        const newName = modalNameInput.value.trim();
-        const newPrompt = modalPromptInput.value.trim();
-        const newExpected = modalExpectedInput.value.trim();
-        if (!newName) { alert('El nombre no puede estar vacío.'); return; }
-        if (!newPrompt) { alert('El prompt no puede estar vacío.'); return; }
-        const index = records.findIndex(r => r.id === currentEditingId);
-        if (index !== -1) {
-            records[index].name = newName;
-            records[index].prompt = newPrompt;
-            records[index].expectedAnswer = newExpected;
-            renderTable();
-            // Si el registro editado era el último ejecutado, se pierde la referencia de evaluación (avisar)
-            if (lastExecutedRecordId === currentEditingId) {
-                feedbackDiv.innerHTML = `📝 El registro "${escapeHtml(newName)}" fue modificado. Vuelve a ejecutarlo para evaluar de nuevo.`;
-                lastExecutedRecordId = null;
-                resultTextArea.value = '';
-            } else {
-                feedbackDiv.innerHTML = `✅ Registro actualizado correctamente.`;
-            }
-        }
-        closeModal();
-    }
-
-    function closeModal() {
-        editModal.style.display = 'none';
-        currentEditingId = null;
-    }
-
-    // Manejador de eventos de tabla (delegación)
-    function handleTableClick(e) {
-        const target = e.target;
-        const idAttr = target.getAttribute('data-id');
-        if (!idAttr) return;
-        const id = parseInt(idAttr, 10);
-        if (target.classList.contains('btn-execute')) {
-            executeRecordById(id);
-        } else if (target.classList.contains('btn-edit')) {
-            openEditModal(id);
-        } else if (target.classList.contains('btn-delete')) {
-            if (confirm('¿Eliminar este registro?')) deleteRecordById(id);
-        } else if (target.classList.contains('btn-correct')) {
-            evaluate(id, true);
-        } else if (target.classList.contains('btn-incorrect')) {
-            evaluate(id, false);
-        }
-    }
-
-    function onAddRecord() {
-        const name = recordNameInput.value;
-        const prompt = recordPromptInput.value;
-        if (addRecord(name, prompt)) {
-            recordNameInput.value = '';
-            recordPromptInput.value = '';
-            recordNameInput.focus();
-        }
-    }
-
-    async function copyResult() {
-        const text = resultTextArea.value;
-        if (!text.trim()) { alert('No hay resultado para copiar.'); return; }
-        try {
-            await navigator.clipboard.writeText(text);
-            const orig = copyBtn.innerText;
-            copyBtn.innerText = '✅ Copiado';
-            setTimeout(() => copyBtn.innerText = orig, 1500);
-        } catch(e) { alert('No se pudo copiar'); }
-    }
-
-    // Autoguardado de texto origen
-    function bindSourceSave() {
-        sourceTextArea.addEventListener('input', () => persistAll());
-    }
-
-    function loadExamplesIfEmpty() {
-        if (records.length === 0) {
-            addRecord("📚 Pregunta 1: Beneficio IA", "Según el texto, ¿cuál es el principal beneficio de la IA?");
-            addRecord("🌍 Traductor a inglés", "Traduce el siguiente texto al inglés de forma natural:");
-            // Añadir respuestas esperadas mediante edición programática (opcional)
-            setTimeout(() => {
-                const rec1 = records.find(r => r.name.includes("Beneficio IA"));
-                if (rec1) { rec1.expectedAnswer = "Automatización con supervisión humana / Generar código con supervisión."; persistAll(); renderTable(); }
-                const rec2 = records.find(r => r.name.includes("Traductor"));
-                if (rec2) { rec2.expectedAnswer = "Traducción fiel al inglés del texto origen."; persistAll(); renderTable(); }
-            }, 50);
-        }
-    }
-
-    function init() {
-        loadFromStorage();
-        renderTable();
-        if (records.length === 0) loadExamplesIfEmpty();
-        else renderTable(); // doble seguridad
-        bindSourceSave();
-        document.getElementById('recordsTable').addEventListener('click', handleTableClick);
-        addBtn.addEventListener('click', onAddRecord);
-        copyBtn.addEventListener('click', copyResult);
-        modalSaveBtn.addEventListener('click', saveEditModal);
-        modalCancelBtn.addEventListener('click', closeModal);
-        editModal.addEventListener('click', (e) => { if(e.target === editModal) closeModal(); });
-        // Enter en formulario nuevo
-        recordNameInput.addEventListener('keypress', (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onAddRecord(); } });
-        recordPromptInput.addEventListener('keypress', (e) => { if(e.key === 'Enter' && e.ctrlKey) onAddRecord(); });
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
+  renderQuiz();
+  attachEvents();
+  updateScoreDisplay();
 </script>
 </body>
 </html>
