@@ -149,21 +149,23 @@
 </div>
 
 <script>
+    // Estado
     let currentPath = "";
     let repoInfo = null;  // { owner, repo, branch, apiPath }
 
+    // Elementos DOM
     const breadcrumbDiv = document.getElementById('breadcrumb');
     const fileListContainer = document.getElementById('fileListContainer');
     const manualConfigPanel = document.getElementById('manualConfigPanel');
     const saveManualBtn = document.getElementById('saveManualBtn');
     const manualErrorDiv = document.getElementById('manualError');
 
-    // Detección automática desde URL
+    // ========= DETECCIÓN AUTOMÁTICA DESDE URL ==========
     function detectRepoFromUrl() {
         const url = window.location.href;
         let owner = null, repo = null, branch = null, path = "";
 
-        // raw.githubusercontent.com
+        // 1) raw.githubusercontent.com
         let rawMatch = url.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.*)/);
         if (rawMatch) {
             owner = rawMatch[1];
@@ -176,7 +178,7 @@
             return { owner, repo, branch, apiPath: path };
         }
 
-        // github.com (blob o tree)
+        // 2) github.com (blob o tree)
         let githubMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/([^\/]+)\/(.*)/);
         if (githubMatch) {
             owner = githubMatch[1];
@@ -192,7 +194,7 @@
             return { owner, repo, branch, apiPath: fullPath };
         }
 
-        // GitHub Pages: usuario.github.io/repo/
+        // 3) GitHub Pages: usuario.github.io/repo/
         let pagesMatch = url.match(/^(https?:\/\/)?([^\/]+)\.github\.io\/([^\/]+)(\/.*)?$/);
         if (pagesMatch) {
             owner = pagesMatch[2];
@@ -208,6 +210,7 @@
         return null;
     }
 
+    // ========= LLAMADA A LA API DE GITHUB ==========
     async function fetchDirectoryContents(owner, repo, branch, path) {
         let apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         if (branch) apiUrl += `?ref=${branch}`;
@@ -222,6 +225,7 @@
         return data;
     }
 
+    // ========= RENDERIZADO ==========
     function renderFileList(items, currentPathFull, owner, repo, branch) {
         if (!items.length) {
             fileListContainer.innerHTML = `<div class="file-item">📭 No hay archivos o carpetas visibles.</div>`;
@@ -239,7 +243,8 @@
             const sizeText = (!isDir && item.size) ? ` (${formatBytes(item.size)})` : "";
             let fileUrl = "#";
             if (isDir) {
-                fileUrl = `?dir=${encodeURIComponent(currentPathFull + item.name + "/")}`;
+                // Para carpetas, usamos un enlace interno que dispara la navegación
+                fileUrl = `#`;
             } else {
                 fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${currentPathFull}${item.name}`;
             }
@@ -285,9 +290,10 @@
         });
     }
 
+    // ========= NAVEGACIÓN ==========
     async function loadDirectory(newPath) {
         if (!repoInfo) return;
-        fileListContainer.innerHTML = `<div class="file-item">⏳ Cargando...</div>`;
+        fileListContainer.innerHTML = `<div class="file-item">⏳ Cargando ${newPath || 'raíz'}...</div>`;
         try {
             const items = await fetchDirectoryContents(repoInfo.owner, repoInfo.repo, repoInfo.branch, newPath);
             currentPath = newPath;
@@ -304,4 +310,93 @@
         let accumulated = "";
         for (const part of parts) {
             accumulated += part + "/";
-            html += ` / <a href="#" data-bpath="${accumulated}">${escapeHtml
+            html += ` / <a href="#" data-bpath="${accumulated}">${escapeHtml(part)}</a>`;
+        }
+        breadcrumbDiv.innerHTML = html;
+
+        const rootLink = document.getElementById('bread-root');
+        if (rootLink) {
+            rootLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadDirectory("");
+            });
+        }
+        document.querySelectorAll('[data-bpath]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetPath = link.getAttribute('data-bpath');
+                loadDirectory(targetPath);
+            });
+        });
+    }
+
+    // ========= INICIALIZACIÓN ==========
+    async function initExplorer(owner, repo, branch, path) {
+        repoInfo = { owner, repo, branch, apiPath: path || "" };
+        currentPath = repoInfo.apiPath;
+        await loadDirectory(currentPath);
+    }
+
+    // Guardar configuración manual y arrancar
+    function saveManualConfig() {
+        const owner = document.getElementById('manualOwner').value.trim();
+        const repo = document.getElementById('manualRepo').value.trim();
+        const branch = document.getElementById('manualBranch').value.trim() || "main";
+        let path = document.getElementById('manualPath').value.trim();
+        if (path && !path.endsWith('/')) path += '/';
+
+        if (!owner || !repo) {
+            manualErrorDiv.style.display = "block";
+            manualErrorDiv.innerText = "❌ Debes completar Dueño y Repositorio.";
+            return;
+        }
+        manualErrorDiv.style.display = "none";
+        // Guardar en localStorage
+        localStorage.setItem('gh_manual_owner', owner);
+        localStorage.setItem('gh_manual_repo', repo);
+        localStorage.setItem('gh_manual_branch', branch);
+        localStorage.setItem('gh_manual_path', path);
+        manualConfigPanel.style.display = "none";
+        initExplorer(owner, repo, branch, path).catch(err => {
+            fileListContainer.innerHTML = `<div class="file-item error">Error: ${err.message}</div>`;
+            // Si falla, mostrar de nuevo el panel por si hay error de datos
+            manualConfigPanel.style.display = "block";
+        });
+    }
+
+    // Función principal al cargar la página
+    function start() {
+        // Intentar con datos guardados previamente
+        const savedOwner = localStorage.getItem('gh_manual_owner');
+        const savedRepo = localStorage.getItem('gh_manual_repo');
+        if (savedOwner && savedRepo) {
+            const savedBranch = localStorage.getItem('gh_manual_branch') || "main";
+            const savedPath = localStorage.getItem('gh_manual_path') || "";
+            initExplorer(savedOwner, savedRepo, savedBranch, savedPath).catch(err => {
+                fileListContainer.innerHTML = `<div class="file-item error">Error con datos guardados: ${err.message}. Reconfigura manualmente.</div>`;
+                manualConfigPanel.style.display = "block";
+            });
+            return;
+        }
+
+        // Si no hay datos guardados, intentar detección automática
+        const detected = detectRepoFromUrl();
+        if (detected) {
+            initExplorer(detected.owner, detected.repo, detected.branch, detected.apiPath).catch(err => {
+                fileListContainer.innerHTML = `<div class="file-item error">Error detectando automáticamente: ${err.message}</div>`;
+                manualConfigPanel.style.display = "block";
+            });
+        } else {
+            // No hay detección ni datos guardados: mostrar panel manual
+            manualConfigPanel.style.display = "block";
+        }
+    }
+
+    // Eventos
+    saveManualBtn.addEventListener('click', saveManualConfig);
+
+    // Iniciar
+    start();
+</script>
+</body>
+</html>
