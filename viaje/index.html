@@ -1,49 +1,473 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>Directorio</title>
-  <style>
-    body {
-      font-family: system-ui, Arial;
-      margin: 40px;
-      background: #f6f6f6;
-    }
-    h1 {
-      font-size: 20px;
-      margin-bottom: 20px;
-    }
-    .item {
-      display: block;
-      padding: 10px 12px;
-      margin: 8px 0;
-      background: white;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #0366d6;
-    }
-    .item:hover {
-      background: #f0f0f0;
-    }
-    .folder {
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador de archivos - GitHub</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #161b22;
+            border-radius: 16px;
+            padding: 24px;
+        }
+        h1 { font-size: 1.6rem; margin-top: 0; }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        input, select {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #e6edf3;
+            font-size: 1rem;
+        }
+        input { flex: 1; min-width: 180px; }
+        button {
+            background: #238636;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover { background: #2ea043; }
+        .error {
+            color: #f85149;
+            background: #2d1a1a;
+            border-left: 4px solid #f85149;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        .success {
+            color: #3fb950;
+            background: #1a2b1f;
+            border-left: 4px solid #3fb950;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .file-list {
+            margin-top: 20px;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #30363d;
+        }
+        .file-item:last-child { border-bottom: none; }
+        .file-item:hover { background: #21262d; }
+        .file-icon { font-size: 1.4rem; width: 28px; text-align: center; }
+        .file-name { flex: 1; word-break: break-word; }
+        .file-name a { color: #58a6ff; text-decoration: none; }
+        .file-name a:hover { text-decoration: underline; }
+        .file-size { color: #8b949e; font-size: 0.8rem; }
+        .breadcrumb {
+            margin-bottom: 16px;
+            background: #21262d;
+            padding: 8px 12px;
+            border-radius: 12px;
+        }
+        .breadcrumb a { color: #58a6ff; text-decoration: none; }
+        .logout-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            margin-left: 10px;
+        }
+        .footer-note {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .card {
+            background: #21262d;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+    </style>
 </head>
 <body>
+<div class="container">
+    <h1>📁 Explorador de directorio <small>GitHub API</small></h1>
 
-<h1>📂 Contenido de la aplicación</h1>
+    <!-- Panel de contraseña -->
+    <div id="passwordPanel">
+        <p>🔐 Acceso protegido. Introduce la contraseña para ver el contenido.</p>
+        <div class="input-group">
+            <input type="password" id="passwordInput" placeholder="Contraseña" autocomplete="off">
+            <button id="unlockBtn">Desbloquear</button>
+        </div>
+        <div id="passError" class="status"></div>
+    </div>
 
-<!-- 🔧 EDITA ESTO MANUALMENTE -->
+    <!-- Panel de configuración manual (solo si falla detección) -->
+    <div id="manualConfigPanel" style="display: none;" class="card">
+        <p>⚠️ No se pudo detectar automáticamente el repositorio desde la URL actual.</p>
+        <p>Introduce los datos de tu repositorio público de GitHub:</p>
+        <div class="flex-row">
+            <div style="flex:1">
+                <label>Dueño (usuario)</label>
+                <input type="text" id="manualOwner" placeholder="ej: tuusuario">
+            </div>
+            <div style="flex:1">
+                <label>Repositorio</label>
+                <input type="text" id="manualRepo" placeholder="ej: mi-repo">
+            </div>
+            <div style="flex:1">
+                <label>Rama (branch)</label>
+                <input type="text" id="manualBranch" placeholder="main" value="main">
+            </div>
+            <div style="flex:1">
+                <label>Ruta inicial (opcional)</label>
+                <input type="text" id="manualPath" placeholder="ej: carpeta/">
+            </div>
+            <div>
+                <button id="saveManualBtn">Guardar y continuar</button>
+            </div>
+        </div>
+        <div id="manualError" class="error" style="display: none;"></div>
+    </div>
 
-<a class="item folder" href="../">⬅️ Volver atrás</a>
+    <!-- Panel del explorador -->
+    <div id="filesPanel" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h2 style="margin: 0;">📄 Contenido del directorio</h2>
+            <button id="logoutBtn" class="logout-btn">🚪 Cerrar sesión</button>
+        </div>
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div id="fileListContainer" class="file-list">Cargando...</div>
+    </div>
 
-<a class="item" href="index.html">📄 index.html</a>
-<a class="item" href="app.html">📄 app.html</a>
-<a class="item" href="script.js">📄 script.js</a>
+    <div class="footer-note">
+        ⚡ Datos desde la API pública de GitHub. Si el repositorio es público funciona sin token.<br>
+        Para pruebas locales, usa la configuración manual.
+    </div>
+</div>
 
-<!-- Ejemplo de carpeta -->
-<a class="item folder" href="subcarpeta/">📁 subcarpeta</a>
+<script>
+    // ========= CONTRASEÑA (CÁMBIALA AQUÍ) ==========
+    const REQUIRED_PASSWORD = "admin123";   // <-- REEMPLAZA POR TU PROPIA CONTRASEÑA
 
+    // Estado
+    let isUnlocked = false;
+    let currentPath = "";
+    let repoInfo = null;  // { owner, repo, branch, apiPath }
+
+    // Elementos DOM
+    const passwordPanel = document.getElementById('passwordPanel');
+    const filesPanel = document.getElementById('filesPanel');
+    const manualConfigPanel = document.getElementById('manualConfigPanel');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const passErrorDiv = document.getElementById('passError');
+    const breadcrumbDiv = document.getElementById('breadcrumb');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const saveManualBtn = document.getElementById('saveManualBtn');
+    const manualErrorDiv = document.getElementById('manualError');
+
+    // ========= UTILIDADES ==========
+    function showError(div, msg) {
+        div.innerHTML = `<div class="error">❌ ${msg}</div>`;
+        setTimeout(() => {
+            if (div.innerHTML.includes(msg)) div.innerHTML = "";
+        }, 4000);
+    }
+
+    // Detección automática desde URL
+    function detectRepoFromUrl() {
+        const url = window.location.href;
+        let owner = null, repo = null, branch = null, path = "";
+
+        // raw.githubusercontent.com
+        let rawMatch = url.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.*)/);
+        if (rawMatch) {
+            owner = rawMatch[1];
+            repo = rawMatch[2];
+            branch = rawMatch[3];
+            path = rawMatch[4];
+            const lastSlash = path.lastIndexOf('/');
+            if (lastSlash !== -1 && !path.endsWith('/')) path = path.substring(0, lastSlash + 1);
+            else if (lastSlash === -1 && path !== "") path = "";
+            return { owner, repo, branch, apiPath: path };
+        }
+
+        // github.com (blob o tree)
+        let githubMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/([^\/]+)\/(.*)/);
+        if (githubMatch) {
+            owner = githubMatch[1];
+            repo = githubMatch[2];
+            branch = githubMatch[4];
+            let fullPath = githubMatch[5];
+            const isBlob = githubMatch[3] === 'blob';
+            if (isBlob) {
+                const lastSlash = fullPath.lastIndexOf('/');
+                fullPath = lastSlash !== -1 ? fullPath.substring(0, lastSlash + 1) : "";
+            }
+            if (fullPath && !fullPath.endsWith('/')) fullPath += '/';
+            return { owner, repo, branch, apiPath: fullPath };
+        }
+
+        // GitHub Pages: usuario.github.io/repo/
+        let pagesMatch = url.match(/^(https?:\/\/)?([^\/]+)\.github\.io\/([^\/]+)(\/.*)?$/);
+        if (pagesMatch) {
+            owner = pagesMatch[2];
+            repo = pagesMatch[3];
+            branch = "main";
+            let extraPath = pagesMatch[4] || "/";
+            if (extraPath.startsWith('/')) extraPath = extraPath.substring(1);
+            if (extraPath.endsWith('index.html')) extraPath = extraPath.substring(0, extraPath.lastIndexOf('index.html'));
+            if (extraPath && !extraPath.endsWith('/')) extraPath += '/';
+            return { owner, repo, branch, apiPath: extraPath };
+        }
+
+        return null;
+    }
+
+    // Obtener contenido del directorio desde GitHub API
+    async function fetchDirectoryContents(owner, repo, branch, path) {
+        let apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+        if (branch) apiUrl += `?ref=${branch}`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            if (response.status === 404) throw new Error(`Directorio no encontrado. Revisa la ruta "${path}" o la rama "${branch}".`);
+            if (response.status === 403) throw new Error(`Límite de API o repositorio privado.`);
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error(`La ruta no es un directorio.`);
+        return data;
+    }
+
+    // Renderizar lista de archivos/carpetas
+    function renderFileList(items, currentPathFull, owner, repo, branch) {
+        if (!items.length) {
+            fileListContainer.innerHTML = `<div class="file-item">📭 No hay archivos o carpetas visibles.</div>`;
+            return;
+        }
+
+        const folders = items.filter(i => i.type === 'dir');
+        const files = items.filter(i => i.type === 'file');
+        const sorted = [...folders, ...files];
+
+        fileListContainer.innerHTML = "";
+        for (const item of sorted) {
+            const isDir = item.type === 'dir';
+            const icon = isDir ? "📁" : "📄";
+            const sizeText = (!isDir && item.size) ? ` (${formatBytes(item.size)})` : "";
+            let fileUrl = "#";
+            if (isDir) {
+                fileUrl = `?dir=${encodeURIComponent(currentPathFull + item.name + "/")}`;
+            } else {
+                fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${currentPathFull}${item.name}`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            div.innerHTML = `
+                <div class="file-icon">${icon}</div>
+                <div class="file-name">
+                    ${isDir ? 
+                        `<a href="#" data-dir-path="${currentPathFull + item.name}/">${escapeHtml(item.name)}</a>` :
+                        `<a href="${escapeHtml(fileUrl)}" target="_blank">${escapeHtml(item.name)}</a>`
+                    }
+                </div>
+                <div class="file-size">${sizeText}</div>
+            `;
+            if (isDir) {
+                const link = div.querySelector('a');
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const newPath = link.getAttribute('data-dir-path');
+                    loadDirectory(newPath);
+                });
+            }
+            fileListContainer.appendChild(div);
+        }
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Cargar un directorio específico
+    async function loadDirectory(newPath) {
+        if (!repoInfo) return;
+        fileListContainer.innerHTML = `<div class="file-item">⏳ Cargando...</div>`;
+        try {
+            const items = await fetchDirectoryContents(repoInfo.owner, repoInfo.repo, repoInfo.branch, newPath);
+            currentPath = newPath;
+            updateBreadcrumb(currentPath);
+            renderFileList(items, currentPath, repoInfo.owner, repoInfo.repo, repoInfo.branch);
+        } catch (err) {
+            fileListContainer.innerHTML = `<div class="file-item error">❌ ${err.message}</div>`;
+        }
+    }
+
+    // Migas de pan
+    function updateBreadcrumb(path) {
+        const parts = path.split('/').filter(p => p !== "");
+        let html = `<a href="#" id="bread-root">📁 raíz</a>`;
+        let accumulated = "";
+        for (const part of parts) {
+            accumulated += part + "/";
+            html += ` / <a href="#" data-bpath="${accumulated}">${escapeHtml(part)}</a>`;
+        }
+        breadcrumbDiv.innerHTML = html;
+
+        document.getElementById('bread-root')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadDirectory("");
+        });
+        document.querySelectorAll('[data-bpath]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadDirectory(link.getAttribute('data-bpath'));
+            });
+        });
+    }
+
+    // Inicializar explorador con la información del repositorio (automática o manual)
+    async function initExplorer(owner, repo, branch, path) {
+        repoInfo = { owner, repo, branch, apiPath: path || "" };
+        currentPath = repoInfo.apiPath;
+        await loadDirectory(currentPath);
+    }
+
+    // Guardar configuración manual y arrancar
+    function saveManualConfig() {
+        const owner = document.getElementById('manualOwner').value.trim();
+        const repo = document.getElementById('manualRepo').value.trim();
+        const branch = document.getElementById('manualBranch').value.trim() || "main";
+        let path = document.getElementById('manualPath').value.trim();
+        if (path && !path.endsWith('/')) path += '/';
+
+        if (!owner || !repo) {
+            manualErrorDiv.style.display = "block";
+            manualErrorDiv.innerText = "❌ Debes completar Dueño y Repositorio.";
+            return;
+        }
+        manualErrorDiv.style.display = "none";
+        // Guardar en localStorage para futuras visitas
+        localStorage.setItem('gh_manual_owner', owner);
+        localStorage.setItem('gh_manual_repo', repo);
+        localStorage.setItem('gh_manual_branch', branch);
+        localStorage.setItem('gh_manual_path', path);
+        // Ocultar panel manual y arrancar explorador
+        manualConfigPanel.style.display = "none";
+        initExplorer(owner, repo, branch, path).catch(err => {
+            fileListContainer.innerHTML = `<div class="file-item error">Error: ${err.message}</div>`;
+        });
+    }
+
+    // Intento de inicio: si hay datos manuales guardados, usarlos; si no, detección automática
+    function startAfterUnlock() {
+        // Comprobar si hay datos manuales guardados en localStorage
+        const savedOwner = localStorage.getItem('gh_manual_owner');
+        const savedRepo = localStorage.getItem('gh_manual_repo');
+        if (savedOwner && savedRepo) {
+            const savedBranch = localStorage.getItem('gh_manual_branch') || "main";
+            const savedPath = localStorage.getItem('gh_manual_path') || "";
+            initExplorer(savedOwner, savedRepo, savedBranch, savedPath).catch(err => {
+                fileListContainer.innerHTML = `<div class="file-item error">Error con datos guardados: ${err.message}. Reconfigura manualmente.</div>`;
+                manualConfigPanel.style.display = "block";
+            });
+            return;
+        }
+
+        const detected = detectRepoFromUrl();
+        if (detected) {
+            initExplorer(detected.owner, detected.repo, detected.branch, detected.apiPath).catch(err => {
+                fileListContainer.innerHTML = `<div class="file-item error">Error detectando automáticamente: ${err.message}</div>`;
+                manualConfigPanel.style.display = "block";
+            });
+        } else {
+            // No hay detección automática ni datos guardados -> mostrar panel manual
+            manualConfigPanel.style.display = "block";
+            // Rellenar con valores de ejemplo si se desea
+            document.getElementById('manualOwner').value = "";
+            document.getElementById('manualRepo').value = "";
+            document.getElementById('manualBranch').value = "main";
+            document.getElementById('manualPath').value = "";
+        }
+    }
+
+    // Desbloquear con contraseña
+    function unlock() {
+        if (passwordInput.value === REQUIRED_PASSWORD) {
+            isUnlocked = true;
+            passwordPanel.style.display = "none";
+            filesPanel.style.display = "block";
+            startAfterUnlock();
+        } else {
+            showError(passErrorDiv, "Contraseña incorrecta.");
+        }
+    }
+
+    function logout() {
+        isUnlocked = false;
+        passwordPanel.style.display = "block";
+        filesPanel.style.display = "none";
+        manualConfigPanel.style.display = "none";
+        passwordInput.value = "";
+        passErrorDiv.innerHTML = "";
+        repoInfo = null;
+        // No borramos localStorage para que la configuración manual persista
+        // Si se quiere borrar, descomentar: localStorage.removeItem('gh_manual_owner'); etc.
+    }
+
+    // Eventos
+    unlockBtn.addEventListener('click', unlock);
+    logoutBtn.addEventListener('click', logout);
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') unlock();
+    });
+    saveManualBtn.addEventListener('click', saveManualConfig);
+</script>
 </body>
 </html>
