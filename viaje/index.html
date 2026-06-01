@@ -1,66 +1,557 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>Directorio</title>
-  <style>
-    body {
-      font-family: system-ui, Arial;
-      margin: 40px;
-      background: #f7f7f7;
-    }
-    h1 {
-      font-size: 20px;
-      margin-bottom: 20px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      margin: 8px 0;
-      padding: 8px;
-      background: white;
-      border-radius: 6px;
-    }
-    a {
-      text-decoration: none;
-      color: #0366d6;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador de archivos - GitHub</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #161b22;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 1.6rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h1 small {
+            font-size: 0.8rem;
+            font-weight: normal;
+            color: #8b949e;
+        }
+        .password-section, .files-section {
+            margin-top: 20px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        input {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #e6edf3;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 180px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        button {
+            background: #238636;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2ea043;
+        }
+        .error {
+            color: #f85149;
+            background: #2d1a1a;
+            border-left: 4px solid #f85149;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        .success {
+            color: #3fb950;
+            background: #1a2b1f;
+            border-left: 4px solid #3fb950;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        .file-list {
+            margin-top: 20px;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #30363d;
+            transition: background 0.1s;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-item:hover {
+            background: #21262d;
+        }
+        .file-icon {
+            font-size: 1.4rem;
+            width: 28px;
+            text-align: center;
+        }
+        .file-name {
+            flex: 1;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .file-name a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        .file-name a:hover {
+            text-decoration: underline;
+        }
+        .file-size {
+            color: #8b949e;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+        .folder-icon {
+            color: #e3b341;
+        }
+        .file-icon-file {
+            color: #8b949e;
+        }
+        .breadcrumb {
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            background: #21262d;
+            padding: 8px 12px;
+            border-radius: 12px;
+            word-break: break-all;
+        }
+        .breadcrumb a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        .logout-btn {
+            background: #21262d;
+            color: #e6edf3;
+            border: 1px solid #30363d;
+            margin-left: 10px;
+        }
+        .logout-btn:hover {
+            background: #30363d;
+        }
+        .status {
+            margin-top: 12px;
+        }
+        hr {
+            border-color: #30363d;
+            margin: 20px 0;
+        }
+        .footer-note {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-align: center;
+            margin-top: 20px;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+            .file-item {
+                flex-wrap: wrap;
+            }
+            .file-size {
+                width: 100%;
+                margin-left: 40px;
+            }
+        }
+    </style>
 </head>
 <body>
-
-<h1>📂 Contenido del directorio</h1>
-<ul id="files"></ul>
+<div class="container" id="app">
+    <h1>
+        📁 Explorador de directorio
+        <small>GitHub API</small>
+    </h1>
+    <div id="passwordPanel">
+        <p>🔐 Este directorio está protegido. Introduce la contraseña para ver los archivos y carpetas.</p>
+        <div class="input-group">
+            <input type="password" id="passwordInput" placeholder="Contraseña" autocomplete="off">
+            <button id="unlockBtn">Desbloquear</button>
+        </div>
+        <div id="passError" class="status"></div>
+    </div>
+    <div id="filesPanel" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h2 style="margin: 0;">📄 Contenido del directorio</h2>
+            <button id="logoutBtn" class="logout-btn">🚪 Cerrar sesión</button>
+        </div>
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div id="fileListContainer" class="file-list">
+            <div class="file-item">Cargando...</div>
+        </div>
+    </div>
+    <div class="footer-note">
+        ⚡ Los datos se obtienen mediante la API pública de GitHub.<br>
+        Si ves errores 404 o 403, verifica que el repositorio sea público y que la URL sea válida.
+    </div>
+</div>
 
 <script>
-  async function loadRepo() {
-    // CAMBIA ESTO por tu repo
-    const api = "https://api.github.com/repos/castrovert-ux/web-apps/contents/viajeaitalia";
-
-    const res = await fetch(api);
-    const data = await res.json();
-
-    const list = document.getElementById("files");
-
-    data.forEach(item => {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-
-      a.href = item.path; // navega dentro del mismo Pages
-      a.textContent = (item.type === "dir" ? "📁 " : "📄 ") + item.name;
-
-      li.appendChild(a);
-      list.appendChild(li);
+    // ========= CONFIGURACIÓN ==========
+    // Cambia esta contraseña por la que desees
+    const REQUIRED_PASSWORD = "miPassword";   // <-- AJUSTA LA CONTRASEÑA AQUÍ
+    
+    // Almacenar estado
+    let isUnlocked = false;
+    let currentPath = "";
+    let repoInfo = null;  // { owner, repo, branch, apiPath }
+    
+    // Elementos DOM
+    const passwordPanel = document.getElementById('passwordPanel');
+    const filesPanel = document.getElementById('filesPanel');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const passErrorDiv = document.getElementById('passError');
+    const breadcrumbDiv = document.getElementById('breadcrumb');
+    const fileListContainer = document.getElementById('fileListContainer');
+    
+    // ========= UTILIDADES ==========
+    function showError(div, msg) {
+        div.innerHTML = `<div class="error">❌ ${msg}</div>`;
+        setTimeout(() => {
+            if (div.innerHTML.includes(msg)) div.innerHTML = "";
+        }, 4000);
+    }
+    
+    function showSuccess(div, msg) {
+        div.innerHTML = `<div class="success">✅ ${msg}</div>`;
+        setTimeout(() => {
+            if (div.innerHTML.includes(msg)) div.innerHTML = "";
+        }, 3000);
+    }
+    
+    // Analizar la URL actual para extraer owner, repo, branch y ruta relativa
+    // Soporta:
+    // - GitHub Pages: https://usuario.github.io/repo/ruta/   -> owner=usuario, repo=repo, branch=main/gh-pages? intentamos main
+    // - raw.githubusercontent.com: https://raw.githubusercontent.com/owner/repo/branch/ruta/index.html
+    // - github.com (vista blob): https://github.com/owner/repo/blob/branch/ruta/index.html
+    // - También puede ser un custom domain? asumimos Pages.
+    function detectRepoFromUrl() {
+        const url = window.location.href;
+        let owner = null, repo = null, branch = null, path = "";
+        
+        // 1) raw.githubusercontent.com
+        let rawMatch = url.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.*)/);
+        if (rawMatch) {
+            owner = rawMatch[1];
+            repo = rawMatch[2];
+            branch = rawMatch[3];
+            path = rawMatch[4];
+            // Si el path termina en un nombre de archivo, lo quitamos para quedarnos con la carpeta
+            const lastSlash = path.lastIndexOf('/');
+            if (lastSlash !== -1 && !path.endsWith('/')) {
+                path = path.substring(0, lastSlash + 1);
+            } else if (lastSlash === -1 && path !== "") {
+                path = ""; // solo un archivo en raíz
+            }
+            return { owner, repo, branch, apiPath: path };
+        }
+        
+        // 2) github.com (blob o tree)
+        let githubMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/([^\/]+)\/(.*)/);
+        if (githubMatch) {
+            owner = githubMatch[1];
+            repo = githubMatch[2];
+            branch = githubMatch[4];
+            let fullPath = githubMatch[5];
+            // Si es blob, quitamos el nombre del archivo para quedarnos con la carpeta
+            const isBlob = githubMatch[3] === 'blob';
+            if (isBlob) {
+                const lastSlash = fullPath.lastIndexOf('/');
+                if (lastSlash !== -1) {
+                    fullPath = fullPath.substring(0, lastSlash + 1);
+                } else {
+                    fullPath = "";
+                }
+            }
+            // Para tree o carpeta, aseguramos que termine con '/'
+            if (fullPath && !fullPath.endsWith('/')) fullPath += '/';
+            return { owner, repo, branch, apiPath: fullPath };
+        }
+        
+        // 3) GitHub Pages: usuario.github.io/repo/ruta/
+        let pagesMatch = url.match(/^(https?:\/\/)?([^\/]+)\.github\.io\/([^\/]+)(\/.*)?$/);
+        if (pagesMatch) {
+            owner = pagesMatch[2];
+            repo = pagesMatch[3];
+            branch = "main"; // por defecto intentamos main, si falla luego probamos gh-pages? la API lo manejará
+            let extraPath = pagesMatch[4] || "/";
+            if (extraPath.startsWith('/')) extraPath = extraPath.substring(1);
+            // Quitamos el nombre del archivo actual (index.html) si está presente
+            if (extraPath.endsWith('index.html')) {
+                extraPath = extraPath.substring(0, extraPath.lastIndexOf('index.html'));
+            }
+            if (extraPath && !extraPath.endsWith('/')) extraPath += '/';
+            return { owner, repo, branch, apiPath: extraPath };
+        }
+        
+        // 4) Fallback: Intentar con la URL actual como si fuera un repositorio estándar? No podemos adivinar.
+        // Mostramos error explicativo
+        return null;
+    }
+    
+    // Obtener contenido del directorio usando GitHub API
+    async function fetchDirectoryContents(owner, repo, branch, path) {
+        // Construir API URL
+        let apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+        if (branch) {
+            apiUrl += `?ref=${branch}`;
+        }
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`Directorio no encontrado. Verifica la ruta "${path}" o la rama "${branch}".`);
+            } else if (response.status === 403) {
+                throw new Error(`Límite de API alcanzado o repositorio privado. Usa un token o espera.`);
+            } else {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+        }
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+            // Si no es array, puede ser un solo archivo (pero esperamos carpeta)
+            throw new Error(`La ruta no es un directorio o está vacía.`);
+        }
+        return data;
+    }
+    
+    // Renderizar lista de archivos/carpetas
+    function renderFileList(items, currentPathFull, owner, repo, branch) {
+        if (!items || items.length === 0) {
+            fileListContainer.innerHTML = `<div class="file-item">📭 No hay archivos o carpetas visibles en este directorio.</div>`;
+            return;
+        }
+        
+        // Ordenar: carpetas primero, luego archivos
+        const folders = items.filter(item => item.type === 'dir');
+        const files = items.filter(item => item.type === 'file');
+        const sorted = [...folders, ...files];
+        
+        fileListContainer.innerHTML = "";
+        for (const item of sorted) {
+            const isDir = item.type === 'dir';
+            const icon = isDir ? "📁" : "📄";
+            const iconClass = isDir ? "folder-icon" : "file-icon-file";
+            let name = item.name;
+            let displayUrl = "#";
+            let sizeText = "";
+            
+            if (isDir) {
+                // Construir URL relativa para navegar a esa carpeta (cambia la ruta actual)
+                let newPath = currentPathFull + name + "/";
+                // Generar link que actualice la vista (navegación interna)
+                displayUrl = `?dir=${encodeURIComponent(newPath)}&owner=${owner}&repo=${repo}&branch=${branch}`;
+                // También podemos mantener estado con history.pushState, pero usaremos recarga limpia con parámetros
+                // Para una mejor experiencia usaremos una función de navegación sin recargar totalmente
+                // Vamos a hacer que el click use una función propia (preventDefault)
+                sizeText = "";
+            } else {
+                // Archivo: generar URL del archivo original (raw o github)
+                let fileUrl = "";
+                // Intentar construir raw URL
+                if (branch) {
+                    fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${currentPathFull}${name}`;
+                } else {
+                    fileUrl = `https://github.com/${owner}/${repo}/blob/main/${currentPathFull}${name}`;
+                }
+                displayUrl = fileUrl;
+                sizeText = item.size ? ` (${formatBytes(item.size)})` : "";
+            }
+            
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'file-item';
+            fileDiv.innerHTML = `
+                <div class="file-icon ${iconClass}">${icon}</div>
+                <div class="file-name">
+                    ${isDir ? 
+                        `<a href="#" data-path="${currentPathFull}${name}/" data-dir="true">${escapeHtml(name)}</a>` : 
+                        `<a href="${escapeHtml(displayUrl)}" target="_blank">${escapeHtml(name)}</a>`
+                    }
+                </div>
+                <div class="file-size">${sizeText}</div>
+            `;
+            
+            if (isDir) {
+                const link = fileDiv.querySelector('a');
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const targetPath = link.getAttribute('data-path');
+                    await loadDirectory(targetPath);
+                });
+            }
+            fileListContainer.appendChild(fileDiv);
+        }
+    }
+    
+    // Helper: formatear bytes
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    // Escapar HTML
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+    
+    // Cargar directorio y actualizar vista
+    async function loadDirectory(newPath) {
+        if (!repoInfo) return;
+        fileListContainer.innerHTML = `<div class="file-item">⏳ Cargando ${newPath || 'raíz'}...</div>`;
+        try {
+            const items = await fetchDirectoryContents(repoInfo.owner, repoInfo.repo, repoInfo.branch, newPath);
+            currentPath = newPath;
+            // Actualizar breadcrumb
+            updateBreadcrumb(currentPath);
+            renderFileList(items, currentPath, repoInfo.owner, repoInfo.repo, repoInfo.branch);
+        } catch (err) {
+            fileListContainer.innerHTML = `<div class="file-item error">❌ Error: ${err.message}</div>`;
+            console.error(err);
+        }
+    }
+    
+    // Actualizar migas de pan
+    function updateBreadcrumb(path) {
+        if (!path) path = "";
+        const parts = path.split('/').filter(p => p !== "");
+        let breadHtml = `<a href="#" id="bread-root">📁 raíz</a>`;
+        let accumulated = "";
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            accumulated += part + "/";
+            breadHtml += ` / <a href="#" data-bread-path="${accumulated}">${escapeHtml(part)}</a>`;
+        }
+        breadcrumbDiv.innerHTML = breadHtml;
+        
+        // Evento raíz
+        const rootLink = document.getElementById('bread-root');
+        if (rootLink) {
+            rootLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadDirectory("");
+            });
+        }
+        // Eventos subcarpetas
+        document.querySelectorAll('[data-bread-path]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetPath = link.getAttribute('data-bread-path');
+                loadDirectory(targetPath);
+            });
+        });
+    }
+    
+    // Inicializar después de desbloquear: detectar repo, cargar directorio raíz
+    async function initExplorer() {
+        const detected = detectRepoFromUrl();
+        if (!detected) {
+            fileListContainer.innerHTML = `<div class="file-item error">❌ No se pudo detectar automáticamente el repositorio. Asegúrate de acceder mediante:<br>
+            - GitHub Pages (usuario.github.io/repo/)<br>
+            - raw.githubusercontent.com/owner/repo/branch/ruta/<br>
+            - github.com/owner/repo/blob/branch/ruta/index.html<br>
+            O edita manualmente el script con los datos.</div>`;
+            return false;
+        }
+        repoInfo = detected;
+        currentPath = repoInfo.apiPath || "";
+        
+        // Mostrar info breve
+        const infoMsg = `Repositorio: ${repoInfo.owner}/${repoInfo.repo} | Rama: ${repoInfo.branch || "main"} | Ruta actual: "${currentPath || 'raíz'}"`;
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'success';
+        statusDiv.style.marginBottom = '12px';
+        statusDiv.innerText = `🔍 ${infoMsg}`;
+        const oldStatus = document.querySelector('#filesPanel .status-temp');
+        if (oldStatus) oldStatus.remove();
+        statusDiv.classList.add('status-temp');
+        filesPanel.insertBefore(statusDiv, filesPanel.firstChild.nextSibling);
+        setTimeout(() => statusDiv.remove(), 5000);
+        
+        try {
+            await loadDirectory(currentPath);
+            return true;
+        } catch (err) {
+            fileListContainer.innerHTML = `<div class="file-item error">⚠️ No se pudo cargar el directorio: ${err.message}</div>`;
+            return false;
+        }
+    }
+    
+    // Cerrar sesión
+    function logout() {
+        isUnlocked = false;
+        passwordPanel.style.display = "block";
+        filesPanel.style.display = "none";
+        passwordInput.value = "";
+        passErrorDiv.innerHTML = "";
+        repoInfo = null;
+        currentPath = "";
+    }
+    
+    // Manejar desbloqueo
+    function unlock() {
+        const pwd = passwordInput.value.trim();
+        if (pwd === REQUIRED_PASSWORD) {
+            isUnlocked = true;
+            passwordPanel.style.display = "none";
+            filesPanel.style.display = "block";
+            initExplorer().catch(err => {
+                fileListContainer.innerHTML = `<div class="file-item error">Error crítico: ${err.message}</div>`;
+            });
+        } else {
+            showError(passErrorDiv, "Contraseña incorrecta. Acceso denegado.");
+        }
+    }
+    
+    // Eventos
+    unlockBtn.addEventListener('click', unlock);
+    logoutBtn.addEventListener('click', logout);
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') unlock();
     });
-  }
-
-  loadRepo();
+    
+    // Si ya está desbloqueado? no, empezamos bloqueado
+    // Para probar en desarrollo si se puede, pero por defecto pide contraseña.
+    // Opcional: si la URL tiene parametro ?autounlock=1 podríamos saltar, pero mejor seguro.
 </script>
-
 </body>
 </html>
