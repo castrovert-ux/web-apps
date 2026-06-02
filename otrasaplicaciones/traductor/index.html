@@ -336,22 +336,41 @@ function sincronizarBidireccional() {
       return subirANube(docRef);
     }
 
-    var tsNube = snap.data().lastUpdate || 0;
-    var tsUltimaSubida = parseInt(localStorage.getItem('tradUltimaSubida')) || 0;
+    var remoteVocab  = snap.data().vocab  || [];
+    var remoteStats  = snap.data().stats  || {};
+    var tsNube       = snap.data().lastUpdate || 0;
+    var tsLocal      = parseInt(localStorage.getItem('tradUltimaSubida')) || 0;
 
-    if (tsNube > tsUltimaSubida) {
-      // La nube tiene cambios más recientes → descargar
-      var remoteVocab = snap.data().vocab || [];
-      var remoteStats = snap.data().stats || {};
-      vocab = remoteVocab;
-      stats = remoteStats;
-      saveVocab(); saveStats(); updateVocabCount(); renderVocab();
-      localStorage.setItem('tradUltimaSubida', tsNube);
-      setSyncStatus('ok', '📲 ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's actualizadas' : ' actualizada') + ' desde la nube');
-    } else {
-      // Lo local es igual o más reciente → subir
-      return subirANube(docRef);
-    }
+    // Merge bidireccional por ID: nunca se pierde ninguna palabra de ningún lado
+    var mergedMap = {};
+    remoteVocab.forEach(function(v) { mergedMap[v.id] = v; });
+    vocab.forEach(function(v) {
+      if (!mergedMap[v.id]) mergedMap[v.id] = v; // palabra local que no está en nube → añadir
+    });
+    var merged = Object.values(mergedMap).sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+
+    // Merge stats: suma los contadores de ambos lados
+    var mergedStats = Object.assign({}, remoteStats);
+    Object.keys(stats).forEach(function(k) {
+      if (!mergedStats[k]) { mergedStats[k] = stats[k]; }
+      else {
+        mergedStats[k].ok   = Math.max(mergedStats[k].ok   || 0, stats[k].ok   || 0);
+        mergedStats[k].fail = Math.max(mergedStats[k].fail || 0, stats[k].fail || 0);
+        mergedStats[k].lastSeen = Math.max(mergedStats[k].lastSeen || 0, stats[k].lastSeen || 0);
+      }
+    });
+
+    var added = merged.length - vocab.length;
+    vocab  = merged;
+    stats  = mergedStats;
+    saveVocab(); saveStats(); updateVocabCount(); renderVocab();
+
+    // Subir el resultado fusionado a la nube
+    return subirANube(docRef).then(function() {
+      if (added > 0) {
+        setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabras (' + added + ' recuperada' + (added !== 1 ? 's' : '') + ' de la nube)');
+      }
+    });
   })
   .catch(function(err) { setSyncStatus('err', 'Error: ' + err.message); })
   .finally(function() { if (btnSync) btnSync.disabled = false; });
@@ -433,12 +452,16 @@ function fbAutoSave() {
   if (!fbUser) return;
   clearTimeout(fbSaveTimer);
   fbSaveTimer = setTimeout(function() {
+    var ts = new Date().getTime();
     fbDb.collection('traductor').doc(fbUser.uid).set({
       vocab: vocab,
       stats: stats,
+      lastUpdate: ts,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      localStorage.setItem('tradUltimaSubida', ts);
     }).catch(function(err) { console.warn('fbAutoSave error:', err); });
-  }, 2000); // espera 2s antes de subir, para no disparar en cada tecla
+  }, 2000);
 }
 function getStat(id){ return stats[String(id)] || {ok:0,fail:0,lastSeen:0}; }
 function wordWeight(v){
