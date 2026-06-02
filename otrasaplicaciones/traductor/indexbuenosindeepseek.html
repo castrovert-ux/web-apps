@@ -180,12 +180,12 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
   <p>Vocabulary · Study</p>
 </header>
 
-<!-- ══ LANGUAGE PAIR SELECTOR (español ↔ italiano por defecto) ══ -->
+<!-- ══ LANGUAGE PAIR SELECTOR ══ -->
 <div class="lang-selector" id="langSelector">
   <span class="ls-label">Idioma</span>
-  <button class="lp-btn" data-pair="es-en"><span class="lp-flag">🇬🇧</span> ES ↔ EN</button>
+  <button class="lp-btn on" data-pair="es-en"><span class="lp-flag">🇬🇧</span> ES ↔ EN</button>
   <button class="lp-btn" data-pair="es-fr"><span class="lp-flag">🇫🇷</span> ES ↔ FR</button>
-  <button class="lp-btn on" data-pair="es-it"><span class="lp-flag">🇮🇹</span> ES ↔ IT</button>
+  <button class="lp-btn" data-pair="es-it"><span class="lp-flag">🇮🇹</span> ES ↔ IT</button>
   <button class="lp-btn" data-pair="es-de"><span class="lp-flag">🇩🇪</span> ES ↔ DE</button>
   <button class="lp-btn" data-pair="es-pt"><span class="lp-flag">🇵🇹</span> ES ↔ PT</button>
 </div>
@@ -203,10 +203,10 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
       <button class="dir-btn on" id="dirA" onclick="setDir('a')">
         <span id="dirFlagA">🇪🇸</span> <span id="dirLabelA">Español</span>
         <span class="dir-arrow">→</span>
-        <span id="dirFlagB2">🇮🇹</span> <span id="dirLabelB">Italiano</span>
+        <span id="dirFlagB2">🇬🇧</span> <span id="dirLabelB">Inglés</span>
       </button>
       <button class="dir-btn" id="dirB" onclick="setDir('b')">
-        <span id="dirFlagB">🇮🇹</span> <span id="dirLabelB2">Italiano</span>
+        <span id="dirFlagB">🇬🇧</span> <span id="dirLabelB2">Inglés</span>
         <span class="dir-arrow">→</span>
         <span id="dirFlagA2">🇪🇸</span> <span id="dirLabelA2">Español</span>
       </button>
@@ -431,7 +431,7 @@ try { stats = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); } catch(_) {}
 let quizSessionCount = 0;
 try { quizSessionCount = parseInt(localStorage.getItem('lexio_sc') || '0'); } catch(_) {}
 
-let activePair  = 'es-it';     // CAMBIADO: ahora el idioma por defecto es español ↔ italiano
+let activePair  = 'es-en';
 let detLang     = null;
 let lastResult  = null;
 let quizMode    = 'a2b';
@@ -808,18 +808,18 @@ function doUnsave(){
 function renderVocab(){
   updateVocabCount();
   const body=document.getElementById('vocabBody'),actions=document.getElementById('tblActions'),filtersEl=document.getElementById('vocabFilters');
-  const pairsInVocab=[...new Set(vocab.map(v=>v.pair||'es-it'))];
+  const pairsInVocab=[...new Set(vocab.map(v=>v.pair||'es-en'))];
   let filtersHTML='<button class="vf-btn'+(vocabFilter==='all'?' on':'')+'" data-filter="all">Todos</button>';
-  pairsInVocab.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-it'];filtersHTML+=`<button class="vf-btn${vocabFilter===p?' on':''}" data-filter="${p}">${lp.flagA}${lp.flagB} ${p.toUpperCase()}</button>`;});
+  pairsInVocab.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-en'];filtersHTML+=`<button class="vf-btn${vocabFilter===p?' on':''}" data-filter="${p}">${lp.flagA}${lp.flagB} ${p.toUpperCase()}</button>`;});
   filtersEl.innerHTML=filtersHTML;
   filtersEl.querySelectorAll('.vf-btn').forEach(b=>{b.addEventListener('click',()=>{vocabFilter=b.dataset.filter;renderVocab();});});
-  const filtered=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-it')===vocabFilter);
+  const filtered=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-en')===vocabFilter);
   if(vocab.length===0){body.innerHTML=`<div class="empty"><div class="ico">📖</div>Aún no hay palabras guardadas.<br>Traduce algo y se guardará automáticamente.</div>`;actions.style.display='none';return;}
   if(filtered.length===0){body.innerHTML=`<div class="empty"><div class="ico">🔍</div>No hay palabras con este filtro.</div>`;actions.style.display='flex';return;}
   actions.style.display='flex';
   let html=`<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Palabra A</th><th>Palabra B</th><th>Nivel</th><th>Collocations</th><th>Fecha</th><th></th></tr></thead><tbody>`;
   filtered.forEach((v,i)=>{
-    const lp=LANG_PAIRS[v.pair||'es-it']||LANG_PAIRS['es-it'],sv=getStat(v.id),stot=sv.ok+sv.fail;
+    const lp=LANG_PAIRS[v.pair||'es-en']||LANG_PAIRS['es-en'],sv=getStat(v.id),stot=sv.ok+sv.fail;
     const dc=stot===0?`<span style="color:var(--tm)">—</span>`:(()=>{const a=Math.round((sv.ok/stot)*100);const [ic,col]=a>=80?['✓ '+a+'%','var(--accent)']:a>=50?['◑ '+a+'%','var(--blue)']:['✗ '+a+'%','var(--red)'];return `<span style="color:${col};font-size:.76rem;font-weight:500">${ic}</span>`;})();
     html+=`<tr data-id="${v.id}"><td style="color:var(--tm);font-size:.76rem">${i+1}</td><td class="td-a td-edit"><span class="cell-val">${esc(v.wordA)}</span><span class="lang-tag">${lp.flagA}</span><button class="edit-btn" data-id="${v.id}" data-field="wordA" title="Editar">✏️</button></td><td class="td-b td-edit"><span class="cell-val">${esc(v.wordB)}</span><span class="lang-tag">${lp.flagB}</span><button class="edit-btn" data-id="${v.id}" data-field="wordB" title="Editar">✏️</button></td><td style="text-align:center">${dc}</td><td class="td-sm td-edit"><span class="cell-val">${esc((v.collocations||[]).slice(0,4).join(', '))}</span><button class="edit-btn" data-id="${v.id}" data-field="collocations" title="Editar">✏️</button></td><td style="font-size:.74rem;color:var(--tm);white-space:nowrap">${v.date}</td><td><button class="del" data-id="${v.id}">✕</button></td></tr>`;
   });
@@ -852,10 +852,10 @@ document.getElementById('exportBtn').addEventListener('click',()=>{
   if(!vocab.length) return;
   const wb=XLSX.utils.book_new();
   const rows=[['#','Idioma','Palabra A','Palabra B','Traducciones','Collocations','Ejemplo 1','Ejemplo 2','Ejemplo 3','Fecha']];
-  vocab.forEach((v,i)=>{const lp=LANG_PAIRS[v.pair||'es-it']||LANG_PAIRS['es-it'],exs=v.examples||[];rows.push([i+1,`${lp.flagA}${lp.flagB} ${(v.pair||'es-it').toUpperCase()}`,v.wordA,v.wordB,(v.translations||[v.wordB]).join(' / '),(v.collocations||[]).join(', '),exs[0]||'',exs[1]||'',exs[2]||'',v.date]);});
+  vocab.forEach((v,i)=>{const lp=LANG_PAIRS[v.pair||'es-en']||LANG_PAIRS['es-en'],exs=v.examples||[];rows.push([i+1,`${lp.flagA}${lp.flagB} ${(v.pair||'es-en').toUpperCase()}`,v.wordA,v.wordB,(v.translations||[v.wordB]).join(' / '),(v.collocations||[]).join(', '),exs[0]||'',exs[1]||'',exs[2]||'',v.date]);});
   const ws1=XLSX.utils.aoa_to_sheet(rows);ws1['!cols']=[4,10,16,16,28,42,50,50,50,10].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws1,'Vocabulario');
-  const pairs=[...new Set(vocab.map(v=>v.pair||'es-it'))];
-  pairs.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-it'],pv=vocab.filter(v=>(v.pair||'es-it')===p);const q1=[[`${lp.labelA} →`,`→ ${lp.labelB}`],...pv.map(v=>[v.wordA,v.wordB])];const ws2=XLSX.utils.aoa_to_sheet(q1);ws2['!cols']=[{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,ws2,`Quiz ${p.toUpperCase()} A→B`);const q2=[[`${lp.labelB} →`,`→ ${lp.labelA}`],...pv.map(v=>[v.wordB,v.wordA])];const ws3=XLSX.utils.aoa_to_sheet(q2);ws3['!cols']=[{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,ws3,`Quiz ${p.toUpperCase()} B→A`);});
+  const pairs=[...new Set(vocab.map(v=>v.pair||'es-en'))];
+  pairs.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-en'],pv=vocab.filter(v=>(v.pair||'es-en')===p);const q1=[[`${lp.labelA} →`,`→ ${lp.labelB}`],...pv.map(v=>[v.wordA,v.wordB])];const ws2=XLSX.utils.aoa_to_sheet(q1);ws2['!cols']=[{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,ws2,`Quiz ${p.toUpperCase()} A→B`);const q2=[[`${lp.labelB} →`,`→ ${lp.labelA}`],...pv.map(v=>[v.wordB,v.wordA])];const ws3=XLSX.utils.aoa_to_sheet(q2);ws3['!cols']=[{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,ws3,`Quiz ${p.toUpperCase()} B→A`);});
   XLSX.writeFile(wb,'Our_Translator_Vocabulario.xlsx');
 });
 
@@ -870,7 +870,7 @@ document.getElementById('importFile').addEventListener('change',e=>{
       const ws=wb.Sheets[sheetName],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       if(rows.length<2){showImportMsg('El archivo no contiene datos.','err');return;}
       const dataRows=rows[0][0]==='#'?rows.slice(1):rows;
-      function parsePair(raw){const s=String(raw).toLowerCase().replace(/[^a-z-]/g,'');const match=s.match(/(es)[- ]?(en|fr|it|de|pt)/);if(match) return `es-${match[2]}`;return 'es-it';}
+      function parsePair(raw){const s=String(raw).toLowerCase().replace(/[^a-z-]/g,'');const match=s.match(/(es)[- ]?(en|fr|it|de|pt)/);if(match) return `es-${match[2]}`;return 'es-en';}
       let imported=0,skipped=0,updated=0;
       dataRows.forEach(row=>{
         const wordA=String(row[2]||'').trim(),wordB=String(row[3]||'').trim();if(!wordA||!wordB) return;
@@ -878,7 +878,7 @@ document.getElementById('importFile').addEventListener('change',e=>{
         const collRaw=String(row[5]||'').trim(),collocations=collRaw?collRaw.split(',').map(s=>s.trim()).filter(Boolean):[];
         const examples=[row[6],row[7],row[8]].map(s=>String(s||'').trim()).filter(Boolean);
         const date=String(row[9]||'').trim()||new Date().toLocaleDateString('es-ES');
-        const existing=vocab.find(v=>(v.pair||'es-it')===pair&&norm(v.wordA)===norm(wordA));
+        const existing=vocab.find(v=>(v.pair||'es-en')===pair&&norm(v.wordA)===norm(wordA));
         if(existing){
           let changed=false;
           if(norm(existing.wordB)!==norm(wordB)){existing.wordB=wordB;changed=true;}
@@ -900,7 +900,7 @@ function showImportMsg(msg,type){const el=document.getElementById('importMsg');e
 
 function renderQuiz(){
   const body=document.getElementById('quizBody');
-  const pool=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-it')===vocabFilter);
+  const pool=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-en')===vocabFilter);
   if(pool.length<2){body.innerHTML=`<div class="empty"><div class="ico">🧠</div>Necesitas al menos 2 palabras guardadas para estudiar.</div>`;return;}
   buildQuiz(body,pool);
 }
@@ -921,7 +921,7 @@ function weightedSample(items,n){
 
 function renderQuizCard(body,pool){
   if(quizIdx>=quizSession.length){renderQuizResult(body,pool);return;}
-  const correct=quizSession[quizIdx],lp=LANG_PAIRS[correct.pair||'es-it']||LANG_PAIRS['es-it'];
+  const correct=quizSession[quizIdx],lp=LANG_PAIRS[correct.pair||'es-en']||LANG_PAIRS['es-en'];
   const others=[...pool].filter(v=>v.id!==correct.id).sort(()=>Math.random()-.5).slice(0,3);
   const opts=[correct,...others].sort(()=>Math.random()-.5);
   const pct=Math.round((quizIdx/quizSession.length)*100);
@@ -968,11 +968,6 @@ function renderQuizResult(body,pool){
   body.innerHTML=`<div class="quiz-card"><div style="font-size:2.8rem;margin-bottom:12px">${e}</div><div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:600;margin-bottom:6px">${t}</div><div style="font-size:.82rem;color:var(--tm);margin-bottom:28px">Has terminado el repaso</div><div class="res-stats">${[['Aciertos',quizScore],['Errores',quizSession.length-quizScore],['Precisión',pct+'%']].map(([l,v])=>`<div class="res-stat"><div class="val">${v}</div><div class="lbl">${l}</div></div>`).join('')}</div><button class="btn-p" id="qRestart" style="margin:0 auto">Volver a intentar</button></div>`;
   document.getElementById('qRestart').addEventListener('click',()=>buildQuiz(body,pool));
 }
-
-// ══════════════════════════════════════════════════════
-//  INICIALIZACIÓN: actualizamos la interfaz con el par por defecto (es-it)
-// ══════════════════════════════════════════════════════
-updateDirButtons();
 </script>
 </body>
 </html>
