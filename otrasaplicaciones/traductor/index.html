@@ -13,7 +13,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
-/* (el mismo CSS base, solo añado mejoras para la tabla de vocabulario) */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
 :root{
   --bg:#f5f2ee;--surface:#fff;--accent:#2d6a4f;--al:#b7e4c7;--am:#d8f3dc;
@@ -22,6 +21,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 0 80px}
+
+
 header{text-align:center;margin:28px 0 16px;padding:0 16px}
 header h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:600;letter-spacing:-.5px}
 header h1 span{color:var(--accent)}
@@ -100,24 +101,14 @@ input::placeholder{color:var(--tm);font-weight:300}
 .vf-btn:hover{border-color:var(--accent);background:var(--am)}
 .vf-btn.on{border-color:var(--accent);background:var(--am);color:var(--accent);font-weight:500}
 .tbl-wrap{overflow-x:auto;border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--bd);width:100%}
-table{width:100%;border-collapse:collapse;background:var(--surface);font-size:.85rem;min-width:550px}
-th{background:var(--accent);color:#fff;padding:10px 13px;text-align:left;font-weight:500;font-size:.7rem;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
-td{padding:9px 13px;border-bottom:1px solid var(--bd);vertical-align:middle;line-height:1.4;color:var(--t2);white-space:nowrap}
-td:first-child, th:first-child { padding-left: 13px; }
-td:last-child, th:last-child { padding-right: 13px; }
-/* Anchos sugeridos para columnas */
-th:nth-child(1), td:nth-child(1) { width: 45px; text-align: center; }
-th:nth-child(2), td:nth-child(2) { min-width: 110px; }
-th:nth-child(3), td:nth-child(3) { min-width: 110px; }
-th:nth-child(4), td:nth-child(4) { width: 70px; text-align: center; }
-th:nth-child(5), td:nth-child(5) { min-width: 130px; }
-th:nth-child(6), td:nth-child(6) { width: 95px; text-align: center; }
-th:nth-child(7), td:nth-child(7) { width: 50px; text-align: center; }
+table{width:100%;border-collapse:collapse;background:var(--surface);font-size:.83rem}
+th{background:var(--accent);color:#fff;padding:10px 13px;text-align:left;font-weight:500;font-size:.69rem;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+td{padding:9px 13px;border-bottom:1px solid var(--bd);vertical-align:top;line-height:1.5;color:var(--t2)}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg)}
-.td-a{font-weight:500;color:var(--t1);white-space:normal;word-break:break-word}
-.td-b{font-style:italic;color:var(--accent);white-space:normal;word-break:break-word}
-.td-sm{font-size:.78rem;white-space:normal;word-break:break-word}
+.td-a{font-weight:500;color:var(--t1)}
+.td-b{font-style:italic;color:var(--accent)}
+.td-sm{font-size:.78rem;max-width:180px}
 .lang-tag{display:inline-block;font-size:.6rem;background:var(--am);color:var(--accent);border-radius:4px;padding:1px 6px;font-weight:600;letter-spacing:.3px;margin-left:4px;vertical-align:middle}
 .del{background:none;border:none;cursor:pointer;color:#ccc;font-size:.95rem;padding:2px 6px;border-radius:6px;transition:all .2s}
 .del:hover{color:var(--red);background:#fdecea}
@@ -150,9 +141,7 @@ tr:hover td{background:var(--bg)}
   .q-opts{grid-template-columns:1fr}
   .q-word{font-size:1.5rem}
   header h1{font-size:1.9rem}
-  /* En móvil, permitir que algunas columnas se ajusten */
-  th:nth-child(5), td:nth-child(5){ min-width: 100px; }
-  td{ white-space: normal; }
+  th:nth-child(5),td:nth-child(5){display:none}
 }
 .td-edit{position:relative}
 .edit-btn{background:none;border:none;cursor:pointer;color:var(--tm);font-size:.8rem;padding:2px 5px;border-radius:5px;transition:all .2s;opacity:0}
@@ -170,31 +159,829 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
 </style>
 </head>
 <body>
-<!-- Contenido HTML igual que antes, hasta el final del script... -->
-<!-- (el código JavaScript es exactamente el mismo que en la respuesta anterior, solo añado un pequeño ajuste en renderVocab para mostrar "—" cuando no hay collocations) -->
-<!-- Por brevedad, pondré el script completo pero sin repetir las partes largas que no han cambiado. En la práctica, entrego el archivo completo funcional. -->
 
-<!-- ========== RESTO DEL BODY (igual que antes) ========== -->
-<!-- (aquí irían los divs de sync-bar, header, lang-selector, tabs, panels, footer, todo igual) -->
+
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar" style="background:#1a1a2e;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 20px;border-bottom:1px solid rgba(255,255,255,0.06)">
+  <span id="sync-user-text" style="display:none;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px;font-family:monospace"></span>
+  <button id="btn-signout" onclick="fbSignOut()" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;text-transform:uppercase;font-family:monospace">Cerrar sesión</button>
+  <button id="btn-sync" onclick="handleSync()" style="background:none;border:1px solid rgba(45,106,79,0.5);color:#7ec8a0;padding:4px 11px;border-radius:20px;cursor:pointer;font-size:10px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:5px;font-family:monospace;transition:all .2s">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar vocabulario</span>
+  </button>
+</div>
+<div id="sync-status" style="display:none;padding:5px 20px;font-size:10px;letter-spacing:1px;text-transform:uppercase;align-items:center;justify-content:space-between;gap:10px">
+  <span id="sync-status-msg"></span>
+  <button onclick="closeSyncStatus()" style="background:none;border:none;cursor:pointer;opacity:.6;font-size:12px;padding:0 3px">✕</button>
+</div>
+
+<header>
+  <h1>Our <span>Translator</span></h1>
+  <p>Vocabulary · Study</p>
+</header>
+
+<!-- ══ LANGUAGE PAIR SELECTOR ══ -->
+<div class="lang-selector" id="langSelector">
+  <span class="ls-label">Idioma</span>
+  <button class="lp-btn on" data-pair="es-en"><span class="lp-flag">🇬🇧</span> ES ↔ EN</button>
+  <button class="lp-btn" data-pair="es-fr"><span class="lp-flag">🇫🇷</span> ES ↔ FR</button>
+  <button class="lp-btn" data-pair="es-it"><span class="lp-flag">🇮🇹</span> ES ↔ IT</button>
+  <button class="lp-btn" data-pair="es-de"><span class="lp-flag">🇩🇪</span> ES ↔ DE</button>
+  <button class="lp-btn" data-pair="es-pt"><span class="lp-flag">🇵🇹</span> ES ↔ PT</button>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-tab="translator">🌐 Traducir</button>
+  <button class="tab" data-tab="vocab">📋 Vocabulario (<span id="vcntTab">0</span>)</button>
+  <button class="tab" data-tab="quiz">🧠 Estudiar</button>
+</div>
+
+<!-- ══ TRANSLATOR ══ -->
+<div class="panel on" id="panel-translator">
+  <div class="card">
+    <div class="dir-row" id="dirRow">
+      <button class="dir-btn on" id="dirA" onclick="setDir('a')">
+        <span id="dirFlagA">🇪🇸</span> <span id="dirLabelA">Español</span>
+        <span class="dir-arrow">→</span>
+        <span id="dirFlagB2">🇬🇧</span> <span id="dirLabelB">Inglés</span>
+      </button>
+      <button class="dir-btn" id="dirB" onclick="setDir('b')">
+        <span id="dirFlagB">🇬🇧</span> <span id="dirLabelB2">Inglés</span>
+        <span class="dir-arrow">→</span>
+        <span id="dirFlagA2">🇪🇸</span> <span id="dirLabelA2">Español</span>
+      </button>
+    </div>
+    <div class="inp-wrap">
+      <input type="text" id="wordInput" maxlength="80" placeholder="Escribe una palabra o frase corta…" autocomplete="off" spellcheck="false">
+      <button class="clr" id="clrBtn">✕</button>
+    </div>
+    <div class="inp-foot">
+      <span id="charCount">0 / 80</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-s red" id="saveBtnTop" style="display:none" onclick="doUnsave()">✕ No guardar</button>
+        <button class="btn-p" id="goBtn">
+          <span class="spin" id="spin"></span>
+          <span id="btnLabel">Traducir →</span>
+        </button>
+      </div>
+    </div>
+    <div id="errBar" style="display:none;margin-top:10px;font-size:.82rem;color:var(--red);font-style:italic"></div>
+  </div>
+  <div id="resultSec"></div>
+</div>
+
+<!-- ══ VOCAB ══ -->
+<div class="panel" id="panel-vocab">
+  <div class="vocab-top">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2>Mi vocabulario</h2>
+      <span class="vcnt" id="vcntBadge">0 palabras</span>
+    </div>
+    <div class="vocab-filters" id="vocabFilters"></div>
+  </div>
+  <div id="vocabBody" style="width:100%"></div>
+  <div style="width:100%;display:flex;justify-content:flex-end;margin-bottom:6px">
+    <button class="btn-s" id="importBtn">⬆ Cargar Excel</button>
+    <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none">
+  </div>
+  <div id="importMsg" style="display:none;width:100%;font-size:.82rem;padding:8px 14px;border-radius:10px;margin-bottom:6px"></div>
+  <div class="tbl-actions" id="tblActions" style="display:none">
+    <button class="btn-s" id="exportBtn">⬇ Descargar Excel</button>
+    <button class="btn-s red" id="clearBtn">🗑 Borrar todo</button>
+  </div>
+</div>
+
+<!-- ══ QUIZ ══ -->
+<div class="panel" id="panel-quiz">
+  <div id="quizBody" style="width:100%"></div>
+</div>
+
+<footer>Google Translate · Wiktionary · MyMemory · Datamuse · Guardado en el navegador</footer>
 
 <script>
-// ========== FIREBASE Y DEMÁS (exactamente igual que antes) ==========
-// (copiar el script completo de la respuesta anterior, pero modificando solo la función renderVocab en la parte donde muestra collocations)
-// A continuación muestro únicamente los cambios en renderVocab, pero en el archivo entregado estará todo completo.
+// ══════════════════════════════════════════════════════
+//  FIREBASE
+// ══════════════════════════════════════════════════════
+var firebaseConfig = {
+  apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs",
+  authDomain: "castroverde-apps.firebaseapp.com",
+  projectId: "castroverde-apps",
+  storageBucket: "castroverde-apps.firebasestorage.app",
+  messagingSenderId: "371026533141",
+  appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+};
+firebase.initializeApp(firebaseConfig);
+var fbAuth     = firebase.auth();
+var fbDb       = firebase.firestore();
+var fbProvider = new firebase.auth.GoogleAuthProvider();
+var fbUser     = null;
+var fbPopupOpen = false;
 
-// Dentro de renderVocab, cambiar la línea que muestra collocations:
-// donde antes ponía: <td class="td-sm td-edit"><span class="cell-val">${esc((v.collocations || []).slice(0, 4).join(', '))}</span>...
-// Ahora pondremos:
-// const collText = (v.collocations && v.collocations.length) ? v.collocations.slice(0,4).join(', ') : '—';
-// y luego usamos collText.
+fbAuth.onAuthStateChanged(function(user) {
+  fbUser = user;
+  updateSyncUI();
+  // Al iniciar sesión: sincronización bidireccional automática
+  if (user) sincronizarBidireccional();
+});
 
-// Además, en el CSS ya hemos añadido mejoras de anchos y white-space.
+function updateSyncUI() {
+  var userEl  = document.getElementById('sync-user-text');
+  var signout = document.getElementById('btn-signout');
+  var btn     = document.getElementById('btn-sync');
+  var icon    = document.getElementById('sync-icon');
+  var label   = document.getElementById('sync-label');
+  if (fbUser) {
+    btn.style.borderColor = 'rgba(45,106,79,0.8)';
+    icon.textContent  = '✓';
+    label.textContent = 'Sincronizar vocabulario';
+    userEl.textContent    = fbUser.email;
+    userEl.style.display  = 'inline';
+    signout.style.display = 'inline';
+  } else {
+    btn.style.borderColor = 'rgba(45,106,79,0.5)';
+    icon.textContent      = '☁';
+    label.textContent     = 'Sincronizar vocabulario';
+    userEl.style.display  = 'none';
+    signout.style.display = 'none';
+  }
+}
 
-// Para no alargar, asumo que el resto del script es el mismo que entregué en la respuesta anterior (con la persistencia de idioma y filtro por defecto).
-// En la práctica, el archivo final completo incluye todas las modificaciones.
+function handleSync() {
+  if (fbPopupOpen) return;
+  if (!fbUser) {
+    fbPopupOpen = true;
+    setSyncStatus('info', 'Iniciando sesión con Google…');
+    fbAuth.signInWithPopup(fbProvider)
+      .then(function() { fbPopupOpen = false; sincronizarBidireccional(); })
+      .catch(function(err) { fbPopupOpen = false; setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
+  } else {
+    sincronizarBidireccional();
+  }
+}
 
-// A continuación doy el bloque completo del script con la corrección de collocations vacías y el CSS mejorado ya incluido arriba.
-// Para que el usuario pueda copiar y pegar, proporciono el archivo íntegro.
+// Sincronización bidireccional con timestamp:
+// - Compara cuándo subió por última vez este dispositivo vs. el lastUpdate de la nube
+// - Si la nube es más reciente → descarga (otro dispositivo subió cambios)
+// - Si lo local es más reciente → sube
+function sincronizarBidireccional() {
+  if (!fbUser) return;
+  var btnSync = document.getElementById('btn-sync');
+  if (btnSync) btnSync.disabled = true;
+  setSyncStatus('info', 'Sincronizando vocabulario…');
+  var docRef = fbDb.collection('traductor').doc(fbUser.uid);
+
+  docRef.get().then(function(snap) {
+    // Sin datos en la nube → subir directamente
+    if (!snap.exists || !(snap.data().vocab || []).length) {
+      return subirANube(docRef);
+    }
+
+    var remoteVocab  = snap.data().vocab  || [];
+    var remoteStats  = snap.data().stats  || {};
+    var tsNube       = snap.data().lastUpdate || 0;
+    var tsLocal      = parseInt(localStorage.getItem('tradUltimaSubida')) || 0;
+
+    // Merge bidireccional por ID: nunca se pierde ninguna palabra de ningún lado
+    var mergedMap = {};
+    remoteVocab.forEach(function(v) { mergedMap[v.id] = v; });
+    vocab.forEach(function(v) {
+      if (!mergedMap[v.id]) mergedMap[v.id] = v; // palabra local que no está en nube → añadir
+    });
+    var merged = Object.values(mergedMap).sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+
+    // Merge stats: suma los contadores de ambos lados
+    var mergedStats = Object.assign({}, remoteStats);
+    Object.keys(stats).forEach(function(k) {
+      if (!mergedStats[k]) { mergedStats[k] = stats[k]; }
+      else {
+        mergedStats[k].ok   = Math.max(mergedStats[k].ok   || 0, stats[k].ok   || 0);
+        mergedStats[k].fail = Math.max(mergedStats[k].fail || 0, stats[k].fail || 0);
+        mergedStats[k].lastSeen = Math.max(mergedStats[k].lastSeen || 0, stats[k].lastSeen || 0);
+      }
+    });
+
+    var added = merged.length - vocab.length;
+    vocab  = merged;
+    stats  = mergedStats;
+    saveVocab(); saveStats(); updateVocabCount(); renderVocab();
+
+    // Subir el resultado fusionado a la nube
+    return subirANube(docRef).then(function() {
+      if (added > 0) {
+        setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabras (' + added + ' recuperada' + (added !== 1 ? 's' : '') + ' de la nube)');
+      }
+    });
+  })
+  .catch(function(err) { setSyncStatus('err', 'Error: ' + err.message); })
+  .finally(function() { if (btnSync) btnSync.disabled = false; });
+}
+
+function subirANube(docRef) {
+  var ts = new Date().getTime();
+  return docRef.set({
+    vocab: vocab,
+    stats: stats,
+    lastUpdate: ts,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    localStorage.setItem('tradUltimaSubida', ts);
+    setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabra' + (vocab.length !== 1 ? 's' : ''));
+  });
+}
+
+function setSyncStatus(type, msg) {
+  var el = document.getElementById('sync-status');
+  var colors = { ok: 'rgba(76,175,80,.12)', err: 'rgba(192,57,43,.1)', info: 'rgba(45,106,79,.1)' };
+  var textColors = { ok: '#2e7d32', err: '#c0392b', info: '#2d6a4f' };
+  el.style.display    = 'flex';
+  el.style.background = colors[type] || colors.info;
+  el.style.color      = textColors[type] || textColors.info;
+  document.getElementById('sync-status-msg').textContent = msg;
+  if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+}
+
+function closeSyncStatus() {
+  document.getElementById('sync-status').style.display = 'none';
+}
+
+function fbSignOut() {
+  fbAuth.signOut().then(function() { fbUser = null; updateSyncUI(); });
+}
+
+// ══════════════════════════════════════════════════════
+//  LANGUAGE PAIR CONFIG
+// ══════════════════════════════════════════════════════
+const LANG_PAIRS = {
+  'es-en': { a:'es', b:'en', labelA:'Español', labelB:'Inglés', flagA:'🇪🇸', flagB:'🇬🇧', nameA:'español', nameB:'inglés' },
+  'es-fr': { a:'es', b:'fr', labelA:'Español', labelB:'Francés', flagA:'🇪🇸', flagB:'🇫🇷', nameA:'español', nameB:'francés' },
+  'es-it': { a:'es', b:'it', labelA:'Español', labelB:'Italiano', flagA:'🇪🇸', flagB:'🇮🇹', nameA:'español', nameB:'italiano' },
+  'es-de': { a:'es', b:'de', labelA:'Español', labelB:'Alemán',  flagA:'🇪🇸', flagB:'🇩🇪', nameA:'español', nameB:'alemán' },
+  'es-pt': { a:'es', b:'pt', labelA:'Español', labelB:'Portugués',flagA:'🇪🇸', flagB:'🇵🇹', nameA:'español', nameB:'portugués' },
+};
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+const STORE     = 'lexio_v2';
+const STATS_KEY = 'lexio_stats_v1';
+let vocab = [];
+try { vocab = JSON.parse(localStorage.getItem(STORE)) || []; } catch(_) {}
+let stats = {};
+try { stats = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); } catch(_) {}
+let quizSessionCount = 0;
+try { quizSessionCount = parseInt(localStorage.getItem('lexio_sc') || '0'); } catch(_) {}
+
+let activePair  = (()=>{ try { return localStorage.getItem('lexio_lastPair') || 'es-en'; } catch(_){ return 'es-en'; } })();
+let detLang     = null;
+let lastResult  = null;
+let quizMode    = 'a2b';
+let quizSession = [], quizIdx = 0, quizScore = 0, quizAnswered = false;
+let vocabFilter = (()=>{
+  try {
+    const saved = localStorage.getItem('lexio_lastPair') || 'es-en';
+    // Solo aplicar el filtro si hay palabras de ese par
+    return vocab.some(v => (v.pair||'es-en') === saved) ? saved : 'all';
+  } catch(_){ return 'all'; }
+})();
+
+function getLP()   { return LANG_PAIRS[activePair]; }
+function saveVocab(){
+  try { localStorage.setItem(STORE, JSON.stringify(vocab)); } catch(_){}
+  fbAutoSave();
+}
+function saveStats(){
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(_){}
+}
+
+var fbSaveTimer = null;
+function fbAutoSave() {
+  if (!fbUser) return;
+  clearTimeout(fbSaveTimer);
+  fbSaveTimer = setTimeout(function() {
+    var ts = new Date().getTime();
+    fbDb.collection('traductor').doc(fbUser.uid).set({
+      vocab: vocab,
+      stats: stats,
+      lastUpdate: ts,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      localStorage.setItem('tradUltimaSubida', ts);
+    }).catch(function(err) { console.warn('fbAutoSave error:', err); });
+  }, 2000);
+}
+function getStat(id){ return stats[String(id)] || {ok:0,fail:0,lastSeen:0}; }
+function wordWeight(v){
+  const s = getStat(v.id);
+  const base = Math.max(1, 1 + s.fail*3 - s.ok);
+  const boost = (quizSessionCount - s.lastSeen) > 2 ? 2 : 1;
+  return base * boost;
+}
+function pruneStats(){
+  const ids = new Set(vocab.map(v => String(v.id)));
+  let ch=false;
+  for(const k of Object.keys(stats)){ if(!ids.has(k)){ delete stats[k]; ch=true; } }
+  if(ch) saveStats();
+}
+
+function enc(s)  { return encodeURIComponent(s); }
+function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function norm(s) { return String(s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' '); }
+function cap(s)  { return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+
+// ══════════════════════════════════════════════════════
+//  LANG DETECTION (sin cambios)
+// ══════════════════════════════════════════════════════
+const LANG_CHARS = {
+  es: /[ñ¿¡]/,
+  fr: /[âæçœûÿÂÆÇŒÛŸêëîïÊËÎÏ]/,
+  it: /[àèìîòùÀÈÌÎÒÙ]/,
+  de: /[äöüßÄÖÜ]/,
+  pt: /[ãõÃÕ]/,
+  en: null
+};
+
+const EXCL = {
+  en: new Set(['the','is','are','was','were','have','has','had','been','will','would','could','should','shall','may','might','must','do','does','did','this','that','these','those','it','its','we','they','them','our','their','my','your','his','her','and','but','or','nor','so','yet','both','either','neither','not','also','just','only','even','still','already','a','an','of','in','on','at','to','for','with','by','from','up','out','off','into','onto','over','under','about','around','through','between','hello','hi','hey','goodbye','bye','please','thank','thanks','sorry','ok','okay','yes','yeah','nope','bee','tree','free','see','three','knee','flee','sheep','horse','cow','pig','goat','owl','frog','slug','snail','bird','fish','fox','bear','wolf','deer','whale','shark','eagle','hawk','robin','sparrow','bread','egg','eggs','butter','cheese','milk','beer','wine','cake','pie','soup','stew','book','books','pen','desk','chair','floor','roof','stairs','window','door','wall','room','phone','screen','keyboard','mouse','internet','email','app','laptop','tablet','red','blue','green','yellow','black','white','brown','pink','grey','gray','purple','orange','big','small','tall','short','long','fast','slow','hot','cold','warm','cool','new','old','good','bad','happy','sad','angry','scared','funny','nice','great','awesome','huge','tiny','pretty','ugly','run','walk','talk','speak','eat','drink','sleep','work','play','read','write','think','feel','know','make','take','give','get','go','come','see','hear','tell','ask','try','use','find','call','keep','put','let','seem','turn','show','help','stay','move','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','monday','tuesday','wednesday','thursday','friday','saturday','sunday','january','february','march','april','june','july','august','september','october','november','december','today','yesterday','tomorrow','now','then','when','where','what','who','why','how','morning','afternoon','evening','night','week','month','year','hour','minute','second','street','road','city','town','country','world','ocean','river','mountain','lake','forest','desert','island','rain','snow','cloud','wind','storm','fog','ice','fire','earth','sky','money','bank','shop','store','market','hotel','hospital','school','park','office','spring','summer','autumn','winter','weather','people','person','life','time','way','day','hand','part','place','case','week','point','number','fact']),
+  fr: new Set(['bonjour','bonsoir','bonne','merci','oui','non','voilà','voici','je','tu','il','elle','nous','vous','ils','elles','me','te','lui','leur','y','en','le','la','les','un','une','des','du','au','aux','dont','où','est','sont','avoir','être','faire','aller','venir','voir','savoir','pouvoir','vouloir','devoir','très','aussi','encore','toujours','jamais','souvent','bien','plus','moins','trop','assez','avec','sans','sous','entre','après','pendant','depuis','chez','maison','voiture','chien','chat','oiseau','fleur','arbre','soleil','lune','étoile','rouge','blanc','noir','vert','jaune','bleu','gris','rose','violet','petit','grand','beau','nouveau','vieux','jeune','premier','dernier','manger','boire','dormir','travailler','parler','écouter','regarder','lire','écrire','lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche','aujourd\'hui','hier','demain','maintenant','puis','donc','mais','car','or','ni','quand','comment','pourquoi','rue','ville','pays','monde','rivière','montagne','forêt','plage','pain','fromage','vin','eau','café','bière','gâteau','légume','fruit','viande','poisson']),
+  it: new Set(['ciao','buongiorno','buonasera','buonanotte','grazie','prego','scusa','scusi','arrivederci','salve','il','lo','gli','una','degli','della','delle','dello','dal','dallo','dalla','dai','dagli','dalle','io','lui','lei','noi','voi','loro','mi','ti','ci','vi','si','sono','sei','siamo','siete','ho','hai','abbiamo','avete','fare','andare','venire','vedere','sapere','potere','volere','dovere','molto','poco','ancora','sempre','mai','spesso','bene','male','più','meno','mangiare','bere','dormire','lavorare','parlare','ascoltare','guardare','leggere','scrivere','gatto','cane','uccello','fiore','albero','sole','luna','stella','mare','cielo','rosso','bianco','nero','verde','giallo','azzurro','grigio','viola','piccolo','bello','vecchio','giovane','primo','ultimo','lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica','oggi','ieri','domani','adesso','dopo','prima','macchina','treno','aereo','nave','pane','vino','caffè','pizza','pasta','gelato','formaggio','birra','strada','città','paese','mondo','fiume','montagna','lago','spiaggia','bosco','perché','come','quando','dove','chi','cosa','quanto','quale','dunque','però','allora','quindi','anche','già','forse']),
+  de: new Set(['hallo','guten','danke','bitte','ja','nein','auf','wiedersehen','tschüss','der','die','das','den','dem','des','ein','eine','einer','einem','einen','eines','ich','du','er','es','wir','ihr','mich','dich','ihn','uns','euch','sich','bin','bist','ist','sind','seid','habe','hast','hat','haben','habt','machen','gehen','kommen','sehen','wissen','können','wollen','müssen','sollen','werden','sehr','auch','noch','immer','nie','oft','gut','schlecht','mehr','weniger','schon','doch','mit','ohne','seit','nach','vor','über','unter','neben','zwischen','durch','gegen','essen','trinken','schlafen','arbeiten','sprechen','hören','schauen','lesen','schreiben','katze','hund','vogel','blume','baum','sonne','mond','stern','meer','himmel','rot','weiß','schwarz','grün','gelb','blau','grau','lila','klein','schön','neu','alt','jung','groß','montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag','heute','gestern','morgen','jetzt','dann','warum','wie','wann','wo','wer','was','haus','auto','buch','wasser','brot','wein','kaffee','käse','fleisch','bier','straße','stadt','land','welt','fluss','berg','see','wald','strand']),
+  pt: new Set(['olá','bom','boa','obrigado','obrigada','sim','não','adeus','tchau','por','favor','o','os','uma','uns','umas','do','da','dos','das','ao','aos','pelo','pela','pelos','pelas','eu','nós','vós','eles','elas','me','te','se','nos','vos','sou','és','é','somos','são','tenho','tens','tem','temos','têm','fazer','vir','ver','saber','poder','querer','dever','muito','pouco','ainda','sempre','nunca','bem','mais','menos','comer','beber','dormir','trabalhar','falar','ouvir','olhar','ler','escrever','gato','cão','pássaro','flor','árvore','lua','estrela','céu','vermelho','branco','preto','verde','amarelo','azul','cinzento','roxo','pequeno','bonito','novo','velho','jovem','primeiro','último','segunda','terça','quarta','quinta','sexta','sábado','domingo','hoje','ontem','amanhã','agora','depois','antes','carro','livro','pão','vinho','café','queijo','cerveja','peixe','rua','cidade','país','mundo','rio','montanha','lago','praia','floresta','porque','como','quando','onde','quem','quanto','porém','então','também','mas','ou','nem','pois']),
+  es: new Set(['hola','adiós','gracias','perdón','español','buenos','tardes','noches','el','los','unos','unas','del','al','yo','tú','él','ella','nosotros','vosotros','ellos','ellas','os','soy','eres','somos','sois','son','tengo','tienes','tiene','tenemos','tenéis','tienen','estoy','estás','está','estamos','estáis','están','hacer','querer','deber','hay','poder','saber','venir','salir','poner','también','todavía','siempre','nunca','veces','bien','mal','muy','más','menos','hablar','escuchar','mirar','trabajar','perro','pájaro','árbol','sol','estrella','rojo','amarillo','morado','pequeño','viejo','joven','primero','último','lunes','martes','miércoles','jueves','viernes','enero','febrero','marzo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre','hoy','ayer','mañana','ahora','después','antes','todavía','coche','calle','país','este','esta','estos','estas','ese','esa','esos','esas','aquel','aquella','todo','toda','todos','todas','mucho','mucha','muchos','muchas','poco','poca','pocos','pocas','cuando','donde','quien','como','aunque','sino','mientras','para','porque','pero'])
+};
+
+function detectLangInPair(text, pair) {
+  const lp=LANG_PAIRS[pair],langA=lp.a,langB=lp.b,t=text.trim(),lower=t.toLowerCase();
+  if(LANG_CHARS[langB]&&LANG_CHARS[langB].test(t)) return langB;
+  if(LANG_CHARS[langA].test(t)) return langA;
+  const tokens=lower.split(/[\s\-,;:.!?]+/).filter(Boolean);
+  let sA=0,sB=0;
+  for(const w of tokens){
+    if(EXCL[langA].has(w)) sA+=3;
+    if(EXCL[langB].has(w)) sB+=3;
+    if(w.length>3){if(EXCL[langB].has(w.slice(0,-1))) sB+=1;}
+  }
+  if(sB>sA) return langB;
+  if(sA>sB) return langA;
+  if(langB==='en'){if(/^[a-zA-Z'\s-]+$/.test(t)&&!EXCL['es'].has(lower)) return langB;}
+  if(langB==='it'){if(/\b\w+(zione|ità|aggio|ello|etto|ando|endo|iamo|iate|isco|isce|iscono)\b/i.test(t)) return langB;if(/\b\w+(ire|zione|ggio|tti|cci)\b/i.test(t)) return langB;}
+  if(langB==='pt'){if(/\b\w+(ção|ções|nho|lho|ável|ível|agem)\b/i.test(t)) return langB;}
+  if(langB==='fr'){if(/\b\w+(eur|euse|eau|aux|eux|ais|aise|ois|tion|ment)\b/i.test(t)) return langB;}
+  if(langB==='de'){if(/\b\w+(ung|heit|keit|schaft|lich|chen|weise|tum|ieren)\b/i.test(t)) return langB;if(/(?:^|\s)[A-ZÄÖÜ][a-zäöüß]{2,}/.test(t)) return langB;}
+  if(/^[a-zA-Z'\s-]+$/.test(t)){
+    if(/\w+(?:cion|miento|ante|ente|iente|tante|rante|ado|ada|ido|ida|ando|iendo|ario|aria|orio|oria|ismo|ista|mente|oso|osa|able|ible|ura|aje|dor|dora|anza|encia|ancia|ero|era|torio|sorio)$/.test(lower)){if(!EXCL[langB]?.has(lower)) return langA;}
+    const ES_GUARD=new Set(['gato','perro','mesa','silla','clase','libro','amigo','amiga','tiempo','trabajo','nombre','cosa','parte','vida','lugar','hombre','mujer','hijo','hija','padre','madre','hermano','hermana','comida','bebida','coche','tren','barco','piso','suelo','techo','puerta','ventana','zapato','ropa','camisa','verde','negro','blanco','azul','gris','hablar','comer','beber','dormir','correr','saltar','vivir','hacer','tener','grande','nuevo','viejo','largo','corto','alto','bajo','bueno','malo','poco','mucho','algo','nada','todo','nadie','alguien','cada','donde','cuando','como','porque','aunque','sino','para','pero','mas','muy','tan','ya','sin','canal','animal','general','natural','hospital','capital','final','total','normal','personal','social','local','central','nacional','original','principal','especial','color','calor','valor','dolor','honor','humor','terror','error','favor','actor','doctor','autor','rector','sector','motor']);
+    if(ES_GUARD.has(lower)) return langA;
+    return langB;
+  }
+  return langA;
+}
+
+// ══════════════════════════════════════════════════════
+//  LANG PAIR SWITCHER
+// ══════════════════════════════════════════════════════
+// Restaurar el botón activo según el par guardado
+document.querySelectorAll('.lp-btn').forEach(btn => {
+  btn.classList.toggle('on', btn.dataset.pair === activePair);
+});
+
+document.querySelectorAll('.lp-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if(btn.dataset.pair === activePair) return;
+    activePair = btn.dataset.pair;
+    try { localStorage.setItem('lexio_lastPair', activePair); } catch(_){}
+    vocabFilter = vocab.some(v => (v.pair||'es-en') === activePair) ? activePair : 'all';
+    document.querySelectorAll('.lp-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    clearInput(); updateVocabCount(); updateDirButtons();
+  });
+});
+
+// ══════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab,.panel').forEach(el => el.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('on');
+    if(btn.dataset.tab==='vocab') renderVocab();
+    if(btn.dataset.tab==='quiz')  renderQuiz();
+  });
+});
+
+// ══════════════════════════════════════════════════════
+//  DIRECTION CONTROL
+// ══════════════════════════════════════════════════════
+let inputDir = 'a';
+
+function updateDirButtons() {
+  const lp = getLP();
+  document.getElementById('dirFlagA').textContent  = lp.flagA;
+  document.getElementById('dirLabelA').textContent = lp.labelA;
+  document.getElementById('dirFlagB2').textContent = lp.flagB;
+  document.getElementById('dirLabelB').textContent = lp.labelB;
+  document.getElementById('dirFlagB').textContent   = lp.flagB;
+  document.getElementById('dirLabelB2').textContent = lp.labelB;
+  document.getElementById('dirFlagA2').textContent  = lp.flagA;
+  document.getElementById('dirLabelA2').textContent = lp.labelA;
+  document.getElementById('dirA').classList.toggle('on', inputDir==='a');
+  document.getElementById('dirB').classList.toggle('on', inputDir==='b');
+  document.getElementById('wordInput').placeholder = `Escribe en ${inputDir==='a' ? lp.labelA : lp.labelB}…`;
+}
+
+function setDir(dir) {
+  inputDir = dir; updateDirButtons();
+  resultSec.classList.remove('on'); errBar.style.display='none';
+  const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false; sb.classList.add('red'); sb.style.borderColor=''; sb.style.color='';
+  lastResult=null; wordInput.focus();
+}
+
+// ══════════════════════════════════════════════════════
+//  INPUT WIRING
+// ══════════════════════════════════════════════════════
+const wordInput = document.getElementById('wordInput');
+const clrBtn    = document.getElementById('clrBtn');
+const goBtn     = document.getElementById('goBtn');
+const spin      = document.getElementById('spin');
+const btnLabel  = document.getElementById('btnLabel');
+const errBar    = document.getElementById('errBar');
+const resultSec = document.getElementById('resultSec');
+
+function clearInput() {
+  wordInput.value=''; clrBtn.classList.remove('on');
+  resultSec.classList.remove('on'); errBar.style.display='none';
+  document.getElementById('charCount').textContent='0 / 80';
+  const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false; sb.classList.add('red'); sb.style.borderColor=''; sb.style.color='';
+  lastResult=null; wordInput.focus();
+}
+
+wordInput.addEventListener('input', () => {
+  const v = wordInput.value;
+  document.getElementById('charCount').textContent = v.length+' / 80';
+  clrBtn.classList.toggle('on', !!v);
+});
+wordInput.addEventListener('keydown', e => { if(e.key==='Enter') go(); });
+clrBtn.addEventListener('click', clearInput);
+goBtn.addEventListener('click', go);
+
+function setLoading(on){ goBtn.disabled=on; spin.classList.toggle('on',on); btnLabel.textContent=on?'Traduciendo…':'Traducir →'; }
+function showErr(msg){ errBar.textContent=msg; errBar.style.display='block'; }
+function hideErr()   { errBar.style.display='none'; }
+
+// ══════════════════════════════════════════════════════
+//  TRANSLATION ENGINE (sin cambios)
+// ══════════════════════════════════════════════════════
+async function gtrans(q, sl, tl) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${enc(q)}`;
+  const r = await fetch(url); if(!r.ok) throw new Error('gtrans failed');
+  const d = await r.json();
+  return (d[0]||[]).map(x=>x[0]).filter(Boolean).join('').trim();
+}
+
+async function fetchTranslations(word, fromLang, toLang) {
+  const results = new Map();
+  const ROMANCE = new Set(['es','fr','it','pt','ro']);
+  const closePair = ROMANCE.has(fromLang) && ROMANCE.has(toLang);
+  function add(raw,w=1){
+    if(!raw) return; const t=raw.trim(); if(!t||t.length<2||t.length>50) return;
+    const isDupe=closePair?t.toLowerCase()===word.toLowerCase():norm(t)===norm(word);
+    if(isDupe) return; if(/\d/.test(t)) return;
+    const n=norm(t); if(!results.has(n)) results.set(n,{display:cap(t),score:0}); results.get(n).score+=w;
+  }
+  const gtP=gtrans(word,fromLang,toLang).then(t=>add(t,3)).catch(()=>{});
+  const gtAutoP=gtrans(word,'auto',toLang).then(t=>{
+    if(!t||t.trim().length<2||t.trim().length>50) return; if(/\d/.test(t)) return;
+    const display=cap(t.trim()),n=norm(t);
+    if(!results.has(n)) results.set(n,{display,score:0}); results.get(n).score+=3;
+  }).catch(()=>{});
+  let myPrimary='';
+  const myP=fetch(`https://api.mymemory.translated.net/get?q=${enc(word)}&langpair=${fromLang}|${toLang}`)
+    .then(r=>r.ok?r.json():null).then(d=>{
+      if(!d||d.responseStatus!==200) return; myPrimary=(d.responseData?.translatedText||'').trim(); add(myPrimary,2);
+      for(const m of (d.matches||[])){ if(norm(m.segment||'')!==word.toLowerCase()) continue; add(m.translation||'',1); }
+    }).catch(()=>{});
+  const wikiLang=(fromLang==='en'||toLang==='en')?(fromLang==='en'?'en':'en'):null;
+  const wikiP=wikiLang?fetch(`https://en.wiktionary.org/w/api.php?action=parse&page=${enc(word)}&prop=wikitext&format=json&origin=*`)
+    .then(r=>r.ok?r.json():null).then(d=>{
+      const txt=d?.parse?.wikitext?.['*']||'',re=new RegExp(`\\{\\{t[+\\-]?\\|${toLang}\\|([^|{}\\n]+)`,'g');let m;
+      while((m=re.exec(txt))!==null) add(m[1].replace(/\[\[([^|\]]+\|)?([^\]]+)\]\]/g,'$2'),2);
+    }).catch(()=>{}):Promise.resolve();
+  const esWikiP=(fromLang==='es'&&toLang!=='en')?
+    fetch(`https://es.wiktionary.org/w/api.php?action=parse&page=${enc(word)}&prop=wikitext&format=json&origin=*`)
+    .then(r=>r.ok?r.json():null).then(d=>{
+      const txt=d?.parse?.wikitext?.['*']||'',re=new RegExp(`\\{\\{t[+\\-]?\\|${toLang}\\|([^|{}\\n]+)`,'g');let m;
+      while((m=re.exec(txt))!==null) add(m[1].replace(/\[\[([^|\]]+\|)?([^\]]+)\]\]/g,'$2'),2);
+    }).catch(()=>{}):Promise.resolve();
+  await Promise.all([gtP,gtAutoP,myP,wikiP,esWikiP]);
+  let sorted=[...results.values()].sort((a,b)=>b.score-a.score||a.display.length-b.display.length).map(v=>v.display);
+  if(sorted.length===0){try{const f=await gtrans(word,'auto',toLang);if(f&&f.trim().length>1) sorted=[cap(f.trim())];}catch(_){}}
+  if(sorted.length===0) throw new Error('No se encontró traducción.');
+  return sorted;
+}
+
+async function fetchDictData(word) {
+  try {
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),4000);
+    const r=await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${enc(word.toLowerCase())}`,{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok) return {phonetic:'',pos:'',rawEx:[]};
+    const dd=await r.json(),entry=dd[0];
+    const phonetic=entry.phonetic||(entry.phonetics||[]).find(p=>p.text)?.text||'';
+    let pos='',rawEx=[];
+    for(const m of (entry.meanings||[])){
+      if(!pos) pos=m.partOfSpeech||'';
+      for(const d of (m.definitions||[])){ if(d.example&&rawEx.length<4) rawEx.push(d.example); }
+      if(rawEx.length>=4) break;
+    }
+    return {phonetic,pos,rawEx};
+  } catch(_){ return {phonetic:'',pos:'',rawEx:[]}; }
+}
+
+async function fetchCollocations(word, langPair) {
+  const lp=LANG_PAIRS[langPair],enWord=(lp.a==='en'||lp.b==='en')?word:null;
+  if(!enWord) return [];
+  try {
+    const eps=[`https://api.datamuse.com/words?rel_jjb=${enc(enWord)}&max=6`,`https://api.datamuse.com/words?rel_jja=${enc(enWord)}&max=6`,`https://api.datamuse.com/words?rc=${enc(enWord)}&max=8`,`https://api.datamuse.com/words?lc=${enc(enWord)}&max=8`];
+    const rs=await Promise.all(eps.map(u=>fetch(u).then(r=>r.ok?r.json():[]).catch(()=>[])));
+    const phrases=[...rs[0].slice(0,4).map(w=>`${w.word} ${enWord}`),...rs[1].slice(0,4).map(w=>`${enWord} ${w.word}`),...rs[2].slice(0,4).map(w=>`${enWord} ${w.word}`),...rs[3].slice(0,4).map(w=>`${w.word} ${enWord}`)];
+    const seen=new Set(),out=[];
+    for(const p of phrases){const n=p.toLowerCase();if(!seen.has(n)&&n!==enWord.toLowerCase()){seen.add(n);out.push(p);}if(out.length>=10) break;}
+    return out;
+  } catch(_){ return []; }
+}
+
+function fetchFigurative(word, langPair) {
+  const lp=LANG_PAIRS[langPair];
+  if(lp.a!=='en'&&lp.b!=='en') return [];
+  const w=word.toLowerCase().trim();
+  const FIG={"light":[{type:"idiom",expression:"see the light",meaning:"To finally understand or have a revelation"},{type:"idiom",expression:"light at the end of the tunnel",meaning:"Hope that a difficult situation will soon end"},{type:"idiom",expression:"come to light",meaning:"To become known or be revealed"},{type:"metaphor",expression:"shed light on",meaning:"To clarify or explain something"},{type:"quote",expression:"Give light, and the darkness will disappear of itself — Erasmus",meaning:"Truth and knowledge dispel ignorance"}],"time":[{type:"idiom",expression:"time flies",meaning:"Time passes very quickly"},{type:"idiom",expression:"kill time",meaning:"To do something to pass the time while waiting"},{type:"proverb",expression:"Time is money",meaning:"Time is a valuable resource"},{type:"proverb",expression:"Time heals all wounds",meaning:"Emotional pain lessens with time"},{type:"metaphor",expression:"time is a thief",meaning:"Time takes away youth and opportunities"},{type:"quote",expression:"Lost time is never found again — Benjamin Franklin",meaning:"Once time passes, it cannot be recovered"}],"water":[{type:"idiom",expression:"water under the bridge",meaning:"Past events no longer worth worrying about"},{type:"idiom",expression:"in hot water",meaning:"In trouble"},{type:"idiom",expression:"test the waters",meaning:"To try something cautiously before committing"},{type:"proverb",expression:"Still waters run deep",meaning:"A quiet person may have deep knowledge or emotions"},{type:"metaphor",expression:"drowning in work",meaning:"Overwhelmed by too many tasks"}],"fire":[{type:"idiom",expression:"play with fire",meaning:"To do something risky"},{type:"idiom",expression:"add fuel to the fire",meaning:"To make a bad situation worse"},{type:"idiom",expression:"under fire",meaning:"Being criticised or attacked"},{type:"proverb",expression:"Where there's smoke, there's fire",meaning:"Signs of a problem usually mean the problem exists"},{type:"metaphor",expression:"fire in the belly",meaning:"Strong ambition and determination"}],"heart":[{type:"idiom",expression:"wear your heart on your sleeve",meaning:"To show your feelings openly"},{type:"idiom",expression:"have a change of heart",meaning:"To change one's opinion"},{type:"idiom",expression:"heart of gold",meaning:"A very kind and generous nature"},{type:"metaphor",expression:"heart of stone",meaning:"A person who shows no compassion"},{type:"quote",expression:"The heart has its reasons which reason does not know — Pascal",meaning:"Emotions defy rational explanation"}]};
+  if(FIG[w]) return FIG[w];
+  const first=w.split(' ')[0];
+  if(first!==w&&FIG[first]) return FIG[first];
+  return [];
+}
+
+// ══════════════════════════════════════════════════════
+//  MAIN TRANSLATE
+// ══════════════════════════════════════════════════════
+async function go() {
+  const raw=wordInput.value.trim(); if(!raw){wordInput.focus();return;}
+  hideErr();
+  const lp=getLP(),isA=inputDir==='a',fromLang=isA?lp.a:lp.b,toLang=isA?lp.b:lp.a;
+  const dirLabel=`${lp.flagA} ${lp.labelA} → ${lp.flagB} ${lp.labelB}`,dirLabelRev=`${lp.flagB} ${lp.labelB} → ${lp.flagA} ${lp.labelA}`;
+  const actualDir=isA?dirLabel:dirLabelRev;
+  setLoading(true);
+  resultSec.innerHTML=`<div class="card result-card"><div class="skel" style="width:55%"></div><div class="skel" style="width:35%"></div></div>`;
+  resultSec.classList.add('on'); resultSec.scrollIntoView({behavior:'smooth',block:'nearest'});
+  try {
+    const translations=await fetchTranslations(raw,fromLang,toLang);
+    const wordA=raw,wordB=translations[0]||raw;
+    const enWord=lp.a==='en'?(isA?raw:wordB):lp.b==='en'?(isA?wordB:raw):null;
+    const {phonetic,pos,rawEx}=enWord?await fetchDictData(enWord):{phonetic:'',pos:'',rawEx:[]};
+    const [collocations,figurative]=await Promise.all([fetchCollocations(enWord||raw,activePair),Promise.resolve(fetchFigurative(enWord||raw,activePair))]);
+    const examples=rawEx.slice(0,3);
+    let html=`<div class="card result-card">
+      <div class="res-dir">${actualDir}</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;padding-bottom:16px;border-bottom:1px solid var(--bd);margin-bottom:16px">
+        <div style="flex:1;min-width:140px">
+          <div class="res-word">${esc(wordA)}</div>
+          ${phonetic&&isA&&lp.a==='en'?`<div class="res-phon">${esc(phonetic)}</div>`:''}
+          ${phonetic&&!isA&&lp.b==='en'?`<div class="res-phon">${esc(phonetic)}</div>`:''}
+          ${pos?`<span class="pos-pill">${esc(pos)}</span>`:''}
+        </div>
+        <div style="color:var(--accent);font-size:1.4rem;padding-top:4px">→</div>
+        <div style="flex:1;min-width:160px">
+          <div class="res-label">Traducciones <span style="font-size:.65rem;color:var(--tm);font-weight:400;text-transform:none;letter-spacing:0">(selecciona la mejor)</span></div>
+          <div class="trans-list" id="transList">
+            ${translations.map((t,i)=>`<div class="trans-opt${i===0?' on':''}" data-val="${esc(t)}" onclick="selectTrans(this)"><div class="radio"></div><span class="trans-w">${esc(t)}</span></div>`).join('')}
+            <div class="trans-custom" id="transCustom" onclick="focusCustom()"><div class="radio"></div><input type="text" id="transCustomInput" placeholder="Otra traducción…" oninput="onCustomInput()" onfocus="selectCustom()"></div>
+          </div>
+        </div>
+      </div>`;
+    if(collocations.length){ html+=`<div class="sec-title">Collocations (EN)</div><div class="chips">${collocations.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>`; }
+    if(examples.length){ html+=`<div class="divider"></div><div class="sec-title">Ejemplos de uso (EN)</div><ul class="ex-list">${examples.map(ex=>{const hl=esc(ex).replace(new RegExp(`(${escRe(enWord||raw)})`,'gi'),'<mark>$1</mark>');return `<li>${hl}</li>`;}).join('')}</ul>`; }
+    if(figurative.length){ const typeIcon={idiom:'💬',proverb:'📜',metaphor:'🌿',quote:'✦'},typeLabel={idiom:'Idiom',proverb:'Proverb',metaphor:'Metaphor',quote:'Quote'}; html+=`<div class="divider"></div><div class="sec-title">Figurative Language</div><div style="display:flex;flex-direction:column;gap:10px">${figurative.map(f=>`<div style="border-left:2px solid var(--blue);padding:8px 14px;background:#f0f4fa;border-radius:0 8px 8px 0"><div style="margin-bottom:4px"><span style="font-size:.7rem;background:#dce6f5;color:var(--blue);padding:2px 8px;border-radius:100px;font-weight:500">${typeIcon[f.type]||'◆'} ${typeLabel[f.type]||f.type}</span></div><div style="font-style:italic;font-size:.93rem;color:var(--t1);margin-bottom:3px">"${esc(f.expression)}"</div><div style="font-size:.78rem;color:var(--t2)">${esc(f.meaning)}</div></div>`).join('')}</div>`; }
+    html+=`</div>`;
+    resultSec.innerHTML=html; resultSec.classList.add('on');
+    lastResult={wordA,wordB,fromLang,toLang,pair:activePair,translations,collocations,examples,figurative,phonetic,pos};
+    // Auto-guardar al traducir
+    const alreadySaved=vocab.find(v=>v.pair===activePair&&norm(v.wordA)===norm(wordA));
+    if(!alreadySaved){
+      vocab.push({id:Date.now(),pair:activePair,wordA,wordB,translations,collocations,examples,figurative:figurative||[],date:new Date().toLocaleDateString('es-ES')});
+      saveVocab(); updateVocabCount();
+    }
+    const sbTop=document.getElementById('saveBtnTop');
+    sbTop.style.display='inline-flex';
+    if(alreadySaved){
+      sbTop.textContent='✓ Ya guardado'; sbTop.disabled=true;
+      sbTop.style.borderColor='var(--tm)'; sbTop.style.color='var(--tm)';
+      sbTop.classList.remove('red');
+    } else {
+      sbTop.textContent='✕ No guardar'; sbTop.disabled=false;
+      sbTop.style.borderColor=''; sbTop.style.color='';
+      sbTop.classList.add('red');
+    }
+  } catch(e){
+    resultSec.innerHTML=''; resultSec.classList.remove('on');
+    showErr(e.message||'Error al traducir. Comprueba tu conexión.');
+  }
+  setLoading(false);
+}
+
+function selectTrans(el) {
+  document.querySelectorAll('.trans-opt').forEach(o=>o.classList.remove('on'));
+  const custom=document.getElementById('transCustom'),customInput=document.getElementById('transCustomInput');
+  if(custom){custom.classList.remove('on');customInput.value='';}
+  el.classList.add('on');
+  if(lastResult){lastResult.wordB=el.dataset.val;updateSaveBtnLabel();}
+}
+function selectCustom(){ document.querySelectorAll('.trans-opt').forEach(o=>o.classList.remove('on'));const custom=document.getElementById('transCustom');if(custom) custom.classList.add('on'); }
+function focusCustom(){ document.getElementById('transCustomInput')?.focus(); }
+function onCustomInput(){ const val=document.getElementById('transCustomInput').value.trim();selectCustom();if(lastResult){lastResult.wordB=val||lastResult.translations[0];updateSaveBtnLabel();} }
+function updateSaveBtnLabel(){ const btn=document.getElementById('saveBtnTop');if(btn&&!btn.disabled) btn.textContent='＋ Guardar'; }
+
+function updateVocabCount(){
+  const n=vocab.length;
+  document.getElementById('vcntTab').textContent=n;
+  document.getElementById('vcntBadge').textContent=n+(n===1?' palabra':' palabras');
+}
+updateVocabCount();
+updateDirButtons();
+
+function doUnsave(){
+  if(!lastResult) return;
+  const btn=document.getElementById('saveBtnTop');
+  vocab=vocab.filter(v=>!(v.pair===lastResult.pair&&norm(v.wordA)===norm(lastResult.wordA)));
+  saveVocab(); updateVocabCount();
+  btn.textContent='✓ Eliminado'; btn.disabled=true;
+  btn.style.borderColor='var(--tm)'; btn.style.color='var(--tm)';
+  btn.classList.remove('red');
+}
+
+function renderVocab(){
+  updateVocabCount();
+  const body=document.getElementById('vocabBody'),actions=document.getElementById('tblActions'),filtersEl=document.getElementById('vocabFilters');
+  const pairsInVocab=[...new Set(vocab.map(v=>v.pair||'es-en'))];
+  let filtersHTML='<button class="vf-btn'+(vocabFilter==='all'?' on':'')+'" data-filter="all">Todos</button>';
+  pairsInVocab.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-en'];filtersHTML+=`<button class="vf-btn${vocabFilter===p?' on':''}" data-filter="${p}">${lp.flagA}${lp.flagB} ${p.toUpperCase()}</button>`;});
+  filtersEl.innerHTML=filtersHTML;
+  filtersEl.querySelectorAll('.vf-btn').forEach(b=>{b.addEventListener('click',()=>{vocabFilter=b.dataset.filter;renderVocab();});});
+  const filtered=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-en')===vocabFilter);
+  if(vocab.length===0){body.innerHTML=`<div class="empty"><div class="ico">📖</div>Aún no hay palabras guardadas.<br>Traduce algo y se guardará automáticamente.</div>`;actions.style.display='none';return;}
+  if(filtered.length===0){body.innerHTML=`<div class="empty"><div class="ico">🔍</div>No hay palabras con este filtro.</div>`;actions.style.display='flex';return;}
+  actions.style.display='flex';
+  let html=`<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Palabra A</th><th>Palabra B</th><th>Nivel</th><th>Collocations</th><th>Fecha</th><th></th></tr></thead><tbody>`;
+  filtered.forEach((v,i)=>{
+    const lp=LANG_PAIRS[v.pair||'es-en']||LANG_PAIRS['es-en'],sv=getStat(v.id),stot=sv.ok+sv.fail;
+    const dc=stot===0?`<span style="color:var(--tm)">—</span>`:(()=>{const a=Math.round((sv.ok/stot)*100);const [ic,col]=a>=80?['✓ '+a+'%','var(--accent)']:a>=50?['◑ '+a+'%','var(--blue)']:['✗ '+a+'%','var(--red)'];return `<span style="color:${col};font-size:.76rem;font-weight:500">${ic}</span>`;})();
+    html+=`<tr data-id="${v.id}"><td style="color:var(--tm);font-size:.76rem">${i+1}</td><td class="td-a td-edit"><span class="cell-val">${esc(v.wordA)}</span><span class="lang-tag">${lp.flagA}</span><button class="edit-btn" data-id="${v.id}" data-field="wordA" title="Editar">✏️</button></td><td class="td-b td-edit"><span class="cell-val">${esc(v.wordB)}</span><span class="lang-tag">${lp.flagB}</span><button class="edit-btn" data-id="${v.id}" data-field="wordB" title="Editar">✏️</button></td><td style="text-align:center">${dc}</td><td class="td-sm td-edit"><span class="cell-val">${esc((v.collocations||[]).slice(0,4).join(', '))}</span><button class="edit-btn" data-id="${v.id}" data-field="collocations" title="Editar">✏️</button></td><td style="font-size:.74rem;color:var(--tm);white-space:nowrap">${v.date}</td><td><button class="del" data-id="${v.id}">✕</button></td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  body.innerHTML=html;
+  body.querySelectorAll('.del').forEach(btn=>{btn.addEventListener('click',()=>{vocab=vocab.filter(v=>v.id!==+btn.dataset.id);saveVocab();pruneStats();renderVocab();});});
+  body.querySelectorAll('.edit-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id=+btn.dataset.id,field=btn.dataset.field,td=btn.closest('td'),entry=vocab.find(v=>v.id===id);
+      if(!entry) return;
+      const cur=field==='collocations'?(entry.collocations||[]).join(', '):entry[field]||'';
+      td.innerHTML=`<input class="td-editable" id="editInput_${id}_${field}" value="${esc(cur)}" style="width:90%"><div style="margin-top:4px;display:flex;gap:4px"><button class="save-edit" data-id="${id}" data-field="${field}">✓ Guardar</button><button class="cancel-edit">✕</button></div>`;
+      const input=td.querySelector('.td-editable'); input.focus(); input.select();
+      td.querySelector('.save-edit').addEventListener('click',()=>{
+        const val=input.value.trim(),entry2=vocab.find(v=>v.id===id);
+        if(!entry2) return;
+        if(field==='collocations'){entry2.collocations=val.split(',').map(s=>s.trim()).filter(Boolean);}else{entry2[field]=val;}
+        saveVocab(); renderVocab();
+      });
+      td.querySelector('.cancel-edit').addEventListener('click',()=>renderVocab());
+      input.addEventListener('keydown',e2=>{if(e2.key==='Enter') td.querySelector('.save-edit').click();if(e2.key==='Escape') renderVocab();});
+    });
+  });
+}
+
+document.getElementById('clearBtn').addEventListener('click',()=>{if(!confirm('¿Borrar todo el vocabulario y el historial de estudio?')) return;vocab=[];stats={};saveVocab();saveStats();renderVocab();});
+
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  if(!vocab.length) return;
+  const wb=XLSX.utils.book_new();
+  const rows=[['#','Idioma','Palabra A','Palabra B','Traducciones','Collocations','Ejemplo 1','Ejemplo 2','Ejemplo 3','Fecha']];
+  vocab.forEach((v,i)=>{const lp=LANG_PAIRS[v.pair||'es-en']||LANG_PAIRS['es-en'],exs=v.examples||[];rows.push([i+1,`${lp.flagA}${lp.flagB} ${(v.pair||'es-en').toUpperCase()}`,v.wordA,v.wordB,(v.translations||[v.wordB]).join(' / '),(v.collocations||[]).join(', '),exs[0]||'',exs[1]||'',exs[2]||'',v.date]);});
+  const ws1=XLSX.utils.aoa_to_sheet(rows);ws1['!cols']=[4,10,16,16,28,42,50,50,50,10].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws1,'Vocabulario');
+  const pairs=[...new Set(vocab.map(v=>v.pair||'es-en'))];
+  pairs.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-en'],pv=vocab.filter(v=>(v.pair||'es-en')===p);const q1=[[`${lp.labelA} →`,`→ ${lp.labelB}`],...pv.map(v=>[v.wordA,v.wordB])];const ws2=XLSX.utils.aoa_to_sheet(q1);ws2['!cols']=[{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,ws2,`Quiz ${p.toUpperCase()} A→B`);const q2=[[`${lp.labelB} →`,`→ ${lp.labelA}`],...pv.map(v=>[v.wordB,v.wordA])];const ws3=XLSX.utils.aoa_to_sheet(q2);ws3['!cols']=[{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,ws3,`Quiz ${p.toUpperCase()} B→A`);});
+  XLSX.writeFile(wb,'Our_Translator_Vocabulario.xlsx');
+});
+
+document.getElementById('importBtn').addEventListener('click',()=>{document.getElementById('importFile').value='';document.getElementById('importFile').click();});
+document.getElementById('importFile').addEventListener('change',e=>{
+  const file=e.target.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=new Uint8Array(ev.target.result),wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames.includes('Vocabulario')?'Vocabulario':wb.SheetNames[0];
+      const ws=wb.Sheets[sheetName],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){showImportMsg('El archivo no contiene datos.','err');return;}
+      const dataRows=rows[0][0]==='#'?rows.slice(1):rows;
+      function parsePair(raw){const s=String(raw).toLowerCase().replace(/[^a-z-]/g,'');const match=s.match(/(es)[- ]?(en|fr|it|de|pt)/);if(match) return `es-${match[2]}`;return 'es-en';}
+      let imported=0,skipped=0,updated=0;
+      dataRows.forEach(row=>{
+        const wordA=String(row[2]||'').trim(),wordB=String(row[3]||'').trim();if(!wordA||!wordB) return;
+        const pair=parsePair(row[1]),transRaw=String(row[4]||'').trim(),translations=transRaw?transRaw.split('/').map(s=>s.trim()).filter(Boolean):[wordB];
+        const collRaw=String(row[5]||'').trim(),collocations=collRaw?collRaw.split(',').map(s=>s.trim()).filter(Boolean):[];
+        const examples=[row[6],row[7],row[8]].map(s=>String(s||'').trim()).filter(Boolean);
+        const date=String(row[9]||'').trim()||new Date().toLocaleDateString('es-ES');
+        const existing=vocab.find(v=>(v.pair||'es-en')===pair&&norm(v.wordA)===norm(wordA));
+        if(existing){
+          let changed=false;
+          if(norm(existing.wordB)!==norm(wordB)){existing.wordB=wordB;changed=true;}
+          translations.forEach(t=>{if(!(existing.translations||[]).some(et=>norm(et)===norm(t))){existing.translations=existing.translations||[];existing.translations.push(t);changed=true;}});
+          if(changed) updated++;else skipped++;
+        } else {
+          vocab.push({id:Date.now()+imported+Math.floor(Math.random()*1000),pair,wordA,wordB,translations,collocations,examples,figurative:[],date});imported++;
+        }
+      });
+      saveVocab();updateVocabCount();renderVocab();
+      const parts=[];if(imported) parts.push(`${imported} palabra${imported!==1?'s':''} importada${imported!==1?'s':''}`);if(updated) parts.push(`${updated} actualizada${updated!==1?'s':''}`);if(skipped) parts.push(`${skipped} ya existía${skipped!==1?'n':''}`);
+      showImportMsg('✓ '+(parts.join(' · ')||'Sin cambios.'),'ok');
+    } catch(err){showImportMsg('Error al leer el archivo: '+err.message,'err');}
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function showImportMsg(msg,type){const el=document.getElementById('importMsg');el.textContent=msg;el.style.display='block';el.style.background=type==='ok'?'var(--am)':'#fdecea';el.style.color=type==='ok'?'var(--accent)':'var(--red)';el.style.border=`1px solid ${type==='ok'?'var(--al)':'#f5c6c6'}`;setTimeout(()=>{el.style.display='none';},5000);}
+
+function renderQuiz(){
+  const body=document.getElementById('quizBody');
+  const pool=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-en')===vocabFilter);
+  if(pool.length<2){body.innerHTML=`<div class="empty"><div class="ico">🧠</div>Necesitas al menos 2 palabras guardadas para estudiar.</div>`;return;}
+  buildQuiz(body,pool);
+}
+
+function buildQuiz(body,pool){
+  quizSessionCount++;try{localStorage.setItem('lexio_sc',quizSessionCount);}catch(_){}
+  quizSession=weightedSample(pool,Math.min(pool.length,10));quizIdx=0;quizScore=0;quizAnswered=false;renderQuizCard(body,pool);
+}
+
+function weightedSample(items,n){
+  if(items.length<=n) return [...items].sort(()=>Math.random()-.5);
+  const pool=[];items.forEach(v=>{const w=wordWeight(v),t=Math.floor(w);for(let i=0;i<t;i++) pool.push(v);if(Math.random()<(w-t)) pool.push(v);});
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const seen=new Set(),result=[];for(const v of pool){if(!seen.has(v.id)){seen.add(v.id);result.push(v);}if(result.length>=n) break;}
+  if(result.length<n){const rest=items.filter(v=>!seen.has(v.id)).sort(()=>Math.random()-.5);result.push(...rest.slice(0,n-result.length));}
+  return result;
+}
+
+function renderQuizCard(body,pool){
+  if(quizIdx>=quizSession.length){renderQuizResult(body,pool);return;}
+  const correct=quizSession[quizIdx],lp=LANG_PAIRS[correct.pair||'es-en']||LANG_PAIRS['es-en'];
+  const others=[...pool].filter(v=>v.id!==correct.id).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[correct,...others].sort(()=>Math.random()-.5);
+  const pct=Math.round((quizIdx/quizSession.length)*100);
+  const s=getStat(correct.id),tot=s.ok+s.fail;
+  let diffBadge='';
+  if(tot>0){const acc=Math.round((s.ok/tot)*100);const [ic,lb,col]=acc>=80?['✓','Controlada','var(--accent)']:acc>=50?['◑','En progreso','var(--blue)']:['✗','Difícil','var(--red)'];diffBadge=`<div style="font-size:.71rem;color:${col};margin:-10px 0 16px;font-weight:500">${ic} ${lb} &nbsp;·&nbsp; ${s.ok}✓ ${s.fail}✗ de ${tot} intento${tot>1?'s':''}</div>`;}
+  const getQ=v=>quizMode==='b2a'?v.wordB:v.wordA,getA=v=>{if(quizMode==='collocations') return (v.collocations||[])[0]||v.wordB;return quizMode==='b2a'?v.wordA:v.wordB;};
+  const qLang=quizMode==='b2a'?`${lp.flagB} → ${lp.flagA}`:`${lp.flagA} → ${lp.flagB}`,qLabel=quizMode==='collocations'?'¿Cuál es una collocation?':`Traduce: ${qLang}`;
+  body.innerHTML=`<div class="quiz-card">
+    <div class="mode-row">${[['a2b',`${lp.flagA}→${lp.flagB}`],['b2a',`${lp.flagB}→${lp.flagA}`],['collocations','Collocations']].map(([m,l])=>`<button class="mode-btn${quizMode===m?' on':''}" data-mode="${m}">${l}</button>`).join('')}</div>
+    <div class="q-progress">Pregunta ${quizIdx+1} de ${quizSession.length} · Aciertos: ${quizScore}</div>
+    <div class="q-bar"><div class="q-fill" style="width:${pct}%"></div></div>
+    <div class="q-label">${qLabel}</div>
+    <div class="q-word">${esc(getQ(correct))}</div>
+    ${diffBadge}
+    <div class="q-opts">${opts.map(v=>`<button class="q-opt" data-id="${v.id}">${esc(getA(v))}</button>`).join('')}</div>
+    <div class="q-fb" id="qFb"></div>
+    <button class="btn-p" id="qNext" style="display:none;margin:0 auto">Siguiente →</button>
+  </div>`;
+  body.querySelectorAll('.mode-btn').forEach(b=>{b.addEventListener('click',()=>{quizMode=b.dataset.mode;buildQuiz(body,pool);});});
+  body.querySelectorAll('.q-opt').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(quizAnswered) return; quizAnswered=true;
+      const clicked=+b.dataset.id,isOk=clicked===correct.id;
+      if(isOk) quizScore++;
+      const sid=String(correct.id);if(!stats[sid]) stats[sid]={ok:0,fail:0,lastSeen:0};
+      isOk?stats[sid].ok++:stats[sid].fail++;stats[sid].lastSeen=quizSessionCount;saveStats();
+      body.querySelectorAll('.q-opt').forEach(o=>{o.disabled=true;if(+o.dataset.id===correct.id) o.classList.add('ok');});
+      if(!isOk) b.classList.add('bad');
+      const fb=document.getElementById('qFb');
+      const allTrans=(correct.translations||[correct.wordB]);
+      const extraNote=allTrans.length>1&&quizMode!=='collocations'?`<div style="font-size:.76rem;color:var(--tm);margin-top:4px">También válido: ${allTrans.filter(t=>t!==correct.wordB).slice(0,3).map(t=>`<em>${esc(t)}</em>`).join(', ')}</div>`:'';
+      fb.innerHTML=(isOk?'✓ ¡Correcto!':'✗ Era: <strong>'+esc(getA(correct))+'</strong>')+extraNote;
+      fb.className='q-fb '+(isOk?'ok':'bad');
+      document.getElementById('qNext').style.display='inline-flex';
+    });
+  });
+  document.getElementById('qNext').addEventListener('click',()=>{quizIdx++;quizAnswered=false;renderQuizCard(body,pool);});
+}
+
+function renderQuizResult(body,pool){
+  const pct=Math.round((quizScore/quizSession.length)*100);
+  const [e,t]=pct===100?['🏆','¡Perfecto!']:pct>=70?['👏','¡Muy bien!']:pct>=40?['💪','¡Sigue practicando!']:['📚','¡A repasar!'];
+  body.innerHTML=`<div class="quiz-card"><div style="font-size:2.8rem;margin-bottom:12px">${e}</div><div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:600;margin-bottom:6px">${t}</div><div style="font-size:.82rem;color:var(--tm);margin-bottom:28px">Has terminado el repaso</div><div class="res-stats">${[['Aciertos',quizScore],['Errores',quizSession.length-quizScore],['Precisión',pct+'%']].map(([l,v])=>`<div class="res-stat"><div class="val">${v}</div><div class="lbl">${l}</div></div>`).join('')}</div><button class="btn-p" id="qRestart" style="margin:0 auto">Volver a intentar</button></div>`;
+  document.getElementById('qRestart').addEventListener('click',()=>buildQuiz(body,pool));
+}
 </script>
 </body>
 </html>
