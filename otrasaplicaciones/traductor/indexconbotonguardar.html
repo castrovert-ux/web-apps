@@ -110,7 +110,7 @@ tr:hover td{background:var(--bg)}
 .td-b{font-style:italic;color:var(--accent)}
 .td-sm{font-size:.78rem;max-width:180px}
 .lang-tag{display:inline-block;font-size:.6rem;background:var(--am);color:var(--accent);border-radius:4px;padding:1px 6px;font-weight:600;letter-spacing:.3px;margin-left:4px;vertical-align:middle}
-.del{background:none;border:none;cursor:pointer;color:#ccc;font-size:.95rem;padding:2px 6px;border-radius:6px;transition:all .2s}
+.del{background:none;border:none;cursor:pointer;color:var(--tm);font-size:.95rem;padding:2px 6px;border-radius:6px;transition:all .2s}
 .del:hover{color:var(--red);background:#fdecea}
 .tbl-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;width:100%}
 .empty{text-align:center;padding:60px 24px;color:var(--tm);width:100%}
@@ -218,7 +218,7 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
     <div class="inp-foot">
       <span id="charCount">0 / 80</span>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn-s red" id="saveBtnTop" style="display:none" onclick="doUnsave()">✕ No guardar</button>
+        <button class="btn-s" id="saveBtnTop" style="display:none" onclick="doSave()">＋ Guardar</button>
         <button class="btn-p" id="goBtn">
           <span class="spin" id="spin"></span>
           <span id="btnLabel">Traducir →</span>
@@ -557,7 +557,7 @@ function updateDirButtons() {
 function setDir(dir) {
   inputDir = dir; updateDirButtons();
   resultSec.classList.remove('on'); errBar.style.display='none';
-  const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false; sb.classList.add('red'); sb.style.borderColor=''; sb.style.color='';
+  const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false;
   lastResult=null; wordInput.focus();
 }
 
@@ -576,7 +576,7 @@ function clearInput() {
   wordInput.value=''; clrBtn.classList.remove('on');
   resultSec.classList.remove('on'); errBar.style.display='none';
   document.getElementById('charCount').textContent='0 / 80';
-  const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false; sb.classList.add('red'); sb.style.borderColor=''; sb.style.color='';
+  const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false;
   lastResult=null; wordInput.focus();
 }
 
@@ -729,23 +729,8 @@ async function go() {
     html+=`</div>`;
     resultSec.innerHTML=html; resultSec.classList.add('on');
     lastResult={wordA,wordB,fromLang,toLang,pair:activePair,translations,collocations,examples,figurative,phonetic,pos};
-    // Auto-guardar al traducir
-    const alreadySaved=vocab.find(v=>v.pair===activePair&&norm(v.wordA)===norm(wordA));
-    if(!alreadySaved){
-      vocab.push({id:Date.now(),pair:activePair,wordA,wordB,translations,collocations,examples,figurative:figurative||[],date:new Date().toLocaleDateString('es-ES')});
-      saveVocab(); updateVocabCount();
-    }
     const sbTop=document.getElementById('saveBtnTop');
-    sbTop.style.display='inline-flex';
-    if(alreadySaved){
-      sbTop.textContent='✓ Ya guardado'; sbTop.disabled=true;
-      sbTop.style.borderColor='var(--tm)'; sbTop.style.color='var(--tm)';
-      sbTop.classList.remove('red');
-    } else {
-      sbTop.textContent='✕ No guardar'; sbTop.disabled=false;
-      sbTop.style.borderColor=''; sbTop.style.color='';
-      sbTop.classList.add('red');
-    }
+    sbTop.style.display='inline-flex'; sbTop.textContent='＋ Guardar'; sbTop.disabled=false; sbTop.style.borderColor=''; sbTop.style.color='';
   } catch(e){
     resultSec.innerHTML=''; resultSec.classList.remove('on');
     showErr(e.message||'Error al traducir. Comprueba tu conexión.');
@@ -772,14 +757,14 @@ function updateVocabCount(){
 }
 updateVocabCount();
 
-function doUnsave(){
+function doSave(){
   if(!lastResult) return;
   const btn=document.getElementById('saveBtnTop');
-  vocab=vocab.filter(v=>!(v.pair===lastResult.pair&&norm(v.wordA)===norm(lastResult.wordA)));
+  const already=vocab.find(v=>v.pair===lastResult.pair&&norm(v.wordA)===norm(lastResult.wordA));
+  if(already){btn.textContent='✓ Ya guardado';btn.disabled=true;return;}
+  vocab.push({id:Date.now(),pair:lastResult.pair,wordA:lastResult.wordA,wordB:lastResult.wordB,translations:lastResult.translations,collocations:lastResult.collocations,examples:lastResult.examples,figurative:lastResult.figurative||[],date:new Date().toLocaleDateString('es-ES')});
   saveVocab(); updateVocabCount();
-  btn.textContent='✓ Eliminado'; btn.disabled=true;
-  btn.style.borderColor='var(--tm)'; btn.style.color='var(--tm)';
-  btn.classList.remove('red');
+  btn.textContent='✓ Guardado'; btn.disabled=true; btn.style.borderColor='var(--tm)'; btn.style.color='var(--tm)';
 }
 
 function renderVocab(){
@@ -791,7 +776,7 @@ function renderVocab(){
   filtersEl.innerHTML=filtersHTML;
   filtersEl.querySelectorAll('.vf-btn').forEach(b=>{b.addEventListener('click',()=>{vocabFilter=b.dataset.filter;renderVocab();});});
   const filtered=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-en')===vocabFilter);
-  if(vocab.length===0){body.innerHTML=`<div class="empty"><div class="ico">📖</div>Aún no hay palabras guardadas.<br>Traduce algo y se guardará automáticamente.</div>`;actions.style.display='none';return;}
+  if(vocab.length===0){body.innerHTML=`<div class="empty"><div class="ico">📖</div>Aún no hay palabras guardadas.<br>Traduce algo y pulsa <strong>"Guardar"</strong>.</div>`;actions.style.display='none';return;}
   if(filtered.length===0){body.innerHTML=`<div class="empty"><div class="ico">🔍</div>No hay palabras con este filtro.</div>`;actions.style.display='flex';return;}
   actions.style.display='flex';
   let html=`<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Palabra A</th><th>Palabra B</th><th>Nivel</th><th>Collocations</th><th>Fecha</th><th></th></tr></thead><tbody>`;
