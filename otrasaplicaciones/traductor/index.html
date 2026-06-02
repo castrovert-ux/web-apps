@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
+/* (el mismo CSS de siempre, sin cambios para mantener el diseño) */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
 :root{
   --bg:#f5f2ee;--surface:#fff;--accent:#2d6a4f;--al:#b7e4c7;--am:#d8f3dc;
@@ -21,8 +22,6 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 0 80px}
-
-
 header{text-align:center;margin:28px 0 16px;padding:0 16px}
 header h1{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:600;letter-spacing:-.5px}
 header h1 span{color:var(--accent)}
@@ -180,12 +179,12 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
   <p>Vocabulary · Study</p>
 </header>
 
-<!-- ══ LANGUAGE PAIR SELECTOR (español ↔ italiano por defecto) ══ -->
+<!-- ══ LANGUAGE PAIR SELECTOR (selección persistente) ══ -->
 <div class="lang-selector" id="langSelector">
   <span class="ls-label">Idioma</span>
   <button class="lp-btn" data-pair="es-en"><span class="lp-flag">🇬🇧</span> ES ↔ EN</button>
   <button class="lp-btn" data-pair="es-fr"><span class="lp-flag">🇫🇷</span> ES ↔ FR</button>
-  <button class="lp-btn on" data-pair="es-it"><span class="lp-flag">🇮🇹</span> ES ↔ IT</button>
+  <button class="lp-btn" data-pair="es-it"><span class="lp-flag">🇮🇹</span> ES ↔ IT</button>
   <button class="lp-btn" data-pair="es-de"><span class="lp-flag">🇩🇪</span> ES ↔ DE</button>
   <button class="lp-btn" data-pair="es-pt"><span class="lp-flag">🇵🇹</span> ES ↔ PT</button>
 </div>
@@ -280,7 +279,6 @@ var fbPopupOpen = false;
 fbAuth.onAuthStateChanged(function(user) {
   fbUser = user;
   updateSyncUI();
-  // Al iniciar sesión: sincronización bidireccional automática
   if (user) sincronizarBidireccional();
 });
 
@@ -319,10 +317,6 @@ function handleSync() {
   }
 }
 
-// Sincronización bidireccional con timestamp:
-// - Compara cuándo subió por última vez este dispositivo vs. el lastUpdate de la nube
-// - Si la nube es más reciente → descarga (otro dispositivo subió cambios)
-// - Si lo local es más reciente → sube
 function sincronizarBidireccional() {
   if (!fbUser) return;
   var btnSync = document.getElementById('btn-sync');
@@ -331,7 +325,6 @@ function sincronizarBidireccional() {
   var docRef = fbDb.collection('traductor').doc(fbUser.uid);
 
   docRef.get().then(function(snap) {
-    // Sin datos en la nube → subir directamente
     if (!snap.exists || !(snap.data().vocab || []).length) {
       return subirANube(docRef);
     }
@@ -341,15 +334,13 @@ function sincronizarBidireccional() {
     var tsNube       = snap.data().lastUpdate || 0;
     var tsLocal      = parseInt(localStorage.getItem('tradUltimaSubida')) || 0;
 
-    // Merge bidireccional por ID: nunca se pierde ninguna palabra de ningún lado
     var mergedMap = {};
     remoteVocab.forEach(function(v) { mergedMap[v.id] = v; });
     vocab.forEach(function(v) {
-      if (!mergedMap[v.id]) mergedMap[v.id] = v; // palabra local que no está en nube → añadir
+      if (!mergedMap[v.id]) mergedMap[v.id] = v;
     });
     var merged = Object.values(mergedMap).sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
 
-    // Merge stats: suma los contadores de ambos lados
     var mergedStats = Object.assign({}, remoteStats);
     Object.keys(stats).forEach(function(k) {
       if (!mergedStats[k]) { mergedStats[k] = stats[k]; }
@@ -365,7 +356,6 @@ function sincronizarBidireccional() {
     stats  = mergedStats;
     saveVocab(); saveStats(); updateVocabCount(); renderVocab();
 
-    // Subir el resultado fusionado a la nube
     return subirANube(docRef).then(function() {
       if (added > 0) {
         setSyncStatus('ok', '✓ Sincronizado — ' + vocab.length + ' palabras (' + added + ' recuperada' + (added !== 1 ? 's' : '') + ' de la nube)');
@@ -431,12 +421,17 @@ try { stats = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); } catch(_) {}
 let quizSessionCount = 0;
 try { quizSessionCount = parseInt(localStorage.getItem('lexio_sc') || '0'); } catch(_) {}
 
-let activePair  = 'es-it';     // CAMBIADO: ahora el idioma por defecto es español ↔ italiano
+// Persistencia del par de idiomas
+const STORAGE_LANG_KEY = 'preferred_lang_pair';
+let activePair = localStorage.getItem(STORAGE_LANG_KEY);
+if (!activePair || !LANG_PAIRS[activePair]) activePair = 'es-it';  // fallback a italiano
+
 let detLang     = null;
 let lastResult  = null;
 let quizMode    = 'a2b';
 let quizSession = [], quizIdx = 0, quizScore = 0, quizAnswered = false;
-let vocabFilter = 'all';
+// Filtro de vocabulario: por defecto el mismo par activo (así se ve el botón resaltado)
+let vocabFilter = activePair;
 
 function getLP()   { return LANG_PAIRS[activePair]; }
 function saveVocab(){
@@ -445,6 +440,9 @@ function saveVocab(){
 }
 function saveStats(){
   try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(_){}
+}
+function savePreferredLang() {
+  localStorage.setItem(STORAGE_LANG_KEY, activePair);
 }
 
 var fbSaveTimer = null;
@@ -532,15 +530,21 @@ function detectLangInPair(text, pair) {
 }
 
 // ══════════════════════════════════════════════════════
-//  LANG PAIR SWITCHER
+//  LANG PAIR SWITCHER (con persistencia y actualización del filtro)
 // ══════════════════════════════════════════════════════
 document.querySelectorAll('.lp-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if(btn.dataset.pair === activePair) return;
     activePair = btn.dataset.pair;
+    savePreferredLang();
     document.querySelectorAll('.lp-btn').forEach(b => b.classList.remove('on'));
     btn.classList.add('on');
     clearInput(); updateVocabCount(); updateDirButtons();
+    // Al cambiar el idioma, actualizamos el filtro de vocabulario al nuevo par
+    vocabFilter = activePair;
+    if (document.getElementById('panel-vocab').classList.contains('on')) {
+      renderVocab();
+    }
   });
 });
 
@@ -617,7 +621,7 @@ function showErr(msg){ errBar.textContent=msg; errBar.style.display='block'; }
 function hideErr()   { errBar.style.display='none'; }
 
 // ══════════════════════════════════════════════════════
-//  TRANSLATION ENGINE (sin cambios)
+//  TRANSLATION ENGINE
 // ══════════════════════════════════════════════════════
 async function gtrans(q, sl, tl) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${enc(q)}`;
@@ -752,7 +756,6 @@ async function go() {
     html+=`</div>`;
     resultSec.innerHTML=html; resultSec.classList.add('on');
     lastResult={wordA,wordB,fromLang,toLang,pair:activePair,translations,collocations,examples,figurative,phonetic,pos};
-    // Auto-guardar al traducir
     const alreadySaved=vocab.find(v=>v.pair===activePair&&norm(v.wordA)===norm(wordA));
     if(!alreadySaved){
       vocab.push({id:Date.now(),pair:activePair,wordA,wordB,translations,collocations,examples,figurative:figurative||[],date:new Date().toLocaleDateString('es-ES')});
@@ -805,47 +808,97 @@ function doUnsave(){
   btn.classList.remove('red');
 }
 
-function renderVocab(){
+// ══════════════════════════════════════════════════════
+//  RENDER VOCAB (con todos los botones de filtro siempre visibles)
+// ══════════════════════════════════════════════════════
+function renderVocab() {
   updateVocabCount();
-  const body=document.getElementById('vocabBody'),actions=document.getElementById('tblActions'),filtersEl=document.getElementById('vocabFilters');
-  const pairsInVocab=[...new Set(vocab.map(v=>v.pair||'es-it'))];
-  let filtersHTML='<button class="vf-btn'+(vocabFilter==='all'?' on':'')+'" data-filter="all">Todos</button>';
-  pairsInVocab.forEach(p=>{const lp=LANG_PAIRS[p]||LANG_PAIRS['es-it'];filtersHTML+=`<button class="vf-btn${vocabFilter===p?' on':''}" data-filter="${p}">${lp.flagA}${lp.flagB} ${p.toUpperCase()}</button>`;});
-  filtersEl.innerHTML=filtersHTML;
-  filtersEl.querySelectorAll('.vf-btn').forEach(b=>{b.addEventListener('click',()=>{vocabFilter=b.dataset.filter;renderVocab();});});
-  const filtered=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-it')===vocabFilter);
-  if(vocab.length===0){body.innerHTML=`<div class="empty"><div class="ico">📖</div>Aún no hay palabras guardadas.<br>Traduce algo y se guardará automáticamente.</div>`;actions.style.display='none';return;}
-  if(filtered.length===0){body.innerHTML=`<div class="empty"><div class="ico">🔍</div>No hay palabras con este filtro.</div>`;actions.style.display='flex';return;}
-  actions.style.display='flex';
-  let html=`<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Palabra A</th><th>Palabra B</th><th>Nivel</th><th>Collocations</th><th>Fecha</th><th></th></tr></thead><tbody>`;
-  filtered.forEach((v,i)=>{
-    const lp=LANG_PAIRS[v.pair||'es-it']||LANG_PAIRS['es-it'],sv=getStat(v.id),stot=sv.ok+sv.fail;
-    const dc=stot===0?`<span style="color:var(--tm)">—</span>`:(()=>{const a=Math.round((sv.ok/stot)*100);const [ic,col]=a>=80?['✓ '+a+'%','var(--accent)']:a>=50?['◑ '+a+'%','var(--blue)']:['✗ '+a+'%','var(--red)'];return `<span style="color:${col};font-size:.76rem;font-weight:500">${ic}</span>`;})();
-    html+=`<tr data-id="${v.id}"><td style="color:var(--tm);font-size:.76rem">${i+1}</td><td class="td-a td-edit"><span class="cell-val">${esc(v.wordA)}</span><span class="lang-tag">${lp.flagA}</span><button class="edit-btn" data-id="${v.id}" data-field="wordA" title="Editar">✏️</button></td><td class="td-b td-edit"><span class="cell-val">${esc(v.wordB)}</span><span class="lang-tag">${lp.flagB}</span><button class="edit-btn" data-id="${v.id}" data-field="wordB" title="Editar">✏️</button></td><td style="text-align:center">${dc}</td><td class="td-sm td-edit"><span class="cell-val">${esc((v.collocations||[]).slice(0,4).join(', '))}</span><button class="edit-btn" data-id="${v.id}" data-field="collocations" title="Editar">✏️</button></td><td style="font-size:.74rem;color:var(--tm);white-space:nowrap">${v.date}</td><td><button class="del" data-id="${v.id}">✕</button></td></tr>`;
+  const body = document.getElementById('vocabBody');
+  const actions = document.getElementById('tblActions');
+  const filtersEl = document.getElementById('vocabFilters');
+
+  // Lista completa de todos los pares disponibles (para mostrar siempre los botones)
+  const allPairs = ['es-en', 'es-fr', 'es-it', 'es-de', 'es-pt'];
+  let filtersHTML = '<button class="vf-btn' + (vocabFilter === 'all' ? ' on' : '') + '" data-filter="all">Todos</button>';
+  allPairs.forEach(p => {
+    const lp = LANG_PAIRS[p];
+    filtersHTML += `<button class="vf-btn${vocabFilter === p ? ' on' : ''}" data-filter="${p}">${lp.flagA}${lp.flagB} ${p.toUpperCase()}</button>`;
   });
-  html+=`</tbody></table></div>`;
-  body.innerHTML=html;
-  body.querySelectorAll('.del').forEach(btn=>{btn.addEventListener('click',()=>{vocab=vocab.filter(v=>v.id!==+btn.dataset.id);saveVocab();pruneStats();renderVocab();});});
-  body.querySelectorAll('.edit-btn').forEach(btn=>{
-    btn.addEventListener('click',e=>{
+  filtersEl.innerHTML = filtersHTML;
+  filtersEl.querySelectorAll('.vf-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      vocabFilter = b.dataset.filter;
+      renderVocab();
+    });
+  });
+
+  const filtered = vocabFilter === 'all' ? vocab : vocab.filter(v => (v.pair || 'es-it') === vocabFilter);
+  if (vocab.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="ico">📖</div>Aún no hay palabras guardadas.<br>Traduce algo y se guardará automáticamente.</div>`;
+    actions.style.display = 'none';
+    return;
+  }
+  if (filtered.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="ico">🔍</div>No hay palabras guardadas en este idioma.</div>`;
+    actions.style.display = 'flex';
+    return;
+  }
+  actions.style.display = 'flex';
+  let html = `<div class="tbl-wrap"></table><thead><tr><th>#</th><th>Palabra A</th><th>Palabra B</th><th>Nivel</th><th>Collocations</th><th>Fecha</th><th></th></tr></thead><tbody>`;
+  filtered.forEach((v, i) => {
+    const lp = LANG_PAIRS[v.pair || 'es-it'] || LANG_PAIRS['es-it'];
+    const sv = getStat(v.id);
+    const stot = sv.ok + sv.fail;
+    const dc = stot === 0 ? `<span style="color:var(--tm)">—</span>` : (() => {
+      const a = Math.round((sv.ok / stot) * 100);
+      const [ic, col] = a >= 80 ? ['✓ ' + a + '%', 'var(--accent)'] : a >= 50 ? ['◑ ' + a + '%', 'var(--blue)'] : ['✗ ' + a + '%', 'var(--red)'];
+      return `<span style="color:${col};font-size:.76rem;font-weight:500">${ic}</span>`;
+    })();
+    html += `<tr data-id="${v.id}"><td style="color:var(--tm);font-size:.76rem">${i + 1}</td><td class="td-a td-edit"><span class="cell-val">${esc(v.wordA)}</span><span class="lang-tag">${lp.flagA}</span><button class="edit-btn" data-id="${v.id}" data-field="wordA" title="Editar">✏️</button></td><td class="td-b td-edit"><span class="cell-val">${esc(v.wordB)}</span><span class="lang-tag">${lp.flagB}</span><button class="edit-btn" data-id="${v.id}" data-field="wordB" title="Editar">✏️</button></td><td style="text-align:center">${dc}</td><td class="td-sm td-edit"><span class="cell-val">${esc((v.collocations || []).slice(0, 4).join(', '))}</span><button class="edit-btn" data-id="${v.id}" data-field="collocations" title="Editar">✏️</button></td><td style="font-size:.74rem;color:var(--tm);white-space:nowrap">${v.date}</td><td><button class="del" data-id="${v.id}">✕</button></td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  body.innerHTML = html;
+  body.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      vocab = vocab.filter(v => v.id !== +btn.dataset.id);
+      saveVocab();
+      pruneStats();
+      renderVocab();
+    });
+  });
+  body.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
       e.stopPropagation();
-      const id=+btn.dataset.id,field=btn.dataset.field,td=btn.closest('td'),entry=vocab.find(v=>v.id===id);
-      if(!entry) return;
-      const cur=field==='collocations'?(entry.collocations||[]).join(', '):entry[field]||'';
-      td.innerHTML=`<input class="td-editable" id="editInput_${id}_${field}" value="${esc(cur)}" style="width:90%"><div style="margin-top:4px;display:flex;gap:4px"><button class="save-edit" data-id="${id}" data-field="${field}">✓ Guardar</button><button class="cancel-edit">✕</button></div>`;
-      const input=td.querySelector('.td-editable'); input.focus(); input.select();
-      td.querySelector('.save-edit').addEventListener('click',()=>{
-        const val=input.value.trim(),entry2=vocab.find(v=>v.id===id);
-        if(!entry2) return;
-        if(field==='collocations'){entry2.collocations=val.split(',').map(s=>s.trim()).filter(Boolean);}else{entry2[field]=val;}
-        saveVocab(); renderVocab();
+      const id = +btn.dataset.id, field = btn.dataset.field, td = btn.closest('td'), entry = vocab.find(v => v.id === id);
+      if (!entry) return;
+      const cur = field === 'collocations' ? (entry.collocations || []).join(', ') : entry[field] || '';
+      td.innerHTML = `<input class="td-editable" id="editInput_${id}_${field}" value="${esc(cur)}" style="width:90%"><div style="margin-top:4px;display:flex;gap:4px"><button class="save-edit" data-id="${id}" data-field="${field}">✓ Guardar</button><button class="cancel-edit">✕</button></div>`;
+      const input = td.querySelector('.td-editable');
+      input.focus();
+      input.select();
+      td.querySelector('.save-edit').addEventListener('click', () => {
+        const val = input.value.trim(), entry2 = vocab.find(v => v.id === id);
+        if (!entry2) return;
+        if (field === 'collocations') {
+          entry2.collocations = val.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+          entry2[field] = val;
+        }
+        saveVocab();
+        renderVocab();
       });
-      td.querySelector('.cancel-edit').addEventListener('click',()=>renderVocab());
-      input.addEventListener('keydown',e2=>{if(e2.key==='Enter') td.querySelector('.save-edit').click();if(e2.key==='Escape') renderVocab();});
+      td.querySelector('.cancel-edit').addEventListener('click', () => renderVocab());
+      input.addEventListener('keydown', e2 => {
+        if (e2.key === 'Enter') td.querySelector('.save-edit').click();
+        if (e2.key === 'Escape') renderVocab();
+      });
     });
   });
 }
 
+// ══════════════════════════════════════════════════════
+//  EXPORT / IMPORT / CLEAR (sin cambios significativos)
+// ══════════════════════════════════════════════════════
 document.getElementById('clearBtn').addEventListener('click',()=>{if(!confirm('¿Borrar todo el vocabulario y el historial de estudio?')) return;vocab=[];stats={};saveVocab();saveStats();renderVocab();});
 
 document.getElementById('exportBtn').addEventListener('click',()=>{
@@ -898,6 +951,9 @@ document.getElementById('importFile').addEventListener('change',e=>{
 
 function showImportMsg(msg,type){const el=document.getElementById('importMsg');el.textContent=msg;el.style.display='block';el.style.background=type==='ok'?'var(--am)':'#fdecea';el.style.color=type==='ok'?'var(--accent)':'var(--red)';el.style.border=`1px solid ${type==='ok'?'var(--al)':'#f5c6c6'}`;setTimeout(()=>{el.style.display='none';},5000);}
 
+// ══════════════════════════════════════════════════════
+//  QUIZ (sin cambios)
+// ══════════════════════════════════════════════════════
 function renderQuiz(){
   const body=document.getElementById('quizBody');
   const pool=vocabFilter==='all'?vocab:vocab.filter(v=>(v.pair||'es-it')===vocabFilter);
@@ -970,9 +1026,17 @@ function renderQuizResult(body,pool){
 }
 
 // ══════════════════════════════════════════════════════
-//  INICIALIZACIÓN: actualizamos la interfaz con el par por defecto (es-it)
+//  INICIALIZACIÓN
 // ══════════════════════════════════════════════════════
+// Resaltar el botón de idioma guardado
+document.querySelectorAll('.lp-btn').forEach(btn => {
+  if(btn.dataset.pair === activePair) btn.classList.add('on');
+  else btn.classList.remove('on');
+});
 updateDirButtons();
+updateVocabCount();
+// Aseguramos que el filtro de vocabulario esté sincronizado (ya lo está por defecto)
+// Si la pestaña de vocabulario estuviera abierta al cargar (no es el caso), se renderizaría al hacer clic.
 </script>
 </body>
 </html>
