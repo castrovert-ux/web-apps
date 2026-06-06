@@ -218,6 +218,7 @@ footer{margin-top:24px;font-size:.73rem;color:var(--tm);text-align:center;paddin
     <div class="inp-foot">
       <span id="charCount">0 / 80</span>
       <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-s" id="saveSelBtn" style="display:none" onclick="doSaveSelection()">💾 Guardar selección</button>
         <button class="btn-s red" id="saveBtnTop" style="display:none" onclick="doUnsave()">✕ No guardar</button>
         <button class="btn-p" id="goBtn">
           <span class="spin" id="spin"></span>
@@ -594,6 +595,7 @@ function setDir(dir) {
   inputDir = dir; updateDirButtons();
   resultSec.classList.remove('on'); errBar.style.display='none';
   const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false; sb.classList.add('red'); sb.style.borderColor=''; sb.style.color='';
+  document.getElementById('saveSelBtn').style.display='none';
   lastResult=null; wordInput.focus();
 }
 
@@ -613,6 +615,7 @@ function clearInput() {
   resultSec.classList.remove('on'); errBar.style.display='none';
   document.getElementById('charCount').textContent='0 / 80';
   const sb=document.getElementById('saveBtnTop'); sb.style.display='none'; sb.disabled=false; sb.classList.add('red'); sb.style.borderColor=''; sb.style.color='';
+  document.getElementById('saveSelBtn').style.display='none';
   lastResult=null; wordInput.focus();
 }
 
@@ -794,12 +797,33 @@ function selectTrans(el) {
   const custom=document.getElementById('transCustom'),customInput=document.getElementById('transCustomInput');
   if(custom){custom.classList.remove('on');customInput.value='';}
   el.classList.add('on');
-  if(lastResult){lastResult.wordB=el.dataset.val;updateSaveBtnLabel();}
+  if(lastResult){
+    lastResult.wordB=el.dataset.val;
+    showSaveSelBtn();
+  }
 }
 function selectCustom(){ document.querySelectorAll('.trans-opt').forEach(o=>o.classList.remove('on'));const custom=document.getElementById('transCustom');if(custom) custom.classList.add('on'); }
 function focusCustom(){ document.getElementById('transCustomInput')?.focus(); }
-function onCustomInput(){ const val=document.getElementById('transCustomInput').value.trim();selectCustom();if(lastResult){lastResult.wordB=val||lastResult.translations[0];updateSaveBtnLabel();} }
-function updateSaveBtnLabel(){ const btn=document.getElementById('saveBtnTop');if(btn&&!btn.disabled) btn.textContent='＋ Guardar'; }
+function onCustomInput(){ const val=document.getElementById('transCustomInput').value.trim();selectCustom();if(lastResult){lastResult.wordB=val||lastResult.translations[0];showSaveSelBtn();} }
+function showSaveSelBtn(){
+  const btn=document.getElementById('saveSelBtn');
+  if(btn) btn.style.display='inline-flex';
+}
+
+function doSaveSelection(){
+  if(!lastResult) return;
+  const entry=vocab.find(v=>v.pair===lastResult.pair&&norm(v.wordA)===norm(lastResult.wordA));
+  const newWordB=lastResult.wordB;
+  if(!newWordB) return;
+  if(entry){
+    entry.wordB=newWordB;
+    saveVocab(); updateVocabCount();
+  }
+  const btn=document.getElementById('saveSelBtn');
+  btn.textContent='✓ Guardado'; btn.disabled=true;
+  btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)';
+  setTimeout(()=>{btn.textContent='💾 Guardar selección'; btn.disabled=false; btn.style.borderColor=''; btn.style.color='';},2000);
+}
 
 function updateVocabCount(){
   const n=vocab.length;
@@ -817,6 +841,7 @@ function doUnsave(){
   btn.textContent='✓ Eliminado'; btn.disabled=true;
   btn.style.borderColor='var(--tm)'; btn.style.color='var(--tm)';
   btn.classList.remove('red');
+  document.getElementById('saveSelBtn').style.display='none';
 }
 
 function renderVocab(){
