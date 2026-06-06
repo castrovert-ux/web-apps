@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Explorador de archivos - GitHub</title>
+    <title>Explorador de archivos - GitHub (sin contraseña)</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -54,13 +54,6 @@
             border-radius: 8px;
             margin-top: 12px;
         }
-        .success {
-            color: #3fb950;
-            background: #1a2b1f;
-            border-left: 4px solid #3fb950;
-            padding: 10px;
-            border-radius: 8px;
-        }
         .file-list {
             margin-top: 20px;
             border: 1px solid #30363d;
@@ -88,17 +81,6 @@
             border-radius: 12px;
         }
         .breadcrumb a { color: #58a6ff; text-decoration: none; }
-        .logout-btn {
-            background: #21262d;
-            border: 1px solid #30363d;
-            margin-left: 10px;
-        }
-        .footer-note {
-            font-size: 0.75rem;
-            color: #8b949e;
-            text-align: center;
-            margin-top: 20px;
-        }
         .card {
             background: #21262d;
             border-radius: 12px;
@@ -116,23 +98,18 @@
             flex-wrap: wrap;
             align-items: flex-end;
         }
+        .footer-note {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>📁 Explorador de directorio <small>GitHub API</small></h1>
 
-    <!-- Panel de contraseña -->
-    <div id="passwordPanel">
-        <p>🔐 Acceso protegido. Introduce la contraseña para ver el contenido.</p>
-        <div class="input-group">
-            <input type="password" id="passwordInput" placeholder="Contraseña" autocomplete="off">
-            <button id="unlockBtn">Desbloquear</button>
-        </div>
-        <div id="passError" class="status"></div>
-    </div>
-
-    <!-- Panel de configuración manual (solo si falla detección) -->
     <div id="manualConfigPanel" style="display: none;" class="card">
         <p>⚠️ No se pudo detectar automáticamente el repositorio desde la URL actual.</p>
         <p>Introduce los datos de tu repositorio público de GitHub:</p>
@@ -160,12 +137,7 @@
         <div id="manualError" class="error" style="display: none;"></div>
     </div>
 
-    <!-- Panel del explorador -->
-    <div id="filesPanel" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <h2 style="margin: 0;">📄 Contenido del directorio</h2>
-            <button id="logoutBtn" class="logout-btn">🚪 Cerrar sesión</button>
-        </div>
+    <div id="explorerPanel">
         <div class="breadcrumb" id="breadcrumb"></div>
         <div id="fileListContainer" class="file-list">Cargando...</div>
     </div>
@@ -177,41 +149,23 @@
 </div>
 
 <script>
-    // ========= CONTRASEÑA (CÁMBIALA AQUÍ) ==========
-    const REQUIRED_PASSWORD = "admin123";   // <-- REEMPLAZA POR TU PROPIA CONTRASEÑA
-
     // Estado
-    let isUnlocked = false;
     let currentPath = "";
     let repoInfo = null;  // { owner, repo, branch, apiPath }
 
     // Elementos DOM
-    const passwordPanel = document.getElementById('passwordPanel');
-    const filesPanel = document.getElementById('filesPanel');
-    const manualConfigPanel = document.getElementById('manualConfigPanel');
-    const unlockBtn = document.getElementById('unlockBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const passwordInput = document.getElementById('passwordInput');
-    const passErrorDiv = document.getElementById('passError');
     const breadcrumbDiv = document.getElementById('breadcrumb');
     const fileListContainer = document.getElementById('fileListContainer');
+    const manualConfigPanel = document.getElementById('manualConfigPanel');
     const saveManualBtn = document.getElementById('saveManualBtn');
     const manualErrorDiv = document.getElementById('manualError');
 
-    // ========= UTILIDADES ==========
-    function showError(div, msg) {
-        div.innerHTML = `<div class="error">❌ ${msg}</div>`;
-        setTimeout(() => {
-            if (div.innerHTML.includes(msg)) div.innerHTML = "";
-        }, 4000);
-    }
-
-    // Detección automática desde URL
+    // ========= DETECCIÓN AUTOMÁTICA DESDE URL ==========
     function detectRepoFromUrl() {
         const url = window.location.href;
         let owner = null, repo = null, branch = null, path = "";
 
-        // raw.githubusercontent.com
+        // 1) raw.githubusercontent.com
         let rawMatch = url.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.*)/);
         if (rawMatch) {
             owner = rawMatch[1];
@@ -224,7 +178,7 @@
             return { owner, repo, branch, apiPath: path };
         }
 
-        // github.com (blob o tree)
+        // 2) github.com (blob o tree)
         let githubMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/([^\/]+)\/(.*)/);
         if (githubMatch) {
             owner = githubMatch[1];
@@ -240,7 +194,7 @@
             return { owner, repo, branch, apiPath: fullPath };
         }
 
-        // GitHub Pages: usuario.github.io/repo/
+        // 3) GitHub Pages: usuario.github.io/repo/
         let pagesMatch = url.match(/^(https?:\/\/)?([^\/]+)\.github\.io\/([^\/]+)(\/.*)?$/);
         if (pagesMatch) {
             owner = pagesMatch[2];
@@ -256,7 +210,7 @@
         return null;
     }
 
-    // Obtener contenido del directorio desde GitHub API
+    // ========= LLAMADA A LA API DE GITHUB ==========
     async function fetchDirectoryContents(owner, repo, branch, path) {
         let apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         if (branch) apiUrl += `?ref=${branch}`;
@@ -271,7 +225,7 @@
         return data;
     }
 
-    // Renderizar lista de archivos/carpetas
+    // ========= RENDERIZADO ==========
     function renderFileList(items, currentPathFull, owner, repo, branch) {
         if (!items.length) {
             fileListContainer.innerHTML = `<div class="file-item">📭 No hay archivos o carpetas visibles.</div>`;
@@ -289,7 +243,8 @@
             const sizeText = (!isDir && item.size) ? ` (${formatBytes(item.size)})` : "";
             let fileUrl = "#";
             if (isDir) {
-                fileUrl = `?dir=${encodeURIComponent(currentPathFull + item.name + "/")}`;
+                // Para carpetas, usamos un enlace interno que dispara la navegación
+                fileUrl = `#`;
             } else {
                 fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${currentPathFull}${item.name}`;
             }
@@ -335,10 +290,10 @@
         });
     }
 
-    // Cargar un directorio específico
+    // ========= NAVEGACIÓN ==========
     async function loadDirectory(newPath) {
         if (!repoInfo) return;
-        fileListContainer.innerHTML = `<div class="file-item">⏳ Cargando...</div>`;
+        fileListContainer.innerHTML = `<div class="file-item">⏳ Cargando ${newPath || 'raíz'}...</div>`;
         try {
             const items = await fetchDirectoryContents(repoInfo.owner, repoInfo.repo, repoInfo.branch, newPath);
             currentPath = newPath;
@@ -349,7 +304,6 @@
         }
     }
 
-    // Migas de pan
     function updateBreadcrumb(path) {
         const parts = path.split('/').filter(p => p !== "");
         let html = `<a href="#" id="bread-root">📁 raíz</a>`;
@@ -360,19 +314,23 @@
         }
         breadcrumbDiv.innerHTML = html;
 
-        document.getElementById('bread-root')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadDirectory("");
-        });
+        const rootLink = document.getElementById('bread-root');
+        if (rootLink) {
+            rootLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadDirectory("");
+            });
+        }
         document.querySelectorAll('[data-bpath]').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                loadDirectory(link.getAttribute('data-bpath'));
+                const targetPath = link.getAttribute('data-bpath');
+                loadDirectory(targetPath);
             });
         });
     }
 
-    // Inicializar explorador con la información del repositorio (automática o manual)
+    // ========= INICIALIZACIÓN ==========
     async function initExplorer(owner, repo, branch, path) {
         repoInfo = { owner, repo, branch, apiPath: path || "" };
         currentPath = repoInfo.apiPath;
@@ -393,21 +351,22 @@
             return;
         }
         manualErrorDiv.style.display = "none";
-        // Guardar en localStorage para futuras visitas
+        // Guardar en localStorage
         localStorage.setItem('gh_manual_owner', owner);
         localStorage.setItem('gh_manual_repo', repo);
         localStorage.setItem('gh_manual_branch', branch);
         localStorage.setItem('gh_manual_path', path);
-        // Ocultar panel manual y arrancar explorador
         manualConfigPanel.style.display = "none";
         initExplorer(owner, repo, branch, path).catch(err => {
             fileListContainer.innerHTML = `<div class="file-item error">Error: ${err.message}</div>`;
+            // Si falla, mostrar de nuevo el panel por si hay error de datos
+            manualConfigPanel.style.display = "block";
         });
     }
 
-    // Intento de inicio: si hay datos manuales guardados, usarlos; si no, detección automática
-    function startAfterUnlock() {
-        // Comprobar si hay datos manuales guardados en localStorage
+    // Función principal al cargar la página
+    function start() {
+        // Intentar con datos guardados previamente
         const savedOwner = localStorage.getItem('gh_manual_owner');
         const savedRepo = localStorage.getItem('gh_manual_repo');
         if (savedOwner && savedRepo) {
@@ -420,6 +379,7 @@
             return;
         }
 
+        // Si no hay datos guardados, intentar detección automática
         const detected = detectRepoFromUrl();
         if (detected) {
             initExplorer(detected.owner, detected.repo, detected.branch, detected.apiPath).catch(err => {
@@ -427,47 +387,16 @@
                 manualConfigPanel.style.display = "block";
             });
         } else {
-            // No hay detección automática ni datos guardados -> mostrar panel manual
+            // No hay detección ni datos guardados: mostrar panel manual
             manualConfigPanel.style.display = "block";
-            // Rellenar con valores de ejemplo si se desea
-            document.getElementById('manualOwner').value = "";
-            document.getElementById('manualRepo').value = "";
-            document.getElementById('manualBranch').value = "main";
-            document.getElementById('manualPath').value = "";
         }
-    }
-
-    // Desbloquear con contraseña
-    function unlock() {
-        if (passwordInput.value === REQUIRED_PASSWORD) {
-            isUnlocked = true;
-            passwordPanel.style.display = "none";
-            filesPanel.style.display = "block";
-            startAfterUnlock();
-        } else {
-            showError(passErrorDiv, "Contraseña incorrecta.");
-        }
-    }
-
-    function logout() {
-        isUnlocked = false;
-        passwordPanel.style.display = "block";
-        filesPanel.style.display = "none";
-        manualConfigPanel.style.display = "none";
-        passwordInput.value = "";
-        passErrorDiv.innerHTML = "";
-        repoInfo = null;
-        // No borramos localStorage para que la configuración manual persista
-        // Si se quiere borrar, descomentar: localStorage.removeItem('gh_manual_owner'); etc.
     }
 
     // Eventos
-    unlockBtn.addEventListener('click', unlock);
-    logoutBtn.addEventListener('click', logout);
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') unlock();
-    });
     saveManualBtn.addEventListener('click', saveManualConfig);
+
+    // Iniciar
+    start();
 </script>
 </body>
 </html>
