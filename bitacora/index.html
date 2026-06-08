@@ -4,53 +4,35 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bitácora de Viaje</title>
-
-  <!-- ═══════════════════════════════════════════════════════════
-       FUENTES — Cambia aquí para modificar la tipografía global
-       Display: Playfair Display (serif elegante)
-       Body:    Lora (serif de lectura cómoda)
-  ════════════════════════════════════════════════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
-
-  <!-- SheetJS para exportar a Excel sin servidor -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
   <style>
-    /* ═══════════════════════════════════════════════════════════
-       VARIABLES DE COLOR — Modifica aquí toda la paleta
-    ════════════════════════════════════════════════════════════ */
+    /* ═══ VARIABLES DE COLOR ═══════════════════════════════════ */
     :root {
-      --color-fondo:        #f5f0e8;   /* Papel crema principal */
-      --color-fondo-carta:  #faf7f2;   /* Tarjeta ligeramente más clara */
-      --color-fondo-madre:  #fdf0e0;   /* Sección especial: melocotón suave */
-      --color-tinta:        #2c2416;   /* Tinta oscura principal */
-      --color-tinta-suave:  #6b5c44;   /* Texto secundario */
-      --color-acento:       #8b3a2a;   /* Granate oscuro — títulos, estrellas activas */
-      --color-acento-suave: #c4855a;   /* Terracota — bordes sección madre */
-      --color-borde:        #d9cdb8;   /* Líneas y separadores */
-      --color-borde-madre:  #e8a87c;   /* Borde sección madre */
-      --color-estrella:     #c4855a;   /* Estrellas activas */
-      --color-placeholder:  #a89880;   /* Texto placeholder */
-      --color-guardado:     #4a7c59;   /* Indicador "guardado" */
-      --color-btn-excel:    #2d5a3d;   /* Botón exportar Excel */
-
+      --color-fondo:        #f5f0e8;
+      --color-fondo-carta:  #faf7f2;
+      --color-fondo-madre:  #fdf0e0;
+      --color-tinta:        #2c2416;
+      --color-tinta-suave:  #6b5c44;
+      --color-acento:       #8b3a2a;
+      --color-acento-suave: #c4855a;
+      --color-borde:        #d9cdb8;
+      --color-borde-madre:  #e8a87c;
+      --color-estrella:     #c4855a;
+      --color-placeholder:  #a89880;
+      --color-guardado:     #4a7c59;
+      --color-btn-excel:    #2d5a3d;
+      --color-historial:    #3a5a7c;
       --fuente-display: 'Playfair Display', Georgia, serif;
       --fuente-body:    'Lora', Georgia, serif;
-
-      --radio:    6px;
-      --sombra:   0 2px 12px rgba(44,36,22,0.08);
+      --radio: 6px;
+      --sombra: 0 2px 12px rgba(44,36,22,0.08);
       --transicion: 0.2s ease;
     }
-
-    /* ═══════════════════════════════════════════════════════════
-       RESET Y BASE
-    ════════════════════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html { scroll-behavior: smooth; }
-
     body {
       background-color: var(--color-fondo);
       color: var(--color-tinta);
@@ -58,600 +40,199 @@
       font-size: 16px;
       line-height: 1.65;
       min-height: 100vh;
-      /* Textura sutil de papel */
-      background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       CABECERA
-    ════════════════════════════════════════════════════════════ */
+    /* ═══ CABECERA ═══════════════════════════════════════════ */
     header {
       text-align: center;
-      padding: 2.5rem 1.5rem 1.5rem;
+      padding: 2rem 1.5rem 1rem;
       border-bottom: 1px solid var(--color-borde);
       background: var(--color-fondo-carta);
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: sticky; top: 0; z-index: 100;
       box-shadow: var(--sombra);
     }
-
-    header h1 {
-      font-family: var(--fuente-display);
-      font-size: clamp(1.6rem, 5vw, 2.4rem);
-      font-weight: 700;
-      color: var(--color-acento);
-      letter-spacing: 0.02em;
-    }
-
-    header h1 span {
-      font-style: italic;
-      font-weight: 400;
-    }
-
-    .header-ornamento {
-      color: var(--color-acento-suave);
-      font-size: 1.1rem;
-      margin: 0.3rem 0 0.6rem;
-      letter-spacing: 0.15em;
-    }
-
-    /* Indicador de guardado automático */
-    #indicador-guardado {
-      font-size: 0.75rem;
-      color: var(--color-guardado);
-      font-family: var(--fuente-body);
-      font-style: italic;
-      opacity: 0;
-      transition: opacity 0.4s;
-      min-height: 1.1em;
-    }
+    header h1 { font-family: var(--fuente-display); font-size: clamp(1.5rem,5vw,2.2rem); font-weight: 700; color: var(--color-acento); }
+    header h1 span { font-style: italic; font-weight: 400; }
+    .header-ornamento { color: var(--color-acento-suave); font-size: 1rem; margin: 0.2rem 0 0.4rem; letter-spacing: 0.15em; }
+    #indicador-guardado { font-size: 0.75rem; color: var(--color-guardado); font-style: italic; opacity: 0; transition: opacity 0.4s; min-height: 1.1em; }
     #indicador-guardado.visible { opacity: 1; }
 
-    /* ═══════════════════════════════════════════════════════════
-       BARRA DE NAVEGACIÓN DE DÍAS
-    ════════════════════════════════════════════════════════════ */
+    /* ═══ BARRA DE DÍAS ══════════════════════════════════════ */
     #barra-dias {
       background: var(--color-fondo-carta);
       border-bottom: 1px solid var(--color-borde);
-      padding: 0.6rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      padding: 0.55rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
     }
+    #barra-dias label { font-size: 0.8rem; color: var(--color-tinta-suave); white-space: nowrap; font-style: italic; }
+    #selector-dias { font-family: var(--fuente-body); font-size: 0.85rem; border: 1px solid var(--color-borde); background: var(--color-fondo); color: var(--color-tinta); padding: 0.3rem 0.6rem; border-radius: var(--radio); flex: 1; min-width: 0; }
+    .btn-barra { background: var(--color-acento); color: #faf7f2; border: none; padding: 0.35rem 0.75rem; border-radius: var(--radio); font-family: var(--fuente-body); font-size: 0.78rem; cursor: pointer; white-space: nowrap; transition: background var(--transicion); }
+    .btn-barra:hover { background: #6e2d1f; }
+    .btn-barra.historial { background: var(--color-historial); }
+    .btn-barra.historial:hover { background: #2a4460; }
 
-    #barra-dias label {
-      font-size: 0.8rem;
-      color: var(--color-tinta-suave);
-      white-space: nowrap;
-      font-style: italic;
-    }
+    /* ═══ MAIN ═══════════════════════════════════════════════ */
+    main { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 
-    #selector-dias {
-      font-family: var(--fuente-body);
-      font-size: 0.85rem;
-      border: 1px solid var(--color-borde);
-      background: var(--color-fondo);
-      color: var(--color-tinta);
-      padding: 0.3rem 0.6rem;
-      border-radius: var(--radio);
-      flex: 1;
-      min-width: 0;
-    }
+    /* ═══ SECCIONES ══════════════════════════════════════════ */
+    .seccion { background: var(--color-fondo-carta); border: 1px solid var(--color-borde); border-radius: var(--radio); padding: 1.4rem 1.3rem; margin-bottom: 1.3rem; box-shadow: var(--sombra); }
+    .seccion-titulo { font-family: var(--fuente-display); font-size: 1.05rem; font-weight: 600; color: var(--color-acento); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--color-borde); padding-bottom: 0.6rem; }
+    .seccion-titulo .num { background: var(--color-acento); color: #faf7f2; font-size: 0.7rem; font-weight: 700; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: var(--fuente-body); }
+    .seccion-madre { background: var(--color-fondo-madre); border-color: var(--color-borde-madre); }
+    .seccion-madre .seccion-titulo { color: var(--color-acento-suave); border-color: var(--color-borde-madre); }
+    .seccion-madre .seccion-titulo .num { background: var(--color-acento-suave); }
 
-    #btn-nuevo-dia {
-      background: var(--color-acento);
-      color: #faf7f2;
-      border: none;
-      padding: 0.35rem 0.8rem;
-      border-radius: var(--radio);
-      font-family: var(--fuente-body);
-      font-size: 0.8rem;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background var(--transicion);
-    }
-    #btn-nuevo-dia:hover { background: #6e2d1f; }
-
-    /* ═══════════════════════════════════════════════════════════
-       CONTENEDOR PRINCIPAL
-    ════════════════════════════════════════════════════════════ */
-    main {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 1.5rem 1rem 4rem;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       TARJETAS DE SECCIÓN
-    ════════════════════════════════════════════════════════════ */
-    .seccion {
-      background: var(--color-fondo-carta);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio);
-      padding: 1.4rem 1.3rem;
-      margin-bottom: 1.3rem;
-      box-shadow: var(--sombra);
-    }
-
-    .seccion-titulo {
-      font-family: var(--fuente-display);
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--color-acento);
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      border-bottom: 1px solid var(--color-borde);
-      padding-bottom: 0.6rem;
-    }
-
-    .seccion-titulo .num {
-      background: var(--color-acento);
-      color: #faf7f2;
-      font-size: 0.7rem;
-      font-weight: 700;
-      width: 1.5rem;
-      height: 1.5rem;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-family: var(--fuente-body);
-    }
-
-    /* Sección especial: Mi madre */
-    .seccion-madre {
-      background: var(--color-fondo-madre);
-      border-color: var(--color-borde-madre);
-    }
-
-    .seccion-madre .seccion-titulo {
-      color: var(--color-acento-suave);
-      border-color: var(--color-borde-madre);
-    }
-
-    .seccion-madre .seccion-titulo .num {
-      background: var(--color-acento-suave);
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       GRUPOS DE CAMPOS
-    ════════════════════════════════════════════════════════════ */
-    .campo-grupo {
-      margin-bottom: 0.9rem;
-    }
-
+    /* ═══ CAMPOS ═════════════════════════════════════════════ */
+    .campo-grupo { margin-bottom: 0.9rem; }
     .campo-grupo:last-child { margin-bottom: 0; }
-
-    .campo-grupo label {
-      display: block;
-      font-size: 0.8rem;
-      font-style: italic;
-      color: var(--color-tinta-suave);
-      margin-bottom: 0.3rem;
+    .campo-grupo label { display: block; font-size: 0.8rem; font-style: italic; color: var(--color-tinta-suave); margin-bottom: 0.3rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    @media (max-width: 480px) { .grid-2 { grid-template-columns: 1fr; } }
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+      width: 100%; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: var(--radio);
+      color: var(--color-tinta); font-family: var(--fuente-body); font-size: 0.9rem; padding: 0.5rem 0.65rem;
+      transition: border-color var(--transicion), box-shadow var(--transicion); appearance: none; -webkit-appearance: none;
     }
-
-    /* Grid de dos columnas para campos cortos */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.8rem;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 0.8rem;
-    }
-
-    @media (max-width: 480px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       INPUTS Y TEXTAREAS
-    ════════════════════════════════════════════════════════════ */
-    input[type="text"],
-    input[type="date"],
-    input[type="time"],
-    input[type="number"],
-    select,
-    textarea {
-      width: 100%;
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio);
-      color: var(--color-tinta);
-      font-family: var(--fuente-body);
-      font-size: 0.9rem;
-      padding: 0.5rem 0.65rem;
-      transition: border-color var(--transicion), box-shadow var(--transicion);
-      appearance: none;
-      -webkit-appearance: none;
-    }
-
-    input[type="date"],
-    input[type="time"] {
-      cursor: pointer;
-    }
-
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: var(--color-acento-suave);
-      box-shadow: 0 0 0 3px rgba(196,133,90,0.15);
-    }
-
-    input::placeholder, textarea::placeholder {
-      color: var(--color-placeholder);
-      font-style: italic;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 80px;
-      line-height: 1.6;
-    }
-
+    input:focus, textarea:focus { outline: none; border-color: var(--color-acento-suave); box-shadow: 0 0 0 3px rgba(196,133,90,0.15); }
+    input::placeholder, textarea::placeholder { color: var(--color-placeholder); font-style: italic; }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     textarea.grande { min-height: 120px; }
-
-    input[readonly] {
-      background: #ede8df;
-      color: var(--color-acento);
-      font-weight: 500;
-      cursor: default;
-    }
-
-    /* Número de input sin flechas */
-    input[type="number"]::-webkit-outer-spin-button,
-    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
     input[type="number"] { -moz-appearance: textfield; }
 
-    /* ═══════════════════════════════════════════════════════════
-       TIEMPO ATMOSFÉRICO — ICONOS SELECCIONABLES
-    ════════════════════════════════════════════════════════════ */
-    .tiempo-opciones {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .tiempo-opcion {
-      display: none; /* oculta el radio real */
-    }
-
-    .tiempo-opcion + label {
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 0.25rem;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      transition: border-color var(--transicion), transform var(--transicion);
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .tiempo-opcion:checked + label,
-    .tiempo-opcion + label:hover {
-      border-color: var(--color-acento);
-      transform: scale(1.15);
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECCIÓN DINÁMICA: LO QUE HE VISTO
-    ════════════════════════════════════════════════════════════ */
-    #lista-lugares { margin-bottom: 0.8rem; }
-
-    .lugar-item {
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio);
-      padding: 0.9rem;
-      margin-bottom: 0.7rem;
-      position: relative;
-    }
-
-    .lugar-cabecera {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.7rem;
-    }
-
-    .lugar-num {
-      font-family: var(--fuente-display);
-      font-style: italic;
-      color: var(--color-acento-suave);
-      font-size: 0.85rem;
+    /* ═══ TIEMPO — botones texto+emoji ═══════════════════════
+       El value guardado es texto legible (ej: "Soleado"), no emoji
+    ════════════════════════════════════════════════════════ */
+    .tiempo-opciones { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .btn-tiempo {
+      display: flex; align-items: center; gap: 0.3rem;
+      padding: 0.32rem 0.6rem; border: 1.5px solid var(--color-borde);
+      border-radius: 20px; background: var(--color-fondo);
+      color: var(--color-tinta-suave); font-family: var(--fuente-body);
+      font-size: 0.78rem; cursor: pointer;
+      transition: border-color var(--transicion), background var(--transicion);
       white-space: nowrap;
     }
+    .btn-tiempo:hover { border-color: var(--color-acento-suave); background: rgba(196,133,90,0.08); }
+    .btn-tiempo.seleccionado { border-color: var(--color-acento); background: rgba(139,58,42,0.1); color: var(--color-acento); font-weight: 500; }
 
+    /* ═══ LUGARES ════════════════════════════════════════════ */
+    #lista-lugares { margin-bottom: 0.8rem; }
+    .lugar-item { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: var(--radio); padding: 0.9rem; margin-bottom: 0.7rem; }
+    .lugar-cabecera { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.7rem; }
+    .lugar-num { font-family: var(--fuente-display); font-style: italic; color: var(--color-acento-suave); font-size: 0.85rem; white-space: nowrap; }
     .lugar-cabecera input { flex: 1; }
-
-    .btn-eliminar-lugar {
-      background: none;
-      border: none;
-      color: var(--color-tinta-suave);
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0.1rem 0.3rem;
-      line-height: 1;
-      opacity: 0.5;
-      transition: opacity var(--transicion);
-    }
+    .btn-eliminar-lugar { background: none; border: none; color: var(--color-tinta-suave); cursor: pointer; font-size: 1.1rem; padding: 0.1rem 0.3rem; line-height: 1; opacity: 0.5; transition: opacity var(--transicion); }
     .btn-eliminar-lugar:hover { opacity: 1; color: var(--color-acento); }
-
-    #btn-add-lugar {
-      background: none;
-      border: 1px dashed var(--color-acento-suave);
-      color: var(--color-acento);
-      padding: 0.5rem 1rem;
-      border-radius: var(--radio);
-      font-family: var(--fuente-body);
-      font-size: 0.85rem;
-      cursor: pointer;
-      width: 100%;
-      transition: background var(--transicion);
-      font-style: italic;
-    }
+    #btn-add-lugar { background: none; border: 1px dashed var(--color-acento-suave); color: var(--color-acento); padding: 0.5rem 1rem; border-radius: var(--radio); font-family: var(--fuente-body); font-size: 0.85rem; cursor: pointer; width: 100%; transition: background var(--transicion); font-style: italic; }
     #btn-add-lugar:hover { background: rgba(196,133,90,0.1); }
 
-    /* ═══════════════════════════════════════════════════════════
-       ESTRELLAS DE VALORACIÓN
-    ════════════════════════════════════════════════════════════ */
-    .valoracion-fila {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-      margin-bottom: 0.6rem;
-    }
-
-    .valoracion-fila:last-of-type { margin-bottom: 0; }
-
-    .valoracion-nombre {
-      font-size: 0.82rem;
-      color: var(--color-tinta-suave);
-      font-style: italic;
-      width: 5rem;
-      flex-shrink: 0;
-    }
-
-    .estrellas {
-      display: flex;
-      gap: 0.2rem;
-    }
-
-    .estrella {
-      font-size: 1.4rem;
-      cursor: pointer;
-      color: var(--color-borde);
-      transition: color var(--transicion), transform var(--transicion);
-      user-select: none;
-      line-height: 1;
-    }
-
+    /* ═══ ESTRELLAS ══════════════════════════════════════════ */
+    .valoracion-fila { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
+    .valoracion-nombre { font-size: 0.82rem; color: var(--color-tinta-suave); font-style: italic; width: 5rem; flex-shrink: 0; }
+    .estrellas { display: flex; gap: 0.2rem; }
+    .estrella { font-size: 1.4rem; cursor: pointer; color: var(--color-borde); transition: color var(--transicion), transform var(--transicion); user-select: none; line-height: 1; }
     .estrella.activa { color: var(--color-estrella); }
-    .estrella:hover  { transform: scale(1.2); }
+    .estrella:hover { transform: scale(1.2); }
 
-    /* ═══════════════════════════════════════════════════════════
-       GRATITUD — NUMERADA
-    ════════════════════════════════════════════════════════════ */
-    .gratitud-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.6rem;
-    }
+    /* ═══ GRATITUD ═══════════════════════════════════════════ */
+    .gratitud-item { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .gratitud-num { font-family: var(--fuente-display); font-size: 1.1rem; font-style: italic; color: var(--color-acento-suave); width: 1.2rem; flex-shrink: 0; }
 
-    .gratitud-num {
-      font-family: var(--fuente-display);
-      font-size: 1.1rem;
-      font-style: italic;
-      color: var(--color-acento-suave);
-      width: 1.2rem;
-      flex-shrink: 0;
-    }
+    /* ═══ GASTOS ═════════════════════════════════════════════ */
+    .total-diario { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: var(--radio); padding: 0.6rem 0.9rem; display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; }
+    .total-diario span { font-style: italic; font-size: 0.85rem; color: var(--color-tinta-suave); }
+    #total-diario-valor { font-family: var(--fuente-display); font-size: 1.15rem; color: var(--color-acento); font-weight: 600; }
 
-    /* ═══════════════════════════════════════════════════════════
-       GASTOS
-    ════════════════════════════════════════════════════════════ */
-    .total-diario {
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio);
-      padding: 0.6rem 0.9rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 0.4rem;
-    }
-
-    .total-diario span {
-      font-style: italic;
-      font-size: 0.85rem;
-      color: var(--color-tinta-suave);
-    }
-
-    #total-diario-valor {
-      font-family: var(--fuente-display);
-      font-size: 1.15rem;
-      color: var(--color-acento);
-      font-weight: 600;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       PIE — BOTONES DE ACCIÓN
-    ════════════════════════════════════════════════════════════ */
-    .pie-acciones {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      margin-top: 2rem;
-      padding: 1.2rem;
-      background: var(--color-fondo-carta);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio);
-      box-shadow: var(--sombra);
-    }
-
-    .pie-acciones-fila {
-      display: flex;
-      gap: 0.7rem;
-      flex-wrap: wrap;
-    }
-
-    .btn-accion {
-      flex: 1;
-      min-width: 140px;
-      padding: 0.75rem 1rem;
-      border-radius: var(--radio);
-      border: none;
-      font-family: var(--fuente-body);
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: background var(--transicion), transform var(--transicion);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-    }
-
+    /* ═══ PIE ════════════════════════════════════════════════ */
+    .pie-acciones { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 2rem; padding: 1.2rem; background: var(--color-fondo-carta); border: 1px solid var(--color-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .pie-acciones-fila { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+    .btn-accion { flex: 1; min-width: 130px; padding: 0.75rem 0.8rem; border-radius: var(--radio); border: none; font-family: var(--fuente-body); font-size: 0.88rem; cursor: pointer; transition: background var(--transicion), transform var(--transicion); display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
     .btn-accion:active { transform: scale(0.97); }
-
-    .btn-excel {
-      background: var(--color-btn-excel);
-      color: #f0f7f0;
-    }
+    .btn-excel { background: var(--color-btn-excel); color: #f0f7f0; }
     .btn-excel:hover { background: #1e3d29; }
-
-    .btn-nuevo {
-      background: var(--color-acento);
-      color: #faf7f2;
-    }
+    .btn-nuevo { background: var(--color-acento); color: #faf7f2; }
     .btn-nuevo:hover { background: #6e2d1f; }
-
-    .btn-peligro {
-      background: none;
-      border: 1px solid #c0392b;
-      color: #c0392b;
-      font-size: 0.8rem;
-      padding: 0.5rem 0.8rem;
-    }
+    .btn-hist { background: var(--color-historial); color: #f0f4f8; }
+    .btn-hist:hover { background: #2a4460; }
+    .btn-peligro { background: none; border: 1px solid #c0392b; color: #c0392b; font-size: 0.8rem; padding: 0.5rem 0.8rem; }
     .btn-peligro:hover { background: #fdecea; }
+    .info-historial { font-size: 0.75rem; color: var(--color-tinta-suave); font-style: italic; text-align: center; }
 
-    .info-historial {
-      font-size: 0.75rem;
-      color: var(--color-tinta-suave);
-      font-style: italic;
-      text-align: center;
-    }
+    /* ═══ PANEL HISTORIAL ════════════════════════════════════ */
+    #panel-historial { display: none; position: fixed; inset: 0; background: rgba(44,36,22,0.55); z-index: 300; align-items: flex-start; justify-content: flex-end; }
+    #panel-historial.activo { display: flex; }
+    .historial-cajon { width: 100%; max-width: 520px; height: 100%; background: var(--color-fondo-carta); border-left: 1px solid var(--color-borde); display: flex; flex-direction: column; box-shadow: -4px 0 24px rgba(44,36,22,0.15); animation: deslizar 0.25s ease; }
+    @keyframes deslizar { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    @media (max-width: 540px) { .historial-cajon { max-width: 100%; border-left: none; } }
 
-    /* ═══════════════════════════════════════════════════════════
-       ORNAMENTOS DECORATIVOS
-    ════════════════════════════════════════════════════════════ */
-    .ornamento-seccion {
-      text-align: center;
-      color: var(--color-acento-suave);
-      font-size: 0.85rem;
-      letter-spacing: 0.3em;
-      margin: 0.3rem 0 0.8rem;
-      opacity: 0.6;
-    }
+    .historial-cabecera { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem; border-bottom: 1px solid var(--color-borde); flex-shrink: 0; }
+    .historial-cabecera h2 { font-family: var(--fuente-display); font-size: 1.1rem; color: var(--color-acento); }
+    .btn-cerrar-panel { background: none; border: none; font-size: 1.4rem; color: var(--color-tinta-suave); cursor: pointer; padding: 0.2rem 0.4rem; line-height: 1; transition: color var(--transicion); }
+    .btn-cerrar-panel:hover { color: var(--color-acento); }
 
-    /* ═══════════════════════════════════════════════════════════
-       MODAL DE CONFIRMACIÓN
-    ════════════════════════════════════════════════════════════ */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(44,36,22,0.5);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
+    .historial-buscador { padding: 0.7rem 1.2rem; border-bottom: 1px solid var(--color-borde); flex-shrink: 0; }
+    .historial-buscador input { font-size: 0.85rem; padding: 0.4rem 0.7rem; }
 
+    .historial-lista { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0.5rem 0; }
+
+    .historial-card { margin: 0 0.8rem 0.5rem; border: 1px solid var(--color-borde); border-radius: var(--radio); background: var(--color-fondo); overflow: hidden; transition: border-color var(--transicion); }
+    .historial-card:hover { border-color: var(--color-acento-suave); }
+    .historial-card.activo-card { border-color: var(--color-acento); background: rgba(139,58,42,0.04); }
+
+    .historial-card-cabecera { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 0.9rem; cursor: pointer; }
+    .historial-card-fecha { font-family: var(--fuente-display); font-size: 0.9rem; font-weight: 600; color: var(--color-acento); flex-shrink: 0; }
+    .historial-card-ciudad { font-size: 0.82rem; color: var(--color-tinta-suave); font-style: italic; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .historial-card-meta { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+    .historial-card-meta span { font-size: 0.75rem; color: var(--color-tinta-suave); }
+    .historial-card-resumen { padding: 0.5rem 0.9rem 0.6rem; font-size: 0.78rem; color: var(--color-tinta-suave); font-style: italic; line-height: 1.4; border-top: 1px solid var(--color-borde); display: none; }
+    .historial-card.expandida .historial-card-resumen { display: block; }
+    .historial-card-acciones { display: flex; gap: 0.4rem; padding: 0.5rem 0.9rem 0.7rem; }
+    .btn-hist-card { flex: 1; padding: 0.4rem 0.6rem; border-radius: var(--radio); border: none; font-family: var(--fuente-body); font-size: 0.78rem; cursor: pointer; transition: background var(--transicion); }
+    .btn-hist-editar { background: var(--color-acento); color: #faf7f2; }
+    .btn-hist-editar:hover { background: #6e2d1f; }
+    .btn-hist-borrar { background: none; border: 1px solid #c0392b; color: #c0392b; }
+    .btn-hist-borrar:hover { background: #fdecea; }
+    .historial-vacio { text-align: center; padding: 3rem 1.5rem; color: var(--color-tinta-suave); font-style: italic; font-size: 0.9rem; }
+
+    .historial-pie { padding: 0.7rem 1.2rem; border-top: 1px solid var(--color-borde); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .historial-pie span { font-size: 0.75rem; color: var(--color-tinta-suave); font-style: italic; }
+    .historial-pie strong { color: var(--color-acento); }
+
+    /* ═══ MODALES ════════════════════════════════════════════ */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(44,36,22,0.5); z-index: 400; align-items: center; justify-content: center; padding: 1rem; }
     .modal-overlay.activo { display: flex; }
-
-    .modal-caja {
-      background: var(--color-fondo-carta);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio);
-      padding: 1.5rem;
-      max-width: 360px;
-      width: 100%;
-      box-shadow: 0 8px 32px rgba(44,36,22,0.2);
-    }
-
-    .modal-caja h3 {
-      font-family: var(--fuente-display);
-      color: var(--color-acento);
-      margin-bottom: 0.7rem;
-    }
-
-    .modal-caja p {
-      font-size: 0.88rem;
-      color: var(--color-tinta-suave);
-      margin-bottom: 1.2rem;
-      line-height: 1.5;
-    }
-
-    .modal-botones {
-      display: flex;
-      gap: 0.7rem;
-    }
-
-    .modal-botones button {
-      flex: 1;
-      padding: 0.6rem;
-      border-radius: var(--radio);
-      border: none;
-      font-family: var(--fuente-body);
-      cursor: pointer;
-      font-size: 0.88rem;
-    }
-
+    .modal-caja { background: var(--color-fondo-carta); border: 1px solid var(--color-borde); border-radius: var(--radio); padding: 1.5rem; max-width: 360px; width: 100%; box-shadow: 0 8px 32px rgba(44,36,22,0.2); }
+    .modal-caja h3 { font-family: var(--fuente-display); color: var(--color-acento); margin-bottom: 0.7rem; }
+    .modal-caja p { font-size: 0.88rem; color: var(--color-tinta-suave); margin-bottom: 1.2rem; line-height: 1.5; }
+    .modal-botones { display: flex; gap: 0.7rem; }
+    .modal-botones button { flex: 1; padding: 0.6rem; border-radius: var(--radio); border: none; font-family: var(--fuente-body); cursor: pointer; font-size: 0.88rem; }
     .modal-confirmar { background: #c0392b; color: white; }
-    .modal-cancelar  { background: var(--color-borde); color: var(--color-tinta); }
+    .modal-cancelar { background: var(--color-borde); color: var(--color-tinta); }
   </style>
 </head>
-
 <body>
 
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║                    CABECERA                         ║
-       ╚══════════════════════════════════════════════════════╝ -->
   <header>
-    <h1>✦ Bitácora de <span>Viaje</span></h1>
-    <div class="header-ornamento">· · · · · · · · · · ·</div>
-    <div id="indicador-guardado">✓ Guardado automáticamente</div>
+    <h1>&#10022; Bit&aacute;cora de <span>Viaje</span></h1>
+    <div class="header-ornamento">&middot; &middot; &middot; &middot; &middot; &middot; &middot; &middot; &middot; &middot; &middot;</div>
+    <div id="indicador-guardado">&#10003; Guardado autom&aacute;ticamente</div>
   </header>
 
-  <!-- Barra de navegación de días -->
   <div id="barra-dias">
-    <label for="selector-dias">Día:</label>
+    <label for="selector-dias">D&iacute;a:</label>
     <select id="selector-dias" onchange="cargarDia(this.value)"></select>
-    <button id="btn-nuevo-dia" onclick="pedirNuevoDia()">+ Nuevo día</button>
+    <button class="btn-barra historial" onclick="abrirHistorial()">&#128203; Historial</button>
+    <button class="btn-barra" onclick="pedirNuevoDia()">+ Nuevo</button>
   </div>
 
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║                  FORMULARIO PRINCIPAL               ║
-       ╚══════════════════════════════════════════════════════╝ -->
   <main>
     <form id="formulario-bitacora" autocomplete="off">
 
-      <!-- ── 1. DATOS BÁSICOS DEL DÍA ─────────────────────── -->
+      <!-- 1. DATOS BÁSICOS -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">1</span> Datos básicos del día</div>
-
+        <div class="seccion-titulo"><span class="num">1</span> Datos b&aacute;sicos del d&iacute;a</div>
         <div class="grid-2">
           <div class="campo-grupo">
             <label for="campo-fecha">Fecha</label>
@@ -659,10 +240,9 @@
           </div>
           <div class="campo-grupo">
             <label for="campo-ciudad">Ciudad o lugar</label>
-            <input type="text" id="campo-ciudad" data-campo="ciudad" placeholder="Roma, Florencia…" />
+            <input type="text" id="campo-ciudad" data-campo="ciudad" placeholder="Roma, Florencia&hellip;" />
           </div>
         </div>
-
         <div class="grid-2">
           <div class="campo-grupo">
             <label for="campo-hora-inicio">Hora de inicio</label>
@@ -673,614 +253,244 @@
             <input type="time" id="campo-hora-final" data-campo="horaFinal" />
           </div>
         </div>
-
         <div class="campo-grupo">
-          <label>Tiempo atmosférico</label>
-          <div class="tiempo-opciones">
-            <!-- Añade o quita emojis libremente aquí -->
-            <input type="radio" name="tiempo" id="t-sol"      class="tiempo-opcion" value="☀️" data-campo="tiempo" />
-            <label for="t-sol" title="Soleado">☀️</label>
-            <input type="radio" name="tiempo" id="t-parcial"  class="tiempo-opcion" value="⛅" data-campo="tiempo" />
-            <label for="t-parcial" title="Parcialmente nublado">⛅</label>
-            <input type="radio" name="tiempo" id="t-nublado"  class="tiempo-opcion" value="☁️" data-campo="tiempo" />
-            <label for="t-nublado" title="Nublado">☁️</label>
-            <input type="radio" name="tiempo" id="t-lluvia"   class="tiempo-opcion" value="🌧️" data-campo="tiempo" />
-            <label for="t-lluvia" title="Lluvia">🌧️</label>
-            <input type="radio" name="tiempo" id="t-tormenta" class="tiempo-opcion" value="⛈️" data-campo="tiempo" />
-            <label for="t-tormenta" title="Tormenta">⛈️</label>
-            <input type="radio" name="tiempo" id="t-niebla"   class="tiempo-opcion" value="🌫️" data-campo="tiempo" />
-            <label for="t-niebla" title="Niebla">🌫️</label>
-          </div>
+          <label>Tiempo atmosf&eacute;rico</label>
+          <div class="tiempo-opciones" id="tiempo-opciones"></div>
         </div>
-
         <div class="campo-grupo">
-          <label for="campo-km">Kilómetros caminados</label>
+          <label for="campo-km">Kil&oacute;metros caminados</label>
           <input type="number" id="campo-km" data-campo="km" placeholder="12.5" step="0.1" min="0" />
         </div>
       </div>
 
-
-      <!-- ── 2. LO QUE HE VISTO ────────────────────────────── -->
+      <!-- 2. LO QUE HE VISTO -->
       <div class="seccion">
         <div class="seccion-titulo"><span class="num">2</span> Lo que he visto</div>
         <div id="lista-lugares"></div>
-        <button type="button" id="btn-add-lugar" onclick="añadirLugar()">+ Añadir lugar</button>
+        <button type="button" id="btn-add-lugar" onclick="anyadirLugar()">+ A&ntilde;adir lugar</button>
       </div>
 
-
-      <!-- ── 3. EL MOMENTO DEL DÍA ─────────────────────────── -->
+      <!-- 3. EL MOMENTO DEL DÍA -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">3</span> El momento del día</div>
+        <div class="seccion-titulo"><span class="num">3</span> El momento del d&iacute;a</div>
         <div class="campo-grupo">
-          <label for="campo-momento">¿Cuál fue el instante que me gustaría recordar dentro de diez años?</label>
-          <textarea id="campo-momento" data-campo="momento" class="grande"
-            placeholder="El sol de las seis de la tarde iluminando el ábside de Santa Croce, y el silencio extraño de la nave vacía…"></textarea>
+          <label for="campo-momento">&iquest;Cu&aacute;l fue el instante que me gustar&iacute;a recordar dentro de diez a&ntilde;os?</label>
+          <textarea id="campo-momento" data-campo="momento" class="grande" placeholder="El sol de las seis de la tarde iluminando el &aacute;bside de Santa Croce&hellip;"></textarea>
         </div>
       </div>
 
-
-      <!-- ── 4. LO QUE SENTÍ ───────────────────────────────── -->
+      <!-- 4. LO QUE SENTÍ -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">4</span> Lo que sentí</div>
+        <div class="seccion-titulo"><span class="num">4</span> Lo que sent&iacute;</div>
         <div class="campo-grupo">
-          <label for="campo-sentimiento">¿Cómo me sentí hoy?</label>
-          <input type="text" id="campo-sentimiento" data-campo="sentimiento"
-            placeholder="Agotado pero lleno, como después de una buena caminata…" />
+          <label for="campo-sentimiento">&iquest;C&oacute;mo me sent&iacute; hoy?</label>
+          <input type="text" id="campo-sentimiento" data-campo="sentimiento" placeholder="Agotado pero lleno, como despu&eacute;s de una buena caminata&hellip;" />
         </div>
         <div class="campo-grupo">
-          <label for="campo-emocion">¿Qué emoción predominó?</label>
-          <input type="text" id="campo-emocion" data-campo="emocion"
-            placeholder="Asombro ante lo que resiste el paso del tiempo…" />
+          <label for="campo-emocion">&iquest;Qu&eacute; emoci&oacute;n predomin&oacute;?</label>
+          <input type="text" id="campo-emocion" data-campo="emocion" placeholder="Asombro ante lo que resiste el paso del tiempo&hellip;" />
         </div>
         <div class="grid-2">
           <div class="campo-grupo">
-            <label for="campo-paz">¿Hubo algún momento de paz?</label>
-            <input type="text" id="campo-paz" data-campo="paz"
-              placeholder="El jardín de Bóboli al amanecer…" />
+            <label for="campo-paz">&iquest;Hubo alg&uacute;n momento de paz?</label>
+            <input type="text" id="campo-paz" data-campo="paz" placeholder="El jard&iacute;n de B&oacute;boli al amanecer&hellip;" />
           </div>
           <div class="campo-grupo">
-            <label for="campo-tension">¿Hubo algún momento de tensión?</label>
-            <input type="text" id="campo-tension" data-campo="tension"
-              placeholder="La cola del Vaticano bajo el sol…" />
+            <label for="campo-tension">&iquest;Hubo alg&uacute;n momento de tensi&oacute;n?</label>
+            <input type="text" id="campo-tension" data-campo="tension" placeholder="La cola del Vaticano bajo el sol&hellip;" />
           </div>
         </div>
       </div>
 
-
-      <!-- ── 5. MI MADRE (SECCIÓN ESPECIAL) ───────────────── -->
+      <!-- 5. MI MADRE -->
       <div class="seccion seccion-madre">
-        <div class="seccion-titulo"><span class="num">♥</span> Mi madre</div>
+        <div class="seccion-titulo"><span class="num">&#9829;</span> Mi madre</div>
         <div class="campo-grupo">
-          <label for="campo-madre-disfruto">¿Qué disfrutó más hoy?</label>
-          <input type="text" id="campo-madre-disfruto" data-campo="madreDisfruto"
-            placeholder="Las palomas de la Piazza Navona, que no le daban ningún miedo…" />
+          <label for="campo-madre-disfruto">&iquest;Qu&eacute; disfut&oacute; m&aacute;s hoy?</label>
+          <input type="text" id="campo-madre-disfruto" data-campo="madreDisfruto" placeholder="Las palomas de la Piazza Navona&hellip;" />
         </div>
         <div class="campo-grupo">
-          <label for="campo-madre-sonrisa">¿Qué comentario suyo me hizo sonreír?</label>
-          <input type="text" id="campo-madre-sonrisa" data-campo="madreSonrisa"
-            placeholder="«Este helado vale lo que cuesta toda la entrada al museo»…" />
+          <label for="campo-madre-sonrisa">&iquest;Qu&eacute; comentario suyo me hizo sonre&iacute;r?</label>
+          <input type="text" id="campo-madre-sonrisa" data-campo="madreSonrisa" placeholder="&laquo;Este helado vale lo que cuesta toda la entrada al museo&raquo;&hellip;" />
         </div>
         <div class="campo-grupo">
-          <label for="campo-madre-recuerdo">¿Qué recuerdo quiero conservar de este día con ella?</label>
-          <textarea id="campo-madre-recuerdo" data-campo="madreRecuerdo"
-            placeholder="Cómo se detuvo ante la Pietà y no dijo nada durante un minuto entero…"></textarea>
+          <label for="campo-madre-recuerdo">&iquest;Qu&eacute; recuerdo quiero conservar de este d&iacute;a con ella?</label>
+          <textarea id="campo-madre-recuerdo" data-campo="madreRecuerdo" placeholder="C&oacute;mo se detuvo ante la Piet&agrave; y no dijo nada durante un minuto entero&hellip;"></textarea>
         </div>
       </div>
 
-
-      <!-- ── 6. UNA FOTOGRAFÍA MENTAL ──────────────────────── -->
+      <!-- 6. FOTOGRAFÍA MENTAL -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">6</span> Una fotografía mental</div>
+        <div class="seccion-titulo"><span class="num">6</span> Una fotograf&iacute;a mental</div>
         <div class="campo-grupo">
-          <label for="campo-fotografia">Si perdiera todas las fotos, ¿qué imagen guardaría de hoy?</label>
-          <textarea id="campo-fotografia" data-campo="fotografia" class="grande"
-            placeholder="Una anciana regando flores en un balcón verde sobre el Arno, con el puente al fondo y la ropa tendida al sol…"></textarea>
+          <label for="campo-fotografia">Si perdiera todas las fotos, &iquest;qu&eacute; imagen guardar&iacute;a de hoy?</label>
+          <textarea id="campo-fotografia" data-campo="fotografia" class="grande" placeholder="Una anciana regando flores en un balc&oacute;n verde sobre el Arno&hellip;"></textarea>
         </div>
       </div>
 
-
-      <!-- ── 7. ALGO QUE HE APRENDIDO ──────────────────────── -->
+      <!-- 7. ALGO QUE HE APRENDIDO -->
       <div class="seccion">
         <div class="seccion-titulo"><span class="num">7</span> Algo que he aprendido</div>
         <div class="campo-grupo">
-          <label for="campo-aprendido">Un dato histórico, costumbre local o reflexión</label>
-          <textarea id="campo-aprendido" data-campo="aprendido" class="grande"
-            placeholder="Los romanos del siglo I caminaban por el centro de las calzadas; las aceras eran para los carros…"></textarea>
+          <label for="campo-aprendido">Un dato hist&oacute;rico, costumbre local o reflexi&oacute;n</label>
+          <textarea id="campo-aprendido" data-campo="aprendido" class="grande" placeholder="Los romanos del siglo I caminaban por el centro de las calzadas&hellip;"></textarea>
         </div>
       </div>
 
-
-      <!-- ── 8. GRATITUD ───────────────────────────────────── -->
+      <!-- 8. GRATITUD -->
       <div class="seccion">
         <div class="seccion-titulo"><span class="num">8</span> Gratitud</div>
-        <div class="gratitud-item">
-          <span class="gratitud-num">1.</span>
-          <input type="text" id="campo-gratitud-1" data-campo="gratitud1"
-            placeholder="El sonido de las campanas al ponerse el sol…" />
-        </div>
-        <div class="gratitud-item">
-          <span class="gratitud-num">2.</span>
-          <input type="text" id="campo-gratitud-2" data-campo="gratitud2"
-            placeholder="El camarero que nos recomendó la trattoria sin turistas…" />
-        </div>
-        <div class="gratitud-item">
-          <span class="gratitud-num">3.</span>
-          <input type="text" id="campo-gratitud-3" data-campo="gratitud3"
-            placeholder="Los pies que aún responden después de diecisiete kilómetros…" />
-        </div>
+        <div class="gratitud-item"><span class="gratitud-num">1.</span><input type="text" id="campo-gratitud-1" data-campo="gratitud1" placeholder="El sonido de las campanas al ponerse el sol&hellip;" /></div>
+        <div class="gratitud-item"><span class="gratitud-num">2.</span><input type="text" id="campo-gratitud-2" data-campo="gratitud2" placeholder="El camarero que nos recomend&oacute; la trattoria sin turistas&hellip;" /></div>
+        <div class="gratitud-item"><span class="gratitud-num">3.</span><input type="text" id="campo-gratitud-3" data-campo="gratitud3" placeholder="Los pies que a&uacute;n responden despu&eacute;s de diecisiete kil&oacute;metros&hellip;" /></div>
       </div>
 
-
-      <!-- ── 9. GASTOS DEL DÍA ──────────────────────────────── -->
+      <!-- 9. GASTOS -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">9</span> Gastos del día</div>
+        <div class="seccion-titulo"><span class="num">9</span> Gastos del d&iacute;a</div>
         <div class="grid-2">
-          <div class="campo-grupo">
-            <label for="campo-transporte">Transporte (€)</label>
-            <input type="number" id="campo-transporte" data-campo="gastoTransporte"
-              placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" />
-          </div>
-          <div class="campo-grupo">
-            <label for="campo-entradas">Entradas (€)</label>
-            <input type="number" id="campo-entradas" data-campo="gastoEntradas"
-              placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" />
-          </div>
-          <div class="campo-grupo">
-            <label for="campo-comidas">Comidas (€)</label>
-            <input type="number" id="campo-comidas" data-campo="gastoComidas"
-              placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" />
-          </div>
-          <div class="campo-grupo">
-            <label for="campo-compras">Compras (€)</label>
-            <input type="number" id="campo-compras" data-campo="gastoCompras"
-              placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" />
-          </div>
+          <div class="campo-grupo"><label for="campo-transporte">Transporte (&euro;)</label><input type="number" id="campo-transporte" data-campo="gastoTransporte" placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" /></div>
+          <div class="campo-grupo"><label for="campo-entradas">Entradas (&euro;)</label><input type="number" id="campo-entradas" data-campo="gastoEntradas" placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" /></div>
+          <div class="campo-grupo"><label for="campo-comidas">Comidas (&euro;)</label><input type="number" id="campo-comidas" data-campo="gastoComidas" placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" /></div>
+          <div class="campo-grupo"><label for="campo-compras">Compras (&euro;)</label><input type="number" id="campo-compras" data-campo="gastoCompras" placeholder="0.00" step="0.01" min="0" oninput="calcularTotal()" /></div>
         </div>
-
-        <div class="total-diario">
-          <span>Total diario</span>
-          <span id="total-diario-valor">0.00 €</span>
-        </div>
+        <div class="total-diario"><span>Total diario</span><span id="total-diario-valor">0.00 &euro;</span></div>
       </div>
 
-
-      <!-- ── 10. EL TESORO OCULTO ───────────────────────────── -->
+      <!-- 10. TESORO OCULTO -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">10</span> El tesoro oculto del día</div>
+        <div class="seccion-titulo"><span class="num">10</span> El tesoro oculto del d&iacute;a</div>
         <div class="campo-grupo">
-          <label for="campo-tesoro">Una sola cosa pequeña que podría haber pasado desapercibida</label>
-          <textarea id="campo-tesoro" data-campo="tesoro"
-            placeholder="El gato que dormía sobre el capitel caído en el Foro, ajeno a dos mil años de historia…"></textarea>
+          <label for="campo-tesoro">Una sola cosa peque&ntilde;a que podr&iacute;a haber pasado desapercibida</label>
+          <textarea id="campo-tesoro" data-campo="tesoro" placeholder="El gato que dorm&iacute;a sobre el capitel ca&iacute;do en el Foro&hellip;"></textarea>
         </div>
       </div>
 
-
-      <!-- ── 11. VALORACIÓN FINAL ──────────────────────────── -->
+      <!-- 11. VALORACIÓN FINAL -->
       <div class="seccion">
-        <div class="seccion-titulo"><span class="num">11</span> Valoración final</div>
-
-        <!-- Estrellas para 4 métricas -->
-        <div id="bloque-estrellas">
-          <!-- Generado por JS para mantener el código DRY -->
-        </div>
-
+        <div class="seccion-titulo"><span class="num">11</span> Valoraci&oacute;n final</div>
+        <div id="bloque-estrellas"></div>
         <div class="campo-grupo" style="margin-top:1rem;">
-          <label for="campo-frase-resumen">Frase de resumen del día</label>
-          <textarea id="campo-frase-resumen" data-campo="fraseResumen" class="grande"
-            placeholder="Un día que empezó con los pies en el barro del mercado y terminó con los ojos fijos en el techo de la Sixtina…"></textarea>
+          <label for="campo-frase-resumen">Frase de resumen del d&iacute;a</label>
+          <textarea id="campo-frase-resumen" data-campo="fraseResumen" class="grande" placeholder="Un d&iacute;a que empez&oacute; con los pies en el barro del mercado y termin&oacute; con los ojos fijos en el techo de la Sixtina&hellip;"></textarea>
         </div>
       </div>
 
     </form>
 
-    <!-- ── BOTONES DE ACCIÓN ─────────────────────────────── -->
     <div class="pie-acciones">
       <div class="pie-acciones-fila">
-        <button type="button" class="btn-accion btn-excel" onclick="exportarExcel()">
-          📊 Exportar historial a Excel
-        </button>
-        <button type="button" class="btn-accion btn-nuevo" onclick="pedirNuevoDia()">
-          ✦ Nuevo día
-        </button>
+        <button type="button" class="btn-accion btn-hist" onclick="abrirHistorial()">&#128203; Ver historial</button>
+        <button type="button" class="btn-accion btn-excel" onclick="exportarExcel()">&#128202; Exportar a Excel</button>
+      </div>
+      <div class="pie-acciones-fila">
+        <button type="button" class="btn-accion btn-nuevo" onclick="pedirNuevoDia()">&#10022; Nuevo d&iacute;a</button>
       </div>
       <div id="info-historial-texto" class="info-historial"></div>
-      <button type="button" class="btn-accion btn-peligro" onclick="confirmarBorrarDia()">
-        🗑 Borrar día actual
-      </button>
+      <button type="button" class="btn-accion btn-peligro" onclick="confirmarBorrarDia()">&#128465; Borrar d&iacute;a actual</button>
     </div>
-
   </main>
 
-  <!-- Modal de confirmación de borrado -->
-  <div id="modal-borrar" class="modal-overlay">
-    <div class="modal-caja">
-      <h3>¿Borrar este día?</h3>
-      <p>Se eliminarán todos los datos del día seleccionado. Esta acción no se puede deshacer.</p>
-      <div class="modal-botones">
-        <button class="modal-confirmar" onclick="borrarDiaConfirmado()">Borrar</button>
-        <button class="modal-cancelar" onclick="cerrarModal()">Cancelar</button>
+  <!-- PANEL HISTORIAL -->
+  <div id="panel-historial">
+    <div class="historial-cajon">
+      <div class="historial-cabecera">
+        <h2>&#128203; Historial de d&iacute;as</h2>
+        <button class="btn-cerrar-panel" onclick="cerrarHistorial()">&#10005;</button>
+      </div>
+      <div class="historial-buscador">
+        <input type="text" id="buscador-historial" placeholder="Buscar por ciudad, fecha&hellip;" oninput="renderizarHistorial()" />
+      </div>
+      <div class="historial-lista" id="historial-lista"></div>
+      <div class="historial-pie">
+        <span id="historial-estadistica">&mdash;</span>
       </div>
     </div>
   </div>
 
+  <!-- Modal borrar día actual -->
+  <div id="modal-borrar" class="modal-overlay">
+    <div class="modal-caja">
+      <h3>&iquest;Borrar este d&iacute;a?</h3>
+      <p>Se eliminar&aacute;n todos los datos del d&iacute;a seleccionado. Esta acci&oacute;n no se puede deshacer.</p>
+      <div class="modal-botones">
+        <button class="modal-confirmar" onclick="borrarDiaConfirmado()">Borrar</button>
+        <button class="modal-cancelar" onclick="cerrarModal('modal-borrar')">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║                  LÓGICA JAVASCRIPT                  ║
-       ╚══════════════════════════════════════════════════════╝ -->
+  <!-- Modal borrar desde historial -->
+  <div id="modal-borrar-historial" class="modal-overlay">
+    <div class="modal-caja">
+      <h3>&iquest;Borrar este d&iacute;a?</h3>
+      <p id="modal-borrar-historial-texto">Esta acci&oacute;n no se puede deshacer.</p>
+      <div class="modal-botones">
+        <button class="modal-confirmar" onclick="borrarDesdeHistorialConfirmado()">Borrar</button>
+        <button class="modal-cancelar" onclick="cerrarModal('modal-borrar-historial')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // ═══════════════════════════════════════════════════════════
-    // CONSTANTES Y ESTADO GLOBAL
-    // ═══════════════════════════════════════════════════════════
+    // ═══ CONFIGURACIÓN ═════════════════════════════════════════
+    const STORAGE_KEY = 'bitacora_viaje_v1';
 
-    const STORAGE_KEY = 'bitacora_viaje_v1'; // Cambia la versión si reestructuras el schema
+    // Opciones de tiempo: [emoji, texto_guardado_en_excel]
+    const OPCIONES_TIEMPO = [
+      ['☀️',  'Soleado'],
+      ['⛅',  'Parcialmente nublado'],
+      ['☁️',  'Nublado'],
+      ['🌧️', 'Lluvia'],
+      ['⛈️', 'Tormenta'],
+      ['🌫️', 'Niebla'],
+      ['❄️',  'Frío / nieve'],
+      ['🌬️', 'Viento'],
+    ];
 
-    // Métricas de valoración — añade o quita filas aquí
-    const METRICAS_VALORACION = ['Día', 'Energía', 'Estrés', 'Felicidad'];
+    const METRICAS = ['Día', 'Energía', 'Estrés', 'Felicidad'];
 
-    let diaActual = null;      // Clave del día en edición (YYYY-MM-DD)
-    let guardadoTimer = null;  // Timer del debounce de guardado
+    let diaActual = null;
+    let guardadoTimer = null;
+    let indicadorTimer = null;
+    let clavePendienteBorrar = null;
 
-    // ═══════════════════════════════════════════════════════════
-    // UTILIDADES DE STORAGE
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ STORAGE ═══════════════════════════════════════════════
     function cargarHistorial() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-      } catch {
-        return {};
-      }
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+      catch(e) { return {}; }
+    }
+    function guardarHistorial(h) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
     }
 
-    function guardarHistorial(historial) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(historial));
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // ESTRUCTURA VACÍA DE UN DÍA
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ DÍA VACÍO ═════════════════════════════════════════════
     function diaVacio(fecha) {
       return {
-        fecha,
-        ciudad: '', horaInicio: '', horaFinal: '', tiempo: '', km: '',
-        // Lugares dinámicos (array)
-        lugares: [],
-        // Sección 3-11
-        momento: '',
-        sentimiento: '', emocion: '', paz: '', tension: '',
-        madreDisfruto: '', madreSonrisa: '', madreRecuerdo: '',
-        fotografia: '',
-        aprendido: '',
-        gratitud1: '', gratitud2: '', gratitud3: '',
-        gastoTransporte: '', gastoEntradas: '', gastoComidas: '', gastoCompras: '',
-        tesoro: '',
-        // Valoraciones: objeto {Día: 0, Energía: 0, Estrés: 0, Felicidad: 0}
-        valoraciones: Object.fromEntries(METRICAS_VALORACION.map(m => [m, 0])),
-        fraseResumen: ''
+        fecha, ciudad:'', horaInicio:'', horaFinal:'', tiempo:'', km:'',
+        lugares:[],
+        momento:'', sentimiento:'', emocion:'', paz:'', tension:'',
+        madreDisfruto:'', madreSonrisa:'', madreRecuerdo:'',
+        fotografia:'', aprendido:'',
+        gratitud1:'', gratitud2:'', gratitud3:'',
+        gastoTransporte:'', gastoEntradas:'', gastoComidas:'', gastoCompras:'',
+        tesoro:'',
+        valoraciones: Object.fromEntries(METRICAS.map(m=>[m,0])),
+        fraseResumen:''
       };
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // INICIALIZACIÓN — GENERA BLOQUES DINÁMICOS Y CARGA EL PRIMER DÍA
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ INIT ═══════════════════════════════════════════════════
     function init() {
+      generarBotonesTiempo();
       generarEstrellas();
       conectarAutoguardado();
-      actualizarSelectorDias();
-
-      const historial = cargarHistorial();
-      const dias = Object.keys(historial).sort();
-
-      if (dias.length === 0) {
-        // Primer uso: crear el día de hoy
-        const hoy = fechaHoy();
-        historial[hoy] = diaVacio(hoy);
-        guardarHistorial(historial);
-        diaActual = hoy;
-      } else {
-        diaActual = dias[dias.length - 1]; // último día
-      }
-
-      actualizarSelectorDias();
-      renderizarDia(diaActual);
-      actualizarInfoHistorial();
-    }
-
-    function fechaHoy() {
-      const d = new Date();
-      return d.toISOString().slice(0, 10);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // ESTRELLAS — GENERACIÓN DINÁMICA
-    // ═══════════════════════════════════════════════════════════
-
-    function generarEstrellas() {
-      const contenedor = document.getElementById('bloque-estrellas');
-      contenedor.innerHTML = METRICAS_VALORACION.map(metrica => `
-        <div class="valoracion-fila">
-          <span class="valoracion-nombre">${metrica}</span>
-          <div class="estrellas" id="estrellas-${metrica}">
-            ${[1,2,3,4,5].map(n => `
-              <span class="estrella"
-                    data-metrica="${metrica}"
-                    data-valor="${n}"
-                    onclick="setEstrella('${metrica}', ${n})"
-                    onmouseover="previewEstrella('${metrica}', ${n})"
-                    onmouseleave="restaurarEstrella('${metrica}')">★</span>
-            `).join('')}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function setEstrella(metrica, valor) {
-      const historial = cargarHistorial();
-      if (!historial[diaActual]) return;
-      historial[diaActual].valoraciones[metrica] = valor;
-      guardarHistorial(historial);
-      pintarEstrellas(metrica, valor);
-      mostrarGuardado();
-    }
-
-    function pintarEstrellas(metrica, valor) {
-      document.querySelectorAll(`#estrellas-${metrica} .estrella`).forEach((s, i) => {
-        s.classList.toggle('activa', i < valor);
-      });
-    }
-
-    function previewEstrella(metrica, valor) {
-      document.querySelectorAll(`#estrellas-${metrica} .estrella`).forEach((s, i) => {
-        s.style.color = i < valor ? 'var(--color-estrella)' : '';
-      });
-    }
-
-    function restaurarEstrella(metrica) {
-      const historial = cargarHistorial();
-      const v = historial[diaActual]?.valoraciones?.[metrica] || 0;
-      pintarEstrellas(metrica, v);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // RENDERIZAR / CARGAR UN DÍA EN EL FORMULARIO
-    // ═══════════════════════════════════════════════════════════
-
-    function renderizarDia(clave) {
-      const historial = cargarHistorial();
-      const dia = historial[clave] || diaVacio(clave);
-      diaActual = clave;
-
-      // Campos simples con data-campo
-      document.querySelectorAll('[data-campo]').forEach(el => {
-        const campo = el.dataset.campo;
-        if (campo === 'tiempo') return; // se maneja aparte
-        if (campo in dia) {
-          el.value = dia[campo] ?? '';
-        }
-      });
-
-      // Tiempo (radio)
-      document.querySelectorAll('.tiempo-opcion').forEach(r => {
-        r.checked = r.value === dia.tiempo;
-      });
-
-      // Lugares dinámicos
-      renderizarLugares(dia.lugares || []);
-
-      // Estrellas
-      METRICAS_VALORACION.forEach(m => {
-        pintarEstrellas(m, dia.valoraciones?.[m] || 0);
-      });
-
-      // Total gastos
-      calcularTotal();
-
-      // Actualizar selector
-      const sel = document.getElementById('selector-dias');
-      sel.value = clave;
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // LUGARES DINÁMICOS
-    // ═══════════════════════════════════════════════════════════
-
-    function renderizarLugares(lugares) {
-      const lista = document.getElementById('lista-lugares');
-      lista.innerHTML = '';
-      lugares.forEach((lugar, i) => crearTarjetaLugar(i, lugar));
-    }
-
-    function crearTarjetaLugar(i, datos = {}) {
-      const lista = document.getElementById('lista-lugares');
-      const div = document.createElement('div');
-      div.className = 'lugar-item';
-      div.dataset.indice = i;
-
-      div.innerHTML = `
-        <div class="lugar-cabecera">
-          <span class="lugar-num">Lugar ${i + 1}</span>
-          <input type="text"
-                 placeholder="Coliseo, Uffizi, Piazza della Signoria…"
-                 value="${escapar(datos.nombre || '')}"
-                 data-lugar="${i}" data-sub="nombre"
-                 oninput="guardarLugar(${i}, 'nombre', this.value)" />
-          <button type="button" class="btn-eliminar-lugar"
-                  onclick="eliminarLugar(${i})" title="Eliminar lugar">✕</button>
-        </div>
-        <div class="campo-grupo" style="padding-left:0.5rem">
-          <label>¿Qué fue lo que más me llamó la atención?</label>
-          <textarea placeholder="La proporción perfecta de la cúpula de Brunelleschi vista desde abajo…"
-                    data-lugar="${i}" data-sub="atencion"
-                    oninput="guardarLugar(${i}, 'atencion', this.value)">${escapar(datos.atencion || '')}</textarea>
-        </div>
-        <div class="campo-grupo" style="padding-left:0.5rem">
-          <label>¿Qué detalle no esperaba encontrar?</label>
-          <textarea placeholder="Una inscripción en latín en el suelo que nadie miraba…"
-                    data-lugar="${i}" data-sub="sorpresa"
-                    oninput="guardarLugar(${i}, 'sorpresa', this.value)">${escapar(datos.sorpresa || '')}</textarea>
-        </div>
-      `;
-      lista.appendChild(div);
-    }
-
-    function añadirLugar() {
-      const historial = cargarHistorial();
-      if (!historial[diaActual]) return;
-      const lugares = historial[diaActual].lugares || [];
-      lugares.push({ nombre: '', atencion: '', sorpresa: '' });
-      historial[diaActual].lugares = lugares;
-      guardarHistorial(historial);
-      crearTarjetaLugar(lugares.length - 1, lugares[lugares.length - 1]);
-    }
-
-    function guardarLugar(indice, subcampo, valor) {
-      const historial = cargarHistorial();
-      if (!historial[diaActual]?.lugares?.[indice]) return;
-      historial[diaActual].lugares[indice][subcampo] = valor;
-      guardarHistorial(historial);
-      mostrarGuardado();
-    }
-
-    function eliminarLugar(indice) {
-      const historial = cargarHistorial();
-      if (!historial[diaActual]) return;
-      historial[diaActual].lugares.splice(indice, 1);
-      guardarHistorial(historial);
-      renderizarLugares(historial[diaActual].lugares);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // AUTOGUARDADO CONTINUO — DEBOUNCE 400ms
-    // ═══════════════════════════════════════════════════════════
-
-    function conectarAutoguardado() {
-      const form = document.getElementById('formulario-bitacora');
-
-      // Inputs y textareas simples (data-campo, excepto tiempo)
-      form.addEventListener('input', e => {
-        const el = e.target;
-        const campo = el.dataset.campo;
-        if (!campo || campo === 'tiempo') return;
-        // Campos de lugar se guardan con su propio handler
-        if (el.dataset.lugar !== undefined) return;
-
-        dispararGuardado(campo, el.value);
-      });
-
-      // Radios de tiempo
-      form.addEventListener('change', e => {
-        const el = e.target;
-        if (el.dataset.campo === 'tiempo') {
-          dispararGuardado('tiempo', el.value);
-        }
-      });
-    }
-
-    function dispararGuardado(campo, valor) {
-      clearTimeout(guardadoTimer);
-      guardadoTimer = setTimeout(() => {
-        const historial = cargarHistorial();
-        if (!historial[diaActual]) return;
-        historial[diaActual][campo] = valor;
-        guardarHistorial(historial);
-        mostrarGuardado();
-      }, 400);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // INDICADOR VISUAL DE GUARDADO
-    // ═══════════════════════════════════════════════════════════
-
-    let indicadorTimer = null;
-
-    function mostrarGuardado() {
-      const ind = document.getElementById('indicador-guardado');
-      ind.classList.add('visible');
-      clearTimeout(indicadorTimer);
-      indicadorTimer = setTimeout(() => ind.classList.remove('visible'), 1800);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // CÁLCULO AUTOMÁTICO DE GASTOS
-    // ═══════════════════════════════════════════════════════════
-
-    function calcularTotal() {
-      const ids = ['campo-transporte', 'campo-entradas', 'campo-comidas', 'campo-compras'];
-      const total = ids.reduce((acc, id) => {
-        const v = parseFloat(document.getElementById(id)?.value) || 0;
-        return acc + v;
-      }, 0);
-      document.getElementById('total-diario-valor').textContent = total.toFixed(2) + ' €';
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // SELECTOR DE DÍAS
-    // ═══════════════════════════════════════════════════════════
-
-    function actualizarSelectorDias() {
-      const historial = cargarHistorial();
-      const sel = document.getElementById('selector-dias');
-      const dias = Object.keys(historial).sort();
-
-      sel.innerHTML = dias.map(d => {
-        const label = formatearFecha(d);
-        const ciudad = historial[d]?.ciudad ? ` · ${historial[d].ciudad}` : '';
-        return `<option value="${d}">${label}${ciudad}</option>`;
-      }).join('');
-
-      if (diaActual) sel.value = diaActual;
-    }
-
-    function cargarDia(clave) {
-      diaActual = clave;
-      renderizarDia(clave);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // NUEVO DÍA
-    // ═══════════════════════════════════════════════════════════
-
-    function pedirNuevoDia() {
-      const fecha = prompt('Fecha del nuevo día (YYYY-MM-DD):', fechaHoy());
-      if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
-
-      const historial = cargarHistorial();
-      if (!historial[fecha]) {
-        historial[fecha] = diaVacio(fecha);
-        guardarHistorial(historial);
-      }
-      diaActual = fecha;
-      actualizarSelectorDias();
-      renderizarDia(fecha);
-      actualizarInfoHistorial();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // BORRAR DÍA
-    // ═══════════════════════════════════════════════════════════
-
-    function confirmarBorrarDia() {
-      document.getElementById('modal-borrar').classList.add('activo');
-    }
-
-    function cerrarModal() {
-      document.getElementById('modal-borrar').classList.remove('activo');
-    }
-
-    function borrarDiaConfirmado() {
-      cerrarModal();
-      const historial = cargarHistorial();
-      delete historial[diaActual];
-      guardarHistorial(historial);
-
-      const dias = Object.keys(historial).sort();
+      const h = cargarHistorial();
+      const dias = Object.keys(h).sort();
       if (dias.length === 0) {
         const hoy = fechaHoy();
-        historial[hoy] = diaVacio(hoy);
-        guardarHistorial(historial);
+        h[hoy] = diaVacio(hoy);
+        guardarHistorial(h);
         diaActual = hoy;
       } else {
         diaActual = dias[dias.length - 1];
@@ -1290,137 +500,426 @@
       actualizarInfoHistorial();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // INFO DEL HISTORIAL
-    // ═══════════════════════════════════════════════════════════
+    function fechaHoy() { return new Date().toISOString().slice(0,10); }
 
-    function actualizarInfoHistorial() {
-      const historial = cargarHistorial();
-      const n = Object.keys(historial).length;
-      const el = document.getElementById('info-historial-texto');
-      el.textContent = n === 1
-        ? 'Hay 1 día guardado en este dispositivo.'
-        : `Hay ${n} días guardados en este dispositivo.`;
-      actualizarSelectorDias();
+    // ═══ TIEMPO — botones ══════════════════════════════════════
+    function generarBotonesTiempo() {
+      const c = document.getElementById('tiempo-opciones');
+      c.innerHTML = OPCIONES_TIEMPO.map(([emoji, texto]) =>
+        '<button type="button" class="btn-tiempo" data-valor="' + texto + '" onclick="seleccionarTiempo(\'' + texto + '\')">' +
+        '<span>' + emoji + '</span><span>' + texto + '</span></button>'
+      ).join('');
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // EXPORTAR A EXCEL — SheetJS
-    // ═══════════════════════════════════════════════════════════
+    function seleccionarTiempo(valor) {
+      const h = cargarHistorial();
+      if (!h[diaActual]) return;
+      const yaEra = h[diaActual].tiempo === valor;
+      const nuevo = yaEra ? '' : valor;
+      h[diaActual].tiempo = nuevo;
+      guardarHistorial(h);
+      pintarTiempo(nuevo);
+      mostrarGuardado();
+    }
 
-    function exportarExcel() {
-      const historial = cargarHistorial();
-      const dias = Object.keys(historial).sort();
+    function pintarTiempo(valor) {
+      document.querySelectorAll('.btn-tiempo').forEach(b => {
+        b.classList.toggle('seleccionado', b.dataset.valor === valor && valor !== '');
+      });
+    }
 
+    // ═══ ESTRELLAS ══════════════════════════════════════════════
+    function generarEstrellas() {
+      const c = document.getElementById('bloque-estrellas');
+      c.innerHTML = METRICAS.map(m =>
+        '<div class="valoracion-fila">' +
+        '<span class="valoracion-nombre">' + m + '</span>' +
+        '<div class="estrellas" id="estrellas-' + m + '">' +
+        [1,2,3,4,5].map(n =>
+          '<span class="estrella" data-metrica="' + m + '" data-valor="' + n + '"' +
+          ' onclick="setEstrella(\'' + m + '\',' + n + ')"' +
+          ' onmouseover="previewEstrella(\'' + m + '\',' + n + ')"' +
+          ' onmouseleave="restaurarEstrella(\'' + m + '\')">&#9733;</span>'
+        ).join('') +
+        '</div></div>'
+      ).join('');
+    }
+
+    function setEstrella(m, v) {
+      const h = cargarHistorial();
+      if (!h[diaActual]) return;
+      h[diaActual].valoraciones[m] = v;
+      guardarHistorial(h);
+      pintarEstrellas(m, v);
+      mostrarGuardado();
+    }
+
+    function pintarEstrellas(m, v) {
+      document.querySelectorAll('#estrellas-' + m + ' .estrella').forEach((s, i) => {
+        s.classList.toggle('activa', i < v);
+      });
+    }
+
+    function previewEstrella(m, v) {
+      document.querySelectorAll('#estrellas-' + m + ' .estrella').forEach((s, i) => {
+        s.style.color = i < v ? 'var(--color-estrella)' : '';
+      });
+    }
+
+    function restaurarEstrella(m) {
+      const h = cargarHistorial();
+      const v = h[diaActual]?.valoraciones?.[m] || 0;
+      document.querySelectorAll('#estrellas-' + m + ' .estrella').forEach((s, i) => {
+        s.style.color = '';
+        s.classList.toggle('activa', i < v);
+      });
+    }
+
+    // ═══ RENDERIZAR DÍA ═════════════════════════════════════════
+    function renderizarDia(clave) {
+      const h = cargarHistorial();
+      const dia = h[clave] || diaVacio(clave);
+      diaActual = clave;
+      document.querySelectorAll('[data-campo]').forEach(el => {
+        const campo = el.dataset.campo;
+        if (campo in dia) el.value = dia[campo] || '';
+      });
+      pintarTiempo(dia.tiempo || '');
+      renderizarLugares(dia.lugares || []);
+      METRICAS.forEach(m => pintarEstrellas(m, dia.valoraciones?.[m] || 0));
+      calcularTotal();
+      document.getElementById('selector-dias').value = clave;
+    }
+
+    // ═══ LUGARES ════════════════════════════════════════════════
+    function renderizarLugares(lugares) {
+      const lista = document.getElementById('lista-lugares');
+      lista.innerHTML = '';
+      lugares.forEach((l, i) => crearTarjetaLugar(i, l));
+    }
+
+    function crearTarjetaLugar(i, d) {
+      d = d || {};
+      const lista = document.getElementById('lista-lugares');
+      const div = document.createElement('div');
+      div.className = 'lugar-item';
+      div.innerHTML =
+        '<div class="lugar-cabecera">' +
+        '<span class="lugar-num">Lugar ' + (i+1) + '</span>' +
+        '<input type="text" placeholder="Coliseo, Uffizi, Piazza della Signoria&hellip;" value="' + esc(d.nombre||'') + '" oninput="guardarLugar(' + i + ',\'nombre\',this.value)" />' +
+        '<button type="button" class="btn-eliminar-lugar" onclick="eliminarLugar(' + i + ')">&#10005;</button>' +
+        '</div>' +
+        '<div class="campo-grupo" style="padding-left:0.5rem"><label>&iquest;Qu&eacute; fue lo que m&aacute;s me llam&oacute; la atenci&oacute;n?</label>' +
+        '<textarea placeholder="La proporci&oacute;n perfecta de la c&uacute;pula de Brunelleschi vista desde abajo&hellip;" oninput="guardarLugar(' + i + ',\'atencion\',this.value)">' + esc(d.atencion||'') + '</textarea></div>' +
+        '<div class="campo-grupo" style="padding-left:0.5rem"><label>&iquest;Qu&eacute; detalle no esperaba encontrar?</label>' +
+        '<textarea placeholder="Una inscripci&oacute;n en lat&iacute;n en el suelo que nadie miraba&hellip;" oninput="guardarLugar(' + i + ',\'sorpresa\',this.value)">' + esc(d.sorpresa||'') + '</textarea></div>';
+      lista.appendChild(div);
+    }
+
+    function anyadirLugar() {
+      const h = cargarHistorial();
+      if (!h[diaActual]) return;
+      h[diaActual].lugares = h[diaActual].lugares || [];
+      h[diaActual].lugares.push({nombre:'', atencion:'', sorpresa:''});
+      guardarHistorial(h);
+      crearTarjetaLugar(h[diaActual].lugares.length - 1, h[diaActual].lugares[h[diaActual].lugares.length-1]);
+    }
+
+    function guardarLugar(i, sub, val) {
+      const h = cargarHistorial();
+      if (h[diaActual]?.lugares?.[i]) { h[diaActual].lugares[i][sub] = val; guardarHistorial(h); mostrarGuardado(); }
+    }
+
+    function eliminarLugar(i) {
+      const h = cargarHistorial();
+      if (!h[diaActual]) return;
+      h[diaActual].lugares.splice(i, 1);
+      guardarHistorial(h);
+      renderizarLugares(h[diaActual].lugares);
+    }
+
+    // ═══ AUTOGUARDADO ═══════════════════════════════════════════
+    function conectarAutoguardado() {
+      document.getElementById('formulario-bitacora').addEventListener('input', function(e) {
+        const el = e.target;
+        const campo = el.dataset.campo;
+        if (!campo || el.closest('.lugar-item')) return;
+        clearTimeout(guardadoTimer);
+        guardadoTimer = setTimeout(function() {
+          const h = cargarHistorial();
+          if (!h[diaActual]) return;
+          h[diaActual][campo] = el.value;
+          guardarHistorial(h);
+          mostrarGuardado();
+        }, 400);
+      });
+    }
+
+    function mostrarGuardado() {
+      const ind = document.getElementById('indicador-guardado');
+      ind.classList.add('visible');
+      clearTimeout(indicadorTimer);
+      indicadorTimer = setTimeout(function() { ind.classList.remove('visible'); }, 1800);
+    }
+
+    // ═══ GASTOS ══════════════════════════════════════════════════
+    function calcularTotal() {
+      const total = ['campo-transporte','campo-entradas','campo-comidas','campo-compras']
+        .reduce(function(acc, id) { return acc + (parseFloat(document.getElementById(id)?.value)||0); }, 0);
+      document.getElementById('total-diario-valor').textContent = total.toFixed(2) + ' €';
+    }
+
+    // ═══ SELECTOR DE DÍAS ═══════════════════════════════════════
+    function actualizarSelectorDias() {
+      const h = cargarHistorial();
+      const sel = document.getElementById('selector-dias');
+      const dias = Object.keys(h).sort();
+      sel.innerHTML = dias.map(function(d) {
+        const ciudad = h[d]?.ciudad ? ' · ' + h[d].ciudad : '';
+        return '<option value="' + d + '">' + formatearFecha(d) + ciudad + '</option>';
+      }).join('');
+      if (diaActual) sel.value = diaActual;
+    }
+
+    function cargarDia(clave) { diaActual = clave; renderizarDia(clave); }
+
+    // ═══ NUEVO DÍA ═══════════════════════════════════════════════
+    function pedirNuevoDia() {
+      const fecha = prompt('Fecha del nuevo día (YYYY-MM-DD):', fechaHoy());
+      if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
+      const h = cargarHistorial();
+      if (!h[fecha]) { h[fecha] = diaVacio(fecha); guardarHistorial(h); }
+      diaActual = fecha;
+      actualizarSelectorDias();
+      renderizarDia(fecha);
+      actualizarInfoHistorial();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    // ═══ BORRAR DÍA ═════════════════════════════════════════════
+    function confirmarBorrarDia() {
+      document.getElementById('modal-borrar').classList.add('activo');
+    }
+
+    function borrarDiaConfirmado() {
+      cerrarModal('modal-borrar');
+      borrarClave(diaActual);
+    }
+
+    function borrarClave(clave) {
+      const h = cargarHistorial();
+      delete h[clave];
+      guardarHistorial(h);
+      const dias = Object.keys(h).sort();
       if (dias.length === 0) {
-        alert('No hay días guardados para exportar.');
+        const hoy = fechaHoy();
+        h[hoy] = diaVacio(hoy);
+        guardarHistorial(h);
+        diaActual = hoy;
+      } else {
+        diaActual = dias[dias.length-1];
+      }
+      actualizarSelectorDias();
+      renderizarDia(diaActual);
+      actualizarInfoHistorial();
+    }
+
+    // ═══ PANEL HISTORIAL ═════════════════════════════════════════
+    function abrirHistorial() {
+      document.getElementById('panel-historial').classList.add('activo');
+      document.getElementById('buscador-historial').value = '';
+      renderizarHistorial();
+    }
+
+    function cerrarHistorial() {
+      document.getElementById('panel-historial').classList.remove('activo');
+    }
+
+    document.getElementById('panel-historial').addEventListener('click', function(e) {
+      if (e.target === this) cerrarHistorial();
+    });
+
+    function renderizarHistorial() {
+      const h = cargarHistorial();
+      const filtro = document.getElementById('buscador-historial').value.toLowerCase().trim();
+      const todos = Object.keys(h).sort().reverse();
+      const lista = document.getElementById('historial-lista');
+
+      const filtrados = filtro ? todos.filter(function(d) {
+        const r = h[d];
+        return (r.ciudad||'').toLowerCase().includes(filtro) ||
+               d.includes(filtro) ||
+               (r.fraseResumen||'').toLowerCase().includes(filtro) ||
+               (r.momento||'').toLowerCase().includes(filtro);
+      }) : todos;
+
+      if (filtrados.length === 0) {
+        lista.innerHTML = '<div class="historial-vacio">' + (filtro ? 'Sin resultados para «' + esc(filtro) + '»' : 'Todavía no hay días guardados.') + '</div>';
+        actualizarEstadistica(h, filtrados);
         return;
       }
 
-      // Construir cabeceras
+      lista.innerHTML = filtrados.map(function(clave) {
+        const r = h[clave];
+        const esActual = clave === diaActual;
+        const vDia = r.valoraciones?.['Día'] || 0;
+        const estrellas = '★'.repeat(vDia) + '☆'.repeat(5-vDia);
+        const total = ['gastoTransporte','gastoEntradas','gastoComidas','gastoCompras']
+          .reduce(function(a,k) { return a+(parseFloat(r[k])||0); }, 0);
+        const resumen = r.fraseResumen || r.momento || r.fotografia || '';
+        const corto = resumen.length > 130 ? resumen.slice(0,130)+'…' : resumen;
+        const tiempo = r.tiempo ? ' · ' + r.tiempo : '';
+
+        return '<div class="historial-card' + (esActual ? ' activo-card' : '') + '" id="hcard-' + clave + '">' +
+          '<div class="historial-card-cabecera" onclick="toggleCard(\'' + clave + '\')">' +
+          '<span class="historial-card-fecha">' + formatearFecha(clave) + '</span>' +
+          '<span class="historial-card-ciudad">' + esc(r.ciudad || '—') + esc(tiempo) + '</span>' +
+          '<div class="historial-card-meta">' +
+          '<span style="color:var(--color-estrella);letter-spacing:-1px">' + estrellas + '</span>' +
+          (total > 0 ? '<span>' + total.toFixed(0) + '€</span>' : '') +
+          (r.km ? '<span>' + r.km + 'km</span>' : '') +
+          '</div></div>' +
+          (corto ? '<div class="historial-card-resumen">' + esc(corto) + '</div>' : '') +
+          '<div class="historial-card-acciones">' +
+          '<button class="btn-hist-card btn-hist-editar" onclick="editarDesdeHistorial(\'' + clave + '\')">&#9999;&#65039; Editar</button>' +
+          '<button class="btn-hist-card btn-hist-borrar" onclick="pedirBorrarDesdeHistorial(\'' + clave + '\')">&#128465; Borrar</button>' +
+          '</div></div>';
+      }).join('');
+
+      actualizarEstadistica(h, filtrados);
+    }
+
+    function toggleCard(clave) {
+      document.getElementById('hcard-' + clave)?.classList.toggle('expandida');
+    }
+
+    function editarDesdeHistorial(clave) {
+      cerrarHistorial();
+      diaActual = clave;
+      actualizarSelectorDias();
+      renderizarDia(clave);
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function pedirBorrarDesdeHistorial(clave) {
+      clavePendienteBorrar = clave;
+      const h = cargarHistorial();
+      const ciudad = h[clave]?.ciudad ? ' (' + h[clave].ciudad + ')' : '';
+      document.getElementById('modal-borrar-historial-texto').textContent =
+        '¿Borrar el día ' + formatearFecha(clave) + ciudad + '? Esta acción no se puede deshacer.';
+      document.getElementById('modal-borrar-historial').classList.add('activo');
+    }
+
+    function borrarDesdeHistorialConfirmado() {
+      cerrarModal('modal-borrar-historial');
+      if (!clavePendienteBorrar) return;
+      const clave = clavePendienteBorrar;
+      clavePendienteBorrar = null;
+      if (clave === diaActual) {
+        borrarClave(clave);
+      } else {
+        const h = cargarHistorial();
+        delete h[clave];
+        guardarHistorial(h);
+        actualizarSelectorDias();
+        actualizarInfoHistorial();
+      }
+      renderizarHistorial();
+    }
+
+    function actualizarEstadistica(h, visibles) {
+      const total = Object.keys(h).length;
+      const gastos = Object.values(h).reduce(function(acc, d) {
+        return acc + ['gastoTransporte','gastoEntradas','gastoComidas','gastoCompras']
+          .reduce(function(s,k) { return s+(parseFloat(d[k])||0); }, 0);
+      }, 0);
+      document.getElementById('historial-estadistica').innerHTML =
+        '<strong>' + visibles.length + '</strong> de <strong>' + total + '</strong> días · Gastos totales: <strong>' + gastos.toFixed(2) + ' €</strong>';
+    }
+
+    // ═══ INFO PIE ════════════════════════════════════════════════
+    function actualizarInfoHistorial() {
+      const n = Object.keys(cargarHistorial()).length;
+      document.getElementById('info-historial-texto').textContent =
+        n === 1 ? '1 día guardado en este dispositivo.' : n + ' días guardados en este dispositivo.';
+      actualizarSelectorDias();
+    }
+
+    // ═══ MODALES ═════════════════════════════════════════════════
+    function cerrarModal(id) {
+      document.getElementById(id)?.classList.remove('activo');
+    }
+
+    // ═══ EXPORTAR EXCEL ══════════════════════════════════════════
+    function exportarExcel() {
+      const h = cargarHistorial();
+      const dias = Object.keys(h).sort();
+      if (dias.length === 0) { alert('No hay días guardados para exportar.'); return; }
+
       const cabeceras = [
-        'Fecha', 'Ciudad', 'Hora inicio', 'Hora final', 'Tiempo', 'Km caminados',
-        // Hasta 5 lugares expandidos
-        ...Array.from({length: 5}, (_, i) => [
-          `Lugar ${i+1} nombre`,
-          `Lugar ${i+1} atención`,
-          `Lugar ${i+1} sorpresa`
-        ]).flat(),
+        'Fecha','Ciudad','Hora inicio','Hora final','Tiempo','Km caminados',
+        'Lugar 1','Lugar 1 - atención','Lugar 1 - sorpresa',
+        'Lugar 2','Lugar 2 - atención','Lugar 2 - sorpresa',
+        'Lugar 3','Lugar 3 - atención','Lugar 3 - sorpresa',
+        'Lugar 4','Lugar 4 - atención','Lugar 4 - sorpresa',
+        'Lugar 5','Lugar 5 - atención','Lugar 5 - sorpresa',
         'Momento del día',
-        'Cómo me sentí', 'Emoción predominante', 'Momento de paz', 'Momento de tensión',
-        'Madre - disfrutó', 'Madre - sonrisa', 'Madre - recuerdo',
-        'Fotografía mental',
-        'Algo aprendido',
-        'Gratitud 1', 'Gratitud 2', 'Gratitud 3',
-        'Gasto transporte (€)', 'Gasto entradas (€)', 'Gasto comidas (€)', 'Gasto compras (€)', 'Total gastos (€)',
+        'Cómo me sentí','Emoción predominante','Momento de paz','Momento de tensión',
+        'Madre - disfrutó','Madre - sonrisa','Madre - recuerdo',
+        'Fotografía mental','Algo aprendido',
+        'Gratitud 1','Gratitud 2','Gratitud 3',
+        'Gasto transporte (€)','Gasto entradas (€)','Gasto comidas (€)','Gasto compras (€)','Total gastos (€)',
         'Tesoro oculto',
-        ...METRICAS_VALORACION.map(m => `Valoración: ${m}`),
+        'Valoración: Día','Valoración: Energía','Valoración: Estrés','Valoración: Felicidad',
         'Frase de resumen'
       ];
 
-      const filas = dias.map(clave => {
-        const d = historial[clave];
-        const lugares = d.lugares || [];
-
-        // Expandir hasta 5 lugares en columnas planas
-        const columnasLugares = Array.from({length: 5}, (_, i) => [
-          lugares[i]?.nombre   || '',
-          lugares[i]?.atencion || '',
-          lugares[i]?.sorpresa || ''
-        ]).flat();
-
-        const transporte = parseFloat(d.gastoTransporte) || 0;
-        const entradas   = parseFloat(d.gastoEntradas)   || 0;
-        const comidas    = parseFloat(d.gastoComidas)    || 0;
-        const compras    = parseFloat(d.gastoCompras)    || 0;
-        const total      = transporte + entradas + comidas + compras;
-
+      const filas = dias.map(function(clave) {
+        const d = h[clave];
+        const lug = d.lugares || [];
+        const lugarFlat = [0,1,2,3,4].map(function(i) {
+          return [lug[i]?.nombre||'', lug[i]?.atencion||'', lug[i]?.sorpresa||''];
+        }).reduce(function(a,b){return a.concat(b);}, []);
+        const tr=parseFloat(d.gastoTransporte)||0, en=parseFloat(d.gastoEntradas)||0,
+              co=parseFloat(d.gastoComidas)||0,   cp=parseFloat(d.gastoCompras)||0;
         return [
-          d.fecha || clave,
-          d.ciudad || '',
-          d.horaInicio || '',
-          d.horaFinal || '',
-          d.tiempo || '',
-          d.km || '',
-          ...columnasLugares,
-          d.momento || '',
-          d.sentimiento || '', d.emocion || '', d.paz || '', d.tension || '',
-          d.madreDisfruto || '', d.madreSonrisa || '', d.madreRecuerdo || '',
-          d.fotografia || '',
-          d.aprendido || '',
-          d.gratitud1 || '', d.gratitud2 || '', d.gratitud3 || '',
-          transporte, entradas, comidas, compras, parseFloat(total.toFixed(2)),
-          d.tesoro || '',
-          ...METRICAS_VALORACION.map(m => d.valoraciones?.[m] || 0),
-          d.fraseResumen || ''
-        ];
+          d.fecha||clave, d.ciudad||'', d.horaInicio||'', d.horaFinal||'',
+          d.tiempo||'', d.km||''
+        ].concat(lugarFlat).concat([
+          d.momento||'', d.sentimiento||'', d.emocion||'', d.paz||'', d.tension||'',
+          d.madreDisfruto||'', d.madreSonrisa||'', d.madreRecuerdo||'',
+          d.fotografia||'', d.aprendido||'',
+          d.gratitud1||'', d.gratitud2||'', d.gratitud3||'',
+          tr, en, co, cp, parseFloat((tr+en+co+cp).toFixed(2)),
+          d.tesoro||'',
+          d.valoraciones?.['Día']||0, d.valoraciones?.['Energía']||0,
+          d.valoraciones?.['Estrés']||0, d.valoraciones?.['Felicidad']||0,
+          d.fraseResumen||''
+        ]);
       });
 
-      const datos = [cabeceras, ...filas];
-
-      // Crear libro
       const libro = XLSX.utils.book_new();
-      const hoja  = XLSX.utils.aoa_to_sheet(datos);
-
-      // Ancho de columnas automático (estimado)
-      const anchos = cabeceras.map((cab, colIdx) => {
-        const maxLen = Math.max(
-          cab.length,
-          ...filas.map(f => String(f[colIdx] || '').length)
-        );
-        return { wch: Math.min(Math.max(maxLen + 2, 12), 50) };
+      const hoja  = XLSX.utils.aoa_to_sheet([cabeceras].concat(filas));
+      hoja['!cols'] = cabeceras.map(function(cab, ci) {
+        var max = cab.length;
+        filas.forEach(function(f) { var l=String(f[ci]||'').length; if(l>max)max=l; });
+        return {wch: Math.min(max+2, 50)};
       });
-      hoja['!cols'] = anchos;
-
       XLSX.utils.book_append_sheet(libro, hoja, 'Bitácora');
-
-      // Descargar
-      const nombreArchivo = `bitacora_viaje_${fechaHoy()}.xlsx`;
-      XLSX.writeFile(libro, nombreArchivo);
+      XLSX.writeFile(libro, 'bitacora_viaje_' + fechaHoy() + '.xlsx');
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // HELPERS
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ HELPERS ═════════════════════════════════════════════════
     function formatearFecha(iso) {
       if (!iso) return '';
-      const [y, m, d] = iso.split('-');
-      return `${d}/${m}/${y}`;
+      var p = iso.split('-');
+      return p[2]+'/'+p[1]+'/'+p[0];
     }
 
-    // Escape básico para HTML dinámico (previene XSS en valores)
-    function escapar(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+    function esc(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // ARRANQUE
-    // ═══════════════════════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', init);
   </script>
 
