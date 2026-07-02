@@ -1,0 +1,523 @@
+<html lang="es"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viaje a Italia</title>
+  <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-from: #0f0c29; --bg-mid: #302b63; --bg-to: #24243e;
+      --card-bg: rgba(255,255,255,0.07); --card-border: rgba(255,255,255,0.13);
+      --card-hover: rgba(255,255,255,0.14); --accent: #e8c76b; --accent2: #f07f5a;
+      --text: #f0eef8; --text-muted: rgba(240,238,248,0.55);
+      --radius: 18px; --radius-sm: 10px; --shadow: 0 8px 40px rgba(0,0,0,0.45);
+      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-mid) 50%, var(--bg-to) 100%);
+      min-height: 100vh; color: var(--text); overflow-x: hidden;
+    }
+
+    header { text-align:center; padding:56px 24px 32px; }
+    header h1 {
+      font-family: 'Syne', sans-serif; font-weight:800; font-size: clamp(2rem,5vw,3.2rem);
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    header p { margin-top:8px; color:var(--text-muted); font-size:1.05rem; letter-spacing:0.02em; }
+
+    #video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 120px;
+    }
+
+    .video-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(12px);
+      cursor: grab;
+      transition: all var(--transition);
+      animation: cardIn 0.5s ease both;
+      user-select: none;
+      position: relative;
+    }
+
+    .video-card:hover { transform: translateY(-5px) scale(1.02); }
+    .video-card:hover .thumb-overlay { opacity: 1; }
+    .video-card:active { cursor: grabbing; }
+
+    .video-card.dragging {
+      opacity: 0.35;
+      transform: scale(0.92);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+      z-index: 50;
+    }
+
+    .video-card.drag-over {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(232,199,107,0.35);
+      transform: scale(1.03);
+    }
+
+    .thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .thumb-wrap img {
+      width: 100%; height: 100%; object-fit: cover; display:block;
+      transition: transform var(--transition);
+    }
+    .video-card:hover .thumb-wrap img { transform: scale(1.06); }
+
+    .thumb-overlay {
+      position: absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(15,12,41,0.35);
+      opacity: 0; transition: opacity var(--transition);
+    }
+    .play-btn {
+      width:56px; height:56px; border-radius:50%;
+      background: rgba(232,199,107,0.9);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.4rem; color:#1a1530; box-shadow:0 6px 20px rgba(0,0,0,0.5);
+    }
+
+    .video-name {
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.98rem;
+      padding: 14px 16px 16px; text-align:center;
+    }
+
+    @keyframes cardIn {
+      from { opacity:0; transform:translateY(25px) scale(0.9); }
+      to { opacity:1; transform:none; }
+    }
+
+    #btn-config {
+      position:fixed; bottom:28px; right:28px; z-index:100;
+      width:56px; height:56px; border-radius:50%;
+      background:rgba(232,199,107,0.2); border:2px solid rgba(232,199,107,0.5);
+      color:var(--accent); font-size:1.6rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 6px 25px rgba(0,0,0,0.4);
+    }
+
+    #modal-overlay, #player-overlay {
+      position:fixed; inset:0; z-index:200;
+      background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+      display:none; align-items:center; justify-content:center; padding:20px;
+    }
+
+    #modal {
+      background: rgba(18,15,40,0.98);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      width: 100%; max-width: 560px;
+      max-height: 92vh; overflow-y: auto;
+      padding: 32px; box-shadow: var(--shadow);
+    }
+
+    #player {
+      width: 100%; max-width: 960px;
+      position: relative;
+    }
+    #player video {
+      width: 100%; max-height: 82vh; border-radius: var(--radius);
+      display:block; background:#000; box-shadow: var(--shadow);
+    }
+    #player-title {
+      font-family:'Syne',sans-serif; font-weight:600; color:var(--text);
+      text-align:center; margin-top:14px; font-size:1.05rem;
+    }
+    #btn-close-player {
+      position:absolute; top:-46px; right:0;
+      background:none; border:none; font-size:1.8rem; color:#eee; cursor:pointer;
+    }
+
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .section-title { font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin:20px 0 12px; }
+
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    label { display:block; font-size:0.78rem; color:var(--text-muted); margin-bottom:5px; }
+    input[type="text"] {
+      width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+      border-radius:var(--radius-sm); padding:10px 12px; color:var(--text);
+    }
+
+    .btn { border:none; border-radius:var(--radius-sm); padding:10px 18px; cursor:pointer; transition:all var(--transition); }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1530; font-weight:600; }
+    .btn-edit { background:rgba(255,255,255,0.1); color:var(--text); }
+    .btn-danger { background:rgba(240,90,90,0.18); color:#ff9b9b; }
+
+    .admin-item {
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+      border-radius:var(--radius-sm); padding:12px 14px; display:flex; align-items:center; gap:12px;
+      flex-wrap:wrap;
+      cursor: grab;
+      transition: all 0.15s;
+    }
+    .admin-item:active { cursor: grabbing; }
+    .admin-item.dragging-admin {
+      opacity: 0.4;
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-item.drag-over-admin {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(232,199,107,0.5);
+    }
+    .admin-thumb {
+      width:52px; height:36px; border-radius:6px; object-fit:cover;
+      background:rgba(255,255,255,0.08); flex-shrink:0;
+    }
+
+    .edit-form { display:none; flex-direction:column; gap:10px; margin-top:12px; width:100%; }
+    .edit-form.visible { display:flex; }
+
+    #toast {
+      position:fixed; bottom:100px; right:28px; z-index:300;
+      background:rgba(18,15,40,0.95); border:1px solid rgba(255,255,255,0.15);
+      padding:12px 20px; border-radius:12px; font-size:0.9rem;
+      opacity:0; transform:translateY(15px); transition:all 0.3s;
+    }
+    #toast.show { opacity:1; transform:none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>✦ Viaje a Italia</h1>
+    <p>Junio de 2026</p>
+  </header>
+
+  <main id="video-grid"></main>
+
+  <button id="btn-config" title="Administración">⚙️</button>
+
+  <!-- Reproductor -->
+  <div id="player-overlay">
+    <div id="player">
+      <button id="btn-close-player">✕</button>
+      <video id="player-video" controls></video>
+      <div id="player-title"></div>
+    </div>
+  </div>
+
+  <!-- Administración -->
+  <div id="modal-overlay">
+    <div id="modal">
+      <div class="modal-header">
+        <h2>⚙️ Administración</h2>
+        <button id="btn-close-modal" style="background:none;border:none;font-size:1.8rem;color:#aaa;cursor:pointer;">✕</button>
+      </div>
+
+      <p class="section-title">➕ Añadir nuevo vídeo</p>
+      <div class="form-row" style="grid-template-columns:1fr;">
+        <div>
+          <label for="new-title">Título *</label>
+          <input type="text" id="new-title" placeholder="Día 1 - Roma">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label for="new-video">Ruta del vídeo *</label>
+          <input type="text" id="new-video" placeholder="videos/dia1-roma.mp4">
+        </div>
+        <div>
+          <label for="new-thumb">Ruta de la miniatura *</label>
+          <input type="text" id="new-thumb" placeholder="videos/miniaturas/dia1-roma.jpg">
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-add-video">➕ Añadir vídeo</button>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
+
+      <p class="section-title">📋 Vídeos actuales (arrastra para reordenar)</p>
+      <div id="videos-admin-list"></div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
+
+      <button class="btn btn-primary" id="btn-download" style="width:100%;padding:14px;">⬇️ Descargar index.html actualizado</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // __VIDEOS_START__
+    let videos = [];
+    // __VIDEOS_END__
+
+    function uid() { return Math.random().toString(36).slice(2,9); }
+
+    function showToast(msg, duration=2400) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('video-grid');
+      grid.innerHTML = '';
+
+      videos.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.draggable = true;
+        card.dataset.id = v.id;
+        card.innerHTML = `
+          <div class="thumb-wrap">
+            <img src="${v.thumb}" alt="${v.title}" loading="lazy">
+            <div class="thumb-overlay"><div class="play-btn">▶</div></div>
+          </div>
+          <span class="video-name">${v.title}</span>
+        `;
+
+        card.addEventListener('click', () => {
+          if (!card.classList.contains('dragging')) openPlayer(v);
+        });
+
+        grid.appendChild(card);
+      });
+
+      initDragAndDropGrid();
+    }
+
+    function openPlayer(v) {
+      const video = document.getElementById('player-video');
+      video.src = v.video;
+      document.getElementById('player-title').textContent = v.title;
+      document.getElementById('player-overlay').style.display = 'flex';
+      video.play().catch(() => {});
+    }
+
+    function closePlayer() {
+      const video = document.getElementById('player-video');
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      document.getElementById('player-overlay').style.display = 'none';
+    }
+
+    document.getElementById('btn-close-player').addEventListener('click', closePlayer);
+    document.getElementById('player-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'player-overlay') closePlayer();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('player-overlay').style.display === 'flex') closePlayer();
+    });
+
+    let draggedGridCard = null;
+
+    function initDragAndDropGrid() {
+      document.querySelectorAll('.video-card').forEach(card => {
+        card.addEventListener('dragstart', () => {
+          draggedGridCard = card;
+          setTimeout(() => card.classList.add('dragging'), 10);
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          document.querySelectorAll('.video-card').forEach(c => c.classList.remove('drag-over'));
+        });
+        card.addEventListener('dragover', e => { e.preventDefault(); if (card !== draggedGridCard) card.classList.add('drag-over'); });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+        card.addEventListener('drop', e => {
+          e.preventDefault();
+          if (!draggedGridCard || draggedGridCard === card) return;
+          const fromId = draggedGridCard.dataset.id;
+          const toId = card.dataset.id;
+          const fromIdx = videos.findIndex(a => a.id === fromId);
+          const toIdx = videos.findIndex(a => a.id === toId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = videos.splice(fromIdx, 1);
+            videos.splice(toIdx, 0, moved);
+            renderGrid();
+            if (document.getElementById('modal-overlay').style.display === 'flex') renderAdminList();
+            showToast('📋 Orden actualizado');
+          }
+        });
+      });
+    }
+
+    let draggedAdminItem = null;
+
+    function renderAdminList() {
+      const container = document.getElementById('videos-admin-list');
+      container.innerHTML = '';
+
+      videos.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'admin-item';
+        item.setAttribute('data-id', v.id);
+        item.setAttribute('draggable', 'true');
+        item.innerHTML = `
+          <img class="admin-thumb" src="${v.thumb}" alt="">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;">${v.title}</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">${v.video}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-edit btn-edit-video" data-id="${v.id}" style="padding:6px 10px;">✏️</button>
+            <button class="btn btn-danger btn-delete-video" data-id="${v.id}" style="padding:6px 10px;">🗑</button>
+          </div>
+          <div class="edit-form" id="edit-form-${v.id}">
+            <div><label>Título</label><input type="text" class="edit-title" value="${v.title.replace(/"/g, '&quot;')}"></div>
+            <div class="form-row">
+              <div><label>Ruta del vídeo</label><input type="text" class="edit-video" value="${v.video.replace(/"/g, '&quot;')}"></div>
+              <div><label>Ruta de la miniatura</label><input type="text" class="edit-thumb" value="${v.thumb.replace(/"/g, '&quot;')}"></div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-save-edit" data-id="${v.id}" style="padding:8px 16px;">Guardar cambios</button>
+              <button class="btn btn-edit btn-cancel-edit" data-id="${v.id}" style="padding:8px 16px;">Cancelar</button>
+            </div>
+          </div>
+        `;
+
+        item.addEventListener('dragstart', () => {
+          draggedAdminItem = item;
+          setTimeout(() => item.classList.add('dragging-admin'), 10);
+        });
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging-admin');
+          document.querySelectorAll('.admin-item').forEach(i => i.classList.remove('drag-over-admin'));
+          draggedAdminItem = null;
+        });
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (draggedAdminItem && draggedAdminItem !== item) {
+            item.classList.add('drag-over-admin');
+          }
+        });
+        item.addEventListener('dragleave', () => {
+          item.classList.remove('drag-over-admin');
+        });
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (!draggedAdminItem || draggedAdminItem === item) return;
+          item.classList.remove('drag-over-admin');
+
+          const fromId = draggedAdminItem.getAttribute('data-id');
+          const toId = item.getAttribute('data-id');
+          const fromIdx = videos.findIndex(a => a.id === fromId);
+          const toIdx = videos.findIndex(a => a.id === toId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = videos.splice(fromIdx, 1);
+            videos.splice(toIdx, 0, moved);
+            renderAdminList();
+            renderGrid();
+            showToast('📋 Orden actualizado (admin)');
+          }
+        });
+
+        container.appendChild(item);
+      });
+    }
+
+    // CRUD
+    function addVideo() {
+      const title = document.getElementById('new-title').value.trim();
+      const video = document.getElementById('new-video').value.trim();
+      const thumb = document.getElementById('new-thumb').value.trim();
+      if (!title) return showToast('⚠️ El título es obligatorio');
+      if (!video) return showToast('⚠️ La ruta del vídeo es obligatoria');
+      if (!thumb) return showToast('⚠️ La ruta de la miniatura es obligatoria');
+      videos.push({ id: uid(), title, video, thumb });
+      document.getElementById('new-title').value = '';
+      document.getElementById('new-video').value = '';
+      document.getElementById('new-thumb').value = '';
+      renderGrid();
+      renderAdminList();
+      showToast(`✅ "${title}" añadido`);
+    }
+
+    function deleteVideo(id) {
+      const v = videos.find(a => a.id === id);
+      if (!v) return;
+      if (!confirm(`¿Eliminar "${v.title}"?`)) return;
+      videos = videos.filter(a => a.id !== id);
+      renderGrid();
+      renderAdminList();
+      showToast(`🗑 "${v.title}" eliminado`);
+    }
+
+    function saveEdit(id) {
+      const form = document.getElementById(`edit-form-${id}`);
+      if (!form) return;
+      const title = form.querySelector('.edit-title').value.trim();
+      const video = form.querySelector('.edit-video').value.trim();
+      const thumb = form.querySelector('.edit-thumb').value.trim();
+      if (!title || !video || !thumb) return showToast('⚠️ Todos los campos son obligatorios');
+      const v = videos.find(a => a.id === id);
+      if (v) {
+        v.title = title;
+        v.video = video;
+        v.thumb = thumb;
+      }
+      renderGrid();
+      renderAdminList();
+      showToast(`✏️ "${title}" actualizado`);
+    }
+
+    document.getElementById('btn-config').addEventListener('click', () => {
+      renderAdminList();
+      document.getElementById('modal-overlay').style.display = 'flex';
+    });
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+      document.getElementById('modal-overlay').style.display = 'none';
+    });
+    document.getElementById('modal-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-overlay') document.getElementById('modal-overlay').style.display = 'none';
+    });
+    document.getElementById('btn-add-video').addEventListener('click', addVideo);
+
+    document.getElementById('videos-admin-list').addEventListener('click', e => {
+      const id = e.target.getAttribute('data-id');
+      if (!id) return;
+      if (e.target.classList.contains('btn-delete-video')) deleteVideo(id);
+      if (e.target.classList.contains('btn-edit-video')) {
+        document.getElementById(`edit-form-${id}`).classList.toggle('visible');
+      }
+      if (e.target.classList.contains('btn-save-edit')) saveEdit(id);
+      if (e.target.classList.contains('btn-cancel-edit')) {
+        document.getElementById(`edit-form-${id}`).classList.remove('visible');
+      }
+    });
+
+    document.getElementById('btn-download').addEventListener('click', () => {
+      let src = document.documentElement.outerHTML;
+      src = src.replace(/id="modal-overlay"[^>]*style="[^"]*display\s*:\s*flex[^"]*"/, 'id="modal-overlay" style="display:none;"');
+      src = src.replace(
+        /\/\/ __VIDEOS_START__[\s\S]*?\/\/ __VIDEOS_END__/,
+        `// __VIDEOS_START__\n    let videos = ${JSON.stringify(videos, null, 2)};\n    // __VIDEOS_END__`
+      );
+      const blob = new Blob([src], { type: 'text/html;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'index.html';
+      link.click();
+      showToast('⬇️ index.html descargado con todos los cambios (incluye orden)');
+    });
+
+    // Inicializar
+    renderGrid();
+  </script>
+
+</body></html>
