@@ -193,40 +193,6 @@
       color: var(--accent);
     }
 
-    /* ── PAUTAS DEL AUTOR ── */
-    .pautas-wrap { display: flex; flex-direction: column; gap: 6px; }
-    .pautas-label {
-      font-family: var(--font-ui);
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-    }
-    .pautas-label .pautas-optional {
-      text-transform: none;
-      font-weight: 400;
-      letter-spacing: 0;
-      color: var(--muted);
-      opacity: .75;
-    }
-    #pautas-textarea {
-      width: 100%;
-      min-height: 90px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 14px;
-      line-height: 1.6;
-      padding: 12px 14px;
-      resize: vertical;
-      outline: none;
-      transition: border-color .2s;
-    }
-    #pautas-textarea:focus { border-color: var(--accent); }
-
     /* ── TEXTAREA ── */
     .textarea-wrap { position: relative; }
     #main-textarea {
@@ -445,11 +411,6 @@
     </div>
   </div>
 
-  <div class="pautas-wrap">
-    <label class="pautas-label">Lo más importante a reflejar <span class="pautas-optional">(opcional, en tus propias palabras)</span></label>
-    <textarea id="pautas-textarea" placeholder="Ej: Lo que más me importa es que quede claro X, que no se pierda la idea de Y, y que Z se mencione aunque sea brevemente…"></textarea>
-  </div>
-
   <div class="textarea-wrap">
     <textarea id="main-textarea" placeholder="Pega aquí el texto a resumir…&#10;&#10;El resultado reemplazará este texto."></textarea>
     <div class="char-count" id="char-count">0 caracteres</div>
@@ -528,7 +489,7 @@
 <div class="modal-overlay" id="modal-prompt">
   <div class="modal-box">
     <div class="modal-title">Editar prompt</div>
-    <div class="modal-sub">Usa {PORCENTAJE}, {PAUTAS} y {TEXTO} como marcadores · se guarda en localStorage</div>
+    <div class="modal-sub">Usa {PORCENTAJE} y {TEXTO} como marcadores · se guarda en localStorage</div>
     <textarea id="prompt-textarea"></textarea>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="restaurarPrompt()">↺ Restaurar</button>
@@ -546,12 +507,6 @@ const DEFAULT_PROMPT = `Tu tarea es resumir el siguiente texto.
 
 OBJETIVO PRINCIPAL:
 Reducir el texto aproximadamente al {PORCENTAJE}% de su longitud original, manteniendo la voz, el estilo y el tono del autor.
-
-PAUTAS DEL AUTOR SOBRE LO MÁS IMPORTANTE:
-"""
-{PAUTAS}
-"""
-Estas pautas indican qué aspectos del texto original el autor considera más importantes y quiere que el resumen refleje con más peso. Da prioridad a conservar esas ideas o pasajes, aunque para ello tengas que comprimir más el resto. Son una guía de énfasis, no información nueva: no añadas al resumen nada que no esté ya en el texto original, aunque lo mencionen las pautas.
 
 REGLAS FUNDAMENTALES:
 - Conserva la voz del autor: su forma de escribir, su ritmo y su personalidad textual.
@@ -584,7 +539,6 @@ const LS = {
   claude:  'resumidor_claude_key',
   api:     'resumidor_active_api',
   prompt:  'resumidor_prompt',
-  pautas:  'resumidor_pautas',
 };
 
 let KEYS = {
@@ -841,13 +795,6 @@ async function callAPI(prompt) {
 const pctInput  = document.getElementById('pct-input');
 const textarea  = document.getElementById('main-textarea');
 const charCount = document.getElementById('char-count');
-const pautasTextarea = document.getElementById('pautas-textarea');
-
-// Restaurar pautas guardadas y persistirlas al escribir
-pautasTextarea.value = localStorage.getItem(LS.pautas) || '';
-pautasTextarea.addEventListener('input', () => {
-  localStorage.setItem(LS.pautas, pautasTextarea.value);
-});
 
 pctInput.addEventListener('change', () => {
   let v = parseInt(pctInput.value, 10);
@@ -874,11 +821,7 @@ async function resumir() {
   }
 
   const pct    = pctInput.value;
-  const pautas = pautasTextarea.value.trim() || '(El autor no ha indicado pautas específicas; usa tu propio criterio para priorizar lo más relevante del texto.)';
-  const prompt = activePrompt
-    .replace('{PORCENTAJE}', pct)
-    .replace('{PAUTAS}', pautas)
-    .replace('{TEXTO}', texto);
+  const prompt = activePrompt.replace('{PORCENTAJE}', pct).replace('{TEXTO}', texto);
 
   textarea.classList.add('loading');
   document.getElementById('btn-resumir').disabled = true;
