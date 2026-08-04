@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Gestor de Prompts - Con localStorage</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 24px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            padding: 24px 28px 32px 28px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+
+        .sub {
+            color: #475569;
+            margin-bottom: 28px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 14px;
+            font-weight: 400;
+            font-size: 0.95rem;
+        }
+
+        .source-group {
+            margin-bottom: 32px;
+        }
+
+        .source-group label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+
+        #sourceText {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            background: #fefefe;
+            resize: vertical;
+            font-family: 'SF Mono', monospace;
+        }
+
+        #sourceText:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+
+        .add-panel {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 24px;
+            margin-bottom: 32px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .add-panel h3 {
+            margin: 0 0 16px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flex-fields {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .field {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .field input, .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 16px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        .field input:focus, .field textarea:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        .btn-add {
+            background: #3b82f6;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-add:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .records-section {
+            margin-bottom: 32px;
+        }
+
+        .records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .records-header h3 {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .badge-count {
+            background: #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #e9edf2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: middle;
+        }
+
+        .prompt-hidden-cell {
+            color: #64748b;
+            font-style: italic;
+            background: #fef9e6;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-execute, .btn-edit, .btn-delete {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-execute {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-execute:hover {
+            background: #059669;
+        }
+
+        .btn-edit {
+            background: #fef9c3;
+            color: #854d0e;
+            border: 1px solid #fde047;
+        }
+
+        .btn-edit:hover {
+            background: #fde047;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .result-group {
+            background: #fef9f0;
+            border-radius: 24px;
+            padding: 6px 0 12px 0;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .result-header label {
+            font-weight: 700;
+            color: #92400e;
+        }
+
+        #copyBtn {
+            background: #f59e0b;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-weight: 600;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            gap: 8px;
+        }
+
+        #copyBtn:hover {
+            background: #d97706;
+        }
+
+        #resultText {
+            width: 100%;
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid #fed7aa;
+            background: #fffbf5;
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(3px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 550px;
+            border-radius: 32px;
+            padding: 20px 24px 28px;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.2s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            resize: vertical;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .modal-buttons button {
+            padding: 8px 18px;
+            border-radius: 40px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .save-modal {
+            background: #3b82f6;
+            color: white;
+        }
+        .cancel-modal {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
+        @media (max-width: 680px) {
+            .app-container { padding: 18px; }
+            .actions { flex-direction: column; gap: 5px; }
+            .btn-execute, .btn-edit, .btn-delete { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>✧ Editor de Prompts Ocultos</h1>
+    <div class="sub">Los prompts están ocultos en la tabla. Usa "✏️ Editar" para verlos/modificarlos. Todo se guarda automáticamente.</div>
+
+    <div class="source-group">
+        <label>📄 Texto origen</label>
+        <textarea id="sourceText" rows="3" placeholder="Escribe o pega tu texto aquí..."></textarea>
+    </div>
+
+    <div class="add-panel">
+        <h3>➕ Nuevo registro</h3>
+        <div class="flex-fields">
+            <div class="field">
+                <label>🏷️ Nombre del registro</label>
+                <input type="text" id="recordName" placeholder="Ej: Traductor, Resumen..." autocomplete="off">
+            </div>
+            <div class="field">
+                <label>✍️ Prompt (secreto, solo editable después)</label>
+                <textarea id="recordPrompt" rows="2" placeholder="Ej: 'Traduce esto al inglés:'"></textarea>
+            </div>
+        </div>
+        <button id="addRecordBtn" class="btn-add">➕ Añadir registro</button>
+    </div>
+
+    <div class="records-section">
+        <div class="records-header">
+            <h3>📋 Mis prompts</h3>
+            <span class="badge-count" id="recordsCount">0 registros</span>
+        </div>
+        <div class="table-wrapper">
+            <table id="recordsTable">
+                <thead>
+                    <tr><th>Nombre</th><th>Prompt (oculto)</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr class="empty-row"><td colspan="3">No hay registros. Añade uno.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="result-group">
+        <div class="result-header">
+            <label>🔗 Unión (prompt + texto origen)</label>
+            <button id="copyBtn">📋 Copiar resultado</button>
+        </div>
+        <textarea id="resultText" rows="5" readonly placeholder="Presiona 'Ejecutar' en algún registro..."></textarea>
+    </div>
+    <div class="footer-note">
+        💾 Los registros y el texto origen se guardan automáticamente en tu navegador (localStorage).
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalRecordName">Editar prompt</h3>
+        <label style="font-size:0.8rem; color:#334155;">Contenido del prompt:</label>
+        <textarea id="modalPromptInput" rows="4" placeholder="Escribe el prompt..."></textarea>
+        <div class="modal-buttons">
+            <button class="cancel-modal" id="modalCancelBtn">Cancelar</button>
+            <button class="save-modal" id="modalSaveBtn">Guardar cambios</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- MODELO CON PERSISTENCIA ----------
+    let records = [];
+    let nextId = 1;
+    let currentEditingId = null;
+
+    // DOM elements
+    const sourceTextArea = document.getElementById('sourceText');
+    const tableBody = document.getElementById('tableBody');
+    const recordsCountSpan = document.getElementById('recordsCount');
+    const resultTextArea = document.getElementById('resultText');
+    const addBtn = document.getElementById('addRecordBtn');
+    const recordNameInput = document.getElementById('recordName');
+    const recordPromptInput = document.getElementById('recordPrompt');
+    const copyBtn = document.getElementById('copyBtn');
+
+    // Modal
+    const editModal = document.getElementById('editModal');
+    const modalPromptInput = document.getElementById('modalPromptInput');
+    const modalRecordNameSpan = document.getElementById('modalRecordName');
+    const modalSaveBtn = document.getElementById('modalSaveBtn');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+
+    // Helper: escape HTML
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Guardar todo en localStorage (records, nextId, sourceText)
+    function persistAll() {
+        try {
+            localStorage.setItem('promptRecords', JSON.stringify(records));
+            localStorage.setItem('nextId', nextId);
+            localStorage.setItem('sourceText', sourceTextArea.value);
+        } catch(e) { console.warn(e); }
+    }
+
+    // Cargar datos desde localStorage
+    function loadFromStorage() {
+        const storedRecords = localStorage.getItem('promptRecords');
+        if (storedRecords) {
+            try {
+                records = JSON.parse(storedRecords);
+                // Asegurar que cada registro tenga los campos necesarios
+                if (!Array.isArray(records)) records = [];
+            } catch(e) { records = []; }
+        } else {
+            records = [];
+        }
+
+        const storedNextId = localStorage.getItem('nextId');
+        if (storedNextId && !isNaN(parseInt(storedNextId, 10))) {
+            nextId = parseInt(storedNextId, 10);
+        } else {
+            // Calcular el máximo id existente para no colisionar
+            if (records.length > 0) {
+                const maxId = Math.max(...records.map(r => r.id), 0);
+                nextId = maxId + 1;
+            } else {
+                nextId = 1;
+            }
+        }
+
+        const storedSource = localStorage.getItem('sourceText');
+        if (storedSource !== null) {
+            sourceTextArea.value = storedSource;
+        } else {
+            sourceTextArea.value = '';
+        }
+    }
+
+    // Actualizar contador y guardar tras cualquier cambio
+    function updateRecordsCount() {
+        const count = records.length;
+        recordsCountSpan.textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
+    }
+
+    function renderTable() {
+        if (!tableBody) return;
+        if (records.length === 0) {
+            tableBody.innerHTML = `<tr class="empty-row"><td colspan="3">✨ No hay registros. Añade uno.</td></tr>`;
+            updateRecordsCount();
+            return;
+        }
+
+        let html = '';
+        for (const record of records) {
+            const safeName = escapeHtml(record.name);
+            const hiddenPromptDisplay = `<span style="background:#eef2ff; padding:4px 10px; border-radius:40px; font-size:0.7rem;">🔒 oculto · clic en ✏️</span>`;
+            html += `
+                <tr data-record-id="${record.id}">
+                    <td style="font-weight:500;">${safeName}</td>
+                    <td class="prompt-hidden-cell">${hiddenPromptDisplay}</td>
+                    <td class="actions">
+                        <button class="btn-execute" data-id="${record.id}" title="Unir prompt con texto origen">▶ Ejecutar</button>
+                        <button class="btn-edit" data-id="${record.id}" title="Ver y modificar el prompt">✏️ Editar</button>
+                        <button class="btn-delete" data-id="${record.id}" title="Eliminar registro">🗑 Eliminar</button>
+                    </td>
+                </tr>
+            `;
+        }
+        tableBody.innerHTML = html;
+        updateRecordsCount();
+        persistAll(); // cada vez que se renderiza por cambios, guardamos (ya se llama desde operaciones, pero redundancia segura)
+    }
+
+    // Añadir registro
+    function addRecord(name, prompt) {
+        const trimmedName = name.trim();
+        const trimmedPrompt = prompt.trim();
+        if (trimmedName === '') {
+            alert('❌ El nombre no puede estar vacío.');
+            return false;
+        }
+        if (trimmedPrompt === '') {
+            alert('❌ El prompt no puede estar vacío.');
+            return false;
+        }
+        const newRecord = {
+            id: nextId++,
+            name: trimmedName,
+            prompt: trimmedPrompt
+        };
+        records.push(newRecord);
+        renderTable();       // guarda automáticamente
+        return true;
+    }
+
+    function deleteRecordById(id) {
+        records = records.filter(record => record.id !== id);
+        renderTable();
+    }
+
+    function executeRecordById(id) {
+        const record = records.find(r => r.id === id);
+        if (!record) {
+            alert('Registro no encontrado.');
+            return;
+        }
+        const source = sourceTextArea.value;
+        const union = record.prompt + '\n\n' + source;
+        resultTextArea.value = union;
+        // No es necesario guardar resultado, pero sí que el texto origen se guarda en persistAll ya al editar source?
+        // Guardamos también cuando se cambie sourceTextArea (evento input)
+    }
+
+    function openEditModal(recordId) {
+        const record = records.find(r => r.id === recordId);
+        if (!record) {
+            alert('No se encontró el registro.');
+            return;
+        }
+        currentEditingId = recordId;
+        modalRecordNameSpan.innerText = `✏️ Editando: ${escapeHtml(record.name)}`;
+        modalPromptInput.value = record.prompt;
+        editModal.style.display = 'flex';
+    }
+
+    function savePromptEdit() {
+        if (currentEditingId === null) return;
+        const newPrompt = modalPromptInput.value;
+        if (newPrompt.trim() === '') {
+            alert('El prompt no puede estar vacío.');
+            return;
+        }
+        const recordIndex = records.findIndex(r => r.id === currentEditingId);
+        if (recordIndex !== -1) {
+            records[recordIndex].prompt = newPrompt.trim();
+            renderTable();       // guarda automáticamente
+            alert('✅ Prompt actualizado correctamente.');
+        } else {
+            alert('Error: el registro ya no existe.');
+        }
+        closeModal();
+    }
+
+    function closeModal() {
+        editModal.style.display = 'none';
+        currentEditingId = null;
+        modalPromptInput.value = '';
+    }
+
+    async function copyResult() {
+        const result = resultTextArea.value;
+        if (!result || result.trim() === '') {
+            alert('No hay resultado para copiar. Ejecuta algún prompt primero.');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(result);
+            const original = copyBtn.innerText;
+            copyBtn.innerText = '✅ ¡Copiado!';
+            setTimeout(() => { copyBtn.innerText = original; }, 1500);
+        } catch(e) {
+            alert('No se pudo copiar.');
+        }
+    }
+
+    function handleTableActions(event) {
+        const target = event.target;
+        if (target.classList.contains('btn-execute')) {
+            const id = parseInt(target.getAttribute('data-id'), 10);
+            executeRecordById(id);
+        }
+        else if (target.classList.contains('btn-edit')) {
+            const id = parseInt(target.getAttribute('data-id'), 10);
+            openEditModal(id);
+        }
+        else if (target.classList.contains('btn-delete')) {
+            const id = parseInt(target.getAttribute('data-id'), 10);
+            if (confirm('¿Eliminar este registro permanentemente?')) {
+                deleteRecordById(id);
+            }
+        }
+    }
+
+    function onAddRecord() {
+        const name = recordNameInput.value;
+        const prompt = recordPromptInput.value;
+        if (addRecord(name, prompt)) {
+            recordNameInput.value = '';
+            recordPromptInput.value = '';
+            recordNameInput.focus();
+        }
+    }
+
+    // Guardar el texto origen cuando el usuario lo modifica (cada cambio)
+    function bindSourceAutoSave() {
+        sourceTextArea.addEventListener('input', () => {
+            persistAll();  // guarda solo el texto origen junto con todo (es seguro)
+        });
+    }
+
+    // Inicializar: cargar datos, renderizar, eventos
+    function init() {
+        loadFromStorage();
+        // Si no hay registros y queremos ejemplos solo la primera vez (si está vacío)
+        if (records.length === 0) {
+            // Ejemplos ilustrativos (se guardarán tras añadirlos)
+            addRecord('📝 Traductor EN', 'Traduce el siguiente texto al inglés:');
+            addRecord('🔍 Resumen creativo', 'Haz un resumen creativo y atractivo de este texto:');
+            addRecord('✨ Corrector gramatical', 'Corrige la gramática y ortografía del siguiente texto:');
+        } else {
+            // Solo renderizar lo cargado
+            renderTable();
+        }
+        // Asegurar que la vista del texto origen refleje lo guardado (ya lo hace loadFromStorage)
+        // Pero si por algún casual el sourceTextArea no se actualizó bien:
+        if (sourceTextArea.value === '' && localStorage.getItem('sourceText') !== null) {
+            sourceTextArea.value = localStorage.getItem('sourceText');
+        }
+        
+        // Eventos
+        addBtn.addEventListener('click', onAddRecord);
+        const tableContainer = document.getElementById('recordsTable');
+        if (tableContainer) tableContainer.addEventListener('click', handleTableActions);
+        copyBtn.addEventListener('click', copyResult);
+        
+        modalSaveBtn.addEventListener('click', savePromptEdit);
+        modalCancelBtn.addEventListener('click', closeModal);
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) closeModal();
+        });
+        
+        recordNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onAddRecord(); } });
+        recordPromptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); onAddRecord(); } });
+        
+        bindSourceAutoSave();
+        // Guardado inicial por si acaso
+        persistAll();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

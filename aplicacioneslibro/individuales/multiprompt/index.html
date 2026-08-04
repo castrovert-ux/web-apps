@@ -1,737 +1,784 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Gestor de Prompts - Con localStorage</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Runner · Castroverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet">
 
-        body {
-            background: #f0f2f5;
-            margin: 0;
-            padding: 24px 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+<!-- Firebase SDK (opcional) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-        .app-container {
-            max-width: 1200px;
-            width: 100%;
-            background: white;
-            border-radius: 28px;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
-            padding: 24px 28px 32px 28px;
-        }
+<!-- Extracción de PDF / Word -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-            color: #1e293b;
-        }
+<style>
+:root {
+  --bg:#f0fdf4; --surface:#e4f5e9; --card:#d2eeda; --border:#a8d4b4;
+  --text:#1a3a22; --muted:#4a7a58; --accent:#1e6b3a; --accent2:#2d9055;
+  --red:#c45a3a; --blue:#3a7ab0; --green:#1e6b3a;
+  --cloud:#4A90D9;
+  --font-h:'Playfair Display',Georgia,serif;
+  --font-body:'Source Serif 4',Georgia,serif;
+  --font-ui:'DM Mono',monospace;
+  --radius:3px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.7;display:flex;flex-direction:column;}
 
-        .sub {
-            color: #475569;
-            margin-bottom: 28px;
-            border-left: 4px solid #3b82f6;
-            padding-left: 14px;
-            font-weight: 400;
-            font-size: 0.95rem;
-        }
+/* Sync bar */
+#sync-bar{flex-shrink:0;background:var(--text);display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 18px;border-bottom:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;}
+.btn-sync{background:none;border:1px solid rgba(74,144,217,0.4);color:#7eb8f0;padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+.btn-sync:hover{background:var(--cloud);color:#fff;border-color:var(--cloud);}
+.btn-sync.synced{border-color:rgba(42,122,74,0.5);color:#7ec87f;}
+.btn-sync.synced:hover{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-sync.syncing{opacity:.6;cursor:default;pointer-events:none;}
+.sync-user-text{font-family:var(--font-ui);font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1px;}
+.btn-signout{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;text-transform:uppercase;}
+.btn-signout:hover{color:var(--red);background:rgba(196,90,58,.1);}
+#sync-status{flex-shrink:0;padding:5px 18px;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;display:none;align-items:center;justify-content:space-between;gap:10px;}
+#sync-status.visible{display:flex;}
+#sync-status.ok{background:rgba(42,122,74,.12);color:var(--green);}
+#sync-status.err{background:rgba(196,90,58,.1);color:var(--red);}
+#sync-status.info{background:rgba(74,144,217,.1);color:var(--cloud);}
+.sync-status-close{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:12px;padding:0 3px;}
+.sync-status-close:hover{opacity:1;}
 
-        .source-group {
-            margin-bottom: 32px;
-        }
+/* Cabecera */
+header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;overflow-x:auto;}
+.logo{font-family:var(--font-h);font-size:19px;font-weight:700;}
+.logo span{color:var(--accent);font-style:italic;}
+.logo small{display:block;font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:1px;}
+.header-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
 
-        .source-group label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 8px;
-            color: #0f172a;
-        }
+/* Selector de API */
+.api-selector{display:flex;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:3px;}
+.api-btn{background:transparent;border:none;padding:4px 12px;border-radius:20px;font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);cursor:pointer;transition:all .18s;}
+.api-btn.active{background:var(--accent);color:var(--bg);}
+.api-btn:hover:not(.active){color:var(--text);}
 
-        #sourceText {
-            width: 100%;
-            padding: 14px 16px;
-            font-size: 0.95rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 20px;
-            background: #fefefe;
-            resize: vertical;
-            font-family: 'SF Mono', monospace;
-        }
+.btn{border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:7px 15px;border:1px solid transparent;transition:all .18s;}
+.btn-primary{background:var(--accent);color:var(--bg);}
+.btn-primary:hover:not(:disabled){background:var(--accent2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:4px 9px;font-size:9px;}
+.btn:disabled{opacity:.45;cursor:default;}
+.btn-key{background:none;border:1px solid rgba(30,107,58,0.35);color:var(--accent);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s;white-space:nowrap;}
+.btn-key:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
 
-        #sourceText:focus {
-            border-color: #3b82f6;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
-        }
+/* Layout principal */
+.layout{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;min-height:0;}
+@media (max-width:860px){.layout{grid-template-columns:1fr;overflow-y:auto;}}
+.panel{display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.panel-left{border-right:1px solid var(--border);background:var(--surface);}
+.panel-right{background:var(--bg);}
+.panel-header{flex-shrink:0;padding:9px 15px;border-bottom:1px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.panel-title{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
 
-        .add-panel {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 24px;
-            margin-bottom: 32px;
-            border: 1px solid #e2e8f0;
-        }
+/* Panel izquierdo: texto de entrada */
+.text-area-wrap{flex:1;position:relative;overflow:hidden;min-height:120px;}
+#input-text{width:100%;height:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.8;padding:14px 15px 24px;resize:none;outline:none;}
+.char-count{position:absolute;bottom:5px;right:10px;font-family:var(--font-ui);font-size:9px;color:var(--muted);pointer-events:none;}
 
-        .add-panel h3 {
-            margin: 0 0 16px 0;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+.attach-section{flex-shrink:0;padding:10px 15px;border-top:1px solid var(--border);background:var(--card);}
+.attach-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.attach-chip{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:5px 6px 5px 13px;font-family:var(--font-ui);font-size:9px;color:var(--text);max-width:100%;}
+.attach-chip .name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.attach-chip button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;padding:2px 6px;border-radius:50%;}
+.attach-chip button:hover{color:var(--red);}
+.attach-hint{font-family:var(--font-ui);font-size:8px;color:var(--muted);letter-spacing:0.5px;margin-top:6px;line-height:1.6;}
+.attach-hint.err{color:var(--red);}
 
-        .flex-fields {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 18px;
-        }
+/* Panel derecho: lista de prompts */
+.prompts-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
+.prompts-empty{font-family:var(--font-ui);font-size:10px;color:var(--muted);text-align:center;padding:40px 20px;letter-spacing:1px;}
+.prompt-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;transition:background .15s,border-color .15s;}
+.prompt-row:hover{background:var(--card);border-color:var(--accent);}
+.prompt-title{flex:1;font-family:var(--font-body);font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prompt-actions{display:flex;gap:4px;flex-shrink:0;}
+.pbtn{background:transparent;border:1px solid var(--border);color:var(--muted);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.pbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg);}
+.pbtn.run{color:var(--accent);border-color:rgba(30,107,58,.35);}
+.pbtn.run:hover{background:var(--accent);color:#fff;}
+.pbtn.del:hover{border-color:var(--red);color:var(--red);}
+.pbtn:disabled{opacity:.5;cursor:default;pointer-events:none;}
 
-        .field {
-            flex: 1;
-            min-width: 180px;
-        }
+/* Modales */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,26,26,0.55);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.visible{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:640px;max-width:95vw;box-shadow:0 8px 32px rgba(58,26,26,0.18);margin:auto;}
+.modal-box-sm{width:430px;}
+.modal-box-lg{width:820px;max-height:88vh;display:flex;flex-direction:column;}
+.modal-title{font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;}
+.modal-subtitle{font-family:var(--font-ui);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:22px;}
+.modal-label{display:block;font-family:var(--font-ui);font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:5px;}
+.modal-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-ui);font-size:12px;border-radius:var(--radius);outline:none;margin-bottom:8px;}
+.modal-input:focus{border-color:var(--accent);}
+.modal-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:var(--font-body);font-size:13px;border-radius:var(--radius);outline:none;resize:vertical;line-height:1.6;min-height:140px;margin-bottom:8px;}
+.modal-hint{font-family:var(--font-ui);font-size:8px;color:var(--muted);margin-top:-4px;margin-bottom:14px;line-height:1.6;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.result-body{flex:1;overflow-y:auto;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);white-space:pre-wrap;line-height:1.75;font-size:13px;min-height:200px;max-height:60vh;}
+.result-body.loading{color:var(--muted);font-style:italic;}
 
-        .field label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-
-        .field input, .field textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 16px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            font-size: 0.9rem;
-        }
-
-        .field input:focus, .field textarea:focus {
-            border-color: #3b82f6;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
-        }
-
-        .btn-add {
-            background: #3b82f6;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: white;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-add:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        .records-section {
-            margin-bottom: 32px;
-        }
-
-        .records-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .records-header h3 {
-            font-weight: 600;
-            font-size: 1.2rem;
-            color: #0f172a;
-            margin: 0;
-        }
-
-        .badge-count {
-            background: #e2e8f0;
-            padding: 4px 10px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 20px;
-            border: 1px solid #e9edf2;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-
-        th {
-            background: #f1f5f9;
-            padding: 14px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #1e293b;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #f0f2f5;
-            vertical-align: middle;
-        }
-
-        .prompt-hidden-cell {
-            color: #64748b;
-            font-style: italic;
-            background: #fef9e6;
-            text-align: center;
-            font-size: 0.8rem;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn-execute, .btn-edit, .btn-delete {
-            border: none;
-            padding: 6px 12px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-execute {
-            background: #10b981;
-            color: white;
-        }
-
-        .btn-execute:hover {
-            background: #059669;
-        }
-
-        .btn-edit {
-            background: #fef9c3;
-            color: #854d0e;
-            border: 1px solid #fde047;
-        }
-
-        .btn-edit:hover {
-            background: #fde047;
-        }
-
-        .btn-delete {
-            background: #fee2e2;
-            color: #b91c1c;
-            border: 1px solid #fecaca;
-        }
-
-        .btn-delete:hover {
-            background: #fecaca;
-        }
-
-        .empty-row td {
-            text-align: center;
-            padding: 40px;
-            color: #64748b;
-        }
-
-        .result-group {
-            background: #fef9f0;
-            border-radius: 24px;
-            padding: 6px 0 12px 0;
-        }
-
-        .result-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            padding: 0 4px;
-        }
-
-        .result-header label {
-            font-weight: 700;
-            color: #92400e;
-        }
-
-        #copyBtn {
-            background: #f59e0b;
-            border: none;
-            padding: 8px 18px;
-            border-radius: 60px;
-            font-weight: 600;
-            color: white;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: flex;
-            gap: 8px;
-        }
-
-        #copyBtn:hover {
-            background: #d97706;
-        }
-
-        #resultText {
-            width: 100%;
-            padding: 16px;
-            border-radius: 20px;
-            border: 1px solid #fed7aa;
-            background: #fffbf5;
-            font-family: monospace;
-            font-size: 0.9rem;
-            resize: vertical;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            backdrop-filter: blur(3px);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 550px;
-            border-radius: 32px;
-            padding: 20px 24px 28px;
-            box-shadow: 0 25px 40px rgba(0,0,0,0.3);
-            animation: fadeInUp 0.2s ease;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px);}
-            to { opacity: 1; transform: translateY(0);}
-        }
-        .modal-content h3 {
-            margin-top: 0;
-            margin-bottom: 16px;
-            font-weight: 600;
-            color: #0f172a;
-        }
-        .modal-content textarea {
-            width: 100%;
-            padding: 12px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            font-family: monospace;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-            resize: vertical;
-        }
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-        .modal-buttons button {
-            padding: 8px 18px;
-            border-radius: 40px;
-            border: none;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .save-modal {
-            background: #3b82f6;
-            color: white;
-        }
-        .cancel-modal {
-            background: #e2e8f0;
-            color: #1e293b;
-        }
-        .footer-note {
-            font-size: 0.7rem;
-            text-align: center;
-            color: #94a3b8;
-            margin-top: 20px;
-        }
-        @media (max-width: 680px) {
-            .app-container { padding: 18px; }
-            .actions { flex-direction: column; gap: 5px; }
-            .btn-execute, .btn-edit, .btn-delete { justify-content: center; }
-        }
-    </style>
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
 </head>
 <body>
-<div class="app-container">
-    <h1>✧ Editor de Prompts Ocultos</h1>
-    <div class="sub">Los prompts están ocultos en la tabla. Usa "✏️ Editar" para verlos/modificarlos. Todo se guarda automáticamente.</div>
 
-    <div class="source-group">
-        <label>📄 Texto origen</label>
-        <textarea id="sourceText" rows="3" placeholder="Escribe o pega tu texto aquí..."></textarea>
-    </div>
-
-    <div class="add-panel">
-        <h3>➕ Nuevo registro</h3>
-        <div class="flex-fields">
-            <div class="field">
-                <label>🏷️ Nombre del registro</label>
-                <input type="text" id="recordName" placeholder="Ej: Traductor, Resumen..." autocomplete="off">
-            </div>
-            <div class="field">
-                <label>✍️ Prompt (secreto, solo editable después)</label>
-                <textarea id="recordPrompt" rows="2" placeholder="Ej: 'Traduce esto al inglés:'"></textarea>
-            </div>
-        </div>
-        <button id="addRecordBtn" class="btn-add">➕ Añadir registro</button>
-    </div>
-
-    <div class="records-section">
-        <div class="records-header">
-            <h3>📋 Mis prompts</h3>
-            <span class="badge-count" id="recordsCount">0 registros</span>
-        </div>
-        <div class="table-wrapper">
-            <table id="recordsTable">
-                <thead>
-                    <tr><th>Nombre</th><th>Prompt (oculto)</th><th>Acciones</th></tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr class="empty-row"><td colspan="3">No hay registros. Añade uno.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="result-group">
-        <div class="result-header">
-            <label>🔗 Unión (prompt + texto origen)</label>
-            <button id="copyBtn">📋 Copiar resultado</button>
-        </div>
-        <textarea id="resultText" rows="5" readonly placeholder="Presiona 'Ejecutar' en algún registro..."></textarea>
-    </div>
-    <div class="footer-note">
-        💾 Los registros y el texto origen se guardan automáticamente en tu navegador (localStorage).
-    </div>
+<!-- SYNC BAR -->
+<div id="sync-bar">
+  <span class="sync-user-text" id="sync-user-text" style="display:none"></span>
+  <button class="btn-signout" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="btn-key" id="btn-or-key-bar" style="color:#4A90D9;border-color:rgba(74,144,217,0.3);display:none;">⚙ OpenRouter</button>
+  <button class="btn-key" id="btn-gemini-key-bar" style="display:none;">⚙ Gemini</button>
+  <button class="btn-key" id="btn-groq-key-bar" style="display:none;">⚙ Groq</button>
+  <button class="btn-key" id="btn-mistral-key-bar" style="display:none;">⚙ Mistral</button>
+  <button class="btn-key" id="btn-claude-key-bar" style="display:none;">⚙ Claude</button>
+  <button class="btn-key" id="btn-fb-key">⚿ Firebase</button>
+  <button class="btn-sync" id="btn-sync" onclick="handleSync()">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar</span>
+  </button>
+</div>
+<div id="sync-status">
+  <span id="sync-status-msg"></span>
+  <button class="sync-status-close" onclick="closeSyncStatus()">✕</button>
 </div>
 
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <h3 id="modalRecordName">Editar prompt</h3>
-        <label style="font-size:0.8rem; color:#334155;">Contenido del prompt:</label>
-        <textarea id="modalPromptInput" rows="4" placeholder="Escribe el prompt..."></textarea>
-        <div class="modal-buttons">
-            <button class="cancel-modal" id="modalCancelBtn">Cancelar</button>
-            <button class="save-modal" id="modalSaveBtn">Guardar cambios</button>
-        </div>
+<header>
+  <div class="logo">Prompt <span>Runner</span><small>Castroverde</small></div>
+  <div class="header-actions">
+    <div class="api-selector" id="api-selector">
+      <button class="api-btn active" data-api="openrouter" onclick="setApi('openrouter')">OpenRouter</button>
+      <button class="api-btn" data-api="gemini" onclick="setApi('gemini')">Gemini</button>
+      <button class="api-btn" data-api="groq" onclick="setApi('groq')">Groq</button>
+      <button class="api-btn" data-api="mistral" onclick="setApi('mistral')">Mistral</button>
+      <button class="api-btn" data-api="claude" onclick="setApi('claude')">Claude</button>
     </div>
+    <select id="or-model-select" class="modal-input" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);margin:0;">
+      <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
+      <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5</option>
+      <option value="google/gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+      <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+      <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+      <option value="openai/gpt-4.1">GPT-4.1</option>
+      <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
+      <option value="mistralai/mistral-small-3.2-24b">Mistral Small 3.2</option>
+      <option value="deepseek/deepseek-r1-0528">DeepSeek R1</option>
+    </select>
+    <button class="btn-key" id="btn-or-key">⚙ OpenRouter</button>
+    <button class="btn-key" id="btn-gemini-key" style="display:none;">⚙ Gemini</button>
+    <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
+    <button class="btn-key" id="btn-mistral-key" style="display:none;">⚙ Mistral</button>
+    <button class="btn-key" id="btn-claude-key" style="display:none;">⚙ Claude</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="panel panel-left">
+    <div class="panel-header"><span class="panel-title">✍ Texto de entrada</span></div>
+    <div class="text-area-wrap">
+      <textarea id="input-text" placeholder="Escribe o pega aquí el texto sobre el que debe operar el prompt…"></textarea>
+      <span class="char-count" id="char-count">0 caracteres</span>
+    </div>
+    <div class="attach-section">
+      <div class="attach-row">
+        <button class="btn btn-ghost btn-sm" id="btn-attach" onclick="document.getElementById('file-input').click()">📎 Adjuntar Word / PDF</button>
+        <input type="file" id="file-input" accept=".pdf,.docx" style="display:none;" onchange="handleFileAttach(this.files[0])">
+        <div id="attach-chip-wrap"></div>
+      </div>
+      <div class="attach-hint" id="attach-hint">Se extraerá el texto del documento en el navegador y se enviará junto al prompt. Solo se admiten .pdf y .docx (Word moderno).</div>
+    </div>
+  </div>
+
+  <div class="panel panel-right">
+    <div class="panel-header">
+      <span class="panel-title">☰ Prompts guardados</span>
+      <button class="btn btn-primary btn-sm" onclick="openPromptModal()">＋ Añadir prompt</button>
+    </div>
+    <div class="prompts-list" id="prompts-list"></div>
+  </div>
+</div>
+
+<!-- MODAL AÑADIR / EDITAR PROMPT -->
+<div class="modal-overlay" id="modal-prompt">
+  <div class="modal-box">
+    <div class="modal-title" id="prompt-modal-title">Nuevo prompt</div>
+    <div class="modal-subtitle">Título e instrucción que se enviará como orden a la API</div>
+    <input type="hidden" id="prompt-edit-id">
+    <label class="modal-label" for="prompt-title-input">Título</label>
+    <input class="modal-input" id="prompt-title-input" type="text" maxlength="120" placeholder="Ej: Resumir en 5 puntos">
+    <label class="modal-label" for="prompt-content-input">Contenido del prompt</label>
+    <textarea class="modal-textarea" id="prompt-content-input" placeholder="Ej: Resume el siguiente texto en 5 puntos clave, en español, con un tono neutro…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePromptModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePromptModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESULTADO -->
+<div class="modal-overlay" id="modal-result">
+  <div class="modal-box modal-box-lg">
+    <div class="modal-title" id="result-modal-title">—</div>
+    <div class="modal-subtitle" id="result-modal-sub">—</div>
+    <div class="result-body" id="result-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btn-copy-result" onclick="copyResult()">⎘ Copiar texto</button>
+      <button class="btn btn-ghost" onclick="closeResultModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALES CLAVES DE API -->
+<div class="modal-overlay" id="modal-orkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de OpenRouter</div>
+    <div class="modal-subtitle">Se guarda solo en este navegador</div>
+    <input class="modal-input" id="or-key-input" type="password" placeholder="sk-or-…">
+    <div class="modal-hint">Consíguela en openrouter.ai → Keys.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOrKeyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOrKey(document.getElementById('or-key-input').value.trim())">Guardar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-groqkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Groq</div>
+    <div class="modal-subtitle">Se guarda solo en este navegador</div>
+    <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_…">
+    <div class="modal-hint">Consíguela en console.groq.com → API Keys.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeGroqKeyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGroqKey(document.getElementById('groq-key-input').value.trim())">Guardar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-geminikey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Gemini</div>
+    <div class="modal-subtitle">Se guarda solo en este navegador</div>
+    <input class="modal-input" id="gemini-key-input" type="password" placeholder="AIzaSy…">
+    <div class="modal-hint">Consíguela en aistudio.google.com → API keys.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeGeminiKeyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGeminiKey(document.getElementById('gemini-key-input').value.trim())">Guardar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-mistralkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Mistral</div>
+    <div class="modal-subtitle">Se guarda solo en este navegador</div>
+    <input class="modal-input" id="mistral-key-input" type="password" placeholder="…">
+    <div class="modal-hint">Consíguela en console.mistral.ai → API Keys.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeMistralKeyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMistralKey(document.getElementById('mistral-key-input').value.trim())">Guardar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-claudekey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Claude</div>
+    <div class="modal-subtitle">Se guarda solo en este navegador</div>
+    <input class="modal-input" id="claude-key-input" type="password" placeholder="sk-ant-…">
+    <div class="modal-hint">Consíguela en console.anthropic.com → API Keys.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeClaudeKeyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClaudeKey(document.getElementById('claude-key-input').value.trim())">Guardar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-fbkey">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-title">Clave API de Firebase</div>
+    <div class="modal-subtitle">Para sincronizar tus prompts entre dispositivos</div>
+    <input class="modal-input" id="fb-key-input" type="password" placeholder="AIzaSy…">
+    <div class="modal-hint">La clave web del proyecto Firebase de la suite.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeFbKeyModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveFbKey(document.getElementById('fb-key-input').value.trim())">Guardar</button>
+    </div>
+  </div>
 </div>
 
 <script>
-    // ---------- MODELO CON PERSISTENCIA ----------
-    let records = [];
-    let nextId = 1;
-    let currentEditingId = null;
+// ══════════════════════════════════════════════════════
+//  ESTADO DE PROMPTS
+// ══════════════════════════════════════════════════════
+let prompts = loadPrompts();
+let attachedFile = null; // { name, text }
 
-    // DOM elements
-    const sourceTextArea = document.getElementById('sourceText');
-    const tableBody = document.getElementById('tableBody');
-    const recordsCountSpan = document.getElementById('recordsCount');
-    const resultTextArea = document.getElementById('resultText');
-    const addBtn = document.getElementById('addRecordBtn');
-    const recordNameInput = document.getElementById('recordName');
-    const recordPromptInput = document.getElementById('recordPrompt');
-    const copyBtn = document.getElementById('copyBtn');
+function loadPrompts() {
+  try { return JSON.parse(localStorage.getItem('promptrunner_prompts') || '[]'); } catch { return []; }
+}
+function savePrompts() {
+  localStorage.setItem('promptrunner_prompts', JSON.stringify(prompts));
+  localStorage.setItem('promptrunner_prompts_ts', String(Date.now()));
+}
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-    // Modal
-    const editModal = document.getElementById('editModal');
-    const modalPromptInput = document.getElementById('modalPromptInput');
-    const modalRecordNameSpan = document.getElementById('modalRecordName');
-    const modalSaveBtn = document.getElementById('modalSaveBtn');
-    const modalCancelBtn = document.getElementById('modalCancelBtn');
+function renderPrompts() {
+  const el = document.getElementById('prompts-list');
+  if (!prompts.length) {
+    el.innerHTML = '<div class="prompts-empty">Aún no has añadido ningún prompt.<br>Pulsa «＋ Añadir prompt» para crear el primero.</div>';
+    return;
+  }
+  el.innerHTML = prompts.map(p => `
+    <div class="prompt-row" data-id="${p.id}">
+      <span class="prompt-title" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</span>
+      <div class="prompt-actions">
+        <button class="pbtn run" title="Ejecutar" onclick="executePrompt('${p.id}')">▶</button>
+        <button class="pbtn" title="Editar" onclick="openPromptModal('${p.id}')">✎</button>
+        <button class="pbtn del" title="Eliminar" onclick="deletePrompt('${p.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+renderPrompts();
 
-    // Helper: escape HTML
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
+// ── Modal añadir/editar ──
+function openPromptModal(id) {
+  document.getElementById('prompt-edit-id').value = id || '';
+  if (id) {
+    const p = prompts.find(x => x.id === id);
+    document.getElementById('prompt-modal-title').textContent = 'Editar prompt';
+    document.getElementById('prompt-title-input').value = p ? p.title : '';
+    document.getElementById('prompt-content-input').value = p ? p.content : '';
+  } else {
+    document.getElementById('prompt-modal-title').textContent = 'Nuevo prompt';
+    document.getElementById('prompt-title-input').value = '';
+    document.getElementById('prompt-content-input').value = '';
+  }
+  document.getElementById('modal-prompt').classList.add('visible');
+  setTimeout(() => document.getElementById('prompt-title-input').focus(), 80);
+}
+function closePromptModal() { document.getElementById('modal-prompt').classList.remove('visible'); }
+document.getElementById('modal-prompt').addEventListener('click', e => { if (e.target === document.getElementById('modal-prompt')) closePromptModal(); });
+
+function savePromptModal() {
+  const id = document.getElementById('prompt-edit-id').value;
+  const title = document.getElementById('prompt-title-input').value.trim();
+  const content = document.getElementById('prompt-content-input').value.trim();
+  if (!title || !content) { setSyncStatus('err', 'El prompt necesita título y contenido.'); return; }
+  if (id) {
+    const p = prompts.find(x => x.id === id);
+    if (p) { p.title = title; p.content = content; }
+  } else {
+    prompts.push({ id: newId(), title, content });
+  }
+  savePrompts();
+  renderPrompts();
+  closePromptModal();
+}
+function deletePrompt(id) {
+  const p = prompts.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm('¿Eliminar el prompt «' + p.title + '»?')) return;
+  prompts = prompts.filter(x => x.id !== id);
+  savePrompts();
+  renderPrompts();
+}
+
+// ══════════════════════════════════════════════════════
+//  TEXTO DE ENTRADA
+// ══════════════════════════════════════════════════════
+const inputTextEl = document.getElementById('input-text');
+inputTextEl.addEventListener('input', () => {
+  document.getElementById('char-count').textContent = inputTextEl.value.length + ' caracteres';
+});
+
+// ══════════════════════════════════════════════════════
+//  ADJUNTAR PDF / WORD
+// ══════════════════════════════════════════════════════
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function extractPdfText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n\n';
+  }
+  return text.trim();
+}
+async function extractDocxText(file) {
+  const buf = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buf });
+  return (result.value || '').trim();
+}
+
+function renderAttachChip() {
+  const wrap = document.getElementById('attach-chip-wrap');
+  if (!attachedFile) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div class="attach-chip"><span class="name">📄 ${escapeHtml(attachedFile.name)}</span><button onclick="removeAttachment()" title="Quitar adjunto">✕</button></div>`;
+}
+function removeAttachment() {
+  attachedFile = null;
+  document.getElementById('file-input').value = '';
+  renderAttachChip();
+  setAttachHint('Se extraerá el texto del documento en el navegador y se enviará junto al prompt. Solo se admiten .pdf y .docx (Word moderno).', false);
+}
+function setAttachHint(msg, isErr) {
+  const el = document.getElementById('attach-hint');
+  el.textContent = msg;
+  el.className = 'attach-hint' + (isErr ? ' err' : '');
+}
+
+async function handleFileAttach(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext !== 'pdf' && ext !== 'docx') {
+    setAttachHint('Formato no admitido. Usa un fichero .pdf o .docx (Word moderno; .doc antiguo no es compatible).', true);
+    document.getElementById('file-input').value = '';
+    return;
+  }
+  setAttachHint('Extrayendo texto de «' + file.name + '»…', false);
+  try {
+    const text = ext === 'pdf' ? await extractPdfText(file) : await extractDocxText(file);
+    if (!text) throw new Error('No se ha podido extraer texto del documento (¿está escaneado como imagen?).');
+    attachedFile = { name: file.name, text };
+    renderAttachChip();
+    setAttachHint('✓ Texto extraído (' + text.length + ' caracteres). Se enviará junto al prompt.', false);
+  } catch (e) {
+    attachedFile = null;
+    renderAttachChip();
+    setAttachHint('Error al extraer el texto: ' + (e.message || e), true);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  EJECUCIÓN DE PROMPTS
+// ══════════════════════════════════════════════════════
+async function executePrompt(id) {
+  const p = prompts.find(x => x.id === id);
+  if (!p) return;
+  const inputText = inputTextEl.value.trim();
+  if (!inputText && !attachedFile) {
+    setSyncStatus('err', 'Escribe un texto o adjunta un documento antes de ejecutar el prompt.');
+    return;
+  }
+  let userPrompt = inputText;
+  if (attachedFile) {
+    userPrompt += (inputText ? '\n\n' : '') + '--- Documento adjunto: ' + attachedFile.name + ' ---\n' + attachedFile.text;
+  }
+  const row = document.querySelector('.prompt-row[data-id="' + id + '"]');
+  const runBtn = row ? row.querySelector('.pbtn.run') : null;
+  if (runBtn) { runBtn.disabled = true; runBtn.textContent = '⏳'; }
+  try {
+    const modelId = document.getElementById('or-model-select').value;
+    const text = await callAPI(p.content, userPrompt, modelId, activeApi);
+    openResultModal(p.title, text);
+  } catch (e) {
+    setSyncStatus('err', e.message || 'Error al ejecutar el prompt.');
+  } finally {
+    if (runBtn) { runBtn.disabled = false; runBtn.textContent = '▶'; }
+  }
+}
+
+function openResultModal(title, text) {
+  document.getElementById('result-modal-title').textContent = title;
+  document.getElementById('result-modal-sub').textContent = (ANA_API_LABELS[activeApi] || activeApi) + ' · ' + new Date().toLocaleString('es-ES');
+  document.getElementById('result-modal-body').textContent = text;
+  document.getElementById('modal-result').classList.add('visible');
+}
+function closeResultModal() { document.getElementById('modal-result').classList.remove('visible'); }
+document.getElementById('modal-result').addEventListener('click', e => { if (e.target === document.getElementById('modal-result')) closeResultModal(); });
+function copyResult() {
+  const text = document.getElementById('result-modal-body').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-result');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  SELECTOR DE API
+// ══════════════════════════════════════════════════════
+const ANA_API_LABELS = { openrouter: 'OpenRouter', gemini: 'Gemini', groq: 'Groq', mistral: 'Mistral', claude: 'Claude' };
+let activeApi = localStorage.getItem('promptrunner_active_api') || 'openrouter';
+
+function setApi(api) {
+  activeApi = api;
+  localStorage.setItem('promptrunner_active_api', api);
+  document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
+  document.getElementById('or-model-select').style.display = api === 'openrouter' ? '' : 'none';
+  document.getElementById('btn-or-key').style.display      = api === 'openrouter' ? '' : 'none';
+  document.getElementById('btn-gemini-key').style.display  = api === 'gemini'     ? '' : 'none';
+  document.getElementById('btn-groq-key').style.display    = api === 'groq'       ? '' : 'none';
+  document.getElementById('btn-mistral-key').style.display = api === 'mistral'    ? '' : 'none';
+  document.getElementById('btn-claude-key').style.display  = api === 'claude'     ? '' : 'none';
+}
+setApi(activeApi);
+
+// ══════════════════════════════════════════════════════
+//  LLAMADAS A LAS APIS
+// ══════════════════════════════════════════════════════
+async function callAPI(systemPrompt, userPrompt, modelId, apiOverride) {
+  const api = apiOverride || activeApi;
+  if (api === 'groq')    return callGroq(systemPrompt, userPrompt);
+  if (api === 'mistral') return callMistral(systemPrompt, userPrompt);
+  if (api === 'claude')  return callClaude(systemPrompt, userPrompt);
+  if (api === 'gemini')  return callGemini(systemPrompt, userPrompt);
+  return callOpenRouter(systemPrompt, userPrompt, modelId);
+}
+
+async function callOpenRouter(systemPrompt, userPrompt, modelId) {
+  if (!OR_API_KEY) { openOrKeyModal(); throw new Error('Introduce la clave de OpenRouter primero.'); }
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + OR_API_KEY,
+      'HTTP-Referer': 'https://castrovert-ux.github.io',
+      'X-Title': 'Prompt Runner Castroverde'
+    },
+    body: JSON.stringify({
+      model: modelId, max_tokens: 8000, temperature: 0.4,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error ' + resp.status); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de OpenRouter');
+  return text;
+}
+async function callGemini(systemPrompt, userPrompt) {
+  if (!GEMINI_API_KEY) { openGeminiKeyModal(); throw new Error('Introduce la clave de Gemini primero.'); }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const resp = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 8000, thinkingConfig: { thinkingBudget: 0 } }
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Gemini ' + resp.status); }
+  const data = await resp.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  let text = parts.filter(p => p.text && !p.thought).map(p => p.text).join('');
+  if (!text) text = parts.filter(p => p.text).map(p => p.text).join('');
+  if (!text) throw new Error('Respuesta vacía de Gemini');
+  return text;
+}
+async function callGroq(systemPrompt, userPrompt) {
+  if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile', max_tokens: 8000, temperature: 0.4,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Groq ' + resp.status); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Groq');
+  return text;
+}
+async function callMistral(systemPrompt, userPrompt, _retry = 0) {
+  if (!MISTRAL_API_KEY) { openMistralKeyModal(); throw new Error('Introduce la clave de Mistral primero.'); }
+  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MISTRAL_API_KEY },
+    body: JSON.stringify({
+      model: 'mistral-small-latest', max_tokens: 8000, temperature: 1.0,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
+    })
+  });
+  if (resp.status === 429 && _retry < 3) {
+    const wait = (_retry + 1) * 15;
+    setSyncStatus('info', `⏳ Mistral: límite de peticiones. Reintentando en ${wait}s…`);
+    await new Promise(r => setTimeout(r, wait * 1000));
+    return callMistral(systemPrompt, userPrompt, _retry + 1);
+  }
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.message || err.error?.message || 'Error Mistral ' + resp.status); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Respuesta vacía de Mistral');
+  return text;
+}
+async function callClaude(systemPrompt, userPrompt) {
+  if (!CLAUDE_API_KEY) { openClaudeKeyModal(); throw new Error('Introduce la clave de Claude primero.'); }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.4,
+      system: systemPrompt, messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || 'Error Claude ' + resp.status); }
+  const data = await resp.json();
+  const text = data.content?.[0]?.text?.trim();
+  if (!text) throw new Error('Respuesta vacía de Claude');
+  return text;
+}
+
+// ══════════════════════════════════════════════════════
+//  CLAVES DE API (localStorage)
+// ══════════════════════════════════════════════════════
+let OR_API_KEY      = localStorage.getItem('promptrunner_or_key')      || '';
+let GEMINI_API_KEY  = localStorage.getItem('promptrunner_gemini_key')  || '';
+let GROQ_API_KEY    = localStorage.getItem('promptrunner_groq_key')    || '';
+let MISTRAL_API_KEY = localStorage.getItem('promptrunner_mistral_key') || '';
+let CLAUDE_API_KEY  = localStorage.getItem('promptrunner_claude_key')  || '';
+
+function openOrKeyModal() { document.getElementById('or-key-input').value = OR_API_KEY || ''; document.getElementById('modal-orkey').classList.add('visible'); setTimeout(() => document.getElementById('or-key-input').focus(), 80); }
+function closeOrKeyModal() { document.getElementById('modal-orkey').classList.remove('visible'); }
+function saveOrKey(val) { if (!val) return false; OR_API_KEY = val; localStorage.setItem('promptrunner_or_key', val); closeOrKeyModal(); return true; }
+
+function openGeminiKeyModal() { document.getElementById('gemini-key-input').value = GEMINI_API_KEY || ''; document.getElementById('modal-geminikey').classList.add('visible'); setTimeout(() => document.getElementById('gemini-key-input').focus(), 80); }
+function closeGeminiKeyModal() { document.getElementById('modal-geminikey').classList.remove('visible'); }
+function saveGeminiKey(val) { if (!val) return false; GEMINI_API_KEY = val; localStorage.setItem('promptrunner_gemini_key', val); closeGeminiKeyModal(); return true; }
+
+function openGroqKeyModal() { document.getElementById('groq-key-input').value = GROQ_API_KEY || ''; document.getElementById('modal-groqkey').classList.add('visible'); setTimeout(() => document.getElementById('groq-key-input').focus(), 80); }
+function closeGroqKeyModal() { document.getElementById('modal-groqkey').classList.remove('visible'); }
+function saveGroqKey(val) { if (!val) return false; GROQ_API_KEY = val; localStorage.setItem('promptrunner_groq_key', val); closeGroqKeyModal(); return true; }
+
+function openMistralKeyModal() { document.getElementById('mistral-key-input').value = MISTRAL_API_KEY || ''; document.getElementById('modal-mistralkey').classList.add('visible'); setTimeout(() => document.getElementById('mistral-key-input').focus(), 80); }
+function closeMistralKeyModal() { document.getElementById('modal-mistralkey').classList.remove('visible'); }
+function saveMistralKey(val) { if (!val) return false; MISTRAL_API_KEY = val; localStorage.setItem('promptrunner_mistral_key', val); closeMistralKeyModal(); return true; }
+
+function openClaudeKeyModal() { document.getElementById('claude-key-input').value = CLAUDE_API_KEY || ''; document.getElementById('modal-claudekey').classList.add('visible'); setTimeout(() => document.getElementById('claude-key-input').focus(), 80); }
+function closeClaudeKeyModal() { document.getElementById('modal-claudekey').classList.remove('visible'); }
+function saveClaudeKey(val) { if (!val) return false; CLAUDE_API_KEY = val; localStorage.setItem('promptrunner_claude_key', val); closeClaudeKeyModal(); return true; }
+
+document.getElementById('btn-or-key').addEventListener('click', openOrKeyModal);
+document.getElementById('btn-gemini-key').addEventListener('click', openGeminiKeyModal);
+document.getElementById('btn-groq-key').addEventListener('click', openGroqKeyModal);
+document.getElementById('btn-mistral-key').addEventListener('click', openMistralKeyModal);
+document.getElementById('btn-claude-key').addEventListener('click', openClaudeKeyModal);
+[['modal-orkey', closeOrKeyModal], ['modal-geminikey', closeGeminiKeyModal], ['modal-groqkey', closeGroqKeyModal], ['modal-mistralkey', closeMistralKeyModal], ['modal-claudekey', closeClaudeKeyModal]].forEach(([id, closeFn]) => {
+  document.getElementById(id).addEventListener('click', e => { if (e.target === document.getElementById(id)) closeFn(); });
+});
+
+// ══════════════════════════════════════════════════════
+//  FIREBASE (sincronización de prompts)
+// ══════════════════════════════════════════════════════
+let FB_API_KEY = localStorage.getItem('promptrunner_fb_key') || '';
+let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+
+function initFirebase(apiKey) {
+  if (!apiKey) return;
+  try {
+    if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey));
+    else startFirebase(apiKey);
+  } catch (e) {}
+}
+function startFirebase(apiKey) {
+  const config = {
+    apiKey: apiKey,
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(config);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(user => { fbUser = user; updateSyncUI(); });
+}
+if (FB_API_KEY) initFirebase(FB_API_KEY);
+
+function updateSyncUI() {
+  const btn = document.getElementById('btn-sync');
+  const icon = document.getElementById('sync-icon');
+  const label = document.getElementById('sync-label');
+  const userEl = document.getElementById('sync-user-text');
+  const signout = document.getElementById('btn-signout');
+  if (fbUser) {
+    btn.classList.add('synced'); icon.textContent = '✓'; label.textContent = 'Sincronizado';
+    userEl.textContent = fbUser.email; userEl.style.display = 'inline'; signout.style.display = 'inline';
+  } else {
+    btn.classList.remove('synced'); icon.textContent = '☁'; label.textContent = 'Sincronizar';
+    userEl.style.display = 'none'; signout.style.display = 'none';
+  }
+}
+function handleSync() {
+  if (!fbAuth) { setSyncStatus('err', 'Introduce la clave de Firebase primero.'); setTimeout(openFbKeyModal, 800); return; }
+  if (!fbUser) {
+    setSyncStatus('info', 'Iniciando sesión…');
+    fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(err => setSyncStatus('err', err.message));
+  } else { doSync(); }
+}
+function doSync() {
+  if (!fbUser || !fbDb) return;
+  setSyncStatus('info', 'Sincronizando…');
+  document.getElementById('btn-sync').classList.add('syncing');
+  const docRef = fbDb.collection('promptrunner').doc(fbUser.uid);
+  docRef.get().then(snap => {
+    const localPrompts = JSON.parse(JSON.stringify(prompts));
+    const localTs = parseInt(localStorage.getItem('promptrunner_prompts_ts') || '0');
+    if (snap.exists && snap.data().prompts && snap.data().promptsUpdatedAt > localTs) {
+      prompts = snap.data().prompts;
+      savePrompts();
+      localStorage.setItem('promptrunner_prompts_ts', snap.data().promptsUpdatedAt);
+      renderPrompts();
     }
+    return docRef.set({
+      prompts: localPrompts,
+      promptsUpdatedAt: Date.now(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(() => {
+    document.getElementById('btn-sync').classList.remove('syncing');
+    setSyncStatus('ok', '✓ Prompts sincronizados');
+  }).catch(err => {
+    document.getElementById('btn-sync').classList.remove('syncing');
+    setSyncStatus('err', 'Error: ' + err.message);
+  });
+}
+function setSyncStatus(type, msg) {
+  const el = document.getElementById('sync-status');
+  document.getElementById('sync-status-msg').textContent = msg;
+  el.className = 'visible ' + type;
+  if (type === 'ok') setTimeout(() => el.className = '', 4000);
+}
+function closeSyncStatus() { document.getElementById('sync-status').className = ''; updateSyncUI(); }
+function fbSignOut() { if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
 
-    // Guardar todo en localStorage (records, nextId, sourceText)
-    function persistAll() {
-        try {
-            localStorage.setItem('promptRecords', JSON.stringify(records));
-            localStorage.setItem('nextId', nextId);
-            localStorage.setItem('sourceText', sourceTextArea.value);
-        } catch(e) { console.warn(e); }
-    }
-
-    // Cargar datos desde localStorage
-    function loadFromStorage() {
-        const storedRecords = localStorage.getItem('promptRecords');
-        if (storedRecords) {
-            try {
-                records = JSON.parse(storedRecords);
-                // Asegurar que cada registro tenga los campos necesarios
-                if (!Array.isArray(records)) records = [];
-            } catch(e) { records = []; }
-        } else {
-            records = [];
-        }
-
-        const storedNextId = localStorage.getItem('nextId');
-        if (storedNextId && !isNaN(parseInt(storedNextId, 10))) {
-            nextId = parseInt(storedNextId, 10);
-        } else {
-            // Calcular el máximo id existente para no colisionar
-            if (records.length > 0) {
-                const maxId = Math.max(...records.map(r => r.id), 0);
-                nextId = maxId + 1;
-            } else {
-                nextId = 1;
-            }
-        }
-
-        const storedSource = localStorage.getItem('sourceText');
-        if (storedSource !== null) {
-            sourceTextArea.value = storedSource;
-        } else {
-            sourceTextArea.value = '';
-        }
-    }
-
-    // Actualizar contador y guardar tras cualquier cambio
-    function updateRecordsCount() {
-        const count = records.length;
-        recordsCountSpan.textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
-    }
-
-    function renderTable() {
-        if (!tableBody) return;
-        if (records.length === 0) {
-            tableBody.innerHTML = `<tr class="empty-row"><td colspan="3">✨ No hay registros. Añade uno.</td></tr>`;
-            updateRecordsCount();
-            return;
-        }
-
-        let html = '';
-        for (const record of records) {
-            const safeName = escapeHtml(record.name);
-            const hiddenPromptDisplay = `<span style="background:#eef2ff; padding:4px 10px; border-radius:40px; font-size:0.7rem;">🔒 oculto · clic en ✏️</span>`;
-            html += `
-                <tr data-record-id="${record.id}">
-                    <td style="font-weight:500;">${safeName}</td>
-                    <td class="prompt-hidden-cell">${hiddenPromptDisplay}</td>
-                    <td class="actions">
-                        <button class="btn-execute" data-id="${record.id}" title="Unir prompt con texto origen">▶ Ejecutar</button>
-                        <button class="btn-edit" data-id="${record.id}" title="Ver y modificar el prompt">✏️ Editar</button>
-                        <button class="btn-delete" data-id="${record.id}" title="Eliminar registro">🗑 Eliminar</button>
-                    </td>
-                </tr>
-            `;
-        }
-        tableBody.innerHTML = html;
-        updateRecordsCount();
-        persistAll(); // cada vez que se renderiza por cambios, guardamos (ya se llama desde operaciones, pero redundancia segura)
-    }
-
-    // Añadir registro
-    function addRecord(name, prompt) {
-        const trimmedName = name.trim();
-        const trimmedPrompt = prompt.trim();
-        if (trimmedName === '') {
-            alert('❌ El nombre no puede estar vacío.');
-            return false;
-        }
-        if (trimmedPrompt === '') {
-            alert('❌ El prompt no puede estar vacío.');
-            return false;
-        }
-        const newRecord = {
-            id: nextId++,
-            name: trimmedName,
-            prompt: trimmedPrompt
-        };
-        records.push(newRecord);
-        renderTable();       // guarda automáticamente
-        return true;
-    }
-
-    function deleteRecordById(id) {
-        records = records.filter(record => record.id !== id);
-        renderTable();
-    }
-
-    function executeRecordById(id) {
-        const record = records.find(r => r.id === id);
-        if (!record) {
-            alert('Registro no encontrado.');
-            return;
-        }
-        const source = sourceTextArea.value;
-        const union = record.prompt + '\n\n' + source;
-        resultTextArea.value = union;
-        // No es necesario guardar resultado, pero sí que el texto origen se guarda en persistAll ya al editar source?
-        // Guardamos también cuando se cambie sourceTextArea (evento input)
-    }
-
-    function openEditModal(recordId) {
-        const record = records.find(r => r.id === recordId);
-        if (!record) {
-            alert('No se encontró el registro.');
-            return;
-        }
-        currentEditingId = recordId;
-        modalRecordNameSpan.innerText = `✏️ Editando: ${escapeHtml(record.name)}`;
-        modalPromptInput.value = record.prompt;
-        editModal.style.display = 'flex';
-    }
-
-    function savePromptEdit() {
-        if (currentEditingId === null) return;
-        const newPrompt = modalPromptInput.value;
-        if (newPrompt.trim() === '') {
-            alert('El prompt no puede estar vacío.');
-            return;
-        }
-        const recordIndex = records.findIndex(r => r.id === currentEditingId);
-        if (recordIndex !== -1) {
-            records[recordIndex].prompt = newPrompt.trim();
-            renderTable();       // guarda automáticamente
-            alert('✅ Prompt actualizado correctamente.');
-        } else {
-            alert('Error: el registro ya no existe.');
-        }
-        closeModal();
-    }
-
-    function closeModal() {
-        editModal.style.display = 'none';
-        currentEditingId = null;
-        modalPromptInput.value = '';
-    }
-
-    async function copyResult() {
-        const result = resultTextArea.value;
-        if (!result || result.trim() === '') {
-            alert('No hay resultado para copiar. Ejecuta algún prompt primero.');
-            return;
-        }
-        try {
-            await navigator.clipboard.writeText(result);
-            const original = copyBtn.innerText;
-            copyBtn.innerText = '✅ ¡Copiado!';
-            setTimeout(() => { copyBtn.innerText = original; }, 1500);
-        } catch(e) {
-            alert('No se pudo copiar.');
-        }
-    }
-
-    function handleTableActions(event) {
-        const target = event.target;
-        if (target.classList.contains('btn-execute')) {
-            const id = parseInt(target.getAttribute('data-id'), 10);
-            executeRecordById(id);
-        }
-        else if (target.classList.contains('btn-edit')) {
-            const id = parseInt(target.getAttribute('data-id'), 10);
-            openEditModal(id);
-        }
-        else if (target.classList.contains('btn-delete')) {
-            const id = parseInt(target.getAttribute('data-id'), 10);
-            if (confirm('¿Eliminar este registro permanentemente?')) {
-                deleteRecordById(id);
-            }
-        }
-    }
-
-    function onAddRecord() {
-        const name = recordNameInput.value;
-        const prompt = recordPromptInput.value;
-        if (addRecord(name, prompt)) {
-            recordNameInput.value = '';
-            recordPromptInput.value = '';
-            recordNameInput.focus();
-        }
-    }
-
-    // Guardar el texto origen cuando el usuario lo modifica (cada cambio)
-    function bindSourceAutoSave() {
-        sourceTextArea.addEventListener('input', () => {
-            persistAll();  // guarda solo el texto origen junto con todo (es seguro)
-        });
-    }
-
-    // Inicializar: cargar datos, renderizar, eventos
-    function init() {
-        loadFromStorage();
-        // Si no hay registros y queremos ejemplos solo la primera vez (si está vacío)
-        if (records.length === 0) {
-            // Ejemplos ilustrativos (se guardarán tras añadirlos)
-            addRecord('📝 Traductor EN', 'Traduce el siguiente texto al inglés:');
-            addRecord('🔍 Resumen creativo', 'Haz un resumen creativo y atractivo de este texto:');
-            addRecord('✨ Corrector gramatical', 'Corrige la gramática y ortografía del siguiente texto:');
-        } else {
-            // Solo renderizar lo cargado
-            renderTable();
-        }
-        // Asegurar que la vista del texto origen refleje lo guardado (ya lo hace loadFromStorage)
-        // Pero si por algún casual el sourceTextArea no se actualizó bien:
-        if (sourceTextArea.value === '' && localStorage.getItem('sourceText') !== null) {
-            sourceTextArea.value = localStorage.getItem('sourceText');
-        }
-        
-        // Eventos
-        addBtn.addEventListener('click', onAddRecord);
-        const tableContainer = document.getElementById('recordsTable');
-        if (tableContainer) tableContainer.addEventListener('click', handleTableActions);
-        copyBtn.addEventListener('click', copyResult);
-        
-        modalSaveBtn.addEventListener('click', savePromptEdit);
-        modalCancelBtn.addEventListener('click', closeModal);
-        editModal.addEventListener('click', (e) => {
-            if (e.target === editModal) closeModal();
-        });
-        
-        recordNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onAddRecord(); } });
-        recordPromptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); onAddRecord(); } });
-        
-        bindSourceAutoSave();
-        // Guardado inicial por si acaso
-        persistAll();
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
+function openFbKeyModal() { document.getElementById('fb-key-input').value = FB_API_KEY || ''; document.getElementById('modal-fbkey').classList.add('visible'); setTimeout(() => document.getElementById('fb-key-input').focus(), 80); }
+function closeFbKeyModal() { document.getElementById('modal-fbkey').classList.remove('visible'); }
+function saveFbKey(val) {
+  if (!val || !val.startsWith('AIzaSy')) { alert('La clave debe empezar por AIzaSy'); return false; }
+  FB_API_KEY = val;
+  localStorage.setItem('promptrunner_fb_key', val);
+  initFirebase(val);
+  closeFbKeyModal();
+  return true;
+}
+document.getElementById('btn-fb-key').addEventListener('click', openFbKeyModal);
+document.getElementById('modal-fbkey').addEventListener('click', e => { if (e.target === document.getElementById('modal-fbkey')) closeFbKeyModal(); });
 </script>
 </body>
 </html>
