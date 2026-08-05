@@ -173,29 +173,6 @@ header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--bor
       <option value="mistralai/mistral-small-3.2-24b">Mistral Small 3.2</option>
       <option value="deepseek/deepseek-r1-0528">DeepSeek R1</option>
     </select>
-    <select id="gemini-model-select" class="modal-input" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);margin:0;display:none;">
-      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (g)</option>
-      <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (g)</option>
-      <option value="gemini-2.0-flash">Gemini 2.0 Flash (g)</option>
-      <option value="gemini-2.5-pro">Gemini 2.5 Pro (p)</option>
-    </select>
-    <select id="groq-model-select" class="modal-input" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);margin:0;display:none;">
-      <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (g)</option>
-      <option value="llama-3.3-70b-versatile" selected>Llama 3.3 70B Versatile (g)</option>
-      <option value="gemma2-9b-it">Gemma2 9B (g)</option>
-      <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill 70B (g)</option>
-    </select>
-    <select id="mistral-model-select" class="modal-input" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);margin:0;display:none;">
-      <option value="open-mistral-nemo">Mistral Nemo (g)</option>
-      <option value="mistral-small-latest" selected>Mistral Small (g)</option>
-      <option value="mistral-large-latest">Mistral Large (p)</option>
-      <option value="codestral-latest">Codestral (p)</option>
-    </select>
-    <select id="claude-model-select" class="modal-input" style="font-family:var(--font-ui);font-size:9px;padding:5px 8px;width:auto;letter-spacing:0.5px;color:var(--muted);background:var(--card);border-color:var(--border);margin:0;display:none;">
-      <option value="claude-haiku-4-5">Claude Haiku 4.5 (p)</option>
-      <option value="claude-sonnet-4-6" selected>Claude Sonnet 4.6 (p)</option>
-      <option value="claude-opus-4-8">Claude Opus 4.8 (p)</option>
-    </select>
     <button class="btn-key" id="btn-or-key">⚙ OpenRouter</button>
     <button class="btn-key" id="btn-gemini-key" style="display:none;">⚙ Gemini</button>
     <button class="btn-key" id="btn-groq-key" style="display:none;">⚙ Groq</button>
@@ -544,11 +521,7 @@ function setApi(api) {
   activeApi = api;
   localStorage.setItem('promptrunner_active_api', api);
   document.querySelectorAll('.api-btn').forEach(b => b.classList.toggle('active', b.dataset.api === api));
-  document.getElementById('or-model-select').style.display      = api === 'openrouter' ? '' : 'none';
-  document.getElementById('gemini-model-select').style.display  = api === 'gemini'     ? '' : 'none';
-  document.getElementById('groq-model-select').style.display    = api === 'groq'       ? '' : 'none';
-  document.getElementById('mistral-model-select').style.display = api === 'mistral'    ? '' : 'none';
-  document.getElementById('claude-model-select').style.display  = api === 'claude'     ? '' : 'none';
+  document.getElementById('or-model-select').style.display = api === 'openrouter' ? '' : 'none';
   document.getElementById('btn-or-key').style.display      = api === 'openrouter' ? '' : 'none';
   document.getElementById('btn-gemini-key').style.display  = api === 'gemini'     ? '' : 'none';
   document.getElementById('btn-groq-key').style.display    = api === 'groq'       ? '' : 'none';
@@ -592,8 +565,7 @@ async function callOpenRouter(systemPrompt, userPrompt, modelId) {
 }
 async function callGemini(systemPrompt, userPrompt) {
   if (!GEMINI_API_KEY) { openGeminiKeyModal(); throw new Error('Introduce la clave de Gemini primero.'); }
-  const model = document.getElementById('gemini-model-select').value || 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   const resp = await fetch(url, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -612,12 +584,11 @@ async function callGemini(systemPrompt, userPrompt) {
 }
 async function callGroq(systemPrompt, userPrompt) {
   if (!GROQ_API_KEY) { openGroqKeyModal(); throw new Error('Introduce la clave de Groq primero.'); }
-  const groqModel = document.getElementById('groq-model-select').value || 'llama-3.3-70b-versatile';
   const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
     body: JSON.stringify({
-      model: groqModel, max_tokens: 8000, temperature: 0.4,
+      model: 'llama-3.3-70b-versatile', max_tokens: 8000, temperature: 0.4,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
     })
   });
@@ -629,12 +600,11 @@ async function callGroq(systemPrompt, userPrompt) {
 }
 async function callMistral(systemPrompt, userPrompt, _retry = 0) {
   if (!MISTRAL_API_KEY) { openMistralKeyModal(); throw new Error('Introduce la clave de Mistral primero.'); }
-  const mistralModel = document.getElementById('mistral-model-select').value || 'mistral-small-latest';
   const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MISTRAL_API_KEY },
     body: JSON.stringify({
-      model: mistralModel, max_tokens: 8000, temperature: 1.0,
+      model: 'mistral-small-latest', max_tokens: 8000, temperature: 1.0,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }]
     })
   });
@@ -652,7 +622,6 @@ async function callMistral(systemPrompt, userPrompt, _retry = 0) {
 }
 async function callClaude(systemPrompt, userPrompt) {
   if (!CLAUDE_API_KEY) { openClaudeKeyModal(); throw new Error('Introduce la clave de Claude primero.'); }
-  const claudeModel = document.getElementById('claude-model-select').value || 'claude-sonnet-4-6';
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -662,7 +631,7 @@ async function callClaude(systemPrompt, userPrompt) {
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: claudeModel, max_tokens: 8000, temperature: 0.4,
+      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.4,
       system: systemPrompt, messages: [{ role: 'user', content: userPrompt }]
     })
   });
