@@ -3,763 +3,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prueba de Nivel · Competencias Digitales</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>Quiz: Ver TV en el Ordenador</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#1a0f27;
-    --bg-2:#241534;
-    --card:#2a1740;
-    --card-2:#33204c;
-    --border:#4a3268;
-    --gold:#cfa14d;
-    --gold-soft:#e8c884;
-    --text:#f2ecf9;
-    --text-muted:#b8a5cf;
-    --basico:#6fcf97;
-    --medio:#e0a94a;
-    --alto:#e2637b;
-    --radius:14px;
+  :root {
+    --c1: #185FA5; --c2: #0C447C; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:radial-gradient(circle at 15% 0%, #2c1a44 0%, var(--bg) 55%);
-    color:var(--text);
-    font-family:'Inter', sans-serif;
-    min-height:100vh;
-    padding-bottom:60px;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
   }
-  h1,h2,h3{
-    font-family:'Fraunces', serif;
-    font-weight:600;
-    margin:0 0 6px 0;
-    letter-spacing:.2px;
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
   }
-  a{color:var(--gold-soft);}
-
-  header.top{
-    padding:26px 20px 18px;
-    border-bottom:1px solid var(--border);
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    flex-wrap:wrap;
-    gap:14px;
-    max-width:960px;
-    margin:0 auto;
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+  .header { text-align: center; margin-bottom: 40px; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
   }
-  header.top .brand{display:flex; flex-direction:column; gap:4px;}
-  header.top .brand small{color:var(--text-muted); font-size:12.5px; letter-spacing:.5px; text-transform:uppercase;}
-  header.top .brand h1{font-size:26px;}
-
-  nav.tabs{display:flex; gap:8px;}
-  nav.tabs button{
-    background:transparent;
-    border:1px solid var(--border);
-    color:var(--text-muted);
-    padding:9px 16px;
-    border-radius:999px;
-    font-family:'Inter',sans-serif;
-    font-size:13.5px;
-    font-weight:600;
-    cursor:pointer;
-    transition:.15s;
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.8rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
   }
-  nav.tabs button.active{
-    background:var(--gold);
-    color:#241534;
-    border-color:var(--gold);
+  .progress-wrap { margin-bottom: 30px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
   }
-  nav.tabs button:hover:not(.active){
-    border-color:var(--gold-soft);
-    color:var(--gold-soft);
+  .q-type-badge {
+    display: inline-flex; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+    background: rgba(24,95,165,0.2); color: #60a5fa;
   }
-
-  main{max-width:800px; margin:0 auto; padding:28px 20px;}
-
-  .card{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:24px 24px 26px;
-    margin-bottom:20px;
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px; color: var(--text);
+    font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 14px; transition: 0.2s;
   }
-  .intro{color:var(--text-muted); font-size:14.5px; line-height:1.55; margin-bottom:4px;}
-
-  .field-row{display:flex; gap:14px; flex-wrap:wrap; margin-top:18px;}
-  .field{flex:1; min-width:180px; display:flex; flex-direction:column; gap:6px;}
-  .field label{font-size:12.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px;}
-  .field input{
-    background:var(--bg-2);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:10px 12px;
-    color:var(--text);
-    font-family:'Inter',sans-serif;
-    font-size:14.5px;
+  .option-btn:hover:not(:disabled) { background: rgba(24,95,165,0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-letter {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
   }
-  .field input:focus{outline:2px solid var(--gold-soft); outline-offset:1px;}
-
-  .question-block{margin-top:26px; padding-top:20px; border-top:1px solid var(--border);}
-  .question-block:first-of-type{border-top:none; margin-top:22px; padding-top:0;}
-  .q-eyebrow{color:var(--gold-soft); font-size:12px; text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px; font-weight:600;}
-  .q-text{font-size:16px; margin-bottom:12px; line-height:1.4;}
-  .options{display:flex; flex-direction:column; gap:8px;}
-  .option{
-    display:flex;
-    align-items:flex-start;
-    gap:10px;
-    background:var(--bg-2);
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:11px 14px;
-    cursor:pointer;
-    transition:.15s;
-    font-size:14.5px;
-    line-height:1.4;
+  .option-btn.correct { background: rgba(24,95,165,0.3); border-color: var(--c1); }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+  .feedback { display: none; margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 700; line-height: 1.4; animation: fadeIn 0.3s ease; }
+  .feedback.correct-fb { display: block; background: rgba(24,95,165,0.2); color: #93c5fd; border: 1px solid var(--c1); }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .btn-next {
+    display: none; width: 100%; max-width: 200px; margin: 0 0 0 auto;
+    padding: 14px; border-radius: 14px; border: none; font-weight: 800;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
   }
-  .option:hover{border-color:var(--gold-soft);}
-  .option.selected{border-color:var(--gold); background:#3a2454;}
-  .option input{margin-top:3px; accent-color:var(--gold);}
-  .option .letter{font-weight:700; color:var(--gold-soft); flex-shrink:0;}
-
-  .btn{
-    background:var(--gold);
-    color:#241534;
-    border:none;
-    border-radius:999px;
-    padding:12px 26px;
-    font-family:'Inter',sans-serif;
-    font-weight:700;
-    font-size:14.5px;
-    cursor:pointer;
-    transition:.15s;
+  .results { display: none; text-align: center; }
+  .score-circle {
+    width: 120px; height: 120px; border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 20px auto;
+    font-size: 2rem; font-family: 'Fredoka One';
   }
-  .btn:hover{background:var(--gold-soft);}
-  .btn:disabled{opacity:.4; cursor:not-allowed;}
-  .btn.secondary{
-    background:transparent;
-    border:1px solid var(--border);
-    color:var(--text);
-  }
-  .btn.secondary:hover{border-color:var(--gold-soft); color:var(--gold-soft);}
-  .btn.danger{background:transparent; border:1px solid var(--alto); color:var(--alto);}
-  .btn.danger:hover{background:var(--alto); color:#241534;}
-
-  .submit-row{margin-top:28px; display:flex; justify-content:flex-end; gap:10px;}
-  .error-msg{color:var(--alto); font-size:13.5px; margin-top:14px; display:none;}
-
-  /* Resultado */
-  .badge{
-    display:inline-block;
-    padding:5px 14px;
-    border-radius:999px;
-    font-weight:700;
-    font-size:13px;
-    text-transform:uppercase;
-    letter-spacing:.4px;
-  }
-  .badge.basico{background:rgba(111,207,151,.18); color:var(--basico);}
-  .badge.medio{background:rgba(224,169,74,.18); color:var(--medio);}
-  .badge.alto{background:rgba(226,99,123,.18); color:var(--alto);}
-
-  .bars{display:flex; flex-direction:column; gap:10px; margin:18px 0;}
-  .bar-row{display:flex; align-items:center; gap:10px;}
-  .bar-row .bar-label{width:110px; font-size:13px; color:var(--text-muted); flex-shrink:0;}
-  .bar-track{flex:1; background:var(--bg-2); border-radius:6px; height:14px; overflow:hidden;}
-  .bar-fill{height:100%; border-radius:6px;}
-  .bar-fill.basico{background:var(--basico);}
-  .bar-fill.medio{background:var(--medio);}
-  .bar-fill.alto{background:var(--alto);}
-  .bar-count{width:22px; text-align:right; font-size:13px; color:var(--text-muted);}
-
-  .alert{
-    border-radius:10px;
-    padding:14px 16px;
-    font-size:14px;
-    line-height:1.5;
-    margin-top:14px;
-  }
-  .alert.alto{background:rgba(226,99,123,.12); border:1px solid rgba(226,99,123,.4); color:var(--text);}
-  .alert.info{background:rgba(207,161,77,.12); border:1px solid rgba(207,161,77,.4); color:var(--text);}
-
-  /* Panel técnicos */
-  .gate{max-width:360px; margin:60px auto; text-align:center;}
-  .gate input{width:100%; margin-bottom:14px;}
-
-  table.results{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px;}
-  table.results th{
-    text-align:left;
-    color:var(--text-muted);
-    font-weight:600;
-    text-transform:uppercase;
-    font-size:11px;
-    letter-spacing:.4px;
-    padding:8px 10px;
-    border-bottom:1px solid var(--border);
-  }
-  table.results td{
-    padding:10px 10px;
-    border-bottom:1px solid var(--border);
-    vertical-align:middle;
-  }
-  table.results tr:hover td{background:var(--card-2);}
-  table.results th.sortable{cursor:pointer; user-select:none; color:var(--gold-soft);}
-  table.results th.sortable:hover{color:var(--gold);}
-  .nota-value{font-weight:700; color:var(--gold-soft); font-size:15px;}
-  .puntos-value{color:var(--text-muted); font-size:12px;}
-  .row-actions{display:flex; gap:6px;}
-  .row-actions button{
-    background:transparent;
-    border:1px solid var(--border);
-    color:var(--text-muted);
-    border-radius:6px;
-    padding:5px 9px;
-    font-size:12px;
-    cursor:pointer;
-  }
-  .row-actions button:hover{color:var(--gold-soft); border-color:var(--gold-soft);}
-  .row-actions button.del:hover{color:var(--alto); border-color:var(--alto);}
-
-  .toolbar{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;}
-  .toolbar .stats{display:flex; gap:10px; flex-wrap:wrap;}
-  .stat-chip{
-    background:var(--bg-2);
-    border:1px solid var(--border);
-    border-radius:999px;
-    padding:6px 13px;
-    font-size:12.5px;
-    color:var(--text-muted);
-  }
-  .stat-chip b{color:var(--text);}
-
-  .empty{color:var(--text-muted); text-align:center; padding:40px 20px; font-size:14px;}
-
-  /* Modal */
-  .modal-backdrop{
-    display:none;
-    position:fixed; inset:0;
-    background:rgba(10,5,16,.7);
-    z-index:50;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-  }
-  .modal-backdrop.open{display:flex;}
-  .modal{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    max-width:560px;
-    width:100%;
-    max-height:85vh;
-    overflow-y:auto;
-    padding:24px;
-  }
-  .modal-close{
-    float:right;
-    background:transparent;
-    border:none;
-    color:var(--text-muted);
-    font-size:20px;
-    cursor:pointer;
-    line-height:1;
-  }
-  .detail-q{padding:10px 0; border-bottom:1px solid var(--border); font-size:13.5px;}
-  .detail-q:last-child{border-bottom:none;}
-  .detail-q .cat{color:var(--gold-soft); font-size:11px; text-transform:uppercase; letter-spacing:.4px;}
-  .detail-q .ans{color:var(--text-muted); margin-top:2px;}
-
-  footer{max-width:800px; margin:20px auto 0; padding:0 20px; color:var(--text-muted); font-size:12px; text-align:center;}
-
-  @media (max-width:560px){
-    header.top{padding:20px 16px 14px;}
-    main{padding:20px 14px;}
-    .card{padding:18px 16px 20px;}
-    table.results{font-size:12.5px;}
-    table.results th:nth-child(2), table.results td:nth-child(2){display:none;}
-  }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
-
-<header class="top">
-  <div class="brand">
-    <small>Cruz Roja Valladolid · Competencias Digitales</small>
-    <h1>Prueba de Nivel</h1>
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+<div class="container">
+  <div class="header">
+    <div class="badge">📺 TV en el Ordenador</div>
+    <h1>Ver televisión online</h1>
   </div>
-  <nav class="tabs">
-    <button id="tabUser" class="active" onclick="showView('user')">Hacer la prueba</button>
-    <button id="tabAdmin" onclick="showView('gate')">Panel de técnicos</button>
-  </nav>
-</header>
-
-<main>
-
-  <!-- VISTA USUARIO: FORMULARIO -->
-  <section id="view-form">
-    <div class="card">
-      <h2>Antes de empezar</h2>
-      <p class="intro">Esta prueba no es un examen. No pasa nada si no sabes hacer muchas de las cosas que aparecen. Queremos conocer qué sabes hacer actualmente y qué te gustaría aprender.</p>
-      <div class="field-row">
-        <div class="field">
-          <label for="fNombre">Nombre y apellidos</label>
-          <input type="text" id="fNombre" placeholder="Nombre completo">
-        </div>
-        <div class="field">
-          <label for="fTelefono">Teléfono / contacto</label>
-          <input type="text" id="fTelefono" placeholder="Teléfono o email">
-        </div>
-        <div class="field">
-          <label for="fFecha">Fecha</label>
-          <input type="date" id="fFecha">
-        </div>
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 10</span>
+        <span id="prog-score">⭐ 0 pts</span>
       </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
     </div>
-
-    <form id="quizForm"></form>
-
-    <div class="card">
-      <p class="error-msg" id="errorMsg">Por favor, completa tu nombre y responde a todas las preguntas antes de continuar.</p>
-      <div class="submit-row">
-        <button type="button" class="btn" id="submitBtn" onclick="submitQuiz()">Enviar respuestas</button>
-      </div>
+    <div class="question-card">
+      <div class="q-type-badge">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number">Cargando...</div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
     </div>
-  </section>
-
-  <!-- VISTA USUARIO: RESULTADO -->
-  <section id="view-result" style="display:none;">
-    <div class="card" id="resultCard"></div>
-    <div class="submit-row" style="justify-content:flex-start;">
-      <button class="btn secondary" onclick="resetForm()">Hacer otra prueba</button>
-    </div>
-  </section>
-
-  <!-- ACCESO PANEL TÉCNICOS -->
-  <section id="view-gate" style="display:none;">
-    <div class="card gate">
-      <h2>Acceso técnicos</h2>
-      <p class="intro">Introduce la clave de acceso para ver los resultados de los usuarios.</p>
-      <input type="password" id="gatePass" placeholder="Clave de acceso" onkeydown="if(event.key==='Enter')checkPass()">
-      <button class="btn" style="width:100%;" onclick="checkPass()">Entrar</button>
-      <p class="error-msg" id="gateError">Clave incorrecta.</p>
-    </div>
-  </section>
-
-  <!-- PANEL TÉCNICOS -->
-  <section id="view-admin" style="display:none;">
-    <div class="card">
-      <div class="toolbar">
-        <h2 style="margin:0;">Resultados de usuarios</h2>
-        <div class="row-actions">
-          <button onclick="exportExcel()">Exportar a Excel</button>
-          <button class="del" onclick="clearAll()">Borrar todo</button>
-        </div>
-      </div>
-      <div class="toolbar">
-        <div class="stats" id="adminStats"></div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="results" id="resultsTable">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Contacto</th>
-              <th>Fecha</th>
-              <th class="sortable" id="thNota" onclick="toggleSort()">Puntos / Nota <span id="sortArrow">▾</span></th>
-              <th>Expectativa</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="resultsBody"></tbody>
-        </table>
-        <div class="empty" id="emptyState" style="display:none;">Todavía no hay ninguna prueba completada.</div>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<footer>Los datos se guardan únicamente en este dispositivo/navegador (almacenamiento local). Exporta a Excel periódicamente para conservar una copia.</footer>
-
-<!-- MODAL DETALLE -->
-<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">&times;</button>
-    <div id="modalContent"></div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+  <div class="results" id="results">
+    <div style="font-size: 4rem;">🏆</div>
+    <div class="score-circle" id="score-num">0/10</div>
+    <h2 id="result-msg"></h2>
+    <button class="badge" style="margin-top: 30px; cursor: pointer; border: none;" onclick="location.reload()">Reiniciar Quiz</button>
   </div>
 </div>
-
 <script>
-/* ============ CONFIGURACIÓN ============ */
-// Cambia esta clave por la que quieras usar para el acceso de técnicos/profesores.
-const TECH_PASSWORD = "cruzroja";
-const STORAGE_KEY = "prueba_nivel_resultados";
-
-/* ============ PREGUNTAS Y RESOLUCIÓN ============ */
-// "points" indica la puntuación (0/1/2) que vale cada respuesta de las preguntas 1-9,
-// según la tabla de equivalencias. La pregunta 10 no puntúa: "map" indica su categoría
-// de expectativa, y "labels" el texto que se muestra al técnico para esa categoría.
-const QUESTIONS = [
-  { id:1, cat:"1. El ordenador",
-    text:"Cuando utilizas un ordenador, ¿cuál de estas situaciones se parece más a la tuya?",
-    options:{ A:"Necesito ayuda para hacer casi cualquier cosa.",
-              B:"Sé hacer algunas cosas, pero otras todavía me cuestan.",
-              C:"Normalmente puedo hacer por mi cuenta las tareas que necesito." },
-    points:{A:0,B:1,C:2} },
-  { id:2, cat:"1. El ordenador",
-    text:"¿Has creado alguna vez una carpeta para guardar documentos o fotografías?",
-    options:{ A:"No.",
-              B:"Sí, pero necesito que me indiquen cómo hacerlo.",
-              C:"Sí, sé crear carpetas y utilizarlas para organizar mis archivos." },
-    points:{A:2,B:0,C:1} },
-  { id:3, cat:"2. Archivos y documentos",
-    text:"Si tienes un documento guardado en el ordenador, ¿podrías cambiarle el nombre?",
-    options:{ A:"Sí, puedo hacerlo sin ayuda.",
-              B:"No sé cómo hacerlo.",
-              C:"Creo que podría hacerlo si alguien me lo explica." },
-    points:{A:2,B:0,C:1} },
-  { id:4, cat:"2. Archivos y documentos",
-    text:"Descargas un documento de Internet. Al día siguiente quieres volver a encontrarlo. ¿Qué situación se parece más a la tuya?",
-    options:{ A:"Normalmente sé dónde buscarlo.",
-              B:"No sabría dónde encontrarlo.",
-              C:"Podría encontrarlo si alguien me indica dónde buscar." },
-    points:{A:0,B:1,C:2} },
-  { id:5, cat:"3. Internet y correo electrónico",
-    text:"Cuando buscas algo en Internet, ¿qué sueles hacer?",
-    options:{ A:"Pido a otra persona que lo busque por mí.",
-              B:"Escribo lo que necesito buscar y miro los resultados.",
-              C:"Utilizo Internet habitualmente y normalmente encuentro por mi cuenta la información que necesito." },
-    points:{A:2,B:0,C:1} },
-  { id:6, cat:"3. Internet y correo electrónico",
-    text:"¿Has enviado alguna vez un correo electrónico con una fotografía o un documento?",
-    options:{ A:"Sí, lo hago sin dificultad.",
-              B:"No.",
-              C:"Sí, pero necesito ayuda algunas veces." },
-    points:{A:1,B:0,C:2} },
-  { id:7, cat:"4. Otras herramientas",
-    text:"¿Has utilizado alguna vez Word, Excel o programas parecidos?",
-    options:{ A:"No los he utilizado prácticamente nunca.",
-              B:"Sí, los utilizo habitualmente y sé hacer bastantes cosas por mi cuenta.",
-              C:"Los he utilizado para cosas sencillas, pero todavía necesito aprender muchas funciones." },
-    points:{A:2,B:0,C:1} },
-  { id:8, cat:"4. Otras herramientas",
-    text:"¿Has utilizado alguna vez herramientas como ChatGPT o Gemini?",
-    options:{ A:"Sí, las utilizo habitualmente para diferentes tareas.",
-              B:"No.",
-              C:"Las he probado alguna vez, pero todavía no sé utilizarlas bien." },
-    points:{A:2,B:0,C:1} },
-  { id:9, cat:"5. Trámites y autonomía",
-    text:"Cuando tienes que hacer un trámite por Internet, como pedir una cita o consultar algo en una página oficial, ¿qué situación se parece más a la tuya?",
-    options:{ A:"Normalmente otra persona me ayuda o lo hace por mí.",
-              B:"He hecho alguno por mi cuenta, pero todavía necesito ayuda en algunos pasos.",
-              C:"Normalmente puedo hacerlos por mi cuenta." },
-    points:{A:0,B:1,C:2} },
-  { id:10, cat:"Expectativas", expect:true,
-    text:"¿Qué tipo de curso buscas principalmente?",
-    options:{ A:"Un curso para aprender a utilizar el ordenador desde el principio: ratón, teclado, escritorio, archivos y tareas básicas.",
-              B:"Un curso para aprender a utilizar mejor Internet, el correo electrónico y otras herramientas que necesito en mi vida diaria.",
-              C:"Un curso para mejorar los conocimientos que ya tengo y aprender a utilizar herramientas nuevas.",
-              D:"Un curso de informática y ofimática avanzada, con funciones más complejas." },
-    map:{A:"basica",B:"delcurso",C:"superior",D:"avanzada"},
-    labels:{basica:"Expectativa básica",delcurso:"Expectativa del curso",superior:"Expectativa superior",avanzada:"Expectativa avanzada"} },
+const questions = [
+  {
+    q: "¿Qué necesitas para ver televisión en el ordenador?",
+    options: ["Una antena especial de TV", "Un ordenador con acceso a internet", "Un mando a distancia"],
+    correct: 1,
+    expl: "Solo necesitas un ordenador con conexión a internet y un navegador web. No hace falta ningún hardware especial."
+  },
+  {
+    q: "¿Cuál es la dirección web de RTVE Play, la plataforma de Televisión Española?",
+    options: ["www.tve.es", "www.rtve.es/play/", "www.television.es"],
+    correct: 1,
+    expl: "La dirección correcta es www.rtve.es/play/. Desde ahí puedes ver La 1, La 2 y muchos programas a la carta."
+  },
+  {
+    q: "¿Qué opción debes elegir en RTVE Play para ver La 1 o La 2 en este momento?",
+    options: ["A la carta", "En directo", "Mis favoritos"],
+    correct: 1,
+    expl: "'En directo' te permite seguir la emisión en tiempo real, igual que si encendieras el televisor."
+  },
+  {
+    q: "¿Qué significa 'A la carta' en las plataformas de TV online?",
+    options: ["Ver canales en directo", "Ver programas emitidos anteriormente cuando quieras", "Pagar por un programa concreto"],
+    correct: 1,
+    expl: "'A la carta' significa que puedes ver programas que ya se han emitido, en el momento que tú elijas, sin horarios fijos."
+  },
+  {
+    q: "¿A qué canales da acceso Atresplayer?",
+    options: ["La 1 y La 2", "Antena 3, La Sexta y otros canales del grupo Atresmedia", "Canal Sur y Telemadrid"],
+    correct: 1,
+    expl: "Atresplayer es la plataforma del grupo Atresmedia, que incluye Antena 3, La Sexta y otros canales. Se accede en www.atresplayer.com."
+  },
+  {
+    q: "¿Cuál de estas opciones es una plataforma gratuita adicional mencionada en la guía?",
+    options: ["Netflix", "Pluto TV", "HBO Max"],
+    correct: 1,
+    expl: "Pluto TV (www.pluto.tv) ofrece canales en vivo y contenido bajo demanda completamente gratis, sin necesidad de registro."
+  },
+  {
+    q: "¿Para qué sirve YouTube en relación con la TV?",
+    options: ["Solo para vídeos de música", "Para ver canales oficiales de TV que suben programas y emisiones en directo", "Para grabar programas de televisión"],
+    correct: 1,
+    expl: "Muchos canales de televisión como RTVE o Telemadrid tienen perfiles oficiales en YouTube donde suben programas completos y retransmisiones."
+  },
+  {
+    q: "¿Qué botón debes pulsar para pausar un vídeo?",
+    options: ["El triángulo", "Las dos líneas verticales", "El cuadrado"],
+    correct: 1,
+    expl: "El botón de pausa son dos líneas verticales. El triángulo es para reproducir, y el cuadrado suele ser para detener o ver en pantalla completa."
+  },
+  {
+    q: "¿Cómo se sube el volumen en el reproductor de vídeo?",
+    options: ["Moviendo la barra del altavoz hacia la izquierda", "Moviendo la barra del altavoz hacia la derecha", "Haciendo doble clic en la pantalla"],
+    correct: 1,
+    expl: "Para subir el volumen hay que mover la barra junto al icono del altavoz hacia la derecha. Hacia la izquierda lo baja."
+  },
+  {
+    q: "¿Qué consejo da la guía para volver fácilmente a tus páginas de TV favoritas?",
+    options: ["Apuntar la dirección en papel", "Guardar los enlaces en 'Favoritos' del navegador", "Buscarlos cada vez en Google"],
+    correct: 1,
+    expl: "Guardar las páginas en 'Favoritos' (o marcadores) del navegador te permite acceder a ellas con un solo clic, sin tener que recordar ni escribir la dirección."
+  }
 ];
 
-const MAX_PUNTOS = QUESTIONS.filter(q => !q.expect).length * 2; // 18
+let currentIdx = 0;
+let score = 0;
+let answered = false;
 
-/* ============ RENDER FORMULARIO ============ */
-const form = document.getElementById("quizForm");
-QUESTIONS.forEach((q, idx) => {
-  const block = document.createElement("div");
-  block.className = "card question-block";
-  const optsHtml = Object.entries(q.options).map(([letter, text]) => `
-    <label class="option" data-q="${q.id}" data-letter="${letter}">
-      <input type="radio" name="q${q.id}" value="${letter}" onchange="onAnswer(${q.id}, this)">
-      <span><span class="letter">${letter}.</span> ${text}</span>
-    </label>
-  `).join("");
-  block.innerHTML = `
-    <div class="q-eyebrow">${q.cat} · Pregunta ${idx + 1} de ${QUESTIONS.length}</div>
-    <div class="q-text">${q.text}</div>
-    <div class="options">${optsHtml}</div>
-  `;
-  form.appendChild(block);
-});
-
-function onAnswer(qId, input) {
-  document.querySelectorAll(`.option[data-q="${qId}"]`).forEach(o => o.classList.remove("selected"));
-  input.closest(".option").classList.add("selected");
-}
-
-/* ============ ENVÍO Y CÁLCULO ============ */
-function submitQuiz() {
-  const nombre = document.getElementById("fNombre").value.trim();
-  const telefono = document.getElementById("fTelefono").value.trim();
-  const fecha = document.getElementById("fFecha").value || new Date().toISOString().slice(0,10);
-
-  const answers = {};
-  let missing = !nombre;
-  QUESTIONS.forEach(q => {
-    const sel = form.querySelector(`input[name="q${q.id}"]:checked`);
-    if (!sel) missing = true;
-    else answers[q.id] = sel.value;
+function loadQuestion() {
+  answered = false;
+  const qData = questions[currentIdx];
+  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
+  document.getElementById('q-text').textContent = qData.q;
+  document.getElementById('btn-next').style.display = 'none';
+  document.getElementById('q-feedback').style.display = 'none';
+  const optionsDiv = document.getElementById('q-options');
+  optionsDiv.innerHTML = '';
+  qData.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span> <span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(i);
+    optionsDiv.appendChild(btn);
   });
-
-  if (missing) {
-    document.getElementById("errorMsg").style.display = "block";
-    return;
-  }
-  document.getElementById("errorMsg").style.display = "none";
-
-  let puntos = 0;
-  QUESTIONS.forEach(q => {
-    if (q.expect) return; // la pregunta de expectativa no puntúa
-    const letter = answers[q.id];
-    puntos += q.points[letter];
-  });
-  const nota = Math.round((puntos / MAX_PUNTOS) * 1000) / 10; // redondeo a 1 decimal
-
-  const expectations = QUESTIONS.filter(q => q.expect).map(q => {
-    const letter = answers[q.id];
-    const category = q.map[letter];
-    return { qid: q.id, letter, text: q.options[letter], category, label: q.labels[category] };
-  });
-
-  const record = {
-    id: Date.now(),
-    nombre, telefono, fecha,
-    answers, puntos, nota,
-    expectations
-  };
-
-  const all = loadResults();
-  all.push(record);
-  saveResults(all);
-
-  renderResult(record);
-  document.getElementById("view-form").style.display = "none";
-  document.getElementById("view-result").style.display = "block";
-  window.scrollTo({top:0, behavior:"smooth"});
+  const pct = (currentIdx / questions.length) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${questions.length}`;
 }
 
-function renderResult(r) {
-  // El usuario no ve su puntuación ni el desglose: esa información es solo para
-  // los técnicos, que la consultan desde el Panel de técnicos.
-  document.getElementById("resultCard").innerHTML = `
-    <h2>¡Gracias, ${escapeHtml(r.nombre)}!</h2>
-    <p class="intro">Tu prueba se ha guardado correctamente (${formatDate(r.fecha)}). Un técnico revisará tus respuestas para orientarte hacia el curso que mejor se adapte a ti.</p>
-  `;
-}
-
-function clearFormFields() {
-  document.getElementById("fNombre").value = "";
-  document.getElementById("fTelefono").value = "";
-  document.getElementById("fFecha").value = new Date().toISOString().slice(0,10);
-  form.reset();
-  document.querySelectorAll(".option.selected").forEach(o => o.classList.remove("selected"));
-  document.getElementById("errorMsg").style.display = "none";
-}
-
-function resetForm() {
-  clearFormFields();
-  document.getElementById("view-result").style.display = "none";
-  document.getElementById("view-form").style.display = "block";
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-
-/* ============ ALMACENAMIENTO ============ */
-function normalizeRecord(r) {
-  // Rellena con valores por defecto los campos que puedan faltar en pruebas
-  // guardadas con una versión anterior del cuestionario, para que nunca
-  // rompan el renderizado del panel de técnicos.
-  const answers = r.answers || {};
-  let puntos = r.puntos;
-  let nota = r.nota;
-  if (typeof puntos !== "number" || typeof nota !== "number") {
-    // Prueba antigua sin puntuación numérica guardada: se recalcula a partir
-    // de las respuestas ya guardadas, usando la tabla de puntos actual.
-    puntos = 0;
-    QUESTIONS.forEach(q => {
-      if (q.expect) return;
-      const letter = answers[q.id];
-      if (letter && q.points && typeof q.points[letter] === "number") puntos += q.points[letter];
-    });
-    nota = Math.round((puntos / MAX_PUNTOS) * 1000) / 10;
-  }
-  return {
-    id: r.id || Date.now(),
-    nombre: r.nombre || "(sin nombre)",
-    telefono: r.telefono || "",
-    fecha: r.fecha || "",
-    answers,
-    puntos, nota,
-    expectations: Array.isArray(r.expectations) ? r.expectations : []
-  };
-}
-function loadResults() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    return raw.map(normalizeRecord);
-  } catch(e) { return []; }
-}
-function saveResults(arr) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-}
-
-/* ============ NAVEGACIÓN DE VISTAS ============ */
-function showView(view) {
-  document.getElementById("tabUser").classList.toggle("active", view === "user");
-  document.getElementById("tabAdmin").classList.toggle("active", view !== "user");
-  document.getElementById("view-form").style.display = view === "user" ? "block" : "none";
-  document.getElementById("view-result").style.display = "none";
-  document.getElementById("view-gate").style.display = view === "gate" ? "block" : "none";
-  document.getElementById("view-admin").style.display = view === "admin" ? "block" : "none";
-  if (view === "user") clearFormFields();
-  if (view === "admin") renderAdmin();
-}
-
-function checkPass() {
-  const val = document.getElementById("gatePass").value;
-  if (val === TECH_PASSWORD) {
-    document.getElementById("gateError").style.display = "none";
-    document.getElementById("gatePass").value = "";
-    showView("admin");
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+  const qData = questions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.disabled = true);
+  const fb = document.getElementById('q-feedback');
+  if (idx === qData.correct) {
+    btns[idx].classList.add('correct');
+    score++;
+    fb.innerHTML = `<strong>✅ ¡Correcto!</strong><br>${qData.expl}`;
+    fb.className = "feedback correct-fb";
   } else {
-    document.getElementById("gateError").style.display = "block";
+    btns[idx].classList.add('wrong');
+    btns[qData.correct].classList.add('correct');
+    fb.innerHTML = `<strong>💡 Nota:</strong><br>${qData.expl}`;
+    fb.className = "feedback wrong-fb";
+  }
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  fb.style.display = 'block';
+  document.getElementById('btn-next').style.display = 'block';
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx < questions.length) {
+    loadQuestion();
+  } else {
+    document.getElementById('quiz-area').classList.add('hidden');
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('score-num').textContent = `${score}/10`;
+    document.getElementById('result-msg').textContent = score >= 7 ? "¡Muy bien! Ya sabes ver la tele en el ordenador." : "Repasa la guía un poco más, ¡casi lo tienes!";
   }
 }
 
-/* ============ PANEL TÉCNICOS ============ */
-let sortDir = "desc"; // orden inicial: nota de mayor a menor
-
-function toggleSort() {
-  sortDir = sortDir === "desc" ? "asc" : "desc";
-  renderAdmin();
-}
-
-function renderAdmin() {
-  const all = loadResults().sort((a, b) => sortDir === "desc" ? b.nota - a.nota : a.nota - b.nota);
-  const body = document.getElementById("resultsBody");
-  const empty = document.getElementById("emptyState");
-  const table = document.getElementById("resultsTable");
-
-  document.getElementById("sortArrow").textContent = sortDir === "desc" ? "▾" : "▴";
-
-  const media = all.length ? Math.round((all.reduce((s, r) => s + r.nota, 0) / all.length) * 10) / 10 : 0;
-  document.getElementById("adminStats").innerHTML = `
-    <span class="stat-chip"><b>${all.length}</b> pruebas realizadas</span>
-    <span class="stat-chip"><b>${media}</b> nota media (/100)</span>
-  `;
-
-  if (all.length === 0) {
-    table.style.display = "none";
-    empty.style.display = "block";
-    return;
-  }
-  table.style.display = "table";
-  empty.style.display = "none";
-
-  body.innerHTML = all.map(r => `
-    <tr>
-      <td>${escapeHtml(r.nombre)}</td>
-      <td>${escapeHtml(r.telefono || "—")}</td>
-      <td>${formatDate(r.fecha)}</td>
-      <td><span class="nota-value">${r.nota}</span><span class="puntos-value"> /100 · ${r.puntos}/${MAX_PUNTOS} pts</span></td>
-      <td>${r.expectations.map(e => e.label).join("<br>")}</td>
-      <td>
-        <div class="row-actions">
-          <button onclick="viewDetail(${r.id})">Ver</button>
-          <button class="del" onclick="deleteResult(${r.id})">Eliminar</button>
-        </div>
-      </td>
-    </tr>
-  `).join("");
-}
-
-function viewDetail(id) {
-  const r = loadResults().find(x => x.id === id);
-  if (!r) return;
-  const pct = r.puntos ? Math.round((r.puntos / MAX_PUNTOS) * 100) : 0;
-  const questionsHtml = QUESTIONS.map(q => {
-    const letter = r.answers[q.id];
-    const tag = q.expect ? ` · ${q.labels[q.map[letter]]}` : ` · ${q.points[letter]} pt`;
-    return `<div class="detail-q">
-      <div class="cat">${q.cat}${tag}</div>
-      <div>${q.text}</div>
-      <div class="ans">Respuesta: <b>${letter}</b> — ${q.options[letter]}</div>
-    </div>`;
-  }).join("");
-  document.getElementById("modalContent").innerHTML = `
-    <h2>${escapeHtml(r.nombre)}</h2>
-    <p class="intro">${escapeHtml(r.telefono || "Sin contacto")} · ${formatDate(r.fecha)}</p>
-    <div style="margin:10px 0;">
-      <span class="nota-value" style="font-size:26px;">${r.nota}</span>
-      <span class="puntos-value">/100 · ${r.puntos}/${MAX_PUNTOS} puntos en las preguntas 1-9</span>
-    </div>
-    <div class="bar-track" style="height:10px; margin-bottom:6px;"><div class="bar-fill medio" style="width:${pct}%"></div></div>
-    <div class="alert info">Esta nota sirve para comparar y ordenar candidatos; los puntos de corte entre básico/medio/alto todavía no están definidos, así que conviene revisar también las respuestas completas antes de decidir.</div>
-    <h3 style="margin-top:20px; font-size:15px;">Respuestas completas</h3>
-    ${questionsHtml}
-  `;
-  document.getElementById("modalBackdrop").classList.add("open");
-}
-
-function closeModal() {
-  document.getElementById("modalBackdrop").classList.remove("open");
-}
-
-function deleteResult(id) {
-  if (!confirm("¿Eliminar esta prueba? Esta acción no se puede deshacer.")) return;
-  const all = loadResults().filter(x => x.id !== id);
-  saveResults(all);
-  renderAdmin();
-}
-
-function clearAll() {
-  if (!confirm("¿Borrar TODOS los resultados guardados en este dispositivo? Esta acción no se puede deshacer.")) return;
-  saveResults([]);
-  renderAdmin();
-}
-
-function exportExcel() {
-  const all = loadResults().sort((a,b) => b.nota - a.nota);
-  if (all.length === 0) { alert("No hay resultados para exportar."); return; }
-  const rows = all.map(r => {
-    const row = {
-      "Nombre": r.nombre,
-      "Contacto": r.telefono || "",
-      "Fecha": r.fecha,
-      "Puntos (/18)": r.puntos,
-      "Nota (/100)": r.nota
-    };
-    r.expectations.forEach(e => { row[`Expectativa P${e.qid}`] = e.label; });
-    QUESTIONS.forEach(q => { row[`P${q.id}`] = r.answers[q.id]; });
-    return row;
-  });
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-  XLSX.writeFile(wb, `resultados_prueba_nivel_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-
-/* ============ UTILIDADES ============ */
-function formatDate(iso) {
-  if (!iso) return "—";
-  const [y,m,d] = iso.split("-");
-  if (!y || !m || !d) return iso;
-  return `${d}/${m}/${y}`;
-}
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str || "";
-  return div.innerHTML;
-}
-
-// Fecha por defecto: hoy
-document.getElementById("fFecha").value = new Date().toISOString().slice(0,10);
+window.onload = loadQuestion;
 </script>
 </body>
 </html>
