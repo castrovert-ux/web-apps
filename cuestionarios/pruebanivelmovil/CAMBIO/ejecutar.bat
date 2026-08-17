@@ -1,0 +1,1 @@
+python actualizar_preguntas.py index.html preguntas_nuevas.json
