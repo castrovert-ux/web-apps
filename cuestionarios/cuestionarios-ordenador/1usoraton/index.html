@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Uso del Ratón en Windows</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+
+  .header { text-align: center; margin-bottom: 40px; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.8rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
+  }
+
+  .progress-wrap { margin-bottom: 30px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .q-type-badge {
+    display: inline-flex; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+    background: rgba(33,115,70,0.2); color: #4ade80;
+  }
+
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px; color: var(--text);
+    font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 14px; transition: 0.2s;
+  }
+  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-btn:disabled { cursor: default; }
+  .option-letter {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+  }
+
+  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+
+  .feedback { display: none; margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 700; line-height: 1.5; animation: fadeIn 0.3s ease; }
+  .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-next {
+    display: none; width: 100%; max-width: 220px; margin: 0 0 0 auto;
+    padding: 14px; border-radius: 14px; border: none; font-weight: 800; font-family: inherit;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+
+  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; }
+  .score-circle {
+    width: 130px; height: 130px; border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 20px auto;
+    font-size: 1.9rem; font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
+  }
+  .score-circle small { font-family: 'Nunito'; font-size: 0.8rem; color: var(--sub); font-weight: 700; }
+  .hidden { display: none !important; }
+
+  .result-sub { color: var(--sub); font-weight: 700; margin-top: 8px; }
+  .btn-restart { margin-top: 30px; cursor: pointer; border: none; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">🖱️ Curso de Informática</div>
+    <h1>Uso del Ratón en Windows</h1>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 10</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number">Cargando...</div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+
+  <div class="results" id="results">
+    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
+    <div class="score-circle" id="score-num">0/10</div>
+    <h2 id="result-msg"></h2>
+    <p class="result-sub" id="result-sub"></p>
+    <button class="badge btn-restart" onclick="restartQuiz()">🔄 Reiniciar Quiz</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    q: "¿Cuál es el botón principal que usas más en el ratón?",
+    options: [
+      "Botón derecho",
+      "Botón izquierdo",
+      "Rueda de desplazamiento"
+    ],
+    correct: 1,
+    expl: "El botón izquierdo es el botón principal del ratón: con él seleccionas, abres archivos, arrastras elementos y haces clic en los enlaces."
+  },
+  {
+    q: "¿Para qué sirve la rueda que está en el medio del ratón?",
+    options: [
+      "Para mover ventanas en la barra de tareas",
+      "Para subir y bajar en páginas o documentos",
+      "Para abrir el menú de inicio"
+    ],
+    correct: 1,
+    expl: "La rueda de desplazamiento sirve para subir y bajar rápidamente dentro de una página web o de un documento largo."
+  },
+  {
+    q: "¿Qué ocurre si haces \"doble clic\" rápido con el botón izquierdo sobre un dibujo (ícono) en el escritorio?",
+    options: [
+      "Lo selecciona",
+      "Lo abre",
+      "Lo borra"
+    ],
+    correct: 1,
+    expl: "El doble clic rápido con el botón izquierdo abre el archivo, programa o carpeta sobre la que haces clic. Un solo clic solo lo selecciona."
+  },
+  {
+    q: "¿Qué sucede si haces clic con el botón derecho sobre un archivo o carpeta?",
+    options: [
+      "Se abre el archivo directamente",
+      "Aparece un menú con opciones para ese archivo",
+      "Se copia automáticamente"
+    ],
+    correct: 1,
+    expl: "El clic derecho abre un menú contextual con opciones para ese archivo o carpeta (abrir, copiar, cortar, cambiar nombre, propiedades, etc.)."
+  },
+  {
+    q: "Para mover un archivo de un sitio a otro (\"arrastrar y soltar\"), ¿qué debes hacer?",
+    options: [
+      "Hacer doble clic sobre el archivo",
+      "Mantener presionado el botón izquierdo mientras lo mueves",
+      "Hacer clic derecho y luego moverlo"
+    ],
+    correct: 1,
+    expl: "Para arrastrar y soltar hay que mantener presionado el botón izquierdo sobre el archivo, mover el ratón hasta el destino y soltar el botón."
+  },
+  {
+    q: "¿Puedes seleccionar texto en un documento manteniendo presionado el botón izquierdo y arrastrando el ratón?",
+    options: ["Verdadero", "Falso"],
+    correct: 0,
+    type: "boolean",
+    expl: "Verdadero. Al mantener presionado el botón izquierdo y arrastrar sobre el texto, este se va seleccionando (se resalta) para luego copiarlo, borrarlo, etc."
+  },
+  {
+    q: "¿El clic derecho siempre abre una página de internet (navegador web)?",
+    options: ["Verdadero", "Falso"],
+    correct: 1,
+    type: "boolean",
+    expl: "Falso. El clic derecho nunca abre una página de internet: lo que hace es mostrar un menú de opciones relacionadas con el elemento sobre el que haces clic."
+  },
+  {
+    q: "Si quieres mover una ventana de un programa a otra parte de la pantalla, ¿qué harías con el ratón?",
+    options: [
+      "Clic izquierdo en la barra de arriba de la ventana (barra de título), mantener presionado y arrastrar",
+      "Clic derecho en la barra de título",
+      "Doble clic en la barra de tareas"
+    ],
+    correct: 0,
+    expl: "Para mover una ventana hay que hacer clic izquierdo en su barra de título, mantener presionado y arrastrar hasta la posición deseada."
+  },
+  {
+    q: "Estás leyendo un documento muy largo y necesitas ir rápido a la parte de abajo. ¿Qué acción del ratón usarías?",
+    options: [
+      "Clic derecho en el texto",
+      "Usar la rueda de desplazamiento",
+      "Doble clic en cualquier parte del documento"
+    ],
+    correct: 1,
+    expl: "La rueda de desplazamiento permite bajar y subir rápidamente por documentos y páginas largas sin usar las barras de desplazamiento."
+  },
+  {
+    q: "¿Qué pasa si haces clic con el botón izquierdo sobre un enlace (una palabra azul o subrayada) en una página de internet?",
+    options: [
+      "Se abre la página o lo que el enlace te muestre",
+      "Se copia el enlace a otro lugar",
+      "No ocurre nada"
+    ],
+    correct: 0,
+    expl: "Al hacer clic izquierdo sobre un enlace se abre la página o el contenido al que ese enlace apunta. Los enlaces suelen aparecer en azul y subrayados."
+  }
+];
+
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+const TOTAL = questions.length;
+
+function loadQuestion() {
+  answered = false;
+  const qData = questions[currentIdx];
+
+  document.getElementById('q-type').textContent =
+    qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
+  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
+  document.getElementById('q-text').textContent = qData.q;
+  document.getElementById('btn-next').style.display = 'none';
+
+  const fb = document.getElementById('q-feedback');
+  fb.style.display = 'none';
+  fb.className = 'feedback';
+
+  const optionsDiv = document.getElementById('q-options');
+  optionsDiv.innerHTML = '';
+
+  qData.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(i);
+    optionsDiv.appendChild(btn);
+  });
+
+  const pct = (currentIdx / TOTAL) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
+  document.getElementById('btn-next').textContent =
+    currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
+}
+
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  const qData = questions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const fb = document.getElementById('q-feedback');
+
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === qData.correct) {
+    btns[idx].classList.add('correct');
+    score++;
+    fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${qData.expl}`;
+    fb.className = 'feedback correct-fb';
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[qData.correct].classList.add('correct');
+    fb.innerHTML = `<strong>💡 Nota:</strong><br>${qData.expl}`;
+    fb.className = 'feedback wrong-fb';
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  fb.style.display = 'block';
+  document.getElementById('btn-next').style.display = 'block';
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx < TOTAL) {
+    loadQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  document.getElementById('results').style.display = 'block';
+
+  const pct = Math.round((score / TOTAL) * 100);
+  document.getElementById('score-num').innerHTML = `${score}/${TOTAL}<small>${pct}%</small>`;
+
+  let emoji, msg, sub;
+  if (pct === 100)    { emoji = '🏆'; msg = '¡Perfecto! Dominas el ratón';  sub = 'Respondiste todo correctamente.'; }
+  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';       sub = 'Solo te faltó un detalle.'; }
+  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';               sub = 'Vas por buen camino, repasa lo fallado.'; }
+  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';           sub = 'Vuelve a leer el material y reinténtalo.'; }
+  else                { emoji = '💪'; msg = '¡No te rindas!';               sub = 'Revisa el tema desde el principio.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-msg').textContent = msg;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('prog-fill').style.width = '100%';
+}
+
+function restartQuiz() {
+  currentIdx = 0;
+  score = 0;
+  answered = false;
+  document.getElementById('prog-score').textContent = '⭐ 0 pts';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-area').classList.remove('hidden');
+  loadQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.onload = loadQuestion;
+</script>
+</body>
+</html>
