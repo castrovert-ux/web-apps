@@ -1,7 +1,7 @@
 <html lang="es"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cuestionarios — Ordenador</title>
+  <title>Cuestionarios — Móvil</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
     :root{--fondo:#0d2b55;--panel:#163567;--borde:#2e4f8a;--amarillo:#f5c518;--azul:#2e8de8;--texto:#f0f4ff;--gris:#b3caee;--verde:#2a9d5c;--rojo:#e63946;--naranja:#ff9f4a}
@@ -66,13 +66,13 @@
 
 <header>
   <span class="logo">🖥️</span>
-  <h1>Cuestionarios de Ordenador</h1>
+  <h1>Cuestionarios de Móvil</h1>
   <p class="subtitulo">Haga clic en el tema que quiera repasar</p>
 </header>
 
 <div class="grid" id="grid"></div>
 
-<footer>Clase de Ordenador · Cuestionarios de repaso</footer>
+<footer>Clase de Móvil · Cuestionarios de repaso</footer>
 
 <button class="btn-gear" onclick="abrirModal()">
   <svg viewBox="0 0 24 24" fill="none" stroke="#b3caee" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -91,6 +91,7 @@
     <div class="lista-items" id="listaActual"></div>
     <p class="aviso-orden">Usa ⬆️ ⬇️ para cambiar el orden de las tarjetas.</p>
 
+    <!-- BOTÓN SIEMPRE DISPONIBLE: guarda y descarga el fichero con el estado actual -->
     <button class="btn-descarga" onclick="guardarYDescargar()">💾 Guardar y descargar index.html</button>
 
     <hr class="separador">
@@ -117,9 +118,9 @@
 // --------------------------------------------------------------
 // DATOS INICIALES
 // --------------------------------------------------------------
-let cuestionarios = [{"icono":"📋","carpeta":"TablasWord","titulo":"Tablas en Word","desc":"Crear, editar y dar formato a tablas","preguntas":10},{"icono":"📄","carpeta":"TitulosEncabezadosWord","titulo":"Títulos y Encabezados en Word","desc":"Índices y encabezados","preguntas":5},{"icono":"💹","carpeta":"IntroduccionExcel","titulo":"Introducción a Excel","desc":"Primeros pasos en la hoja de cálculo","preguntas":10},{"icono":"💹","carpeta":"ExcelFilasyColumnas","titulo":"Filas y Columnas en Excel","desc":"Conceptos básicos","preguntas":10},{"icono":"📊","carpeta":"excelgraficos","titulo":"Gráficos en Excel","desc":"Tipos de gráficos y buenas prácticas","preguntas":10},{"icono":"📈","carpeta":"tablasdinamicas","titulo":"Tablas Dinámicas","desc":"","preguntas":10},{"icono":"📺","carpeta":"guiatv","titulo":"Guía TV","desc":"","preguntas":10}];
+let cuestionarios = [{"icono":"🤼‍♀","carpeta":"GruposWhatsappMovil","titulo":"Grupos de Whatsapp","desc":"Funciones de Grupos de Whatsapp","preguntas":5},{"icono":"🔑","carpeta":"cl@ve","titulo":"Aplicación Cl@ve","desc":"Identificación digital","preguntas":10},{"icono":"⚒️","carpeta":"movil/pequeñasdestrezas","titulo":"Pequeñas Destrezas","desc":"","preguntas":10},{"icono":"⏰","carpeta":"movil/alarmamovil","titulo":"Alarma en el móvil","desc":"","preguntas":10},{"icono":"📫","carpeta":"movil/gmail","titulo":"Gmail","desc":"","preguntas":10},{"icono":"📺","carpeta":"guiatv","titulo":"Guía TV","desc":"","preguntas":10},{"icono":"📄","carpeta":"testanualmovil","titulo":"Test Anual de Móvil","desc":"","preguntas":50}];
 
-let editandoIndex = null;   // índice que se está editando, null si es nuevo
+let editandoIndex = null;
 
 function renderGrid(){
     const contenedor = document.getElementById('grid');
@@ -266,6 +267,7 @@ function guardarYDescargar(){
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+// ------------------------------------------------------------------------------
 
 // ------------------- AÑADIR / ACTUALIZAR CUESTIONARIO -------------------
 function guardarCambios(){
@@ -276,14 +278,16 @@ function guardarCambios(){
     const preguntas = parseInt(document.getElementById('nuevoPreguntas').value) || 10;
 
     if(editandoIndex !== null){
+        // Modo edición: carpeta y título son obligatorios
         if(!carpeta || !titulo){
             alert('Al editar, la carpeta y el título son obligatorios');
             return;
         }
         cuestionarios[editandoIndex] = { icono, carpeta, titulo, desc, preguntas };
     } else {
+        // Modo nuevo: si ambos campos están vacíos, no se añade nada (solo refresca)
         if(!carpeta && !titulo){
-            return;
+            return; // no hay nada que añadir
         }
         if(!carpeta || !titulo){
             alert('Para añadir un cuestionario, rellena carpeta y título.');
@@ -298,43 +302,8 @@ function guardarCambios(){
 }
 // ------------------------------------------------------------------------
 
-// ----------------------------------------------------------------------
-// Genera el HTML completo asegurando que el fichero descargado:
-//   - NO tenga la clase "abierto" en el overlay (menú cerrado al abrir)
-//   - Tenga los textos/estilos por defecto en el formulario
-//   - Contenga la variable cuestionarios actualizada
-// ----------------------------------------------------------------------
 function generarHTMLCompleto(){
-    const overlay = document.getElementById('overlay');
-    const btnGuardar = document.getElementById('btnGuardar');
-    const btnCancelar = document.getElementById('btnCancelarEdicion');
-    const tituloModal = document.getElementById('modalTitulo');
-
-    // Guardar estado actual del DOM
-    const estabaAbierto = overlay.classList.contains('abierto');
-    const estadoBtnTexto = btnGuardar.textContent;
-    const estadoBtnBg = btnGuardar.style.background;
-    const estadoCancelar = btnCancelar.style.display;
-    const estadoTitulo = tituloModal.textContent;
-
-    // Forzar estado "de fábrica" para el HTML que se va a guardar
-    overlay.classList.remove('abierto');
-    btnGuardar.textContent = '➕ Añadir cuestionario';
-    btnGuardar.style.background = "linear-gradient(135deg, #2a9d5c, #35c470)";
-    btnCancelar.style.display = 'none';
-    tituloModal.textContent = '⚙️ Administrar';
-
-    // Capturar el HTML en ese estado limpio
     let htmlActual = document.documentElement.outerHTML;
-
-    // Restaurar el estado visual que tenía la página para el usuario
-    if(estabaAbierto) overlay.classList.add('abierto');
-    btnGuardar.textContent = estadoBtnTexto;
-    btnGuardar.style.background = estadoBtnBg;
-    btnCancelar.style.display = estadoCancelar;
-    tituloModal.textContent = estadoTitulo;
-
-    // Reemplazar la variable cuestionarios con los datos actuales
     const cuestionariosStr = JSON.stringify(cuestionarios);
     const regex = /let cuestionarios = \[[\s\S]*?\];/;
     const nuevaDeclaracion = `let cuestionarios = ${cuestionariosStr};`;
