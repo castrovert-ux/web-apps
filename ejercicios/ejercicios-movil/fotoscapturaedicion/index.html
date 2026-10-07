@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fotos con el móvil · Clase</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366; --c3: #FFD93D; --c4: #FF6B6B; --c5: #6BCB77; --c6: #4DA3FF; --c7: #C77DFF;
+    --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+    --win: #f3f5f8; --win-ink: #1b2433;
+    --accent: var(--c6);
+    color-scheme: dark;
+  }
+  :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font-family: inherit; }
+  button:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.14; animation: float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1) { width: 45vw; height: 45vw; background: var(--c7); top: -12vw; left: -10vw; }
+  .blob:nth-child(2) { width: 35vw; height: 35vw; background: var(--c4); bottom: -10vw; right: -8vw; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 28vw; height: 28vw; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0) scale(1); } to { transform: translate(25px,18px) scale(1.07); } }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.96) translateY(14px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Estructura de pantalla ---------- */
+  .app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 2.2vh 2.6vw 1.6vh; gap: 1.8vh; }
+
+  .top { display: flex; align-items: center; gap: 1.4vw; flex-shrink: 0; }
+  .badge {
+    background: linear-gradient(135deg, var(--c7), #8a3fd6); color: #fff; font-weight: 800;
+    font-size: clamp(0.7rem, 1vw, 1.05rem); letter-spacing: 2px; text-transform: uppercase;
+    padding: 0.5em 1.4em; border-radius: 100px; white-space: nowrap;
+  }
+  .top-title { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1rem, 1.7vw, 1.9rem); color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-actions { margin-left: auto; display: flex; gap: 0.6vw; }
+  .tbtn {
+    border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: var(--sub);
+    font-weight: 800; font-size: clamp(0.8rem, 1vw, 1.1rem); padding: 0.45em 0.9em; border-radius: 12px; cursor: pointer;
+  }
+  .tbtn:hover { color: var(--text); border-color: var(--c6); }
+
+  .stage { flex: 1; min-height: 0; display: flex; }
+  .slide { flex: 1; min-height: 0; display: flex; animation: popIn 0.45s cubic-bezier(.34,1.56,.64,1); }
+
+  /* ---------- Portada ---------- */
+  .cover { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 3vh; }
+  .cover h1 {
+    font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(2.6rem, 7vw, 8rem); line-height: 1.05;
+    background: linear-gradient(135deg, var(--c7), var(--c4), var(--c3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .cover .big-emoji { font-size: clamp(4rem, 11vw, 12rem); line-height: 1; }
+  .cover p { color: var(--sub); font-weight: 700; font-size: clamp(1.1rem, 2.2vw, 2.6rem); max-width: 30em; line-height: 1.35; }
+  .cover p b { color: var(--text); }
+  .cover-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vw; max-width: 80vw; }
+  .cover-list span {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 100px;
+    padding: 0.4em 1em; font-weight: 800; font-size: clamp(0.95rem, 1.5vw, 1.7rem);
+  }
+
+  /* ---------- Iconos ---------- */
+  .icons { flex-direction: column; justify-content: center; gap: 3vh; }
+  .slide-h { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1.8rem, 3.6vw, 4.2rem); text-align: center; }
+  .slide-sub { text-align: center; color: var(--sub); font-weight: 700; font-size: clamp(1rem, 1.8vw, 2.1rem); margin-top: -1.5vh; }
+  .legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vw; }
+  .chip {
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.4vh;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 2.4vh 1vw;
+    font-size: clamp(0.9rem, 1.4vw, 1.6rem); font-weight: 700; color: var(--sub); line-height: 1.25;
+  }
+  .chip b { color: var(--text); display: block; font-size: 1.15em; }
+  .chip-ic { width: clamp(64px, 8vw, 150px); aspect-ratio: 1; border-radius: 22%; background: var(--win); color: var(--win-ink); display: grid; place-items: center; }
+  .chip-ic svg { width: 62%; height: 62%; }
+  .chip-ic.dark { background: #1c1c1e; color: #fff; }
+
+  /* ---------- Ejercicio ---------- */
+  .ex { gap: 2vw; }
+  .ex-main {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-left: 0.6vw solid var(--accent);
+    border-radius: 28px; padding: 3vh 2.4vw;
+  }
+  .ex-head { display: flex; align-items: center; gap: 1.4vw; margin-bottom: 1.2vh; }
+  .ex-icon {
+    width: clamp(52px, 5.4vw, 110px); aspect-ratio: 1; border-radius: 22%; flex-shrink: 0; display: grid; place-items: center;
+    font-size: clamp(1.6rem, 3vw, 3.6rem); background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .ex-num { font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-size: clamp(0.8rem, 1.1vw, 1.3rem); }
+  .ex-title { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1.6rem, 3vw, 3.6rem); line-height: 1.1; }
+  .ex-obj { color: var(--sub); font-weight: 700; font-size: clamp(1rem, 1.6vw, 1.9rem); margin-bottom: 1.4vh; }
+  .ex-note {
+    font-weight: 700; color: var(--sub); line-height: 1.4; font-size: clamp(0.95rem, 1.45vw, 1.7rem);
+    background: rgba(77,163,255,0.1); border-radius: 14px; padding: 0.6em 1em; margin-bottom: 1.6vh;
+  }
+  .ex-note b { color: var(--text); }
+
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 1vh; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .steps::-webkit-scrollbar { display: none; }
+  .step {
+    display: flex; align-items: flex-start; gap: 1.1vw; width: 100%; text-align: left; cursor: pointer;
+    background: rgba(255,255,255,0.03); border: 3px solid rgba(255,255,255,0.06); border-radius: 18px;
+    padding: 1.3vh 1.2vw; color: var(--text); font-weight: 700; line-height: 1.3;
+    font-size: clamp(0.95rem, 1.45vw, 1.8rem); transition: all 0.3s ease; opacity: 0.6;
+  }
+  .step-box {
+    width: 1.6em; height: 1.6em; border-radius: 0.35em; flex-shrink: 0; display: grid; place-items: center;
+    background: rgba(255,255,255,0.1); font-weight: 800; font-size: 0.85em;
+  }
+  .step b { color: var(--c3); font-weight: 800; }
+  .step.past { opacity: 0.5; padding-top: 0.8vh; padding-bottom: 0.8vh; }
+  .step.past .step-box { background: var(--c1); color: #0a1628; }
+  .step.current {
+    opacity: 1; border-color: var(--c3); background: rgba(255,217,61,0.09);
+    font-size: clamp(1.2rem, 2.15vw, 2.7rem); box-shadow: 0 0 0 6px rgba(255,217,61,0.08);
+  }
+  .step.current .step-box { background: var(--c3); color: #0a1628; }
+  .step-tip { display: none; margin-top: 0.6em; font-size: 0.72em; color: var(--sub); background: rgba(255,217,61,0.1); border-radius: 12px; padding: 0.45em 0.8em; }
+  .step-tip b { color: var(--text); }
+  .step.current .step-tip { display: block; }
+
+  .ex-side {
+    width: 24vw; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.4vh;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: 28px; padding: 3vh 1.6vw; text-align: center;
+  }
+  .side-ic {
+    width: 17vw; max-width: 42vh; aspect-ratio: 1; border-radius: 22%; display: grid; place-items: center;
+    background: var(--win); color: var(--win-ink); animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .side-ic.dark { background: #1c1c1e; color: #fff; }
+  .side-ic.emoji { background: color-mix(in srgb, var(--accent) 16%, transparent); font-size: min(10vw, 24vh); }
+  .side-ic svg { width: 64%; height: 64%; }
+  .side-ic .hl { fill: var(--c4); stroke: var(--c4); }
+  .side-lb { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1.1rem, 2vw, 2.4rem); line-height: 1.15; }
+  .side-count { color: var(--sub); font-weight: 800; font-size: clamp(0.9rem, 1.4vw, 1.6rem); }
+
+  /* ---------- Final ---------- */
+  .finish { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2.4vh; }
+  .trophy { font-size: clamp(5rem, 12vw, 13rem); animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0) rotate(-5deg); } to { transform: translateY(-14px) rotate(5deg); } }
+  .finish h2 { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(2.4rem, 5.5vw, 6.4rem); color: var(--c3); }
+  .finish p { color: var(--sub); font-weight: 700; font-size: clamp(1.1rem, 2.1vw, 2.5rem); max-width: 30em; line-height: 1.4; }
+  .finish p b { color: var(--text); }
+
+  /* ---------- Barra inferior ---------- */
+  .bottom { flex-shrink: 0; display: flex; align-items: center; gap: 1.4vw; }
+  .nav {
+    border: 0; border-radius: 16px; cursor: pointer; font-weight: 800; white-space: nowrap;
+    font-size: clamp(1rem, 1.5vw, 1.8rem); padding: 0.6em 1.4em; transition: transform 0.15s;
+  }
+  .nav:hover { transform: scale(1.04); }
+  .nav:disabled { opacity: 0.3; cursor: default; transform: none; }
+  .nav-prev { background: rgba(255,255,255,0.07); color: var(--text); }
+  .nav-next { background: linear-gradient(135deg, var(--c1), #1aa851); color: #0a1628; }
+  .dots { flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.7vw; flex-wrap: wrap; }
+  .dot {
+    height: clamp(30px, 3vw, 56px); min-width: clamp(30px, 3vw, 56px); padding: 0 0.6em; border-radius: 100px; cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--sub);
+    font-weight: 800; font-size: clamp(0.85rem, 1.25vw, 1.5rem); transition: all 0.2s;
+  }
+  .dot.seen { color: var(--text); border-color: rgba(37,211,102,0.5); background: rgba(37,211,102,0.1); }
+  .dot.on { color: #0a1628; background: var(--c3); border-color: var(--c3); transform: scale(1.12); }
+  .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,0.06); z-index: 2; }
+  .prog-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--c7), var(--c4), var(--c3)); transition: width 0.4s; }
+
+  .help { color: var(--sub); font-weight: 700; font-size: clamp(0.75rem, 0.95vw, 1.05rem); text-align: center; flex-shrink: 0; opacity: 0.7; }
+
+  @media (max-width: 900px), (max-aspect-ratio: 1/1) {
+    body { overflow: auto; }
+    html, body { height: auto; }
+    .app { min-height: 100vh; height: auto; }
+    .ex { flex-direction: column; }
+    .ex-side { width: auto; flex-direction: row; justify-content: flex-start; padding: 2vh 4vw; }
+    .side-ic { width: 90px; }
+    .legend { grid-template-columns: repeat(2, 1fr); }
+    .top-title { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="app">
+  <div class="top">
+    <div class="badge">📱 Móvil</div>
+    <div class="top-title" id="top-title">Fotos con el móvil</div>
+    <div class="top-actions">
+      <button class="tbtn" id="btn-full" type="button" title="Pantalla completa (tecla F)">⛶ Pantalla completa</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="bottom">
+    <button class="nav nav-prev" id="prev" type="button">◀ Anterior</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav nav-next" id="next" type="button">Siguiente ▶</button>
+  </div>
+  <div class="help">Flechas ← → o el mando de diapositivas para avanzar · También puedes tocar un paso o un número</div>
+</div>
+<div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+   Iconos grandes
+   ========================================================= */
+const PHONE = (hl) => `<svg viewBox="0 0 40 40" aria-hidden="true">
+  <rect x="12" y="4" width="16" height="32" rx="3"/>
+  <rect x="28" y="9" width="2.2" height="5" rx="1" ${hl.includes('p') ? 'class="hl"' : ''}/>
+  <rect x="28" y="17" width="2.2" height="5" rx="1" ${hl.includes('u') ? 'class="hl"' : ''}/>
+  <rect x="28" y="24" width="2.2" height="5" rx="1" ${hl.includes('d') ? 'class="hl"' : ''}/>
+</svg>`;
+const IC = {
+  shutter: { dark: true, svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="11"/><circle cx="14" cy="14" r="8" fill="#fff" stroke="none"/></svg>' },
+  flash: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M16 3 7 16h7l-2 9 9-13h-7z"/></svg>' },
+  edit: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M5 23l1.2-5L18.5 5.7a2.4 2.4 0 0 1 3.4 0l.4.4a2.4 2.4 0 0 1 0 3.4L10 21.8z"/><path d="M16.5 7.7l3.8 3.8"/></svg>' },
+  sliders: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M5 8h18M5 14h18M5 20h18"/><circle cx="10" cy="8" r="2.4" fill="#f3f5f8"/><circle cx="18" cy="14" r="2.4" fill="#f3f5f8"/><circle cx="12" cy="20" r="2.4" fill="#f3f5f8"/></svg>' },
+  shareA: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="20" cy="7" r="3"/><circle cx="8" cy="14" r="3"/><circle cx="20" cy="21" r="3"/><path d="M10.7 12.6l6.6-4.2M10.7 15.4l6.6 4.2"/></svg>' },
+  shareI: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M10 11H8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V13a2 2 0 0 0-2-2h-2"/><path d="M14 17V3M9.5 7.5 14 3l4.5 4.5"/></svg>' },
+  scissors: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="8" cy="20" r="3.5"/><circle cx="20" cy="20" r="3.5"/><path d="M10.4 17.4 21 4M17.6 17.4 7 4"/></svg>' },
+  crop: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M8 3v17h17M3 8h17v17"/></svg>' },
+  sun: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="5"/><path d="M14 3v3M14 22v3M3 14h3M22 14h3M6.2 6.2l2.1 2.1M19.7 19.7l2.1 2.1M6.2 21.8l2.1-2.1M19.7 8.3l2.1-2.1"/></svg>' },
+  send: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 14 24 5l-6 19-4-8z"/><path d="M14 16 24 5"/></svg>' },
+  swipeDown: { svg: '<svg viewBox="0 0 28 28" aria-hidden="true"><rect x="7" y="2.5" width="14" height="23" rx="2.5"/><path d="M14 6v10M10.5 12.5 14 16l3.5-3.5"/></svg>' },
+  power: { svg: PHONE('p') },
+  volUp: { svg: PHONE('u') },
+  combo: { svg: PHONE('pd') }
+};
+
+/* =========================================================
+   Ejercicios
+   ========================================================= */
+const EX = [
+  {
+    icon: '📷', accent: 'var(--c6)', title: 'Haz tu primera foto',
+    objective: 'Abrir la cámara, enfocar y hacer la foto.',
+    steps: [
+      { ic: '📷', lb: 'La Cámara', text: 'Desbloquea el móvil y busca en la pantalla principal el icono de la <b>Cámara</b>. Tócalo para abrirla.' },
+      { ic: '🪴', lb: 'Elige qué fotografiar', text: 'Apunta con el móvil a algo de la clase: una planta, una taza, tu mano…' },
+      { ic: '👆', lb: 'Toca para enfocar', text: 'Toca con el dedo en la pantalla la parte que quieres que salga <b>nítida</b>.',
+        tip: 'Aparece un cuadrito o un círculo: el móvil está enfocando ahí.' },
+      { ic: 'shutter', lb: 'Botón de disparar', text: 'Pulsa el <b>botón redondo grande</b> para hacer la foto.' },
+      { ic: '🖼️', lb: 'Mira tu foto', text: 'Toca la <b>miniatura</b> de una esquina de abajo para ver la foto que acabas de hacer.' }
+    ]
+  },
+  {
+    icon: '🔒', accent: 'var(--c7)', title: 'Abre la cámara sin desbloquear',
+    objective: 'Hacer una foto rápida desde la pantalla de bloqueo y con el botón de volumen.',
+    steps: [
+      { ic: 'power', lb: 'Botón de encendido', text: 'Bloquea el móvil pulsando una vez el <b>botón de encendido</b>.' },
+      { ic: 'power', lb: 'Enciende la pantalla', text: 'Vuelve a pulsarlo para encender la pantalla, pero <b>sin desbloquear</b>.' },
+      { ic: '📷', lb: 'Desliza la cámara', text: 'Busca el icono de la cámara en la pantalla de bloqueo y <b>desliza</b> el dedo hacia un lado.',
+        tip: 'En unos móviles se desliza el icono; en el iPhone, se desliza toda la pantalla hacia la izquierda.' },
+      { ic: 'volUp', lb: 'Subir volumen', text: 'Haz la foto apretando el <b>botón de subir volumen</b>, en lugar del botón redondo.',
+        tip: 'Es muy cómodo cuando sujetas el móvil con una sola mano.' }
+    ]
+  },
+  {
+    icon: '⚡', accent: 'var(--c3)', title: 'Aprende a usar el flash',
+    objective: 'Encender, apagar o dejar el flash en automático.',
+    steps: [
+      { ic: 'flash', lb: 'El rayo', text: 'Abre la cámara y busca el símbolo del <b>rayo</b>, arriba o en un lateral de la pantalla.' },
+      { ic: 'flash', lb: 'Tres opciones', text: 'Tócalo y fíjate en las opciones: <b>Automático</b>, <b>Encendido</b> y <b>Apagado</b>.',
+        tip: 'A veces cada toque cambia de opción. Rayo <b>tachado</b> = apagado. Rayo con una <b>A</b> = automático.' },
+      { ic: '🌙', lb: 'Flash apagado', text: 'Elige <b>Apagado</b> y haz una foto con la luz de la clase.' },
+      { ic: '💡', lb: 'Flash encendido', text: 'Elige <b>Encendido</b> y haz la misma foto. Compara las dos.',
+        tip: 'Si hay buena luz, mejor sin flash: el color se ve más natural.' },
+      { ic: '🤖', lb: 'Automático', text: 'Para terminar, déjalo en <b>Automático</b>: así el móvil decide cuándo hace falta.' }
+    ]
+  },
+  {
+    icon: '✂️', accent: 'var(--c5)', title: 'Recorta una foto',
+    objective: 'Quitar los bordes que sobran o centrar mejor lo importante.',
+    steps: [
+      { ic: '🖼️', lb: 'Galería o Fotos', text: 'Entra en la <b>Galería</b> o en <b>Fotos</b>.' },
+      { ic: '👆', lb: 'Elige una foto', text: 'Toca una de las fotos que has hecho hoy.' },
+      { ic: 'edit', lb: 'Editar', text: 'Pulsa <b>Editar</b>: puede ser un lápiz o tres controles deslizantes.' },
+      { ic: 'crop', lb: 'Recortar', text: 'Busca <b>Recortar</b> y arrastra las esquinas del marco hasta dejar solo lo que te interesa.' },
+      { ic: '✅', lb: 'Guardar', text: 'Pulsa <b>Guardar</b> o <b>Hecho</b> para mantener los cambios.',
+        tip: 'Si el móvil pregunta, elige <b>Guardar como copia</b>: así conservas también la foto original.' }
+    ]
+  },
+  {
+    icon: '🎨', accent: 'var(--c4)', title: 'Mejora la luz y el color',
+    objective: 'Aclarar una foto oscura y probar filtros.',
+    steps: [
+      { ic: 'sliders', lb: 'Editar', text: 'Abre otra foto de la galería y pulsa <b>Editar</b>.' },
+      { ic: 'sun', lb: 'Brillo', text: 'Busca <b>Brillo</b> o <b>Luz</b> y mueve la barra hasta que la foto se vea más clara.',
+        tip: 'A veces está dentro de un apartado llamado <b>Ajustes</b> o <b>Ajustar</b>.' },
+      { ic: '🌈', lb: 'Contraste y color', text: 'Prueba <b>Contraste</b> o <b>Color</b> y mira cómo cambian los tonos y los detalles.' },
+      { ic: '🎨', lb: 'Filtros', text: 'Prueba dos o tres <b>Filtros</b> distintos.',
+        tip: 'Úsalos con moderación, solo para resaltar la foto.' },
+      { ic: '✅', lb: 'Guardar', text: 'Pulsa <b>Guardar</b> o <b>Hecho</b>.' }
+    ]
+  },
+  {
+    icon: '📤', accent: 'var(--c1)', title: 'Comparte una foto',
+    objective: 'Enviar una foto a otra persona por WhatsApp.',
+    steps: [
+      { ic: '🖼️', lb: 'Abre la foto', text: 'Abre en la galería la foto que más te guste.' },
+      { ic: 'shareA', ic2: 'shareI', lb: 'Compartir', text: 'Pulsa el icono de <b>compartir</b>: tres puntos unidos o un cuadrado con una flecha hacia arriba.' },
+      { ic: '💬', lb: 'WhatsApp', text: 'Elige <b>WhatsApp</b>.',
+        tip: 'Si no aparece, desliza la fila de aplicaciones hacia un lado o pulsa <b>Más</b>.' },
+      { ic: '👤', lb: 'Elige a quién', text: 'Busca a un familiar o a un compañero de clase y toca su nombre.' },
+      { ic: 'send', lb: 'Enviar', text: 'Pulsa el botón de <b>enviar</b> y espera a que se envíe.',
+        tip: 'Para mandarla por <b>correo</b>, elige la aplicación de correo y escribe la dirección de email.' }
+    ]
+  },
+  {
+    icon: '🖼️', accent: 'var(--c6)', title: 'Captura la pantalla desde los ajustes rápidos',
+    objective: 'Guardar como imagen lo que se ve en la pantalla del móvil.',
+    note: '📱 <b>¿Tienes iPhone?</b> Este botón no existe en el iPhone. Espera al ejercicio siguiente.',
+    steps: [
+      { ic: '📱', lb: 'Elige qué guardar', text: 'Deja en tu móvil una pantalla que quieras guardar. Por ejemplo, la pantalla principal o un mensaje.' },
+      { ic: 'swipeDown', lb: 'Desliza hacia abajo', text: 'Desliza el dedo desde <b>arriba</b> de la pantalla hacia abajo para ver los ajustes rápidos.',
+        tip: 'A veces hay que deslizar dos veces para verlos todos.' },
+      { ic: 'scissors', lb: 'Captura de pantalla', text: 'Pulsa el botón de <b>captura de pantalla</b>, que suele tener unas tijeras.',
+        tip: 'Si no lo ves, desliza los ajustes rápidos hacia un lado: puede estar en otra página.' },
+      { ic: '✨', lb: '¡Guardada!', text: 'Verás un destello o una miniatura en una esquina: la captura ya está guardada.' }
+    ]
+  },
+  {
+    icon: '🔘', accent: 'var(--c7)', title: 'Captura la pantalla con los botones',
+    objective: 'Hacer una captura pulsando dos botones a la vez y encontrarla en la galería.',
+    note: '📱 <b>¿Tienes iPhone?</b> Pulsa a la vez el <b>botón lateral</b> y el de <b>subir volumen</b>. La captura aparece en la app Fotos.',
+    steps: [
+      { ic: 'combo', lb: 'Encendido y bajar volumen', text: 'Localiza en el lateral del móvil el <b>botón de encendido</b> y el de <b>bajar volumen</b>.' },
+      { ic: 'combo', lb: 'Los dos a la vez', text: 'Púlsalos <b>los dos a la vez</b> durante un segundo y suelta.',
+        tip: 'Si solo baja el volumen o se apaga la pantalla, no los has pulsado a la vez. Prueba otra vez.' },
+      { ic: '📂', lb: 'Capturas', text: 'Abre la <b>Galería</b> y busca la carpeta <b>Capturas</b> o <b>Screenshots</b>.' },
+      { ic: '🖼️', lb: 'Como una foto más', text: 'Abre tu captura. Puedes recortarla y compartirla como cualquier otra foto.' }
+    ]
+  },
+  {
+    icon: '🏆', accent: 'var(--c3)', title: 'Reto final: todo junto',
+    objective: 'Repasar toda la lección de principio a fin.',
+    steps: [
+      { ic: 'shutter', lb: 'Foto', text: 'Haz una foto a algo de la clase, o a un compañero <b>pidiéndole permiso</b> antes.' },
+      { ic: 'crop', lb: 'Edición', text: 'Recórtala y ajusta el <b>brillo</b> si hace falta.' },
+      { ic: 'shareA', ic2: 'shareI', lb: 'Compartir', text: 'Compártela por <b>WhatsApp</b> con quien quieras.' },
+      { ic: 'scissors', lb: 'Captura', text: 'Haz una <b>captura de pantalla</b> del mensaje enviado.' }
+    ]
+  }
+];
+
+/* =========================================================
+   Diapositivas: portada, iconos, un ejercicio por diapositiva, final
+   ========================================================= */
+const SLIDES = [{ t: 'cover' }, { t: 'icons' }, ...EX.map((_, i) => ({ t: 'ex', i })), { t: 'end' }];
+const KEY = 'clase-fotos-movil-pos';
+let pos = { s: 0, j: 0 };
+try { const p = JSON.parse(localStorage.getItem(KEY)); if (p && SLIDES[p.s]) pos = p; } catch (e) {}
+const savePos = () => { try { localStorage.setItem(KEY, JSON.stringify(pos)); } catch (e) {} };
+
+const icHTML = (k, cls, style = '') => {
+  const d = IC[k], st = style ? ` style="${style}"` : '';
+  if (!d) return `<div class="${cls} emoji"${st}>${k}</div>`;
+  return `<div class="${cls}${d.dark ? ' dark' : ''}"${st}>${d.svg}</div>`;
+};
+
+function renderSlide(animate) {
+  const sl = SLIDES[pos.s], st = $('stage');
+  document.documentElement.style.setProperty('--accent', sl.t === 'ex' ? EX[sl.i].accent : 'var(--c6)');
+  let h = '';
+  if (sl.t === 'cover') {
+    $('top-title').textContent = 'Fotos con el móvil';
+    h = `<div class="slide cover">
+      <div class="big-emoji">📸</div>
+      <h1>Fotos con el móvil</h1>
+      <p>Saca tu móvil: hoy vamos a <b>hacer fotos, mejorarlas, compartirlas</b> y <b>capturar la pantalla</b>.</p>
+      <div class="cover-list">${EX.map(e => `<span>${e.icon} ${e.title}</span>`).join('')}</div>
+    </div>`;
+  } else if (sl.t === 'icons') {
+    $('top-title').textContent = 'Iconos que vas a buscar';
+    const L = [['shutter','Disparar','Redondo y grande'],['flash','Flash','Un rayo'],['edit','Editar','Un lápiz…'],['sliders','Editar','…o tres controles'],
+               ['shareA','Compartir','Tres puntos unidos'],['shareI','Compartir','Cuadrado con flecha'],['scissors','Captura','Unas tijeras'],['combo','Captura','Encendido + bajar volumen']];
+    h = `<div class="slide icons">
+      <h2 class="slide-h">🔎 Iconos que vas a buscar</h2>
+      <p class="slide-sub">Cada móvil los dibuja un poco distinto, pero se parecen a estos.</p>
+      <div class="legend">${L.map(([k,b,s]) => `<div class="chip">${icHTML(k,'chip-ic')}<span><b>${b}</b>${s}</span></div>`).join('')}</div>
+    </div>`;
+  } else if (sl.t === 'ex') {
+    const ex = EX[sl.i], s = ex.steps[pos.j];
+    $('top-title').textContent = `Ejercicio ${sl.i + 1} de ${EX.length}`;
+    h = `<div class="slide ex">
+      <div class="ex-main">
+        <div class="ex-head">
+          <div class="ex-icon">${ex.icon}</div>
+          <div><div class="ex-num">Ejercicio ${sl.i + 1}</div><div class="ex-title">${ex.title}</div></div>
+        </div>
+        <div class="ex-obj">🎯 ${ex.objective}</div>
+        ${ex.note ? `<div class="ex-note">${ex.note}</div>` : ''}
+        <ol class="steps">${ex.steps.map((st, j) => `
+          <li><button class="step ${j < pos.j ? 'past' : j === pos.j ? 'current' : ''}" type="button" data-j="${j}">
+            <span class="step-box">${j < pos.j ? '✓' : j + 1}</span>
+            <span>${st.text}${st.tip ? `<span class="step-tip">💡 ${st.tip}</span>` : ''}</span>
+          </button></li>`).join('')}</ol>
+      </div>
+      <div class="ex-side" id="side">${sideHTML(s, pos.j, ex.steps.length)}</div>
+    </div>`;
+  } else {
+    $('top-title').textContent = '¡Terminado!';
+    h = `<div class="slide finish">
+      <div class="trophy">🏆</div>
+      <h2>¡Enhorabuena!</h2>
+      <p>Ya sabéis <b>hacer fotos, mejorarlas, compartirlas</b> y <b>capturar la pantalla</b> del móvil.</p>
+      <p>Recordad: con buena luz, mejor sin flash. Y antes de hacer una foto a alguien, pedidle permiso.</p>
+    </div>`;
+  }
+  if (animate || !st.firstChild) st.innerHTML = h;
+  updateChrome();
+}
+
+function sideHTML(s, j, n) {
+  const two = s.ic2 ? `<div style="display:flex;gap:1vw">${icHTML(s.ic,'side-ic','width:12vw')}${icHTML(s.ic2,'side-ic','width:12vw')}</div>` : icHTML(s.ic, 'side-ic');
+  return `${two}<div class="side-lb">${s.lb}</div><div class="side-count">Paso ${j + 1} de ${n}</div>`;
+}
+
+/* Cambio de paso dentro del mismo ejercicio, sin rehacer la diapositiva */
+function updateSteps() {
+  const ex = EX[SLIDES[pos.s].i];
+  document.querySelectorAll('.step').forEach(b => {
+    const j = +b.dataset.j;
+    b.className = 'step ' + (j < pos.j ? 'past' : j === pos.j ? 'current' : '');
+    b.querySelector('.step-box').textContent = j < pos.j ? '✓' : j + 1;
+  });
+  $('side').innerHTML = sideHTML(ex.steps[pos.j], pos.j, ex.steps.length);
+  const cur = document.querySelector('.step.current');
+  if (cur) cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  updateChrome();
+}
+
+function updateChrome() {
+  const sl = SLIDES[pos.s];
+  $('prev').disabled = pos.s === 0 && pos.j === 0;
+  $('next').disabled = pos.s === SLIDES.length - 1;
+  $('next').textContent = sl.t === 'ex' && pos.j < EX[sl.i].steps.length - 1 ? 'Siguiente paso ▶'
+    : sl.t === 'ex' && sl.i === EX.length - 1 ? 'Terminar ▶'
+    : sl.t === 'ex' ? 'Siguiente ejercicio ▶' : 'Siguiente ▶';
+  document.querySelectorAll('.dot').forEach((d, k) => {
+    d.classList.toggle('on', k === pos.s);
+    d.classList.toggle('seen', k < pos.s);
+  });
+  const total = SLIDES.reduce((a, s) => a + (s.t === 'ex' ? EX[s.i].steps.length : 1), 0);
+  let n = 0;
+  for (let k = 0; k < pos.s; k++) n += SLIDES[k].t === 'ex' ? EX[SLIDES[k].i].steps.length : 1;
+  n += pos.j + 1;
+  $('prog-fill').style.width = (n / total * 100) + '%';
+  savePos();
+}
+
+function next() {
+  const sl = SLIDES[pos.s];
+  if (sl.t === 'ex' && pos.j < EX[sl.i].steps.length - 1) { pos.j++; updateSteps(); return; }
+  if (pos.s < SLIDES.length - 1) { pos.s++; pos.j = 0; renderSlide(true); }
+}
+function prev() {
+  const sl = SLIDES[pos.s];
+  if (sl.t === 'ex' && pos.j > 0) { pos.j--; updateSteps(); return; }
+  if (pos.s > 0) {
+    pos.s--;
+    const p = SLIDES[pos.s];
+    pos.j = p.t === 'ex' ? EX[p.i].steps.length - 1 : 0;
+    renderSlide(true);
+  }
+}
+function goSlide(s) { pos.s = s; pos.j = 0; renderSlide(true); }
+
+/* Puntos de navegación */
+$('dots').innerHTML = SLIDES.map((s, k) => {
+  const lb = s.t === 'cover' ? '🏠' : s.t === 'icons' ? '🔎' : s.t === 'end' ? '🏆' : s.i + 1;
+  const tt = s.t === 'cover' ? 'Portada' : s.t === 'icons' ? 'Iconos' : s.t === 'end' ? 'Final' : EX[s.i].title;
+  return `<button class="dot" type="button" data-s="${k}" title="${tt}">${lb}</button>`;
+}).join('');
+$('dots').addEventListener('click', e => { const d = e.target.closest('.dot'); if (d) goSlide(+d.dataset.s); });
+
+$('stage').addEventListener('click', e => {
+  const b = e.target.closest('.step');
+  if (b) { pos.j = +b.dataset.j; updateSteps(); }
+});
+$('next').onclick = next;
+$('prev').onclick = prev;
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight', 'PageDown', ' ', 'Enter', 'ArrowDown'].includes(e.key)) { e.preventDefault(); next(); }
+  else if (['ArrowLeft', 'PageUp', 'Backspace', 'ArrowUp'].includes(e.key)) { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') { e.preventDefault(); goSlide(0); }
+  else if (e.key === 'End') { e.preventDefault(); goSlide(SLIDES.length - 1); }
+  else if (e.key.toLowerCase() === 'f') toggleFull();
+});
+
+/* Pantalla completa */
+function toggleFull() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  } catch (e) {}
+}
+if (!document.fullscreenEnabled) $('btn-full').style.display = 'none';
+$('btn-full').onclick = toggleFull;
+document.addEventListener('fullscreenchange', () => {
+  $('btn-full').textContent = document.fullscreenElement ? '✕ Salir de pantalla completa' : '⛶ Pantalla completa';
+});
+
+renderSlide(true);
+</script>
+</body>
+</html>
