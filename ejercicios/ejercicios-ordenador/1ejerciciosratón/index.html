@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Ejercicios con el ratón</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --c6: #4DA3FF;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+    --display: 'Fredoka One', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c6); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(25px, 18px) scale(1.07); }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 820px; margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  /* ---------- Cabecera ---------- */
+  .header { text-align: center; margin-bottom: 34px; animation: slideDown 0.7s ease; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.94) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .subtitle { color: var(--sub); font-size: 1rem; font-weight: 600; }
+
+  /* ---------- Ratón ilustrado (reacciona al ratón real) ---------- */
+  .mouse-panel {
+    margin: 0 auto 34px; max-width: 640px;
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    background:
+      radial-gradient(circle at 25% 30%, rgba(77,163,255,0.55), transparent 55%),
+      radial-gradient(circle at 80% 70%, rgba(255,107,107,0.30), transparent 50%),
+      linear-gradient(135deg, #12335f, #0b1d3a);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    animation: popIn 0.7s cubic-bezier(.34,1.56,.64,1);
+  }
+  .mouse-stage {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    gap: 18px; padding: 22px 20px 10px;
+  }
+  .legend { display: flex; flex-direction: column; gap: 14px; }
+  .legend.left { align-items: flex-end; text-align: right; }
+  .legend.right { align-items: flex-start; }
+  .lg { display: flex; flex-direction: column; gap: 3px; }
+  .legend.left .lg { align-items: flex-end; }
+  .lg-tag {
+    font-size: 0.78rem; font-weight: 800; padding: 4px 11px; border-radius: 100px;
+    color: #0a1628; white-space: nowrap; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .lg-tag.on { transform: scale(1.12); box-shadow: 0 0 0 4px rgba(255,255,255,0.18); }
+  .lg-left .lg-tag  { background: var(--c1); }
+  .lg-wheel .lg-tag { background: var(--c3); }
+  .lg-right .lg-tag { background: var(--c4); color: #fff; }
+  .lg-sub { font-size: 0.72rem; font-weight: 700; color: #c4d2ee; }
+
+  .mouse-svg { width: 118px; height: auto; display: block; filter: drop-shadow(0 12px 20px rgba(0,0,0,0.45)); }
+  .mouse-svg .part { fill: #1c2f55; stroke: rgba(255,255,255,0.28); stroke-width: 2; transition: fill 0.15s; }
+  .mouse-svg #m-left.on  { fill: var(--c1); }
+  .mouse-svg #m-right.on { fill: var(--c4); }
+  .mouse-svg #m-wheel { fill: #2f4878; stroke: rgba(255,255,255,0.45); stroke-width: 2; transition: fill 0.15s; }
+  .mouse-svg #m-wheel.on { fill: var(--c3); }
+  .wheel-arrow { font-size: 0.95rem; font-weight: 800; color: var(--c3); height: 1.2em; text-align: center; }
+
+  .mouse-hint {
+    text-align: center; font-size: 0.82rem; font-weight: 700; color: #c4d2ee;
+    background: rgba(8,16,32,0.6); border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 11px 14px;
+  }
+
+  /* ---------- Progreso ---------- */
+  .progress-wrap {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    background: rgba(10,22,40,0.92); backdrop-filter: blur(8px);
+    padding: 12px 0 14px; margin-bottom: 24px;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px;
+  }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--c1), var(--c3));
+    border-radius: 10px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ---------- Tarjetas de ejercicio ---------- */
+  .ex-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 6px solid var(--accent, var(--c1));
+    border-radius: 24px; padding: 28px 30px; margin-bottom: 20px;
+    animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1) both;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .ex-card.done { background: rgba(37,211,102,0.07); border-color: rgba(37,211,102,0.35); border-left-color: var(--c1); }
+
+  .ex-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .ex-icon {
+    width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; background: color-mix(in srgb, var(--accent, var(--c1)) 18%, transparent);
+  }
+  .ex-num { font-size: 0.75rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent, var(--c1)); }
+  .ex-title { font-family: var(--display); font-size: 1.4rem; line-height: 1.2; }
+  .ex-check {
+    margin-left: auto; font-size: 1.5rem; opacity: 0; transform: scale(0.4);
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .ex-card.done .ex-check { opacity: 1; transform: scale(1); }
+
+  .ex-obj {
+    display: inline-block; font-size: 0.85rem; font-weight: 700; color: var(--sub);
+    background: rgba(255,255,255,0.05); padding: 8px 14px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .ex-obj strong { color: var(--text); }
+
+  .steps-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sub); margin-bottom: 10px; }
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .step {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 12px 16px;
+    font-family: inherit; font-size: 1rem; font-weight: 600; color: var(--text);
+    text-align: left; width: 100%; cursor: pointer; transition: all 0.2s ease;
+  }
+  .step:hover { background: rgba(37,211,102,0.08); border-color: var(--c1); transform: translateX(6px); }
+  .step:focus-visible, button:focus-visible, .scroll-box:focus-visible, .rc-box:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+  .step-box {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem; transition: all 0.2s;
+  }
+  .step.on { background: rgba(37,211,102,0.13); border-color: var(--c1); }
+  .step.on .step-box { background: var(--c1); color: #0a1628; }
+  .step.on .step-text { opacity: 0.75; }
+  .step-text q, .step-text b { font-weight: 800; color: var(--c3); quotes: "«" "»"; }
+  .step.practice-step { border-style: dashed; }
+
+  .ex-tip {
+    margin-top: 14px; font-size: 0.9rem; font-weight: 600; color: #d6e0f5;
+    background: rgba(255,217,61,0.08); border: 1px solid rgba(255,217,61,0.22);
+    border-radius: 12px; padding: 10px 14px;
+  }
+  .ex-tip b { color: var(--c3); }
+
+  /* ---------- Zonas de práctica ---------- */
+  .practice {
+    margin-top: 12px; border-radius: 18px;
+    background: rgba(8,16,32,0.55); border: 2px dashed color-mix(in srgb, var(--accent, var(--c1)) 45%, transparent);
+    padding: 16px;
+  }
+  .pr-area { position: relative; min-height: 150px; border-radius: 12px; user-select: none; -webkit-user-select: none; }
+  .pr-msg {
+    margin-top: 12px; text-align: center; font-weight: 800; font-size: 1rem; color: var(--sub);
+    min-height: 1.4em; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .pr-msg.ok { color: var(--c1); }
+  .pr-msg.warn { color: var(--c3); }
+  .pr-btn {
+    font-family: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer;
+    padding: 9px 18px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.06); color: var(--text); transition: all 0.2s;
+  }
+  .pr-btn:hover { border-color: var(--c1); background: rgba(37,211,102,0.12); }
+  .pr-btn.main { background: var(--c1); color: #0a1628; border-color: var(--c1); }
+
+  /* Globos */
+  .pr-balloons { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 14px; padding: 14px 6px 24px; }
+  .balloon {
+    width: 58px; height: 70px; border: none; cursor: pointer; position: relative;
+    border-radius: 50% 50% 46% 46%; background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55), transparent 28%), var(--bc);
+    animation: sway 2.8s ease-in-out infinite alternate; animation-delay: var(--d);
+    transition: transform 0.25s, opacity 0.25s;
+  }
+  .balloon::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 20px; background: rgba(255,255,255,0.35); }
+  .balloon.pop { transform: scale(1.6); opacity: 0; pointer-events: none; animation: none; }
+  @keyframes sway { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-8px) rotate(4deg); } }
+
+  /* Regalo / emoji grande */
+  .center-area { display: flex; align-items: center; justify-content: center; }
+  .big-emoji {
+    font-size: 4.6rem; background: none; border: none; cursor: pointer; line-height: 1;
+    padding: 10px 20px; border-radius: 20px; transition: transform 0.15s;
+  }
+  .big-emoji:active { transform: scale(0.92); }
+  .big-emoji.opened { animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1); }
+
+  /* Clic derecho */
+  .rc-box {
+    width: min(260px, 100%); height: 130px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-weight: 800; font-size: 1.05rem; color: #0a1628; background: #c4d2ee;
+    cursor: context-menu; transition: background 0.3s; padding: 10px;
+  }
+  .rc-menu {
+    position: absolute; z-index: 3; min-width: 190px;
+    background: #f3f5fa; color: #1b2433; border-radius: 10px; padding: 6px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+  }
+  .rc-menu[hidden] { display: none; }
+  .rc-menu .rc-title { font-size: 0.75rem; font-weight: 800; color: #6b778c; padding: 4px 10px 6px; }
+  .rc-menu button {
+    font-family: inherit; font-size: 0.95rem; font-weight: 700; text-align: left;
+    background: none; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: inherit;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .rc-menu button:hover, .rc-menu button:focus-visible { background: #dce6f8; outline: none; }
+  .swatch { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
+
+  /* Cajas con desplazamiento */
+  .scroll-box {
+    height: 210px; overflow-y: auto; overscroll-behavior: contain;
+    border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  }
+  .scroll-box[hidden] { display: none; }
+  .scroll-row {
+    padding: 14px 18px; font-weight: 700; color: var(--sub);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .scroll-end { padding: 24px; text-align: center; font-size: 3rem; }
+  .scroll-end small { display: block; font-size: 1rem; font-weight: 800; color: var(--c3); }
+  .speed-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .timer { font-family: var(--display); font-size: 1.6rem; color: var(--c3); }
+  .record { font-size: 0.85rem; font-weight: 700; color: var(--sub); }
+
+  /* Arrastrar */
+  .drag-area { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 6px; }
+  .tray { display: flex; flex-wrap: wrap; gap: 12px; flex: 1 1 200px; }
+  .drag-item {
+    width: 62px; height: 62px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15);
+    cursor: grab; touch-action: none; position: relative; z-index: 2;
+  }
+  .drag-item.dragging { cursor: grabbing; z-index: 10; box-shadow: 0 12px 26px rgba(0,0,0,0.5); border-color: var(--c3); }
+  .drag-item.placed { cursor: default; background: none; border-color: transparent; }
+  .basket {
+    flex: 0 1 230px; min-height: 140px; border-radius: 20px;
+    border: 3px dashed rgba(255,217,61,0.5); background: rgba(255,217,61,0.06);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px;
+    transition: background 0.2s;
+  }
+  .basket.hover { background: rgba(255,217,61,0.18); }
+  .basket-label { font-size: 2.6rem; }
+  .basket-in { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+  .basket-in .drag-item { width: 44px; height: 44px; font-size: 1.7rem; }
+
+  /* Puzzle */
+  .puzzle-wrap { display: flex; gap: 22px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 6px; }
+  .board { display: grid; grid-template-columns: 76px 76px; grid-template-rows: 76px 76px; gap: 4px; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 14px; }
+  .slot {
+    border-radius: 10px; background: rgba(8,16,32,0.7);
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .slot::before { content: attr(data-ghost); font-size: 2.4rem; opacity: 0.18; position: absolute; }
+  .slot.filled::before { display: none; }
+  .slot .drag-item { width: 100%; height: 100%; border-radius: 10px; background: #2a4170; border: none; }
+  .pieces { display: grid; grid-template-columns: 70px 70px; gap: 10px; }
+  .pieces .drag-item { width: 70px; height: 70px; background: #2a4170; }
+
+  /* Selección de texto */
+  .sel-text {
+    font-size: 1.1rem; line-height: 1.7; font-weight: 600; color: var(--text);
+    user-select: text; -webkit-user-select: text; cursor: text;
+    background: rgba(255,255,255,0.04); border-radius: 12px; padding: 16px 18px;
+  }
+  .sel-text::selection { background: var(--c6); color: #fff; }
+
+  /* Diana */
+  .target-area { height: 230px; overflow: hidden; background: rgba(255,255,255,0.03); }
+  .target {
+    position: absolute; border: none; border-radius: 50%; cursor: crosshair;
+    background: radial-gradient(circle closest-side, var(--c4) 0 25%, #fff 25% 45%, var(--c4) 45% 65%, #fff 65% 82%, var(--c4) 82% 100%);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    transition: left 0.35s, top 0.35s, width 0.35s, height 0.35s;
+  }
+  .score { position: absolute; top: 8px; left: 10px; font-weight: 800; font-size: 0.85rem; color: var(--sub); pointer-events: none; }
+
+  /* ---------- Final ---------- */
+  .finish {
+    display: none; text-align: center; margin: 30px 0 10px;
+    background: var(--card); border: 1px solid rgba(255,217,61,0.3);
+    border-radius: 24px; padding: 36px 24px;
+  }
+  .finish.show { display: block; animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+  .trophy { font-size: 4.5rem; animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-5deg); }
+    to   { transform: translateY(-12px) rotate(5deg); }
+  }
+  .finish h2 { font-family: var(--display); font-size: 1.8rem; margin: 10px 0 6px; color: var(--c3); }
+  .finish p { color: var(--sub); font-weight: 600; }
+
+  .footer-row { text-align: center; margin-top: 26px; }
+  .btn-reset {
+    padding: 12px 28px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.15);
+    background: transparent; color: var(--sub); font-family: inherit; font-weight: 800; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-reset:hover { color: var(--text); border-color: var(--c4); transform: scale(1.04); }
+
+  @media (max-width: 560px) {
+    .ex-card { padding: 22px 18px; }
+    .ex-title { font-size: 1.15rem; }
+    .ex-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+    .mouse-stage { gap: 10px; padding: 18px 10px 8px; }
+    .mouse-svg { width: 86px; }
+    .lg-tag { font-size: 0.68rem; padding: 3px 8px; }
+    .lg-sub { font-size: 0.64rem; }
+    .practice { padding: 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  @media print {
+    .bg-blobs, .progress-wrap, .btn-reset, .mouse-panel, .practice { display: none; }
+    body, :root { background: #fff; color: #000; }
+    .ex-card { break-inside: avoid; border: 1px solid #999; background: #fff; }
+    .step { border-color: #999; color: #000; background: #fff; }
+    .ex-title, .subtitle, .ex-obj, .ex-obj strong, .ex-tip { color: #000; -webkit-text-fill-color: #000; }
+    h1 { -webkit-text-fill-color: #000; background: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="badge">🖱️ Ordenador</div>
+    <h1>Ejercicios con el ratón</h1>
+    <p class="subtitle">Practica paso a paso y marca cada actividad cuando la hayas hecho</p>
+  </div>
+
+  <!-- Ratón ilustrado: se ilumina al usar el ratón de verdad -->
+  <div class="mouse-panel" aria-hidden="true">
+    <div class="mouse-stage">
+      <div class="legend left">
+        <div class="lg lg-left"><span class="lg-tag" id="tag-left">Botón izquierdo</span><span class="lg-sub">Clic, doble clic y arrastrar</span></div>
+      </div>
+      <div>
+        <svg class="mouse-svg" viewBox="0 0 160 270" xmlns="http://www.w3.org/2000/svg">
+          <defs><clipPath id="body-clip"><rect x="12" y="42" width="136" height="216" rx="68"/></clipPath></defs>
+          <path d="M80 42 C80 22 96 14 108 8" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="4" stroke-linecap="round"/>
+          <rect class="part" x="12" y="42" width="136" height="216" rx="68"/>
+          <g clip-path="url(#body-clip)">
+            <rect class="part" id="m-left"  x="12" y="42" width="68" height="96"/>
+            <rect class="part" id="m-right" x="80" y="42" width="68" height="96"/>
+          </g>
+          <rect x="12" y="42" width="136" height="216" rx="68" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+          <rect id="m-wheel" x="71" y="64" width="18" height="44" rx="9"/>
+          <line x1="74" y1="78" x2="86" y2="78" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+          <line x1="74" y1="86" x2="86" y2="86" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+          <line x1="74" y1="94" x2="86" y2="94" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+        </svg>
+        <div class="wheel-arrow" id="wheel-arrow"></div>
+      </div>
+      <div class="legend right">
+        <div class="lg lg-wheel"><span class="lg-tag" id="tag-wheel">Rueda</span><span class="lg-sub">Subir y bajar</span></div>
+        <div class="lg lg-right"><span class="lg-tag" id="tag-right">Botón derecho</span><span class="lg-sub">Menú de opciones</span></div>
+      </div>
+    </div>
+    <div class="mouse-hint">Prueba: pulsa los botones de tu ratón y gira la rueda. El dibujo se ilumina.</div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span id="prog-label">0 de 0 actividades</span>
+      <span id="prog-ex">⭐ 0 de 0 ejercicios</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div id="exercises"></div>
+
+  <div class="finish" id="finish">
+    <div class="trophy">🏆</div>
+    <h2>¡Enhorabuena!</h2>
+    <p>Has practicado todas las funciones básicas del ratón.</p>
+  </div>
+
+  <div class="footer-row">
+    <button class="btn-reset" onclick="resetAll()">🔄 Empezar de nuevo</button>
+  </div>
+
+</div>
+
+<script>
+const exercises = [
+  {
+    icon: "👆", color: "#25D366",
+    title: "El clic simple",
+    objective: "Seleccionar cosas pulsando una vez el botón izquierdo.",
+    steps: [
+      "Coloca la flecha sobre un icono del escritorio y haz <b>un clic</b> con el botón izquierdo. Verás que se marca en azul.",
+      "Haz clic en otros dos iconos distintos.",
+      "Haz clic en una <b>zona vacía</b> del escritorio para quitar la marca."
+    ],
+    practice: { type: "balloons", label: "explota los seis globos con un clic." },
+    tip: "Sujeta el ratón con la mano relajada: el dedo índice sobre el <b>botón izquierdo</b> y el corazón sobre el <b>derecho</b>."
+  },
+  {
+    icon: "📂", color: "#4DA3FF",
+    title: "El doble clic",
+    objective: "Abrir carpetas y programas.",
+    steps: [
+      "Pulsa <b>dos veces seguidas y rápido</b> sobre una carpeta del escritorio para abrirla.",
+      "Ciérrala con la <b>X</b> de la esquina superior derecha.",
+      "Abre la <q>Papelera de reciclaje</q> con doble clic y ciérrala también."
+    ],
+    practice: { type: "gift", label: "abre el regalo con doble clic." },
+    tip: "Si no se abre, comprueba que <b>no mueves el ratón</b> entre los dos clics y que los haces seguidos, sin pausa."
+  },
+  {
+    icon: "📋", color: "#FF6B6B",
+    title: "El clic derecho",
+    objective: "Descubrir el menú de opciones.",
+    steps: [
+      "Haz <b>clic derecho</b> en una zona vacía del escritorio.",
+      "Lee con calma las opciones del menú que aparece.",
+      "Cierra el menú sin elegir nada: pulsa la tecla <b>Esc</b> o haz clic fuera de él."
+    ],
+    practice: { type: "rightclick", label: "cambia el color del cuadro con el clic derecho." }
+  },
+  {
+    icon: "🎡", color: "#FFD93D",
+    title: "La rueda del ratón",
+    objective: "Desplazarse por una página sin usar las barras.",
+    steps: [
+      "Abre el navegador y entra en una página larga (por ejemplo, un periódico).",
+      "Gira la rueda <b>hacia ti</b> para bajar hasta el final.",
+      "Gira la rueda <b>hacia fuera</b> para volver arriba."
+    ],
+    practice: { type: "scroll", label: "baja hasta encontrar la estrella y vuelve arriba." }
+  },
+  {
+    icon: "✋", color: "#B388FF",
+    title: "Arrastrar y soltar",
+    objective: "Mover cosas de un sitio a otro.",
+    steps: [
+      "Pon la flecha sobre un icono del escritorio.",
+      "<b>Mantén pulsado</b> el botón izquierdo y mueve el ratón sin soltar.",
+      "<b>Suelta</b> el botón en otro sitio del escritorio.",
+      "Devuelve el icono a su lugar de la misma forma."
+    ],
+    practice: { type: "fruits", label: "mete toda la fruta en la cesta." },
+    tip: "Si el icono vuelve solo a su sitio, Windows está ordenando los iconos por su cuenta. Haz clic derecho en el escritorio, entra en <b>Ver</b> y quita la marca de <q>Organizar iconos automáticamente</q>."
+  },
+  {
+    icon: "🗂️", color: "#FF9F43",
+    title: "Ordenar el escritorio",
+    objective: "Arrastrar con más soltura y precisión.",
+    steps: [
+      "Elige cuatro o cinco iconos del escritorio.",
+      "Colócalos en una columna, arrastrándolos, por <b>orden alfabético</b> de su nombre.",
+      "Ahora ordénalos por el <b>color de su dibujo</b>.",
+      "Devuélvelos como estaban al principio."
+    ]
+  },
+  {
+    icon: "✍️", color: "#4DA3FF",
+    title: "Seleccionar texto",
+    objective: "Marcar palabras y frases para copiarlas o borrarlas.",
+    steps: [
+      "Haz <b>doble clic</b> sobre una palabra: queda marcada solo esa palabra.",
+      "Haz <b>tres clics</b> seguidos: se marca el párrafo entero.",
+      "Pon la flecha al principio de una frase, <b>mantén pulsado</b> y arrastra hasta el final."
+    ],
+    practice: { type: "text", label: "selecciona palabras y frases en este texto." }
+  },
+  {
+    icon: "🎨", color: "#25D366",
+    title: "Dibujar en Paint",
+    objective: "Controlar el ratón con trazos largos.",
+    steps: [
+      "Abre <q>Paint</q> desde el botón de inicio.",
+      "Elige la herramienta <b>Línea</b> y dibuja una línea recta.",
+      "Elige la forma <b>Óvalo</b> y dibuja un círculo.",
+      "Elige el <b>Pincel</b> y escribe tu nombre a mano."
+    ],
+    tip: "Truco: si mantienes pulsada la tecla <b>Mayúsculas</b> mientras dibujas, la línea sale perfectamente recta y el óvalo, perfectamente redondo."
+  },
+  {
+    icon: "🎯", color: "#FF6B6B",
+    title: "Puntería",
+    objective: "Hacer clic justo donde quieres.",
+    steps: [
+      "En Paint, dibuja un círculo grande.",
+      "Elige el <b>Bote de pintura</b> y haz clic en el <b>centro</b> del círculo para rellenarlo de color."
+    ],
+    practice: { type: "target", label: "acierta tres veces en el centro de la diana." }
+  },
+  {
+    icon: "🧩", color: "#FFD93D",
+    title: "Un puzzle",
+    objective: "Arrastrar piezas con calma hasta su sitio.",
+    steps: [
+      "En el navegador, busca <q>puzzle online fácil</q>.",
+      "Elige uno de pocas piezas (por ejemplo, 9 o 16).",
+      "Arrastra las piezas hasta completarlo."
+    ],
+    practice: { type: "puzzle", label: "coloca cada dibujo en su hueco." }
+  },
+  {
+    icon: "⏱️", color: "#B388FF",
+    title: "Juego de velocidad",
+    objective: "Manejar la rueda con rapidez y control.",
+    steps: [
+      "Pulsa <b>Empezar</b> en el recuadro de abajo.",
+      "Baja con la rueda lo más rápido que puedas hasta la meta.",
+      "Inténtalo otra vez y procura <b>batir tu récord</b>."
+    ],
+    practice: { type: "speed", label: "llega a la meta. El reloj se para solo." }
+  }
+];
+
+const KEY = 'ejercicios-raton';
+let state = {};
+
+function load() {
+  try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { state = {}; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+/* Pasos totales de un ejercicio (incluye el de práctica, si lo hay) */
+function stepCount(ex) { return ex.steps.length + (ex.practice ? 1 : 0); }
+
+function build() {
+  const root = document.getElementById('exercises');
+  root.innerHTML = exercises.map((ex, i) => {
+    const n = ex.steps.length;
+    return `
+    <section class="ex-card" id="ex-${i}" style="--accent:${ex.color}; animation-delay:${i * 0.05}s">
+      <div class="ex-top">
+        <div class="ex-icon">${ex.icon}</div>
+        <div>
+          <div class="ex-num">Ejercicio ${i + 1}</div>
+          <div class="ex-title">${ex.title}</div>
+        </div>
+        <div class="ex-check">✅</div>
+      </div>
+      <div class="ex-obj"><strong>Objetivo:</strong> ${ex.objective}</div>
+      <div class="steps-title">Actividad</div>
+      <ul class="steps">
+        ${ex.steps.map((s, j) => `
+          <li>
+            <button class="step" id="st-${i}-${j}" onclick="toggle(${i},${j})" aria-pressed="false">
+              <span class="step-box"></span>
+              <span class="step-text">${s}</span>
+            </button>
+          </li>`).join('')}
+        ${ex.practice ? `
+          <li>
+            <button class="step practice-step" id="st-${i}-${n}" onclick="toggle(${i},${n})" aria-pressed="false">
+              <span class="step-box"></span>
+              <span class="step-text">🎮 <b>Practica aquí:</b> ${ex.practice.label}</span>
+            </button>
+          </li>` : ''}
+      </ul>
+      ${ex.practice ? `<div class="practice" id="pr-${i}"></div>` : ''}
+      ${ex.tip ? `<div class="ex-tip">💡 ${ex.tip}</div>` : ''}
+    </section>`;
+  }).join('');
+
+  exercises.forEach((ex, i) => {
+    if (!ex.practice) return;
+    const el = document.getElementById('pr-' + i);
+    const done = () => { state[i + '-' + ex.steps.length] = true; save(); refresh(); };
+    widgets[ex.practice.type](el, done);
+  });
+}
+
+function toggle(i, j) {
+  const k = i + '-' + j;
+  if (state[k]) delete state[k]; else state[k] = true;
+  save();
+  refresh();
+}
+
+function refresh() {
+  let total = 0, done = 0, exDone = 0;
+  exercises.forEach((ex, i) => {
+    let all = true;
+    for (let j = 0; j < stepCount(ex); j++) {
+      total++;
+      const on = !!state[i + '-' + j];
+      if (on) done++; else all = false;
+      const btn = document.getElementById(`st-${i}-${j}`);
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on);
+      btn.querySelector('.step-box').textContent = on ? '✓' : '';
+    }
+    document.getElementById('ex-' + i).classList.toggle('done', all);
+    if (all) exDone++;
+  });
+  document.getElementById('prog-label').textContent = `${done} de ${total} actividades`;
+  document.getElementById('prog-ex').textContent = `⭐ ${exDone} de ${exercises.length} ejercicios`;
+  document.getElementById('prog-fill').style.width = (done / total * 100) + '%';
+  document.getElementById('finish').classList.toggle('show', exDone === exercises.length);
+}
+
+function resetAll() {
+  if (!confirm('¿Quieres borrar tu progreso y empezar de nuevo?')) return;
+  state = {};
+  save();
+  build();
+  refresh();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ---------- Utilidades de las zonas de práctica ---------- */
+function setMsg(el, text, kind) {
+  const m = el.querySelector('.pr-msg');
+  m.className = 'pr-msg' + (kind ? ' ' + kind : '');
+  m.innerHTML = text;
+}
+function addAgain(el, redo) {
+  const b = document.createElement('button');
+  b.className = 'pr-btn'; b.textContent = '🔄 Repetir';
+  b.onclick = redo;
+  el.querySelector('.pr-msg').appendChild(b);
+}
+function inside(box, x, y) {
+  const r = box.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+function atBottom(box) { return box.scrollTop + box.clientHeight >= box.scrollHeight - 4; }
+
+/* Arrastrar con el ratón (también funciona con el dedo) */
+function makeDraggable(item, onDrop) {
+  item.addEventListener('pointerdown', e => {
+    if (item.classList.contains('placed') || e.button !== 0) return;
+    e.preventDefault();
+    item.setPointerCapture(e.pointerId);
+    const sx = e.clientX, sy = e.clientY;
+    item.classList.add('dragging');
+    const move = ev => {
+      item.style.transform = `translate(${ev.clientX - sx}px, ${ev.clientY - sy}px) scale(1.1)`;
+      if (item._onMove) item._onMove(ev.clientX, ev.clientY);
+    };
+    const up = ev => {
+      item.removeEventListener('pointermove', move);
+      item.removeEventListener('pointerup', up);
+      item.removeEventListener('pointercancel', up);
+      item.classList.remove('dragging');
+      item.style.transform = '';
+      const moved = Math.hypot(ev.clientX - sx, ev.clientY - sy) > 8;
+      onDrop(item, ev.clientX, ev.clientY, moved);
+    };
+    item.addEventListener('pointermove', move);
+    item.addEventListener('pointerup', up);
+    item.addEventListener('pointercancel', up);
+  });
+}
+
+const widgets = {
+  balloons(el, done) {
+    const colors = ['#FF6B6B', '#FFD93D', '#4DA3FF', '#6BCB77', '#B388FF', '#FF9F43'];
+    const draw = () => {
+      el.innerHTML = `<div class="pr-area pr-balloons">${colors.map((c, k) =>
+        `<button class="balloon" style="--bc:${c}; --d:${-k * 0.45}s" aria-label="Globo ${k + 1}"></button>`).join('')}</div>
+        <div class="pr-msg">Haz un clic en cada globo.</div>`;
+      let left = colors.length;
+      el.querySelectorAll('.balloon').forEach(b => b.addEventListener('click', () => {
+        if (b.classList.contains('pop')) return;
+        b.classList.add('pop'); left--;
+        if (left) setMsg(el, `¡Bien! Quedan ${left}.`);
+        else { setMsg(el, '¡Muy bien! Has explotado todos los globos.', 'ok'); addAgain(el, draw); done(); }
+      }));
+    };
+    draw();
+  },
+
+  gift(el, done) {
+    const draw = () => {
+      el.innerHTML = `<div class="pr-area center-area"><button class="big-emoji" aria-label="Regalo">🎁</button></div>
+        <div class="pr-msg">Pulsa dos veces seguidas sobre el regalo.</div>`;
+      const g = el.querySelector('.big-emoji');
+      let t = null, opened = false;
+      g.addEventListener('click', () => {
+        if (opened) return;
+        clearTimeout(t);
+        t = setTimeout(() => setMsg(el, 'Eso ha sido un solo clic. Pulsa <b>dos veces, rápido</b> y sin mover el ratón.', 'warn'), 450);
+      });
+      g.addEventListener('dblclick', () => {
+        if (opened) return;
+        clearTimeout(t); opened = true;
+        g.textContent = '🎉'; g.classList.add('opened');
+        setMsg(el, '¡Abierto! Así se abren las carpetas y los programas.', 'ok');
+        addAgain(el, draw); done();
+      });
+    };
+    draw();
+  },
+
+  rightclick(el, done) {
+    const colors = [['Verde', '#25D366'], ['Amarillo', '#FFD93D'], ['Azul', '#4DA3FF'], ['Rojo', '#FF6B6B']];
+    el.innerHTML = `<div class="pr-area center-area">
+        <div class="rc-box" tabindex="0">Haz clic derecho aquí</div>
+        <div class="rc-menu" hidden role="menu">
+          <div class="rc-title">Cambiar color</div>
+          ${colors.map(([n, c]) => `<button role="menuitem" data-c="${c}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('')}
+        </div>
+      </div>
+      <div class="pr-msg">Usa el botón <b>derecho</b> sobre el cuadro.</div>`;
+    const area = el.querySelector('.pr-area'), box = el.querySelector('.rc-box'), menu = el.querySelector('.rc-menu');
+    const hide = () => { menu.hidden = true; };
+    box.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      menu.hidden = false;
+      const a = area.getBoundingClientRect();
+      const x = Math.min(e.clientX - a.left, a.width - menu.offsetWidth - 4);
+      const y = Math.min(e.clientY - a.top, a.height - menu.offsetHeight + 40);
+      menu.style.left = Math.max(4, x) + 'px';
+      menu.style.top = Math.max(4, y) + 'px';
+      setMsg(el, 'Ha aparecido el menú. Elige un color con un clic normal.');
+    });
+    box.addEventListener('click', () => {
+      if (menu.hidden) setMsg(el, 'Ese es el botón <b>izquierdo</b>. Prueba con el de la derecha.', 'warn');
+    });
+    menu.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      box.style.background = b.dataset.c;
+      box.textContent = '¡Color cambiado! Puedes repetirlo.';
+      hide();
+      setMsg(el, '¡Perfecto! Has usado el menú del clic derecho.', 'ok');
+      done();
+    });
+    document.addEventListener('click', e => { if (!menu.contains(e.target)) hide(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+  },
+
+  scroll(el, done) {
+    const rows = ['⬇️ Gira la rueda hacia ti para bajar', 'Sigue bajando…', 'Un poco más…', '¡Vas muy bien!', 'Sigue, sigue…',
+      'Ya queda menos…', 'Casi…', 'Un poquito más…', 'Ya casi está…'];
+    const draw = () => {
+      el.innerHTML = `<div class="scroll-box" tabindex="0">
+          ${rows.map(r => `<div class="scroll-row">${r}</div>`).join('')}
+          <div class="scroll-end">⭐<small>¡Aquí está la estrella!</small></div>
+        </div>
+        <div class="pr-msg">Pon la flecha dentro del recuadro y gira la rueda.</div>`;
+      const box = el.querySelector('.scroll-box');
+      let found = false, finished = false;
+      box.addEventListener('scroll', () => {
+        if (finished) return;
+        if (!found && atBottom(box)) {
+          found = true;
+          setMsg(el, '¡Encontraste la estrella! Ahora gira la rueda hacia fuera para volver arriba.', 'warn');
+        } else if (found && box.scrollTop <= 2) {
+          finished = true;
+          setMsg(el, '¡Muy bien! Has bajado y has vuelto arriba con la rueda.', 'ok');
+          addAgain(el, draw); done();
+        }
+      });
+    };
+    draw();
+  },
+
+  fruits(el, done) {
+    const fruits = ['🍎', '🍐', '🍊', '🍇'];
+    const draw = () => {
+      el.innerHTML = `<div class="pr-area drag-area">
+          <div class="tray">${fruits.map(f => `<div class="drag-item">${f}</div>`).join('')}</div>
+          <div class="basket"><div class="basket-label">🧺</div><div class="basket-in"></div></div>
+        </div>
+        <div class="pr-msg">Mantén pulsado sobre una fruta y llévala a la cesta.</div>`;
+      const basket = el.querySelector('.basket'), bin = el.querySelector('.basket-in');
+      let count = 0;
+      el.querySelectorAll('.drag-item').forEach(it => {
+        it._onMove = (x, y) => basket.classList.toggle('hover', inside(basket, x, y));
+        makeDraggable(it, (item, x, y, moved) => {
+          basket.classList.remove('hover');
+          if (inside(basket, x, y)) {
+            item.classList.add('placed'); bin.appendChild(item); count++;
+            if (count < fruits.length) setMsg(el, `¡Dentro! Quedan ${fruits.length - count}.`);
+            else { setMsg(el, '¡Toda la fruta en la cesta! Ya sabes arrastrar y soltar.', 'ok'); addAgain(el, draw); done(); }
+          } else if (!moved) {
+            setMsg(el, 'Mantén el botón <b>pulsado</b> mientras mueves el ratón.', 'warn');
+          } else {
+            setMsg(el, 'Se soltó antes de llegar. No sueltes el botón hasta estar encima de la cesta.', 'warn');
+          }
+        });
+      });
+    };
+    draw();
+  },
+
+  text(el, done) {
+    el.innerHTML = `<p class="sel-text">En primavera, el valle se llena de flores amarillas. Por la mañana temprano se oyen los pájaros y huele a pan recién hecho en la panadería del pueblo.</p>
+      <div class="pr-msg">Prueba con doble clic, con tres clics y arrastrando.</div>`;
+    const p = el.querySelector('.sel-text');
+    let marked = false;
+    document.addEventListener('selectionchange', () => {
+      const sel = window.getSelection();
+      if (!sel.rangeCount || !p.contains(sel.anchorNode)) return;
+      const txt = sel.toString().trim();
+      if (!txt) return;
+      const words = txt.split(/\s+/).length;
+      const shown = txt.length > 50 ? txt.slice(0, 50) + '…' : txt;
+      setMsg(el, `Has seleccionado ${words === 1 ? 'una palabra' : words + ' palabras'}: «${shown}»`, 'ok');
+      if (!marked) { marked = true; done(); }
+    });
+  },
+
+  target(el, done) {
+    const sizes = [130, 100, 72];
+    const draw = () => {
+      el.innerHTML = `<div class="pr-area target-area"><span class="score">Aciertos: 0 de 3</span><button class="target" aria-label="Diana"></button></div>
+        <div class="pr-msg">Haz clic en el círculo rojo del centro.</div>`;
+      const area = el.querySelector('.target-area'), t = el.querySelector('.target'), score = el.querySelector('.score');
+      let hits = 0;
+      const place = () => {
+        const s = sizes[Math.min(hits, sizes.length - 1)];
+        const w = area.clientWidth, h = area.clientHeight;
+        t.style.width = t.style.height = s + 'px';
+        t.style.left = (10 + Math.random() * Math.max(0, w - s - 20)) + 'px';
+        t.style.top = (24 + Math.random() * Math.max(0, h - s - 34)) + 'px';
+      };
+      place();
+      t.addEventListener('click', e => {
+        if (hits >= 3 || e.detail === 0) return;
+        const r = t.getBoundingClientRect();
+        const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) / (r.width / 2);
+        if (d <= 0.25) {
+          hits++; score.textContent = `Aciertos: ${hits} de 3`;
+          if (hits < 3) { setMsg(el, '¡En el centro! La diana se hace más pequeña…', 'ok'); place(); }
+          else { setMsg(el, '¡Tres dianas! Tienes muy buena puntería.', 'ok'); addAgain(el, draw); done(); }
+        } else {
+          setMsg(el, d <= 0.5 ? 'Muy cerca. Un poco más al centro.' : 'Apunta al círculo rojo del medio.', 'warn');
+        }
+      });
+    };
+    draw();
+  },
+
+  puzzle(el, done) {
+    const parts = ['🌞', '☁️', '🏠', '🌳'];
+    const draw = () => {
+      const shuffled = [...parts].sort(() => Math.random() - 0.5);
+      el.innerHTML = `<div class="pr-area puzzle-wrap">
+          <div class="pieces">${shuffled.map(p => `<div class="drag-item" data-k="${p}">${p}</div>`).join('')}</div>
+          <div class="board">${parts.map(p => `<div class="slot" data-k="${p}" data-ghost="${p}"></div>`).join('')}</div>
+        </div>
+        <div class="pr-msg">Arrastra cada pieza al hueco donde se ve su dibujo clarito.</div>`;
+      const slots = [...el.querySelectorAll('.slot')];
+      let placed = 0;
+      el.querySelectorAll('.drag-item').forEach(it => makeDraggable(it, (item, x, y, moved) => {
+        const slot = slots.find(s => inside(s, x, y));
+        if (slot && !slot.classList.contains('filled') && slot.dataset.k === item.dataset.k) {
+          slot.appendChild(item); slot.classList.add('filled'); item.classList.add('placed'); placed++;
+          if (placed < parts.length) setMsg(el, `¡Encaja! Quedan ${parts.length - placed}.`);
+          else { setMsg(el, '¡Puzzle completo!', 'ok'); addAgain(el, draw); done(); }
+        } else if (slot) {
+          setMsg(el, 'Ese no es su sitio. Fíjate en el dibujo clarito de cada hueco.', 'warn');
+        } else if (!moved) {
+          setMsg(el, 'Mantén el botón <b>pulsado</b> mientras mueves la pieza.', 'warn');
+        }
+      }));
+    };
+    draw();
+  },
+
+  speed(el, done) {
+    const RK = 'ejercicios-raton-record';
+    const getRecord = () => { try { return parseFloat(localStorage.getItem(RK)) || null; } catch (e) { return null; } };
+    const setRecord = v => { try { localStorage.setItem(RK, String(v)); } catch (e) {} };
+    const fmt = s => s.toFixed(1).replace('.', ',') + ' s';
+    const rows = Array.from({ length: 30 }, (_, k) => `<div class="scroll-row">${k % 5 === 0 ? '⬇️ ¡Rápido, sigue bajando!' : '…'}</div>`).join('');
+    el.innerHTML = `<div class="speed-top">
+        <button class="pr-btn main">▶️ Empezar</button>
+        <span class="timer">0,0 s</span>
+        <span class="record"></span>
+      </div>
+      <div class="scroll-box" tabindex="0" hidden>${rows}<div class="scroll-end">🏁<small>¡Meta!</small></div></div>
+      <div class="pr-msg">Cuando pulses Empezar, el reloj se pondrá en marcha.</div>`;
+    const btn = el.querySelector('.pr-btn'), timer = el.querySelector('.timer'),
+          rec = el.querySelector('.record'), box = el.querySelector('.scroll-box');
+    const showRecord = () => { const r = getRecord(); rec.textContent = r ? `🏅 Tu récord: ${fmt(r)}` : ''; };
+    showRecord();
+    let t0 = 0, iv = null, running = false;
+    btn.addEventListener('click', () => {
+      box.hidden = false; box.scrollTop = 0;
+      running = true; t0 = performance.now();
+      clearInterval(iv);
+      iv = setInterval(() => { timer.textContent = fmt((performance.now() - t0) / 1000); }, 100);
+      btn.textContent = '🔄 Otra vez';
+      setMsg(el, '¡Ya! Pon la flecha en el recuadro y baja con la rueda.');
+      box.focus({ preventScroll: true });
+    });
+    box.addEventListener('scroll', () => {
+      if (!running || !atBottom(box)) return;
+      running = false; clearInterval(iv);
+      const s = (performance.now() - t0) / 1000;
+      timer.textContent = fmt(s);
+      const r = getRecord();
+      if (!r || s < r) { setRecord(s); setMsg(el, `¡Meta en ${fmt(s)}! Es tu mejor marca.`, 'ok'); }
+      else setMsg(el, `¡Meta en ${fmt(s)}! Tu récord sigue siendo ${fmt(r)}.`, 'ok');
+      showRecord(); done();
+    });
+  }
+};
+
+/* ---------- El ratón dibujado se ilumina con el ratón real ---------- */
+(function liveMouse() {
+  const parts = {
+    left:  [document.getElementById('m-left'),  document.getElementById('tag-left')],
+    right: [document.getElementById('m-right'), document.getElementById('tag-right')],
+    wheel: [document.getElementById('m-wheel'), document.getElementById('tag-wheel')]
+  };
+  const arrow = document.getElementById('wheel-arrow');
+  const flash = name => parts[name].forEach(n => {
+    n.classList.add('on'); clearTimeout(n._t);
+    n._t = setTimeout(() => n.classList.remove('on'), 380);
+  });
+  window.addEventListener('mousedown', e => {
+    if (e.button === 0) flash('left');
+    else if (e.button === 2) flash('right');
+    else if (e.button === 1) flash('wheel');
+  });
+  window.addEventListener('wheel', e => {
+    flash('wheel');
+    arrow.textContent = e.deltaY > 0 ? '▼ bajando' : '▲ subiendo';
+    clearTimeout(arrow._t);
+    arrow._t = setTimeout(() => { arrow.textContent = ''; }, 600);
+  }, { passive: true });
+})();
+
+load();
+build();
+refresh();
+</script>
+</body>
+</html>
