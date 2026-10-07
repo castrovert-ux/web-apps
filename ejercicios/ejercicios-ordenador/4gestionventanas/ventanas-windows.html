@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practica con las ventanas de Windows</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --c6: #4DA3FF;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+    --win: #f3f5f8;
+    --win-ink: #1b2433;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  button { font-family: inherit; }
+  button:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c6); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(25px, 18px) scale(1.07); }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 860px; margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  /* ---------- Cabecera ---------- */
+  .header { text-align: center; margin-bottom: 26px; animation: slideDown 0.7s ease; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.94) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c6), #2a6fd6);
+    color: #fff; font-weight: 800; font-size: 0.75rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1;
+    background: linear-gradient(135deg, var(--c6), var(--c1), var(--c3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .subtitle { color: var(--sub); font-size: 1rem; font-weight: 600; max-width: 560px; margin: 0 auto; }
+
+  /* ---------- Progreso ---------- */
+  .progress-wrap {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10,22,40,0.92); backdrop-filter: blur(8px);
+    padding: 12px 0 14px; margin-bottom: 18px;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px;
+  }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--c6), var(--c1), var(--c3));
+    border-radius: 10px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ---------- Misión actual ---------- */
+  .practice { scroll-margin-top: 70px; margin-bottom: 40px; animation: popIn 0.7s cubic-bezier(.34,1.56,.64,1); }
+  .mission {
+    --accent: var(--c6);
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 6px solid var(--accent);
+    border-radius: 20px; padding: 18px 22px; margin-bottom: 14px;
+  }
+  .mission.flash { animation: flash 0.9s ease; }
+  @keyframes flash {
+    0% { background: rgba(37,211,102,0.28); }
+    100% { background: var(--card); }
+  }
+  .m-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .m-ex { font-size: 0.8rem; font-weight: 800; color: var(--accent); }
+  .m-reset {
+    margin-left: auto; padding: 6px 12px; border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.15); background: transparent;
+    color: var(--sub); font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+  }
+  .m-reset:hover { color: var(--text); border-color: var(--c6); }
+  .m-text { font-size: 1.18rem; font-weight: 700; line-height: 1.45; }
+  .m-text b, .m-text q { color: var(--c3); font-weight: 800; quotes: "«" "»"; }
+  .m-point {
+    display: none; margin-top: 10px; font-size: 0.88rem; font-weight: 700; color: var(--sub);
+    background: rgba(255,217,61,0.09); border-radius: 10px; padding: 7px 12px;
+  }
+  .m-point.show { display: inline-block; }
+
+  /* ---------- Simulador ---------- */
+  .screen {
+    position: relative;
+    height: clamp(380px, 62vw, 520px);
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+    background:
+      radial-gradient(circle at 25% 30%, rgba(77,163,255,0.55), transparent 55%),
+      radial-gradient(circle at 80% 70%, rgba(37,211,102,0.35), transparent 50%),
+      linear-gradient(135deg, #12335f, #0b1d3a);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    user-select: none; -webkit-user-select: none;
+  }
+  .desk { position: absolute; left: 0; top: 0; right: 0; bottom: 46px; overflow: hidden; }
+
+  .dicon {
+    position: absolute; left: 10px; width: 78px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 4px; border-radius: 8px; border: 1px solid transparent;
+    background: transparent; color: #fff; cursor: default;
+    font-size: 0.7rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  }
+  .dicon .di { font-size: 1.8rem; line-height: 1; }
+  .dicon:hover { background: rgba(255,255,255,0.1); }
+  .dicon.sel { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); }
+
+  /* Ventanas */
+  .win {
+    position: absolute; display: flex; flex-direction: column;
+    background: var(--win); color: var(--win-ink);
+    border-radius: 10px; border: 1px solid rgba(0,0,0,0.3);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.45);
+    transition: left .22s ease, top .22s ease, width .22s ease, height .22s ease, transform .28s ease, opacity .28s ease;
+  }
+  .win.dragging { transition: none; }
+  .win.closed { display: none; }
+  .win.is-min { opacity: 0; transform: translateY(45%) scale(0.2); pointer-events: none; }
+  .win.is-max { border-radius: 0; border-color: transparent; }
+  .win.is-max .win-title { border-radius: 0; }
+  .win.is-max .win-body { border-radius: 0; }
+  .win.opening { animation: winOpen 0.25s ease; }
+  @keyframes winOpen { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
+  .win-title {
+    height: 34px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding-left: 10px;
+    background: #e3e8ef; border-radius: 10px 10px 0 0; touch-action: none; cursor: default;
+  }
+  .win.focused .win-title { background: #fff; }
+  .win-ico { font-size: 0.95rem; }
+  .win-name { flex: 1; min-width: 0; font-weight: 700; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6b7587; }
+  .win.focused .win-name { color: var(--win-ink); }
+  .win-ctrls { display: flex; height: 100%; flex-shrink: 0; }
+  .wc {
+    width: 44px; height: 100%; border: 0; background: transparent; color: var(--win-ink);
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .wc:hover { background: rgba(0,0,0,0.08); }
+  .wc-close { border-top-right-radius: 9px; }
+  .win.is-max .wc-close { border-radius: 0; }
+  .wc-close:hover { background: #e81123; color: #fff; }
+  .wc svg { width: 12px; height: 12px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .win-body { flex: 1; min-height: 0; overflow: hidden; background: #fff; border-radius: 0 0 10px 10px; }
+
+  .rz { position: absolute; z-index: 2; touch-action: none; }
+  .rz-n  { top: -4px; left: 10px; right: 10px; height: 8px; cursor: ns-resize; }
+  .rz-s  { bottom: -4px; left: 10px; right: 10px; height: 8px; cursor: ns-resize; }
+  .rz-e  { right: -4px; top: 10px; bottom: 10px; width: 8px; cursor: ew-resize; }
+  .rz-w  { left: -4px; top: 10px; bottom: 10px; width: 8px; cursor: ew-resize; }
+  .rz-nw { left: -5px; top: -5px; width: 16px; height: 16px; cursor: nwse-resize; }
+  .rz-ne { right: -5px; top: -5px; width: 16px; height: 16px; cursor: nesw-resize; }
+  .rz-sw { left: -5px; bottom: -5px; width: 16px; height: 16px; cursor: nesw-resize; }
+  .rz-se { right: -6px; bottom: -6px; width: 24px; height: 24px; cursor: nwse-resize; }
+  .rz-se::after {
+    content: ""; position: absolute; right: 9px; bottom: 9px; width: 9px; height: 9px;
+    background: linear-gradient(135deg, transparent 45%, #9aa6b8 45%, #9aa6b8 55%, transparent 55%, transparent 70%, #9aa6b8 70%, #9aa6b8 80%, transparent 80%);
+  }
+  .win.is-max .rz, .win.is-snap .rz { display: none; }
+  .screen.point-mode .win, .screen.point-mode .wc, .screen.point-mode .rz { cursor: pointer; }
+
+  /* Contenido de cada programa */
+  .np { height: 100%; display: flex; flex-direction: column; }
+  .np-menu { display: flex; gap: 14px; padding: 5px 12px; font-size: 0.72rem; color: #4a5568; border-bottom: 1px solid #e5e9f0; }
+  .np-text { padding: 10px 12px; font-size: 0.85rem; line-height: 1.5; color: #222; }
+  .caret { display: inline-block; width: 1px; height: 1em; background: #222; vertical-align: text-bottom; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .calc { height: 100%; display: flex; flex-direction: column; background: #eef1f6; padding: 8px; gap: 6px; }
+  .calc-disp { text-align: right; font-size: 1.6rem; font-weight: 800; padding: 4px 6px; }
+  .calc-keys { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .calc-keys span { background: #fff; border-radius: 5px; display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; }
+  .calc-keys span.op { background: #dbe6f7; }
+  .calc-keys span.eq { background: var(--c6); color: #fff; }
+  .ph { height: 100%; display: flex; flex-direction: column; background: #20242c; }
+  .ph-pic { flex: 1; margin: 8px; border-radius: 6px; display: flex; align-items: flex-end; justify-content: center; font-size: 2.4rem; padding-bottom: 6px;
+    background: linear-gradient(180deg, #7ec8ff 0%, #bfe3ff 55%, #6bcb77 56%, #3f9a50 100%); }
+  .ph-cap { color: #cfd6e2; font-size: 0.72rem; font-weight: 700; padding: 0 10px 8px; }
+
+  /* Previsualización de encaje */
+  .snap-ghost {
+    position: absolute; display: none; z-index: 400; border-radius: 10px;
+    background: rgba(77,163,255,0.28); border: 2px solid rgba(255,255,255,0.75);
+    transition: left .15s, top .15s, width .15s, height .15s;
+    pointer-events: none;
+  }
+  .snap-ghost.show { display: block; }
+
+  /* Organizaciones (Snap layouts) */
+  .layouts {
+    position: absolute; z-index: 900; width: 236px; padding: 10px;
+    display: none; grid-template-columns: 1fr 1fr; gap: 8px;
+    background: var(--win); border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  }
+  .layouts.show { display: grid; animation: popIn 0.2s ease; }
+  .lay { position: relative; height: 58px; background: #e3e8ef; border-radius: 6px; }
+  .zone {
+    position: absolute; border: 2px solid #e3e8ef; border-radius: 6px;
+    background: #c3cddb; cursor: pointer; padding: 0;
+  }
+  .zone:hover, .zone:focus-visible { background: var(--c6); outline: none; }
+
+  /* Barra de tareas */
+  .taskbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 46px; z-index: 600;
+    background: rgba(8,16,32,0.86); backdrop-filter: blur(6px);
+    border-top: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; padding: 0 10px;
+  }
+  .tb-center { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; }
+  .start-btn {
+    width: 38px; height: 38px; border-radius: 8px; padding: 10px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+  }
+  .start-btn i { background: var(--c6); border-radius: 1px; display: block; }
+  .tb-btn {
+    position: relative; width: 40px; height: 40px; border-radius: 8px; border: 0;
+    background: transparent; color: #fff; font-size: 1.25rem; cursor: pointer;
+    display: grid; place-items: center; transition: background 0.15s;
+  }
+  .tb-btn:hover { background: rgba(255,255,255,0.12); }
+  .tb-btn svg { width: 22px; height: 22px; stroke-width: 1.4; }
+  .tb-app.active { background: rgba(255,255,255,0.14); }
+  .tb-ind {
+    position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 3px; border-radius: 3px; background: #9fb3d1; transition: width 0.2s;
+  }
+  .tb-app.open .tb-ind { width: 6px; }
+  .tb-app.active .tb-ind { width: 16px; background: var(--c6); }
+  .tb-tray { display: flex; align-items: center; gap: 10px; margin-left: auto; font-size: 0.72rem; font-weight: 700; color: #fff; }
+  .tb-clock { text-align: right; line-height: 1.15; font-size: 0.62rem; }
+
+  /* Vista previa de la barra de tareas */
+  .preview {
+    position: absolute; z-index: 900; bottom: 52px; width: 170px; display: none;
+    background: #1f2b45; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+    padding: 8px; cursor: pointer; text-align: left; color: #fff;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+  }
+  .preview.show { display: block; animation: popIn 0.18s ease; }
+  .preview:hover { border-color: var(--c6); }
+  .pv-head { font-size: 0.72rem; font-weight: 800; margin-bottom: 6px; display: flex; gap: 6px; align-items: center; }
+  .thumb {
+    display: grid; place-items: center; height: 70px; border-radius: 6px; font-size: 1.9rem;
+    background: color-mix(in srgb, var(--ac, var(--c6)) 30%, #f3f5f8);
+  }
+
+  /* Vista de tareas y Alt + Tab */
+  .overlay {
+    position: absolute; inset: 0; z-index: 700; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: rgba(6,12,26,0.6); backdrop-filter: blur(5px); padding: 16px;
+  }
+  .overlay.show { display: flex; animation: popIn 0.2s ease; }
+  .ov-title { font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: #fff; }
+  .ov-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .ov-card {
+    width: 128px; padding: 8px; border-radius: 12px; border: 3px solid transparent;
+    background: rgba(255,255,255,0.08); color: #fff; font-weight: 800; font-size: 0.78rem;
+    display: flex; flex-direction: column; gap: 6px; cursor: pointer;
+  }
+  .ov-card:hover { border-color: rgba(255,255,255,0.4); }
+  .ov-card.sel { border-color: var(--c3); background: rgba(255,217,61,0.15); }
+  .switcher .ov-card { cursor: default; }
+  .ov-empty { color: var(--sub); font-weight: 700; }
+
+  .toast {
+    position: absolute; bottom: 12px; left: 50%; transform: translate(-50%, 20px);
+    z-index: 950; max-width: 90%; text-align: center;
+    background: rgba(17,29,53,0.95); border: 2px solid var(--c1); color: #fff;
+    padding: 9px 16px; border-radius: 100px; font-weight: 800; font-size: 0.92rem;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s;
+  }
+  .toast.info { border-color: var(--c3); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Teclado y leyenda */
+  .keys {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
+    margin-top: 14px; padding: 12px; border-radius: 16px; border: 2px dashed transparent;
+    transition: border-color 0.3s;
+  }
+  .keys.attention { border-color: var(--c3); }
+  .keys-label { font-weight: 800; color: var(--sub); font-size: 0.85rem; }
+  .key {
+    min-width: 76px; padding: 10px 16px; border-radius: 10px;
+    background: #e9edf3; color: var(--win-ink); font-weight: 800; font-size: 1rem;
+    border: 0; border-bottom: 5px solid #9aa7bb; cursor: pointer; transition: all 0.1s;
+  }
+  .key.held { background: var(--c3); border-bottom-width: 1px; transform: translateY(4px); }
+  .key.nudge { animation: nudge 0.4s ease; }
+  @keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .keys-plus { font-weight: 800; color: var(--sub); }
+  .keys-hint { width: 100%; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--sub); }
+  .keys-hint b { color: var(--c3); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+  .chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.05); padding: 5px 12px 5px 5px; border-radius: 100px;
+    font-size: 0.85rem; font-weight: 700; color: var(--sub);
+  }
+  .chip-ic { width: 30px; height: 24px; border-radius: 6px; background: var(--win); color: var(--win-ink); display: grid; place-items: center; }
+  .chip-ic.red { background: #e81123; color: #fff; }
+  .chip-ic svg { width: 12px; height: 12px; }
+
+  /* ---------- Tarjetas de ejercicio ---------- */
+  .section-title { font-family: 'Fredoka One', cursive; font-size: 1.5rem; margin-bottom: 4px; }
+  .section-sub { color: var(--sub); font-weight: 600; margin-bottom: 18px; }
+
+  .ex-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 6px solid var(--accent, var(--c1));
+    border-radius: 24px; padding: 26px 28px; margin-bottom: 20px;
+    animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1) both;
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+  }
+  .ex-card.active { box-shadow: 0 0 0 2px var(--accent, var(--c1)); }
+  .ex-card.done { background: rgba(37,211,102,0.07); border-color: rgba(37,211,102,0.35); border-left-color: var(--c1); }
+
+  .ex-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .ex-icon {
+    width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; background: color-mix(in srgb, var(--accent, var(--c1)) 18%, transparent);
+  }
+  .ex-num { font-size: 0.75rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent, var(--c1)); }
+  .ex-title { font-family: 'Fredoka One', cursive; font-size: 1.4rem; line-height: 1.2; }
+  .ex-go {
+    margin-left: auto; flex-shrink: 0; padding: 9px 14px; border-radius: 12px;
+    border: 2px solid color-mix(in srgb, var(--accent, var(--c1)) 55%, transparent);
+    background: color-mix(in srgb, var(--accent, var(--c1)) 14%, transparent);
+    color: var(--text); font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: transform 0.2s;
+  }
+  .ex-go:hover { transform: scale(1.05); }
+  .ex-check {
+    font-size: 1.5rem; opacity: 0; transform: scale(0.4); width: 0; overflow: hidden;
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .ex-card.done .ex-check { opacity: 1; transform: scale(1); width: auto; }
+
+  .ex-obj {
+    display: inline-block; font-size: 0.9rem; font-weight: 700; color: var(--sub);
+    background: rgba(255,255,255,0.05); padding: 8px 14px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .ex-obj strong { color: var(--text); }
+
+  .steps-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sub); margin-bottom: 10px; }
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .step {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 12px 16px;
+    font-size: 1rem; font-weight: 600; color: var(--text);
+    text-align: left; width: 100%; cursor: pointer; transition: all 0.2s ease;
+  }
+  .step:hover { background: rgba(37,211,102,0.08); border-color: var(--c1); transform: translateX(6px); }
+  .step.current { border-color: var(--c3); background: rgba(255,217,61,0.07); }
+  .step-box {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem; transition: all 0.2s;
+  }
+  .step.on { background: rgba(37,211,102,0.13); border-color: var(--c1); }
+  .step.on .step-box { background: var(--c1); color: #0a1628; }
+  .step.on .step-text { opacity: 0.75; }
+  .step-text q, .step-text b { font-weight: 800; color: var(--c3); quotes: "«" "»"; }
+
+  /* ---------- Final ---------- */
+  .finish {
+    display: none; text-align: center; margin: 30px 0 10px;
+    background: var(--card); border: 1px solid rgba(255,217,61,0.3);
+    border-radius: 24px; padding: 36px 24px;
+  }
+  .finish.show { display: block; animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+  .trophy { font-size: 4.5rem; animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-5deg); }
+    to   { transform: translateY(-12px) rotate(5deg); }
+  }
+  .finish h2 { font-family: 'Fredoka One', cursive; font-size: 1.8rem; margin: 10px 0 6px; color: var(--c3); }
+  .finish p { color: var(--sub); font-weight: 600; max-width: 520px; margin: 0 auto 8px; }
+
+  .footer-row { text-align: center; margin-top: 26px; }
+  .btn-reset {
+    padding: 12px 28px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.15);
+    background: transparent; color: var(--sub); font-weight: 800; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-reset:hover { color: var(--text); border-color: var(--c4); transform: scale(1.04); }
+
+  @media (max-width: 560px) {
+    .container { padding: 28px 12px 50px; }
+    .ex-card { padding: 22px 18px; }
+    .ex-top { flex-wrap: wrap; }
+    .ex-go { margin-left: 0; width: 100%; }
+    .ex-title { font-size: 1.15rem; }
+    .ex-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+    .m-text { font-size: 1.03rem; }
+    .wc { width: 36px; }
+    .tb-tray .opt { display: none; }
+    .dicon { width: 66px; font-size: 0.62rem; }
+    .dicon .di { font-size: 1.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  @media print {
+    .bg-blobs, .progress-wrap, .btn-reset, .practice, .ex-go { display: none; }
+    body { background: #fff; color: #000; }
+    .ex-card { break-inside: avoid; border: 1px solid #999; background: #fff; }
+    .step { border-color: #999; color: #000; background: #fff; }
+    .ex-title, .subtitle, .ex-obj, .ex-obj strong, .section-title, .section-sub { color: #000; -webkit-text-fill-color: #000; }
+    h1 { -webkit-text-fill-color: #000; background: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="badge">🪟 Ordenador</div>
+    <h1>Practica con las ventanas de Windows</h1>
+    <p class="subtitle">Sigue las instrucciones y hazlo en el simulador. Cada paso se marca solo cuando lo consigues.</p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span id="prog-label">0 de 0 actividades</span>
+      <span id="prog-ex">⭐ 0 de 8 ejercicios</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+  </div>
+
+  <!-- Zona de práctica -->
+  <section class="practice" id="practice">
+    <div class="mission" id="mission" aria-live="polite">
+      <div class="m-top">
+        <span class="m-ex" id="m-ex"></span>
+        <button class="m-reset" id="m-reset" type="button">🔄 Colocar las ventanas</button>
+      </div>
+      <p class="m-text" id="m-text"></p>
+      <div class="m-point" id="m-point">👆 Ahora solo hay que <b>tocar</b> la parte que se pide. La ventana no hará nada.</div>
+    </div>
+
+    <div class="screen" id="screen">
+      <div class="desk" id="desk">
+        <button class="dicon" data-app="notas" style="top:10px" type="button"><span class="di">📝</span><span>Bloc de notas</span></button>
+        <button class="dicon" data-app="calc"  style="top:84px" type="button"><span class="di">🧮</span><span>Calculadora</span></button>
+        <button class="dicon" data-app="fotos" style="top:158px" type="button"><span class="di">🖼️</span><span>Fotos</span></button>
+        <div class="snap-ghost" id="ghost"></div>
+        <div class="overlay" id="taskview"></div>
+        <div class="overlay switcher" id="switcher"></div>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+
+      <div class="taskbar">
+        <div class="tb-center" id="tb-center">
+          <div class="start-btn" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <button class="tb-btn" id="tb-taskview" type="button" aria-label="Vista de tareas" title="Vista de tareas"></button>
+        </div>
+        <div class="tb-tray">
+          <span class="opt">ESP</span><span class="opt">📶</span><span class="opt">🔊</span>
+          <span class="tb-clock" id="clock"></span>
+        </div>
+      </div>
+
+      <div class="layouts" id="layouts"></div>
+      <button class="preview" id="preview" type="button"></button>
+    </div>
+
+    <div class="keys" id="keys">
+      <span class="keys-label">Teclado:</span>
+      <button class="key" id="key-alt" type="button" aria-pressed="false">Alt</button>
+      <span class="keys-plus">+</span>
+      <button class="key" id="key-tab" type="button">Tab ⇥</button>
+      <p class="keys-hint" id="keys-hint"></p>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <h2 class="section-title">Todos los ejercicios</h2>
+  <p class="section-sub">Pulsa «Practicar» para elegir uno. Si lo prefieres, también puedes marcar un paso tocándolo.</p>
+
+  <div id="exercises"></div>
+
+  <div class="finish" id="finish">
+    <div class="trophy">🏆</div>
+    <h2>¡Enhorabuena!</h2>
+    <p>Has completado todos los ejercicios de gestión de ventanas.</p>
+    <p>Recuerda: si cierras una ventana sin querer, no pasa nada. Puedes volver a abrir el programa desde el menú de inicio o desde el escritorio.</p>
+  </div>
+
+  <div class="footer-row">
+    <button class="btn-reset" onclick="resetAll()">🔄 Empezar de nuevo</button>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   Iconos
+   ========================================================= */
+const SVG = {
+  min: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6h9"/></svg>',
+  max: '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" rx="1.2"/></svg>',
+  restore: '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="3.5" width="7" height="7" rx="1"/><path d="M3.5 3.5V2.6c0-.6.5-1.1 1.1-1.1h4.8c.6 0 1.1.5 1.1 1.1v4.8c0 .6-.5 1.1-1.1 1.1h-.9"/></svg>',
+  close: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg>',
+  taskview: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="6.5" width="10" height="9" rx="1.8"/><path d="M6.5 6.5V5.3c0-1 .8-1.8 1.8-1.8h7.4c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8h-3.2"/></svg>'
+};
+
+/* =========================================================
+   Programas del simulador
+   ========================================================= */
+const APPS = {
+  notas: { name: 'Bloc de notas', icon: '📝', color: '#4DA3FF', def: { x: 13, y: 7, w: 52, h: 60 } },
+  calc:  { name: 'Calculadora',   icon: '🧮', color: '#FFD93D', def: { x: 56, y: 12, w: 30, h: 66 } },
+  fotos: { name: 'Fotos',         icon: '🖼️', color: '#FF6B6B', def: { x: 30, y: 24, w: 48, h: 58 } }
+};
+// En pantallas estrechas las ventanas empiezan más anchas y apartadas de los iconos
+const DEF_NARROW = {
+  notas: { x: 22, y: 4, w: 74, h: 62 },
+  calc:  { x: 42, y: 10, w: 54, h: 66 },
+  fotos: { x: 24, y: 20, w: 70, h: 58 }
+};
+const defOf = app => (desk.clientWidth < 560 ? DEF_NARROW : null)?.[app] || APPS[app].def;
+
+const CALC_KEYS = ['7','8','9','÷','4','5','6','×','1','2','3','−','0',',','=','+'];
+const BODY = {
+  notas: `<div class="np"><div class="np-menu"><span>Archivo</span><span>Editar</span><span>Ver</span></div>
+          <div class="np-text">Hoy estoy aprendiendo a manejar las ventanas de Windows.<br><br>Ya sé maximizarlas, minimizarlas, moverlas y cambiarlas de tamaño.<span class="caret"></span></div></div>`,
+  calc:  `<div class="calc"><div class="calc-disp">1.234</div><div class="calc-keys">${
+            CALC_KEYS.map(k => `<span class="${k === '=' ? 'eq' : ('÷×−+'.includes(k) ? 'op' : '')}">${k}</span>`).join('')
+          }</div></div>`,
+  fotos: `<div class="ph"><div class="ph-pic">🏔️🌲🌲</div><div class="ph-cap">Excursión de otoño</div></div>`
+};
+
+const PART_NAME = {
+  title: 'la barra de título', min: 'el botón Minimizar', max: 'el botón Maximizar',
+  restore: 'el botón Restaurar', close: 'el botón Cerrar', body: 'el contenido de la ventana',
+  border: 'el borde de la ventana'
+};
+
+/* =========================================================
+   Ejercicios
+   ========================================================= */
+const EX = [
+  {
+    icon: '🔎', color: '#25D366', title: 'Las partes de una ventana',
+    objective: 'Arriba está la <strong>barra de título</strong> con el nombre del programa. En la esquina superior derecha están los <strong>botones de control</strong>.',
+    setup: () => scene(['notas']),
+    steps: [
+      { text: 'Toca la <b>barra de título</b>: la franja de arriba donde aparece el nombre del programa.', point: 'title' },
+      { text: 'Toca el botón <b>Minimizar</b>, el de la rayita <q>—</q>.', point: 'min' },
+      { text: 'Toca el botón <b>Maximizar</b>, el del cuadrado <q>□</q>.', point: 'max' },
+      { text: 'Toca el botón <b>Cerrar</b>, el de la equis <q>✕</q>.', point: 'close' }
+    ]
+  },
+  {
+    icon: '⬜', color: '#4DA3FF', title: 'Maximizar y restaurar',
+    objective: '<strong>Maximizar</strong> hace que la ventana ocupe toda la pantalla. <strong>Restaurar</strong> la devuelve a su tamaño de antes.',
+    setup: () => scene(['notas']),
+    steps: [
+      { text: 'Pulsa el botón <b>Maximizar</b> (□). La ventana ocupará toda la pantalla.', when: e => e.type === 'maximize' },
+      { text: 'Fíjate: ahora el botón tiene <b>dos cuadrados superpuestos</b>. Púlsalo para <b>restaurar</b> la ventana.', when: e => e.type === 'restore' }
+    ]
+  },
+  {
+    icon: '➖', color: '#FFD93D', title: 'Minimizar y recuperar',
+    objective: '<strong>Minimizar</strong> esconde la ventana sin cerrar el programa. Se queda como un icono en la barra de tareas.',
+    setup: () => scene(['notas']),
+    steps: [
+      { text: 'Pulsa el botón <b>Minimizar</b> (—). La ventana se esconde.', when: e => e.type === 'minimize' },
+      { text: 'Busca el icono del <b>Bloc de notas</b> 📝 en la barra de tareas, abajo, y haz clic en él para recuperar la ventana.', when: e => e.type === 'taskbarRestore' }
+    ]
+  },
+  {
+    icon: '❌', color: '#FF6B6B', title: 'Cerrar y volver a abrir',
+    objective: '<strong>Cerrar</strong> termina el programa. Si lo cierras sin querer, no pasa nada: se vuelve a abrir.',
+    setup: () => scene(['notas']),
+    steps: [
+      { text: 'Pulsa el botón <b>Cerrar</b> (✕).', when: e => e.type === 'close' },
+      { text: 'Haz <b>doble clic</b> en el icono <q>Bloc de notas</q> del escritorio para abrirlo otra vez.', when: e => e.type === 'open' && e.app === 'notas' }
+    ]
+  },
+  {
+    icon: '✋', color: '#B388FF', title: 'Mover y cambiar el tamaño',
+    objective: 'Con la ventana <strong>restaurada</strong> (ni maximizada ni minimizada) puedes moverla y cambiar su tamaño.',
+    setup: () => scene(['notas']),
+    steps: [
+      { text: 'Pincha en la <b>barra de título</b>, mantén pulsado y arrastra la ventana a otro sitio. Suelta cuando quieras.', when: e => e.type === 'move' },
+      { text: 'Pon el ratón en la <b>esquina inferior derecha</b> de la ventana. Cuando veas la flecha doble ↘, pincha y arrastra para hacerla más grande o más pequeña.', when: e => e.type === 'resize' }
+    ]
+  },
+  {
+    icon: '🧩', color: '#FF9F43', title: 'Organizar ventanas en la pantalla',
+    objective: 'Windows 11 coloca las ventanas solo: en una mitad, en una esquina o en la organización que elijas.',
+    setup: () => scene(['notas']),
+    steps: [
+      { text: 'Arrastra la ventana por la barra de título hasta el <b>borde izquierdo</b> de la pantalla y suelta. Ocupará justo la mitad.', when: e => e.type === 'snapHalf' },
+      { text: 'Ahora arrástrala hasta una <b>esquina</b> de la pantalla y suelta. Ocupará un cuarto.', when: e => e.type === 'snapQuarter' },
+      { text: 'Deja el ratón quieto <b>encima del botón Maximizar</b>, sin hacer clic. Cuando aparezcan las organizaciones, elige un hueco. (En tableta, deja el dedo apoyado en el botón.)', when: e => e.type === 'snapLayout' }
+    ]
+  },
+  {
+    icon: '🔀', color: '#25D366', title: 'Moverse entre ventanas',
+    objective: 'Con varias ventanas abiertas puedes pasar de una a otra de tres maneras.',
+    setup: () => scene(['fotos', 'calc', 'notas']),
+    steps: [
+      { text: '<b>Barra de tareas</b>: pasa el ratón por el icono de la <b>Calculadora</b> 🧮 y haz clic en la vista previa que aparece encima.', when: e => e.type === 'focusTaskbar' && e.app === 'calc' },
+      { text: '<b>Alt + Tab</b>: pulsa la tecla <b>Alt</b> de debajo del simulador (se queda pulsada). Pulsa <b>Tab</b> hasta llegar a <q>Fotos</q> y vuelve a pulsar Alt para soltarla.', when: e => e.type === 'altTab' && e.app === 'fotos', keys: true },
+      { text: '<b>Vista de tareas</b>: pulsa el botón de las dos ventanas superpuestas en la barra de tareas y elige el <b>Bloc de notas</b>.', when: e => e.type === 'taskView' && e.app === 'notas' }
+    ]
+  },
+  {
+    icon: '🏆', color: '#FFD93D', title: 'Repaso: los estados de una ventana',
+    objective: '<strong>Maximizada</strong> ocupa toda la pantalla, <strong>restaurada</strong> está a medio tamaño y <strong>minimizada</strong> queda en la barra de tareas.',
+    setup: () => scene(['fotos', 'calc', 'notas']),
+    steps: [
+      { text: 'Deja la <b>Calculadora</b> minimizada.', state: () => W.calc.open && W.calc.min },
+      { text: 'Pon el <b>Bloc de notas</b> maximizado.', state: () => W.notas.open && !W.notas.min && W.notas.mode === 'max' },
+      { text: 'Cierra <b>Fotos</b>.', state: () => !W.fotos.open }
+    ]
+  }
+];
+
+/* =========================================================
+   Estado de las ventanas
+   ========================================================= */
+const W = {};
+for (const a in APPS) W[a] = { open: false, min: false, mode: 'normal', snap: null, ...APPS[a].def };
+let z = [];               // orden de apilado, el último está delante
+const winEls = {}, tbEls = {};
+let pointMode = false, swallowClick = false;
+
+const $ = id => document.getElementById(id);
+const screenEl = $('screen'), desk = $('desk'), ghost = $('ghost');
+const layoutsEl = $('layouts'), previewEl = $('preview');
+const tvEl = $('taskview'), swEl = $('switcher'), toastEl = $('toast');
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+function rectOf(w) {
+  if (w.mode === 'max') return { x: 0, y: 0, w: 100, h: 100 };
+  if (w.mode === 'snap' && w.snap) return w.snap;
+  return { x: w.x, y: w.y, w: w.w, h: w.h };
+}
+function topApp() {
+  for (let i = z.length - 1; i >= 0; i--) if (W[z[i]].open && !W[z[i]].min) return z[i];
+  return null;
+}
+
+function render() {
+  const top = topApp();
+  for (const app in APPS) {
+    const w = W[app], el = winEls[app], r = rectOf(w);
+    el.classList.toggle('closed', !w.open);
+    el.classList.toggle('is-min', w.min);
+    el.classList.toggle('is-max', w.mode === 'max');
+    el.classList.toggle('is-snap', w.mode === 'snap');
+    el.classList.toggle('focused', app === top);
+    el.style.left = r.x + '%'; el.style.top = r.y + '%';
+    el.style.width = r.w + '%'; el.style.height = r.h + '%';
+    el.style.zIndex = 10 + Math.max(0, z.indexOf(app));
+    const ic = w.mode === 'max' ? 'restore' : 'max';
+    if (el.dataset.ic !== ic) {
+      const b = el.querySelector('[data-part=max]');
+      b.innerHTML = SVG[ic];
+      b.setAttribute('aria-label', ic === 'max' ? 'Maximizar' : 'Restaurar');
+      el.dataset.ic = ic;
+    }
+    tbEls[app].classList.toggle('open', w.open);
+    tbEls[app].classList.toggle('active', app === top);
+  }
+  checkState();
+}
+
+function focus(app) { z = z.filter(a => a !== app); z.push(app); render(); }
+
+function resetWin(app, open) {
+  Object.assign(W[app], { open, min: false, mode: 'normal', snap: null }, defOf(app));
+}
+
+/* Prepara el escenario de un ejercicio: abre solo los programas indicados */
+function scene(list) {
+  hideLayouts(); hidePreview(); closeTaskView(); cancelSwitcher();
+  for (const a in APPS) resetWin(a, list.includes(a));
+  z = [...list];
+  render();
+}
+
+/* ---------- Acciones ---------- */
+function minimize(app) {
+  W[app].min = true; hideLayouts(); render();
+  emit({ type: 'minimize', app });
+}
+function toggleMax(app) {
+  const w = W[app]; hideLayouts();
+  if (w.mode === 'max') { w.mode = 'normal'; render(); emit({ type: 'restore', app }); }
+  else { w.mode = 'max'; render(); emit({ type: 'maximize', app }); }
+}
+function closeApp(app) {
+  resetWin(app, false); z = z.filter(a => a !== app); hideLayouts(); render();
+  emit({ type: 'close', app });
+}
+function openApp(app, via) {
+  const w = W[app];
+  if (!w.open) {
+    resetWin(app, true);
+    const el = winEls[app];
+    el.classList.remove('opening'); void el.offsetWidth; el.classList.add('opening');
+    setTimeout(() => el.classList.remove('opening'), 300);
+  } else w.min = false;
+  focus(app);
+  emit({ type: 'open', app, via });
+}
+
+/* =========================================================
+   Construcción de las ventanas
+   ========================================================= */
+function makeWin(app) {
+  const a = APPS[app];
+  const el = document.createElement('div');
+  el.className = 'win closed'; el.dataset.app = app;
+  el.innerHTML = `
+    <div class="win-title" data-part="title">
+      <span class="win-ico">${a.icon}</span><span class="win-name">${a.name}</span>
+      <div class="win-ctrls">
+        <button class="wc" data-part="min" type="button" aria-label="Minimizar" title="Minimizar">${SVG.min}</button>
+        <button class="wc" data-part="max" type="button" aria-label="Maximizar">${SVG.max}</button>
+        <button class="wc wc-close" data-part="close" type="button" aria-label="Cerrar" title="Cerrar">${SVG.close}</button>
+      </div>
+    </div>
+    <div class="win-body" data-part="body">${BODY[app]}</div>
+    ${['n','s','e','w','nw','ne','sw','se'].map(d => `<div class="rz rz-${d}" data-part="border" data-dir="${d}"></div>`).join('')}`;
+  el.dataset.ic = 'max';
+  desk.insertBefore(el, ghost);
+  winEls[app] = el;
+
+  el.addEventListener('pointerdown', e => {
+    swallowClick = false;
+    const partEl = e.target.closest('[data-part]');
+    const part = partEl ? partEl.dataset.part : null;
+    if (pointMode) {
+      e.preventDefault();
+      if (e.target.closest('.wc')) swallowClick = true;
+      handlePoint(app, part);
+      return;
+    }
+    focus(app);
+    if (part === 'title' && !e.target.closest('.wc')) startDrag(e, app, partEl);
+    else if (part === 'border') startResize(e, app, partEl.dataset.dir, partEl);
+  });
+
+  el.addEventListener('click', e => {
+    const b = e.target.closest('.wc');
+    if (!b) return;
+    if (swallowClick || pointMode) { swallowClick = false; return; }
+    const p = b.dataset.part;
+    if (p === 'min') minimize(app);
+    else if (p === 'max') toggleMax(app);
+    else if (p === 'close') closeApp(app);
+  });
+
+  el.querySelector('.win-title').addEventListener('dblclick', e => {
+    if (pointMode || e.target.closest('.wc')) return;
+    toggleMax(app);
+  });
+
+  // Botón maximizar: al dejar el ratón encima aparecen las organizaciones
+  const mb = el.querySelector('[data-part=max]');
+  let lpT;
+  mb.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(layHideT); clearTimeout(layShowT);
+    layShowT = setTimeout(() => showLayouts(app), 550);
+  });
+  mb.addEventListener('pointerleave', () => {
+    clearTimeout(layShowT); clearTimeout(lpT);
+    layHideT = setTimeout(hideLayouts, 400);
+  });
+  mb.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || pointMode) return;
+    clearTimeout(lpT);
+    lpT = setTimeout(() => { swallowClick = true; showLayouts(app); }, 550);
+  });
+  mb.addEventListener('pointerup', () => clearTimeout(lpT));
+  mb.addEventListener('pointercancel', () => clearTimeout(lpT));
+}
+
+/* ---------- Señalar partes (ejercicio 1) ---------- */
+function handlePoint(app, part) {
+  if (!part) return;
+  if (part === 'max' && W[app].mode === 'max') part = 'restore';
+  const a = activeStep();
+  if (!a || !a.step.point) return;
+  const want = a.step.point;
+  if (part === want) completeStep(a.i, a.j, `✅ ¡Correcto! Eso es ${PART_NAME[part]}.`);
+  else toast(`Eso es ${PART_NAME[part]}. Busca ${PART_NAME[want]}.`, 'info');
+}
+
+/* ---------- Arrastrar ---------- */
+function zoneAt(px, py, dw, dh) {
+  const E = 16;
+  const L = px <= E, R = px >= dw - E, T = py <= E;
+  if (L || R) {
+    const x = L ? 0 : 50;
+    if (py < dh * 0.2) return { kind: 'quarter', r: { x, y: 0, w: 50, h: 50 } };
+    if (py > dh * 0.8) return { kind: 'quarter', r: { x, y: 50, w: 50, h: 50 } };
+    return { kind: 'half', r: { x, y: 0, w: 50, h: 100 } };
+  }
+  if (T) {
+    if (px < dw * 0.12) return { kind: 'quarter', r: { x: 0, y: 0, w: 50, h: 50 } };
+    if (px > dw * 0.88) return { kind: 'quarter', r: { x: 50, y: 0, w: 50, h: 50 } };
+    return { kind: 'max', r: { x: 0, y: 0, w: 100, h: 100 } };
+  }
+  return null;
+}
+function showGhost(zone) {
+  if (!zone) { ghost.classList.remove('show'); return; }
+  const r = zone.r;
+  ghost.style.left = r.x + '%'; ghost.style.top = r.y + '%';
+  ghost.style.width = r.w + '%'; ghost.style.height = r.h + '%';
+  ghost.classList.add('show');
+}
+
+function startDrag(e, app, handle) {
+  if (e.button > 0) return;
+  const w = W[app], el = winEls[app];
+  const d = desk.getBoundingClientRect();
+  const st = { sx: e.clientX, sy: e.clientY, bx: w.x, by: w.y, moved: false, zone: null };
+  try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+
+  const move = ev => {
+    const dx = ev.clientX - st.sx, dy = ev.clientY - st.sy;
+    if (!st.moved) {
+      if (Math.hypot(dx, dy) < 6) return;
+      st.moved = true; el.classList.add('dragging'); hideLayouts();
+      if (w.mode !== 'normal') {
+        // Al arrastrar una ventana maximizada o encajada, vuelve a su tamaño
+        const cur = rectOf(w);
+        const pxp = (st.sx - d.left) / d.width * 100;
+        const frac = clamp((pxp - cur.x) / cur.w, 0.1, 0.9);
+        const wasMax = w.mode === 'max';
+        w.mode = 'normal'; w.snap = null;
+        st.bx = pxp - frac * w.w;
+        st.by = Math.max(0, (st.sy - d.top - 17) / d.height * 100);
+        if (wasMax) emit({ type: 'restore', app, via: 'drag' });
+      }
+    }
+    w.x = clamp(st.bx + dx / d.width * 100, -w.w + 15, 90);
+    w.y = clamp(st.by + dy / d.height * 100, 0, 90);
+    st.zone = zoneAt(ev.clientX - d.left, ev.clientY - d.top, d.width, d.height);
+    showGhost(st.zone);
+    render();
+  };
+  const up = ev => {
+    handle.removeEventListener('pointermove', move);
+    handle.removeEventListener('pointerup', up);
+    handle.removeEventListener('pointercancel', up);
+    el.classList.remove('dragging'); showGhost(null);
+    if (!st.moved) return;
+    const zn = st.zone;
+    if (zn && zn.kind === 'max') { w.mode = 'max'; render(); emit({ type: 'maximize', app, via: 'drag' }); }
+    else if (zn) {
+      w.mode = 'snap'; w.snap = zn.r; render();
+      emit({ type: zn.kind === 'half' ? 'snapHalf' : 'snapQuarter', app });
+    } else {
+      render();
+      if (Math.hypot(ev.clientX - st.sx, ev.clientY - st.sy) > 30) emit({ type: 'move', app });
+    }
+  };
+  handle.addEventListener('pointermove', move);
+  handle.addEventListener('pointerup', up);
+  handle.addEventListener('pointercancel', up);
+}
+
+/* ---------- Cambiar el tamaño ---------- */
+function startResize(e, app, dir, handle) {
+  if (e.button > 0) return;
+  const w = W[app], el = winEls[app];
+  if (w.mode !== 'normal') return;
+  const d = desk.getBoundingClientRect();
+  const st = { sx: e.clientX, sy: e.clientY, x: w.x, y: w.y, w: w.w, h: w.h, changed: false };
+  const minW = Math.max(18, 180 / d.width * 100), minH = Math.max(20, 130 / d.height * 100);
+  try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+  el.classList.add('dragging');
+
+  const move = ev => {
+    const dx = (ev.clientX - st.sx) / d.width * 100, dy = (ev.clientY - st.sy) / d.height * 100;
+    let x = st.x, y = st.y, ww = st.w, h = st.h;
+    if (dir.includes('e')) ww = Math.max(minW, st.w + dx);
+    if (dir.includes('w')) { ww = Math.max(minW, st.w - dx); x = st.x + st.w - ww; }
+    if (dir.includes('s')) h = Math.max(minH, st.h + dy);
+    if (dir.includes('n')) { h = Math.max(minH, st.h - dy); y = st.y + st.h - h; if (y < 0) { h += y; y = 0; } }
+    Object.assign(w, { x, y, w: ww, h });
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) st.changed = true;
+    render();
+  };
+  const up = () => {
+    handle.removeEventListener('pointermove', move);
+    handle.removeEventListener('pointerup', up);
+    handle.removeEventListener('pointercancel', up);
+    el.classList.remove('dragging');
+    if (st.changed) emit({ type: 'resize', app });
+  };
+  handle.addEventListener('pointermove', move);
+  handle.addEventListener('pointerup', up);
+  handle.addEventListener('pointercancel', up);
+}
+
+/* ---------- Organizaciones (Snap layouts) ---------- */
+const LAYOUTS = [
+  [[0, 0, 50, 100], [50, 0, 50, 100]],
+  [[0, 0, 66.6, 100], [66.6, 0, 33.4, 100]],
+  [[0, 0, 50, 100], [50, 0, 50, 50], [50, 50, 50, 50]],
+  [[0, 0, 50, 50], [50, 0, 50, 50], [0, 50, 50, 50], [50, 50, 50, 50]]
+];
+let layShowT, layHideT;
+layoutsEl.innerHTML = LAYOUTS.map(L => `<div class="lay">${L.map(r =>
+  `<button class="zone" type="button" style="left:${r[0]}%;top:${r[1]}%;width:${r[2]}%;height:${r[3]}%" data-r="${r.join(',')}" aria-label="Colocar la ventana aquí"></button>`
+).join('')}</div>`).join('');
+
+function showLayouts(app) {
+  const w = W[app];
+  if (pointMode || !w.open || w.min) return;
+  const b = winEls[app].querySelector('[data-part=max]');
+  const sr = screenEl.getBoundingClientRect(), br = b.getBoundingClientRect();
+  layoutsEl.dataset.app = app;
+  layoutsEl.classList.add('show');
+  const pw = layoutsEl.offsetWidth, ph = layoutsEl.offsetHeight;
+  const left = clamp(br.left + br.width / 2 - sr.left - pw / 2, 6, sr.width - pw - 6);
+  let top = br.bottom - sr.top + 4;
+  if (top + ph > sr.height - 50) top = Math.max(6, br.top - sr.top - ph - 4);
+  layoutsEl.style.left = left + 'px';
+  layoutsEl.style.top = top + 'px';
+}
+function hideLayouts() { clearTimeout(layShowT); layoutsEl.classList.remove('show'); }
+
+layoutsEl.addEventListener('pointerenter', () => clearTimeout(layHideT));
+layoutsEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') layHideT = setTimeout(hideLayouts, 400); });
+layoutsEl.addEventListener('click', e => {
+  const zb = e.target.closest('.zone');
+  if (!zb) return;
+  const [x, y, w, h] = zb.dataset.r.split(',').map(Number);
+  const app = layoutsEl.dataset.app;
+  Object.assign(W[app], { mode: 'snap', snap: { x, y, w, h }, min: false });
+  hideLayouts(); focus(app);
+  emit({ type: 'snapLayout', app });
+});
+
+/* =========================================================
+   Barra de tareas
+   ========================================================= */
+const tbCenter = $('tb-center');
+$('tb-taskview').innerHTML = SVG.taskview;
+let pvShowT, pvHideT;
+
+for (const app in APPS) {
+  const b = document.createElement('button');
+  b.className = 'tb-btn tb-app'; b.type = 'button'; b.dataset.app = app;
+  b.setAttribute('aria-label', APPS[app].name);
+  b.innerHTML = `${APPS[app].icon}<span class="tb-ind"></span>`;
+  tbCenter.appendChild(b);
+  tbEls[app] = b;
+  b.addEventListener('click', () => activate(app, 'icon'));
+  b.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(pvHideT); clearTimeout(pvShowT);
+    pvShowT = setTimeout(() => showPreview(app), 280);
+  });
+  b.addEventListener('pointerleave', () => { clearTimeout(pvShowT); pvHideT = setTimeout(hidePreview, 300); });
+}
+
+function thumb(app) {
+  return `<span class="thumb" style="--ac:${APPS[app].color}">${APPS[app].icon}</span>`;
+}
+function showPreview(app) {
+  if (!W[app].open) return;
+  const sr = screenEl.getBoundingClientRect(), ir = tbEls[app].getBoundingClientRect();
+  previewEl.dataset.app = app;
+  previewEl.innerHTML = `<div class="pv-head">${APPS[app].icon} ${APPS[app].name}</div>${thumb(app)}`;
+  previewEl.setAttribute('aria-label', 'Abrir ' + APPS[app].name);
+  previewEl.classList.add('show');
+  previewEl.style.left = clamp(ir.left + ir.width / 2 - sr.left - 85, 6, sr.width - 176) + 'px';
+}
+function hidePreview() { clearTimeout(pvShowT); previewEl.classList.remove('show'); }
+previewEl.addEventListener('pointerenter', () => clearTimeout(pvHideT));
+previewEl.addEventListener('pointerleave', () => { pvHideT = setTimeout(hidePreview, 300); });
+previewEl.addEventListener('click', () => activate(previewEl.dataset.app, 'preview'));
+
+function activate(app, via) {
+  const w = W[app];
+  hidePreview();
+  if (!w.open) { openApp(app, 'taskbar'); return; }
+  if (w.min) {
+    w.min = false; focus(app);
+    emit({ type: 'taskbarRestore', app });
+    emit({ type: 'focusTaskbar', app });
+    return;
+  }
+  if (via === 'icon' && topApp() === app) { minimize(app); return; }
+  focus(app);
+  emit({ type: 'focusTaskbar', app });
+}
+
+/* ---------- Vista de tareas ---------- */
+function ovCards(list, sel) {
+  return list.map((a, i) => `<button class="ov-card${i === sel ? ' sel' : ''}" type="button" data-app="${a}">${thumb(a)}<span>${APPS[a].name}</span></button>`).join('');
+}
+function openTaskView() {
+  hideLayouts(); hidePreview();
+  const list = [...z].reverse().filter(a => W[a].open);
+  tvEl.innerHTML = `<div class="ov-title">Vista de tareas</div>
+    <div class="ov-row">${list.length ? ovCards(list, -1) : '<p class="ov-empty">No hay ventanas abiertas.</p>'}</div>`;
+  tvEl.classList.add('show');
+}
+function closeTaskView() { tvEl.classList.remove('show'); }
+$('tb-taskview').addEventListener('click', () => tvEl.classList.contains('show') ? closeTaskView() : openTaskView());
+tvEl.addEventListener('click', e => {
+  const c = e.target.closest('.ov-card');
+  closeTaskView();
+  if (!c) return;
+  const app = c.dataset.app;
+  W[app].min = false; focus(app);
+  emit({ type: 'taskView', app });
+});
+
+/* ---------- Alt + Tab ---------- */
+const keyAlt = $('key-alt'), keyTab = $('key-tab'), keysHint = $('keys-hint');
+const HINT = 'Pulsa <b>Alt</b> una vez y se quedará pulsada.';
+let altHeld = false, realAlt = false;
+const sw = { on: false, list: [], idx: 0 };
+
+function setHint(h) { keysHint.innerHTML = h; }
+function altDown() {
+  if (altHeld) return;
+  altHeld = true;
+  keyAlt.classList.add('held'); keyAlt.setAttribute('aria-pressed', 'true');
+  setHint('Alt está pulsada. Ahora pulsa <b>Tab</b>.');
+}
+function tabPress() {
+  if (!altHeld) {
+    setHint('Primero pulsa <b>Alt</b> para dejarla pulsada.');
+    keyAlt.classList.remove('nudge'); void keyAlt.offsetWidth; keyAlt.classList.add('nudge');
+    return;
+  }
+  if (!sw.on) {
+    sw.list = [...z].reverse().filter(a => W[a].open);
+    if (!sw.list.length) { setHint('No hay ventanas abiertas.'); return; }
+    sw.on = true; sw.idx = sw.list.length > 1 ? 1 : 0;
+    hideLayouts(); hidePreview(); closeTaskView();
+  } else sw.idx = (sw.idx + 1) % sw.list.length;
+  swEl.innerHTML = `<div class="ov-row">${ovCards(sw.list, sw.idx)}</div>`;
+  swEl.classList.add('show');
+  setHint('Sigue pulsando <b>Tab</b> para avanzar. Cuando llegues, pulsa <b>Alt</b> otra vez para soltarla.');
+}
+function altUp() {
+  if (!altHeld) return;
+  altHeld = false;
+  keyAlt.classList.remove('held'); keyAlt.setAttribute('aria-pressed', 'false');
+  setHint(HINT);
+  if (sw.on) {
+    const app = sw.list[sw.idx];
+    sw.on = false; swEl.classList.remove('show');
+    W[app].min = false; focus(app);
+    emit({ type: 'altTab', app });
+  }
+}
+function cancelSwitcher() {
+  sw.on = false; swEl.classList.remove('show');
+  altHeld = false; keyAlt.classList.remove('held'); keyAlt.setAttribute('aria-pressed', 'false');
+  setHint(HINT);
+}
+keyAlt.addEventListener('click', () => altHeld ? altUp() : altDown());
+keyTab.addEventListener('click', tabPress);
+
+// Teclado de verdad (cuando el sistema deja llegar las teclas al navegador)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Alt') { e.preventDefault(); if (!altHeld) { realAlt = true; altDown(); } }
+  else if (e.key === 'Tab' && e.altKey && altHeld) { e.preventDefault(); tabPress(); }
+});
+document.addEventListener('keyup', e => { if (e.key === 'Alt' && realAlt) { e.preventDefault(); realAlt = false; altUp(); } });
+window.addEventListener('blur', () => { if (realAlt) { realAlt = false; altUp(); } });
+
+/* ---------- Iconos del escritorio (doble clic) ---------- */
+let lastIcon = null, lastIconT = 0;
+desk.querySelectorAll('.dicon').forEach(ic => {
+  const app = ic.dataset.app;
+  ic.addEventListener('click', () => {
+    desk.querySelectorAll('.dicon').forEach(o => o.classList.toggle('sel', o === ic));
+    const now = Date.now();
+    if (lastIcon === app && now - lastIconT < 500) { lastIcon = null; openApp(app, 'desktop'); }
+    else { lastIcon = app; lastIconT = now; }
+  });
+  ic.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); openApp(app, 'desktop'); } });
+});
+
+screenEl.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.layouts') && !e.target.closest('[data-part=max]')) hideLayouts();
+  if (!e.target.closest('.dicon')) desk.querySelectorAll('.dicon').forEach(o => o.classList.remove('sel'));
+}, true);
+screenEl.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ---------- Leyenda y reloj ---------- */
+$('legend').innerHTML = [
+  ['min', 'Minimizar'], ['max', 'Maximizar'], ['restore', 'Restaurar'], ['close', 'Cerrar']
+].map(([k, t]) => `<span class="chip"><span class="chip-ic${k === 'close' ? ' red' : ''}">${SVG[k]}</span>${t}</span>`).join('');
+
+function tick() {
+  const d = new Date();
+  $('clock').innerHTML = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '<br>' + d.toLocaleDateString('es-ES');
+}
+tick(); setInterval(tick, 30000);
+
+/* ---------- Avisos ---------- */
+let toastT;
+function toast(msg, kind = 'ok') {
+  toastEl.innerHTML = msg;
+  toastEl.className = 'toast show ' + kind;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => toastEl.classList.remove('show'), 2800);
+}
+
+/* =========================================================
+   Progreso de los ejercicios
+   ========================================================= */
+const KEY = 'ejercicios-gestion-ventanas';
+let done = {};       // { "0-1": true, ... }
+let activeEx = null;
+let nextT;
+
+function load() { try { done = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { done = {}; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {} }
+
+const exComplete = i => EX[i].steps.every((_, j) => done[i + '-' + j]);
+
+function activeStep() {
+  if (activeEx === null) return null;
+  const ex = EX[activeEx];
+  const j = ex.steps.findIndex((_, jj) => !done[activeEx + '-' + jj]);
+  return j < 0 ? null : { i: activeEx, j, step: ex.steps[j] };
+}
+
+function emit(e) {
+  const a = activeStep();
+  if (a && a.step.when && a.step.when(e)) completeStep(a.i, a.j);
+}
+
+let checking = false;
+function checkState() {
+  if (checking) return;
+  checking = true;
+  let a = activeStep();
+  while (a && a.step.state && a.step.state()) { completeStep(a.i, a.j); a = activeStep(); }
+  checking = false;
+}
+
+function completeStep(i, j, msg) {
+  const k = i + '-' + j;
+  if (done[k]) return;
+  done[k] = true; save();
+  const m = $('mission');
+  m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
+  if (exComplete(i)) {
+    toast('🎉 ¡Ejercicio completado!');
+    clearTimeout(nextT); nextT = setTimeout(goToNext, 1800);
+  } else toast(msg || '✅ ¡Bien hecho!');
+  refresh();
+}
+
+function goToNext() {
+  const n = EX.length;
+  for (let s = 1; s <= n; s++) {
+    const i = ((activeEx ?? -1) + s) % n;
+    if (!exComplete(i)) { setActive(i, false); return; }
+  }
+  activeEx = null; refresh();
+}
+
+function setActive(i, scroll) {
+  clearTimeout(nextT);
+  if (exComplete(i)) { EX[i].steps.forEach((_, j) => delete done[i + '-' + j]); save(); }
+  activeEx = i;
+  refresh();
+  EX[i].setup();
+  if (scroll) $('practice').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function build() {
+  $('exercises').innerHTML = EX.map((ex, i) => `
+    <section class="ex-card" id="ex-${i}" style="--accent:${ex.color}; animation-delay:${i * 0.06}s">
+      <div class="ex-top">
+        <div class="ex-icon">${ex.icon}</div>
+        <div>
+          <div class="ex-num">Ejercicio ${i + 1}</div>
+          <div class="ex-title">${ex.title}</div>
+        </div>
+        <button class="ex-go" id="go-${i}" type="button" onclick="setActive(${i}, true)">▶ Practicar</button>
+        <div class="ex-check">✅</div>
+      </div>
+      <div class="ex-obj">${ex.objective}</div>
+      <div class="steps-title">Actividad</div>
+      <ul class="steps">
+        ${ex.steps.map((s, j) => `
+          <li>
+            <button class="step" id="st-${i}-${j}" type="button" onclick="toggle(${i},${j})" aria-pressed="false">
+              <span class="step-box"></span>
+              <span class="step-text">${s.text}</span>
+            </button>
+          </li>`).join('')}
+      </ul>
+    </section>`).join('');
+}
+
+function toggle(i, j) {
+  const k = i + '-' + j;
+  if (done[k]) delete done[k]; else done[k] = true;
+  save();
+  if (i === activeEx && exComplete(i)) { clearTimeout(nextT); nextT = setTimeout(goToNext, 1200); }
+  refresh();
+}
+
+function refresh() {
+  let total = 0, n = 0, exDone = 0;
+  const a = activeStep();
+  EX.forEach((ex, i) => {
+    let all = true;
+    ex.steps.forEach((_, j) => {
+      total++;
+      const on = !!done[i + '-' + j];
+      if (on) n++; else all = false;
+      const btn = $(`st-${i}-${j}`);
+      btn.classList.toggle('on', on);
+      btn.classList.toggle('current', !!a && a.i === i && a.j === j);
+      btn.setAttribute('aria-pressed', on);
+      btn.querySelector('.step-box').textContent = on ? '✓' : '';
+    });
+    $('ex-' + i).classList.toggle('done', all);
+    $('ex-' + i).classList.toggle('active', i === activeEx);
+    $('go-' + i).textContent = all ? '↻ Repetir' : (i === activeEx ? '▶ Practicando' : '▶ Practicar');
+    if (all) exDone++;
+  });
+  $('prog-label').textContent = `${n} de ${total} actividades`;
+  $('prog-ex').textContent = `⭐ ${exDone} de ${EX.length} ejercicios`;
+  $('prog-fill').style.width = (n / total * 100) + '%';
+  $('finish').classList.toggle('show', exDone === EX.length);
+  updateMission(a);
+}
+
+function updateMission(a) {
+  const m = $('mission'), mEx = $('m-ex'), mText = $('m-text');
+  pointMode = !!(a && a.step.point);
+  screenEl.classList.toggle('point-mode', pointMode);
+  $('m-point').classList.toggle('show', pointMode);
+  $('keys').classList.toggle('attention', !!(a && a.step.keys));
+  $('m-reset').style.display = activeEx === null ? 'none' : '';
+  if (pointMode) { hideLayouts(); hidePreview(); }
+
+  if (activeEx === null) {
+    m.style.setProperty('--accent', 'var(--c3)');
+    mEx.textContent = 'Práctica libre';
+    mText.innerHTML = '🎉 ¡Has completado todos los ejercicios! Puedes seguir practicando con el simulador o repetir el ejercicio que quieras.';
+    return;
+  }
+  const ex = EX[activeEx];
+  m.style.setProperty('--accent', ex.color);
+  if (!a) {
+    mEx.textContent = `Ejercicio ${activeEx + 1}: ${ex.title}`;
+    mText.innerHTML = '🎉 ¡Ejercicio completado! Preparando el siguiente…';
+    return;
+  }
+  mEx.textContent = `Ejercicio ${activeEx + 1} de ${EX.length}: ${ex.title}. Paso ${a.j + 1} de ${ex.steps.length}`;
+  mText.innerHTML = a.step.text;
+}
+
+$('m-reset').addEventListener('click', () => { if (activeEx !== null) EX[activeEx].setup(); });
+
+function resetAll() {
+  if (!confirm('¿Quieres borrar tu progreso y empezar de nuevo?')) return;
+  done = {}; save();
+  setActive(0, false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ---------- Inicio ---------- */
+for (const app in APPS) makeWin(app);
+setHint(HINT);
+load();
+build();
+const first = EX.findIndex((_, i) => !exComplete(i));
+if (first >= 0) setActive(first, false);
+else { refresh(); scene(['notas']); }
+</script>
+</body>
+</html>
