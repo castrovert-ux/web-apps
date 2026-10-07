@@ -325,23 +325,46 @@
 
   /* Teclado y leyenda */
   .keys {
-    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
-    margin-top: 14px; padding: 12px; border-radius: 16px; border: 2px dashed transparent;
+    display: none; margin-top: 14px; padding: 18px 20px; border-radius: 20px;
+    background: var(--card); border: 2px dashed rgba(255,255,255,0.1);
     transition: border-color 0.3s;
   }
+  .keys.show { display: block; animation: popIn 0.4s ease; }
   .keys.attention { border-color: var(--c3); }
-  .keys-label { font-weight: 800; color: var(--sub); font-size: 0.85rem; }
-  .key {
-    min-width: 76px; padding: 10px 16px; border-radius: 10px;
-    background: #e9edf3; color: var(--win-ink); font-weight: 800; font-size: 1rem;
-    border: 0; border-bottom: 5px solid #9aa7bb; cursor: pointer; transition: all 0.1s;
+  .keys-title { font-family: 'Fredoka One', cursive; font-size: 1.15rem; margin-bottom: 6px; }
+  .keys-intro { color: var(--sub); font-weight: 600; line-height: 1.55; margin-bottom: 14px; }
+  .keys-intro b { color: var(--text); }
+  .keys-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .kstep {
+    flex: 1; min-width: 150px; max-width: 220px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px 10px; border-radius: 16px;
+    border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+    color: var(--text); font-weight: 800; font-size: 0.95rem; cursor: pointer;
+    transition: all 0.2s;
   }
-  .key.held { background: var(--c3); border-bottom-width: 1px; transform: translateY(4px); }
-  .key.nudge { animation: nudge 0.4s ease; }
-  @keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-  .keys-plus { font-weight: 800; color: var(--sub); }
-  .keys-hint { width: 100%; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--sub); }
-  .keys-hint b { color: var(--c3); }
+  .kstep:disabled { opacity: 0.35; cursor: default; }
+  .kstep.ready { border-color: var(--c3); background: rgba(255,217,61,0.1); }
+  .kstep.ready:hover { transform: translateY(-2px); }
+  .kn {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(255,255,255,0.12); font-size: 0.85rem;
+  }
+  .kstep.ready .kn { background: var(--c3); color: #0a1628; }
+  .key {
+    min-width: 80px; padding: 9px 16px; border-radius: 10px; text-align: center;
+    background: #e9edf3; color: var(--win-ink); font-weight: 800; font-size: 1.05rem;
+    border-bottom: 5px solid #9aa7bb; transition: all 0.1s;
+  }
+  .kstep.held { opacity: 1; border-color: var(--c1); background: rgba(37,211,102,0.12); }
+  .kstep.held .key { background: var(--c3); border-bottom-width: 1px; transform: translateY(4px); }
+  .keys-hint {
+    margin-top: 14px; text-align: center; font-size: 1rem; font-weight: 700; color: var(--text);
+    background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 14px;
+  }
+  .keys-hint b, .keys-hint q { color: var(--c3); quotes: "«" "»"; }
+  .sw-caption { color: #fff; font-weight: 800; text-align: center; font-size: 0.95rem; }
+  .sw-caption q { color: var(--c3); quotes: "«" "»"; }
 
   .legend { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
   .chip {
@@ -527,11 +550,14 @@
     </div>
 
     <div class="keys" id="keys">
-      <span class="keys-label">Teclado:</span>
-      <button class="key" id="key-alt" type="button" aria-pressed="false">Alt</button>
-      <span class="keys-plus">+</span>
-      <button class="key" id="key-tab" type="button">Tab ⇥</button>
-      <p class="keys-hint" id="keys-hint"></p>
+      <h3 class="keys-title">⌨️ Practicar Alt + Tab</h3>
+      <p class="keys-intro">En el ordenador de verdad se hace con una mano: el pulgar <b>mantiene pulsada la tecla Alt</b> (a la izquierda de la barra espaciadora) y, sin soltarla, otro dedo <b>pulsa la tecla Tab</b> (encima de Bloq Mayús) tantas veces como haga falta. Al <b>soltar Alt</b>, se abre la ventana elegida. Aquí lo hacemos en tres pasos con estos botones:</p>
+      <div class="keys-row">
+        <button class="kstep" id="k-hold" type="button"><span class="kn">1</span><span class="key">Alt</span><span>Mantener pulsada</span></button>
+        <button class="kstep" id="k-tab" type="button"><span class="kn">2</span><span class="key">Tab ⇥</span><span>Pulsar para elegir</span></button>
+        <button class="kstep" id="k-release" type="button"><span class="kn">3</span><span class="key">Alt</span><span>Soltar</span></button>
+      </div>
+      <p class="keys-hint" id="keys-hint" aria-live="polite"></p>
     </div>
 
     <div class="legend" id="legend"></div>
@@ -663,10 +689,11 @@ const EX = [
   {
     icon: '🔀', color: '#25D366', title: 'Moverse entre ventanas',
     objective: 'Con varias ventanas abiertas puedes pasar de una a otra de tres maneras.',
+    keysPanel: true,
     setup: () => scene(['fotos', 'calc', 'notas']),
     steps: [
       { text: '<b>Barra de tareas</b>: pasa el ratón por el icono de la <b>Calculadora</b> 🧮 y haz clic en la vista previa que aparece encima.', when: e => e.type === 'focusTaskbar' && e.app === 'calc' },
-      { text: '<b>Alt + Tab</b>: pulsa la tecla <b>Alt</b> de debajo del simulador (se queda pulsada). Pulsa <b>Tab</b> hasta llegar a <q>Fotos</q> y vuelve a pulsar Alt para soltarla.', when: e => e.type === 'altTab' && e.app === 'fotos', keys: true },
+      { text: '<b>Alt + Tab</b>: usa los tres botones que hay debajo del simulador. Mantén Alt, pulsa Tab hasta que quede marcada <q>Fotos</q> y suelta Alt.', when: e => e.type === 'altTab' && e.app === 'fotos', keys: true },
       { text: '<b>Vista de tareas</b>: pulsa el botón de las dos ventanas superpuestas en la barra de tareas y elige el <b>Bloc de notas</b>.', when: e => e.type === 'taskView' && e.app === 'notas' }
     ]
   },
@@ -1084,53 +1111,60 @@ tvEl.addEventListener('click', e => {
 });
 
 /* ---------- Alt + Tab ---------- */
-const keyAlt = $('key-alt'), keyTab = $('key-tab'), keysHint = $('keys-hint');
-const HINT = 'Pulsa <b>Alt</b> una vez y se quedará pulsada.';
+const kHold = $('k-hold'), kTab = $('k-tab'), kRelease = $('k-release'), keysHint = $('keys-hint');
+const HINT = 'Empieza por el paso <b>1</b>: mantener pulsada Alt.';
 let altHeld = false, realAlt = false;
 const sw = { on: false, list: [], idx: 0 };
 
 function setHint(h) { keysHint.innerHTML = h; }
+function syncKeys() {
+  kHold.disabled = altHeld;
+  kHold.classList.toggle('held', altHeld);
+  kHold.classList.toggle('ready', !altHeld);
+  kTab.disabled = !altHeld;
+  kTab.classList.toggle('ready', altHeld);
+  kRelease.disabled = !sw.on;
+  kRelease.classList.toggle('ready', sw.on);
+}
 function altDown() {
   if (altHeld) return;
-  altHeld = true;
-  keyAlt.classList.add('held'); keyAlt.setAttribute('aria-pressed', 'true');
-  setHint('Alt está pulsada. Ahora pulsa <b>Tab</b>.');
+  altHeld = true; syncKeys();
+  setHint('Muy bien, Alt está pulsada. Ahora el paso <b>2</b>: pulsa Tab.');
 }
 function tabPress() {
-  if (!altHeld) {
-    setHint('Primero pulsa <b>Alt</b> para dejarla pulsada.');
-    keyAlt.classList.remove('nudge'); void keyAlt.offsetWidth; keyAlt.classList.add('nudge');
-    return;
-  }
+  if (!altHeld) return;
   if (!sw.on) {
     sw.list = [...z].reverse().filter(a => W[a].open);
-    if (!sw.list.length) { setHint('No hay ventanas abiertas.'); return; }
+    if (!sw.list.length) { setHint('No hay ventanas abiertas. Abre algún programa primero.'); return; }
     sw.on = true; sw.idx = sw.list.length > 1 ? 1 : 0;
     hideLayouts(); hidePreview(); closeTaskView();
   } else sw.idx = (sw.idx + 1) % sw.list.length;
-  swEl.innerHTML = `<div class="ov-row">${ovCards(sw.list, sw.idx)}</div>`;
+  const name = APPS[sw.list[sw.idx]].name;
+  swEl.innerHTML = `<div class="ov-row">${ovCards(sw.list, sw.idx)}</div>
+    <div class="sw-caption">Está marcada <q>${name}</q></div>`;
   swEl.classList.add('show');
-  setHint('Sigue pulsando <b>Tab</b> para avanzar. Cuando llegues, pulsa <b>Alt</b> otra vez para soltarla.');
+  syncKeys();
+  setHint(`Está marcada <q>${name}</q>. Pulsa <b>Tab</b> otra vez para pasar a la siguiente, o pulsa <b>Soltar</b> (paso 3) para abrirla.`);
 }
 function altUp() {
   if (!altHeld) return;
   altHeld = false;
-  keyAlt.classList.remove('held'); keyAlt.setAttribute('aria-pressed', 'false');
-  setHint(HINT);
   if (sw.on) {
     const app = sw.list[sw.idx];
     sw.on = false; swEl.classList.remove('show');
+    syncKeys();
+    setHint(`Has cambiado a <q>${APPS[app].name}</q>. Para repetirlo, vuelve al paso <b>1</b>.`);
     W[app].min = false; focus(app);
     emit({ type: 'altTab', app });
-  }
+  } else { syncKeys(); setHint(HINT); }
 }
 function cancelSwitcher() {
   sw.on = false; swEl.classList.remove('show');
-  altHeld = false; keyAlt.classList.remove('held'); keyAlt.setAttribute('aria-pressed', 'false');
-  setHint(HINT);
+  altHeld = false; syncKeys(); setHint(HINT);
 }
-keyAlt.addEventListener('click', () => altHeld ? altUp() : altDown());
-keyTab.addEventListener('click', tabPress);
+kHold.addEventListener('click', altDown);
+kTab.addEventListener('click', tabPress);
+kRelease.addEventListener('click', altUp);
 
 // Teclado de verdad (cuando el sistema deja llegar las teclas al navegador)
 document.addEventListener('keydown', e => {
@@ -1311,6 +1345,7 @@ function updateMission(a) {
   screenEl.classList.toggle('point-mode', pointMode);
   $('m-point').classList.toggle('show', pointMode);
   $('keys').classList.toggle('attention', !!(a && a.step.keys));
+  $('keys').classList.toggle('show', activeEx === null || !!EX[activeEx].keysPanel);
   $('m-reset').style.display = activeEx === null ? 'none' : '';
   if (pointMode) { hideLayouts(); hidePreview(); }
 
@@ -1342,7 +1377,7 @@ function resetAll() {
 
 /* ---------- Inicio ---------- */
 for (const app in APPS) makeWin(app);
-setHint(HINT);
+cancelSwitcher();
 load();
 build();
 const first = EX.findIndex((_, i) => !exComplete(i));
