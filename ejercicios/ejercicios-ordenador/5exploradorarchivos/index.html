@@ -466,6 +466,25 @@
 
   /* Atajos de teclado */
   .combo { display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--sub); }
+  .m-steps { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .m-steps:empty { display: none; }
+  .m-steps li {
+    display: flex; align-items: flex-start; gap: 10px; padding: 6px 10px; border-radius: 10px;
+    font-size: 0.9rem; font-weight: 600; line-height: 1.4; color: var(--sub);
+    background: rgba(255,255,255,0.03); border: 2px solid transparent; transition: all 0.25s;
+  }
+  .m-steps li b, .m-steps li q { color: inherit; font-weight: 800; quotes: "«" "»"; }
+  .m-steps .ms-box {
+    width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0; margin-top: 1px;
+    display: grid; place-items: center; font-size: 0.8rem; font-weight: 800;
+    background: rgba(255,255,255,0.08); color: var(--sub); transition: all 0.25s;
+  }
+  .m-steps li.cur { color: var(--text); border-color: rgba(255,217,61,0.45); background: rgba(255,217,61,0.07); }
+  .m-steps li.ok { color: var(--text); background: rgba(37,211,102,0.1); }
+  .m-steps li.ok .ms-box { background: var(--c1); color: #0a1628; }
+  .m-steps li.ok .ms-txt { opacity: 0.75; }
+  .m-steps li.just .ms-box { animation: tick 0.5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes tick { from { transform: scale(0.3); } to { transform: scale(1); } }
   .combo .key { min-width: 0; padding: 8px 12px; font-size: 0.95rem; }
   .kstep.pressed .key { background: var(--c3); border-bottom-width: 1px; transform: translateY(4px); }
 
@@ -688,6 +707,7 @@
         <button class="m-reset" id="m-reset" type="button">🔄 Volver a empezar</button>
       </div>
       <p class="m-text" id="m-text"></p>
+      <ol class="m-steps" id="m-steps"></ol>
       <div class="m-point" id="m-point">👆 Ahora solo hay que <b>tocar</b> la parte que se pide. El Explorador no hará nada.</div>
     </div>
 
@@ -1759,7 +1779,7 @@ const EX = [
         miss: e => e.type === 'paste' && e.dest !== 'escritorio' ? 'Lo has pegado en otra carpeta. Ve al «Escritorio» y pégalo allí.' : null },
       { text: 'Ahora vamos a mover. Ve a <q>Descargas</q>, haz clic derecho en <q>foto_playa</q> y elige <q>Cortar</q>.', when: e => e.type === 'cut' && e.id === 'fotoplaya' },
       { text: 'Ve a <q>Imágenes</q> y pega allí la foto: clic derecho en una zona vacía y <q>Pegar</q>.', when: e => e.type === 'paste' && e.dest === 'imagenes' && e.op === 'cut' },
-      { text: 'Vuelve a <q>Descargas</q> y comprueba que la foto ya no está: se ha <b>movido</b>.', state: () => atLoc('descargas') }
+      { text: 'Vuelve a <q>Descargas</q> y comprueba que la foto ya no está: se ha <b>movido</b>.', state: () => atLoc('descargas') && N.fotoplaya && N.fotoplaya.parent === 'imagenes' }
     ]
   },
   {
@@ -1801,7 +1821,7 @@ const EX = [
     steps: [
       { text: 'Haz clic derecho en el archivo <q>Carta al banco</q> y elige <q>Agregar a favoritos</q>.', state: () => S.favs.includes('carta') },
       { text: 'Haz clic derecho en la carpeta <q>Cruz Roja</q> y elige <q>Anclar al acceso rápido</q>.', state: () => S.pinned.includes('cruzroja') },
-      { text: 'Pulsa <q>Inicio</q> en la barra de navegación: verás la carpeta en <q>Acceso rápido</q> y la carta en <q>Favoritos</q>.', state: () => atLoc('home') }
+      { text: 'Pulsa <q>Inicio</q> en la barra de navegación: verás la carpeta en <q>Acceso rápido</q> y la carta en <q>Favoritos</q>.', state: () => atLoc('home') && S.favs.includes('carta') && S.pinned.includes('cruzroja') }
     ]
   },
   {
@@ -1861,15 +1881,22 @@ let checking = false;
 function checkState() {
   if (checking) return;
   checking = true;
-  let a = activeStep();
-  while (a && a.step.state && a.step.state()) { completeStep(a.i, a.j); a = activeStep(); }
+  let changed = true;
+  while (changed && activeEx !== null) {
+    changed = false;
+    const i = activeEx;
+    EX[i].steps.forEach((s, j) => {
+      if (activeEx === i && !done[i + '-' + j] && s.state && s.state()) { completeStep(i, j); changed = true; }
+    });
+  }
   checking = false;
 }
 
+let justDone = null;
 function completeStep(i, j, msg) {
   const k = i + '-' + j;
   if (done[k]) return;
-  done[k] = true; save();
+  done[k] = true; save(); justDone = k;
   const m = $('mission');
   m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
   if (exComplete(i)) {
@@ -1968,6 +1995,13 @@ function updateMission(a) {
   $('keys').classList.toggle('show', activeEx === null || !!EX[activeEx].keysPanel);
   ['wine', 'ctrlc', 'ctrlv', 'del'].forEach(id => $('k-' + id).classList.toggle('ready', !!(a && a.step.key === id)));
   $('m-reset').style.display = activeEx === null ? 'none' : '';
+  const list = $('m-steps');
+  if (activeEx === null) list.innerHTML = '';
+  else list.innerHTML = EX[activeEx].steps.map((s, j) => {
+    const ok = !!done[activeEx + '-' + j], cur = !!a && a.j === j;
+    return `<li class="${ok ? 'ok' : ''}${cur ? ' cur' : ''}${justDone === activeEx + '-' + j ? ' just' : ''}"><span class="ms-box">${ok ? '✓' : j + 1}</span><span class="ms-txt">${s.text}</span></li>`;
+  }).join('');
+  justDone = null;
 
   if (activeEx === null) {
     m.style.setProperty('--accent', 'var(--c3)');
