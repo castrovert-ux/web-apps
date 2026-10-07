@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Ejercicios con el teclado</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --c6: #4DA3FF;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+    --display: 'Fredoka One', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(25px, 18px) scale(1.07); }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 820px; margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  /* ---------- Cabecera ---------- */
+  .header { text-align: center; margin-bottom: 34px; animation: slideDown 0.7s ease; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.94) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .subtitle { color: var(--sub); font-size: 1rem; font-weight: 600; }
+
+  
+
+  /* ---------- Teclado ilustrado (reacciona al teclado real) ---------- */
+  .kb-panel {
+    margin: 0 auto 34px; max-width: 700px;
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    background:
+      radial-gradient(circle at 25% 30%, rgba(77,163,255,0.5), transparent 55%),
+      radial-gradient(circle at 80% 70%, rgba(37,211,102,0.28), transparent 50%),
+      linear-gradient(135deg, #12335f, #0b1d3a);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    animation: popIn 0.7s cubic-bezier(.34,1.56,.64,1);
+  }
+  .kb-readout {
+    text-align: center; padding: 16px 14px 4px; font-weight: 700; color: #c4d2ee; font-size: 0.95rem;
+    min-height: 2.6em;
+  }
+  .kb-readout b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; color: var(--c3); margin-left: 6px; }
+  .kb {
+    display: flex; gap: 10px; padding: 10px 16px 16px; justify-content: center;
+  }
+  .kb-main { flex: 15 1 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .kb-side { flex: 3 1 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: 112px; }
+  .kb-row { display: flex; gap: 4px; }
+  .kb-row.f-row { margin-bottom: 6px; }
+  .key {
+    flex: var(--w, 1) 1 0; min-width: 0; height: 32px; border-radius: 6px;
+    background: #1f3460; border: 1px solid rgba(255,255,255,0.14); border-bottom-width: 3px;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    font-size: 0.66rem; font-weight: 800; color: #dbe5f8; white-space: nowrap; overflow: hidden;
+    transition: background 0.12s, transform 0.12s, color 0.12s;
+  }
+  .key.blank { visibility: hidden; }
+  .kb-side .key { font-size: 0.56rem; }
+  .key.k-ctrl { background: #1d3f6e; color: #9fd0ff; }
+  .key.k-esp  { background: #46263e; color: #ffb3b3; }
+  .key.k-nav  { background: #47421f; color: #ffe58a; }
+  .key.k-fn   { background: #1d4436; color: #a5e8b8; height: 24px; }
+  .key.bump::after {
+    content: ""; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 9px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0.8;
+  }
+  .key.on { background: var(--c1) !important; color: #0a1628 !important; transform: translateY(2px); border-bottom-width: 1px; }
+  .key.locked { box-shadow: inset 0 0 0 2px var(--c1); }
+  .key.locked::before {
+    content: ""; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--c1);
+  }
+  .kb-legend {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px;
+    padding: 0 14px 14px; font-size: 0.75rem; font-weight: 700; color: #c4d2ee;
+  }
+  .kb-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .kb-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid rgba(255,255,255,0.25); }
+  .kb-hint {
+    text-align: center; font-size: 0.82rem; font-weight: 700; color: #c4d2ee;
+    background: rgba(8,16,32,0.6); border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 11px 14px;
+  }
+
+  /* ---------- Progreso ---------- */
+  .progress-wrap {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    background: rgba(10,22,40,0.92); backdrop-filter: blur(8px);
+    padding: 12px 0 14px; margin-bottom: 24px;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px;
+  }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--c1), var(--c3));
+    border-radius: 10px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ---------- Tarjetas de ejercicio ---------- */
+  .ex-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 6px solid var(--accent, var(--c1));
+    border-radius: 24px; padding: 28px 30px; margin-bottom: 20px;
+    animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1) both;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .ex-card.done { background: rgba(37,211,102,0.07); border-color: rgba(37,211,102,0.35); border-left-color: var(--c1); }
+
+  .ex-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .ex-icon {
+    width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; background: color-mix(in srgb, var(--accent, var(--c1)) 18%, transparent);
+  }
+  .ex-num { font-size: 0.75rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent, var(--c1)); }
+  .ex-title { font-family: var(--display); font-size: 1.4rem; line-height: 1.2; }
+  .ex-check {
+    margin-left: auto; font-size: 1.5rem; opacity: 0; transform: scale(0.4);
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .ex-card.done .ex-check { opacity: 1; transform: scale(1); }
+
+  .ex-obj {
+    display: inline-block; font-size: 0.85rem; font-weight: 700; color: var(--sub);
+    background: rgba(255,255,255,0.05); padding: 8px 14px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .ex-obj strong { color: var(--text); }
+
+  .steps-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sub); margin-bottom: 10px; }
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .step {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 12px 16px;
+    font-family: inherit; font-size: 1rem; font-weight: 600; color: var(--text);
+    text-align: left; width: 100%; cursor: pointer; transition: all 0.2s ease;
+  }
+  .step:hover { background: rgba(37,211,102,0.08); border-color: var(--c1); transform: translateX(6px); }
+  .step:focus-visible, button:focus-visible, .scroll-box:focus-visible, .rc-box:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+  .step-box {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem; transition: all 0.2s;
+  }
+  .step.on { background: rgba(37,211,102,0.13); border-color: var(--c1); }
+  .step.on .step-box { background: var(--c1); color: #0a1628; }
+  .step.on .step-text { opacity: 0.75; }
+  .step-text q, .step-text b { font-weight: 800; color: var(--c3); quotes: "«" "»"; }
+  .step.practice-step { border-style: dashed; }
+
+  .ex-tip {
+    margin-top: 14px; font-size: 0.9rem; font-weight: 600; color: #d6e0f5;
+    background: rgba(255,217,61,0.08); border: 1px solid rgba(255,217,61,0.22);
+    border-radius: 12px; padding: 10px 14px;
+  }
+  .ex-tip b { color: var(--c3); }
+
+  /* ---------- Zonas de práctica ---------- */
+  .practice {
+    margin-top: 12px; border-radius: 18px;
+    background: rgba(8,16,32,0.55); border: 2px dashed color-mix(in srgb, var(--accent, var(--c1)) 45%, transparent);
+    padding: 16px;
+  }
+  .pr-area { position: relative; min-height: 150px; border-radius: 12px; user-select: none; -webkit-user-select: none; }
+  .pr-msg {
+    margin-top: 12px; text-align: center; font-weight: 800; font-size: 1rem; color: var(--sub);
+    min-height: 1.4em; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .pr-msg.ok { color: var(--c1); }
+  .pr-msg.warn { color: var(--c3); }
+  .pr-btn {
+    font-family: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer;
+    padding: 9px 18px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.06); color: var(--text); transition: all 0.2s;
+  }
+  .pr-btn:hover { border-color: var(--c1); background: rgba(37,211,102,0.12); }
+  .pr-btn.main { background: var(--c1); color: #0a1628; border-color: var(--c1); }
+
+  
+
+  /* Teclas dentro del texto */
+  kbd {
+    display: inline-block; font-family: inherit; font-size: 0.85em; font-weight: 800; line-height: 1.3;
+    padding: 1px 8px; margin: 0 1px; border-radius: 7px; white-space: nowrap;
+    background: #263e6b; color: #fff; border: 1px solid rgba(255,255,255,0.22); border-bottom-width: 3px;
+  }
+  .ex-tip kbd { background: #3a3a22; }
+
+  /* Escribir */
+  .model {
+    font-size: 0.9rem; font-weight: 700; color: var(--sub); margin-bottom: 10px; line-height: 1.6;
+  }
+  .model-text {
+    display: inline-block; font-size: 1.15rem; font-weight: 800; color: var(--text);
+    background: rgba(255,255,255,0.06); border-radius: 10px; padding: 4px 12px; margin-top: 4px;
+  }
+  .type-in, .type-area {
+    width: 100%; font-family: inherit; font-size: 1.15rem; font-weight: 700; color: #0a1628;
+    background: #f3f6fc; border: 3px solid transparent; border-radius: 12px; padding: 12px 14px;
+    transition: border-color 0.2s;
+  }
+  .type-area { resize: vertical; min-height: 130px; line-height: 1.6; }
+  .type-in:focus, .type-area:focus { outline: none; border-color: var(--c6); }
+  .type-in.ok, .type-area.ok { border-color: var(--c1); }
+  .caps-ind {
+    margin-top: 10px; text-align: center; font-weight: 800; color: #0a1628; background: var(--c3);
+    border-radius: 10px; padding: 6px 10px;
+  }
+  .caps-ind[hidden] { display: none; }
+
+  /* Juego de teclas */
+  .key-game {
+    min-height: 170px; border-radius: 14px; cursor: pointer;
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 14px;
+  }
+  .key-game:focus { outline: none; border-color: var(--c6); background: rgba(77,163,255,0.08); }
+  .kg-label { font-weight: 800; color: var(--sub); }
+  .kg-key {
+    font-family: var(--display); font-size: 2.6rem; line-height: 1; color: #0a1628;
+    background: #f3f6fc; border-radius: 14px; padding: 14px 24px; border-bottom: 6px solid #9fb0d0;
+    min-width: 92px;
+  }
+  .kg-key.small { font-size: 1.4rem; padding: 18px 22px; }
+  .kg-key.hit { animation: popIn 0.35s cubic-bezier(.34,1.56,.64,1); }
+  .kg-dots { display: flex; gap: 6px; }
+  .kg-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+  .kg-dots i.on { background: var(--c1); }
+
+  /* Laberinto */
+  .maze {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 420px; margin: 0 auto;
+    padding: 8px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+  }
+  .maze:focus { outline: none; border-color: var(--c6); background: rgba(77,163,255,0.08); }
+  .cell {
+    aspect-ratio: 1; border-radius: 8px; background: rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center; font-size: clamp(1.1rem, 4.5vw, 1.8rem);
+  }
+  .cell.wall { background: rgba(107,203,119,0.14); }
+
+  /* Formulario */
+  .mini-form { display: flex; flex-direction: column; gap: 10px; max-width: 420px; margin: 0 auto; }
+  .mini-form label { font-weight: 800; font-size: 0.9rem; color: var(--sub); display: flex; flex-direction: column; gap: 4px; }
+
+  /* Copiar y pegar */
+  .src {
+    font-size: 1.2rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 12px;
+    user-select: text; -webkit-user-select: text; cursor: text;
+    background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px;
+  }
+  .src::selection { background: var(--c6); color: #fff; }
+
+  /* ---------- Final ---------- */
+  .finish {
+    display: none; text-align: center; margin: 30px 0 10px;
+    background: var(--card); border: 1px solid rgba(255,217,61,0.3);
+    border-radius: 24px; padding: 36px 24px;
+  }
+  .finish.show { display: block; animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+  .trophy { font-size: 4.5rem; animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-5deg); }
+    to   { transform: translateY(-12px) rotate(5deg); }
+  }
+  .finish h2 { font-family: var(--display); font-size: 1.8rem; margin: 10px 0 6px; color: var(--c3); }
+  .finish p { color: var(--sub); font-weight: 600; }
+
+  .footer-row { text-align: center; margin-top: 26px; }
+  .btn-reset {
+    padding: 12px 28px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.15);
+    background: transparent; color: var(--sub); font-family: inherit; font-weight: 800; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-reset:hover { color: var(--text); border-color: var(--c4); transform: scale(1.04); }
+
+  
+
+  @media (max-width: 560px) {
+    .ex-card { padding: 22px 18px; }
+    .ex-title { font-size: 1.15rem; }
+    .ex-icon { width: 46px; height: 46px; font-size: 1.4rem; }
+    .practice { padding: 12px; }
+    .kb { padding: 8px 8px 12px; }
+    .kb-side, .kb-row.f-row { display: none; }
+    .kb-row, .kb-main { gap: 2px; }
+    .key { height: 24px; font-size: 0.45rem; border-radius: 4px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  @media print {
+    .bg-blobs, .progress-wrap, .btn-reset, .kb-panel, .practice { display: none; }
+    body, :root { background: #fff; color: #000; }
+    .ex-card { break-inside: avoid; border: 1px solid #999; background: #fff; }
+    .step { border-color: #999; color: #000; background: #fff; }
+    .ex-title, .subtitle, .ex-obj, .ex-obj strong, .ex-tip { color: #000; -webkit-text-fill-color: #000; }
+    h1 { -webkit-text-fill-color: #000; background: none; }
+    kbd { background: #fff; color: #000; border-color: #999; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="badge">⌨️ Ordenador</div>
+    <h1>Ejercicios con el teclado</h1>
+    <p class="subtitle">Practica paso a paso y marca cada actividad cuando la hayas hecho</p>
+  </div>
+
+  <!-- Teclado ilustrado: se ilumina al pulsar el teclado de verdad -->
+  <div class="kb-panel" aria-hidden="true">
+    <div class="kb-readout" id="kb-readout">Pulsa una tecla…</div>
+    <div class="kb">
+      <div class="kb-main" id="kb-main"></div>
+      <div class="kb-side" id="kb-side"></div>
+    </div>
+    <div class="kb-legend">
+      <span><i style="background:#1f3460"></i>Escritura</span>
+      <span><i style="background:#1d3f6e"></i>Control</span>
+      <span><i style="background:#46263e"></i>Especiales</span>
+      <span><i style="background:#47421f"></i>Movimiento</span>
+      <span><i style="background:#1d4436"></i>Función</span>
+    </div>
+    <div class="kb-hint">Pulsa cualquier tecla de tu teclado: se ilumina en el dibujo y arriba aparece su nombre.</div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span id="prog-label">0 de 0 actividades</span>
+      <span id="prog-ex">⭐ 0 de 0 ejercicios</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div id="exercises"></div>
+
+  <div class="finish" id="finish">
+    <div class="trophy">🏆</div>
+    <h2>¡Enhorabuena!</h2>
+    <p>Has practicado las teclas más importantes del teclado.</p>
+  </div>
+
+  <div class="footer-row">
+    <button class="btn-reset" onclick="resetAll()">🔄 Empezar de nuevo</button>
+  </div>
+
+</div>
+
+<script>
+/* ================= Ejercicios ================= */
+const exercises = [
+  {
+    icon: "⌨️", color: "#25D366",
+    title: "Conoce tu teclado",
+    objective: "Colocar las manos y encontrar las teclas sin perderse.",
+    steps: [
+      "Pulsa unas cuantas teclas y mira el dibujo de arriba: se ilumina la tecla y aparece su <b>nombre</b>.",
+      "Busca las teclas <kbd>F</kbd> y <kbd>J</kbd>: tienen una <b>rayita en relieve</b> que se nota con el dedo.",
+      "Apoya ahí los dos dedos índices. Los demás dedos descansan en las teclas de al lado."
+    ],
+    practice: { type: "keys", label: "pulsa las teclas que te vaya pidiendo." },
+    tip: "No hace falta escribir rápido ni sin mirar. Lo importante es saber <b>dónde está</b> cada tecla."
+  },
+  {
+    icon: "📝", color: "#4DA3FF",
+    title: "Escribir un texto sencillo",
+    objective: "Escribir frases cortas en un programa de texto.",
+    steps: [
+      "Abre el <q>Bloc de notas</q>: pulsa el botón de inicio y escribe <q>bloc</q>.",
+      "Escribe una frase corta, por ejemplo, lo que has desayunado hoy.",
+      "Escribe otra frase sobre el tiempo que hace."
+    ],
+    practice: { type: "copy", label: "copia la frase tal cual." }
+  },
+  {
+    icon: "↵", color: "#FFD93D",
+    title: "Espacio e Intro",
+    objective: "Separar palabras y cambiar de línea.",
+    steps: [
+      "Pulsa la <b>barra espaciadora</b> (la tecla larga de abajo) para separar cada palabra.",
+      "Pulsa <kbd>Intro ↵</kbd> para pasar a la línea siguiente.",
+      "Escribe así una pequeña lista de la compra, una cosa en cada línea."
+    ],
+    practice: { type: "lines", label: "escribe tres cosas de la compra, cada una en su línea." },
+    tip: "<kbd>Intro</kbd> también sirve para <b>aceptar</b>: enviar un mensaje, hacer una búsqueda o pulsar el botón que está marcado."
+  },
+  {
+    icon: "ñ", color: "#FF6B6B",
+    title: "Tildes y la ñ",
+    objective: "Escribir bien las palabras en español.",
+    steps: [
+      "La <kbd>Ñ</kbd> tiene su propia tecla, a la derecha de la <kbd>L</kbd>.",
+      "Para poner tilde, pulsa primero la tecla <kbd>´</kbd> (a la derecha de la Ñ). En pantalla no aparece nada todavía: es normal.",
+      "Después pulsa la vocal y saldrá con su tilde: <b>á é í ó ú</b>."
+    ],
+    practice: { type: "accents", label: "escribe la frase con sus tildes y su ñ." },
+    tip: "Primero la tilde, después la vocal. Si lo haces al revés, la tilde se queda esperando y se pega a la siguiente letra."
+  },
+  {
+    icon: "🔠", color: "#B388FF",
+    title: "Mayúsculas y signos",
+    objective: "Usar Mayús y Bloq Mayús.",
+    steps: [
+      "Para una sola mayúscula, mantén pulsada <kbd>⇧ Mayús</kbd> y pulsa la letra.",
+      "Pulsa <kbd>Bloq Mayús</kbd> una vez: todo sale en mayúsculas y se enciende una lucecita. Púlsala otra vez para quitarlo.",
+      "Los signos dibujados arriba en las teclas también salen con <kbd>⇧ Mayús</kbd>. Por ejemplo, <kbd>⇧ Mayús</kbd> + <kbd>1</kbd> escribe <b>!</b>"
+    ],
+    practice: { type: "caps", label: "escribe la frase con sus mayúsculas y sus signos." },
+    tip: "En el teclado español, <b>¡</b> tiene su propia tecla (cerca de la de borrar) y <b>¿</b> sale con <kbd>⇧ Mayús</kbd> + esa misma tecla."
+  },
+  {
+    icon: "⌫", color: "#FF9F43",
+    title: "Borrar: Retroceso y Supr",
+    objective: "Corregir errores.",
+    steps: [
+      "<kbd>⌫ Retroceso</kbd> borra la letra que está a la <b>izquierda</b> del cursor.",
+      "<kbd>Supr</kbd> borra la letra que está a la <b>derecha</b> del cursor.",
+      "Si mantienes pulsada cualquiera de las dos, borra muchas letras seguidas."
+    ],
+    practice: { type: "fix", label: "quita las letras que sobran." }
+  },
+  {
+    icon: "🧭", color: "#25D366",
+    title: "Las flechas",
+    objective: "Mover el cursor sin usar el ratón.",
+    steps: [
+      "Escribe una frase en el Bloc de notas.",
+      "Pulsa <kbd>←</kbd> y <kbd>→</kbd> y fíjate en la rayita que parpadea: es el <b>cursor</b>, y marca dónde aparecerá lo que escribas.",
+      "Escribe dos líneas y usa <kbd>↑</kbd> y <kbd>↓</kbd> para pasar de una a otra."
+    ],
+    practice: { type: "maze", label: "lleva a la persona hasta su casa con las flechas." }
+  },
+  {
+    icon: "⏮️", color: "#4DA3FF",
+    title: "Inicio, Fin y páginas",
+    objective: "Saltar al principio, al final o una pantalla entera.",
+    steps: [
+      "<kbd>Inicio</kbd> lleva el cursor al <b>principio</b> de la línea.",
+      "<kbd>Fin</kbd> lo lleva al <b>final</b> de la línea.",
+      "En una página web, <kbd>Av Pág</kbd> baja una pantalla entera y <kbd>Re Pág</kbd> la sube. Pruébalo en esta misma página."
+    ],
+    practice: { type: "homeend", label: "añade palabras al principio y al final sin usar el ratón." },
+    tip: "En muchos portátiles, <kbd>Inicio</kbd>, <kbd>Fin</kbd>, <kbd>Re Pág</kbd> y <kbd>Av Pág</kbd> comparten tecla con las flechas: hay que mantener pulsada la tecla <kbd>Fn</kbd>."
+  },
+  {
+    icon: "⇥", color: "#FFD93D",
+    title: "El tabulador en formularios",
+    objective: "Pasar de una casilla a la siguiente.",
+    steps: [
+      "Haz clic en la primera casilla de un formulario y escribe.",
+      "Pulsa <kbd>⇥ Tab</kbd> para saltar a la casilla siguiente.",
+      "Con <kbd>⇧ Mayús</kbd> + <kbd>⇥ Tab</kbd> vuelves a la casilla anterior."
+    ],
+    practice: { type: "form", label: "rellena las tres casillas pasando de una a otra con Tab." }
+  },
+  {
+    icon: "📋", color: "#FF6B6B",
+    title: "Copiar, pegar y deshacer",
+    objective: "Usar los atajos más útiles.",
+    steps: [
+      "Selecciona un texto con el ratón y pulsa <kbd>Ctrl</kbd> + <kbd>C</kbd> para copiarlo.",
+      "Haz clic donde quieras ponerlo y pulsa <kbd>Ctrl</kbd> + <kbd>V</kbd> para pegarlo.",
+      "Si te equivocas, <kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace lo último que hiciste."
+    ],
+    practice: { type: "paste", label: "copia la felicitación y pégala en la casilla." },
+    tip: "Para un atajo, mantén pulsada la primera tecla (<kbd>Ctrl</kbd>) y, sin soltarla, da un toque a la segunda."
+  },
+  {
+    icon: "💾", color: "#B388FF",
+    title: "Guardar con el teclado",
+    objective: "Guardar sin buscar en los menús.",
+    steps: [
+      "Escribe unas líneas en el Bloc de notas.",
+      "Abre el menú <b>Archivo</b> y mira qué atajo aparece junto a <q>Guardar</q>.",
+      "Cierra el menú con <kbd>Esc</kbd> y guarda usando ese atajo.",
+      "Ponle un nombre al archivo y guárdalo en <q>Documentos</q>."
+    ],
+    tip: "El atajo de guardar cambia según el programa y el idioma. En Word en español es <kbd>Ctrl</kbd> + <kbd>G</kbd>, y allí <kbd>Ctrl</kbd> + <kbd>S</kbd> sirve para <b>subrayar</b>. Por eso conviene mirarlo en el menú."
+  },
+  {
+    icon: "🔝", color: "#FF9F43",
+    title: "Teclas de función",
+    objective: "Conocer F1, F5 y F11.",
+    steps: [
+      "Abre el navegador y pulsa <kbd>F11</kbd>: la página ocupa toda la pantalla.",
+      "Vuelve a pulsar <kbd>F11</kbd> para salir.",
+      "Pulsa <kbd>F5</kbd> para recargar la página.",
+      "En un programa, pulsa <kbd>F1</kbd> para abrir su ayuda y luego ciérrala."
+    ],
+    tip: "Si en tu portátil <kbd>F11</kbd> sube el volumen o el brillo, mantén pulsada la tecla <kbd>Fn</kbd> mientras la pulsas."
+  }
+];
+
+const KEY = 'ejercicios-teclado';
+let state = {};
+
+function load() {
+  try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { state = {}; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+function stepCount(ex) { return ex.steps.length + (ex.practice ? 1 : 0); }
+
+function build() {
+  const root = document.getElementById('exercises');
+  root.innerHTML = exercises.map((ex, i) => {
+    const n = ex.steps.length;
+    return `
+    <section class="ex-card" id="ex-${i}" style="--accent:${ex.color}; animation-delay:${i * 0.05}s">
+      <div class="ex-top">
+        <div class="ex-icon">${ex.icon}</div>
+        <div>
+          <div class="ex-num">Ejercicio ${i + 1}</div>
+          <div class="ex-title">${ex.title}</div>
+        </div>
+        <div class="ex-check">✅</div>
+      </div>
+      <div class="ex-obj"><strong>Objetivo:</strong> ${ex.objective}</div>
+      <div class="steps-title">Actividad</div>
+      <ul class="steps">
+        ${ex.steps.map((s, j) => `
+          <li>
+            <button class="step" id="st-${i}-${j}" onclick="toggle(${i},${j})" aria-pressed="false">
+              <span class="step-box"></span>
+              <span class="step-text">${s}</span>
+            </button>
+          </li>`).join('')}
+        ${ex.practice ? `
+          <li>
+            <button class="step practice-step" id="st-${i}-${n}" onclick="toggle(${i},${n})" aria-pressed="false">
+              <span class="step-box"></span>
+              <span class="step-text">🎮 <b>Practica aquí:</b> ${ex.practice.label}</span>
+            </button>
+          </li>` : ''}
+      </ul>
+      ${ex.practice ? `<div class="practice" id="pr-${i}"></div>` : ''}
+      ${ex.tip ? `<div class="ex-tip">💡 ${ex.tip}</div>` : ''}
+    </section>`;
+  }).join('');
+
+  exercises.forEach((ex, i) => {
+    if (!ex.practice) return;
+    const el = document.getElementById('pr-' + i);
+    const done = () => { state[i + '-' + ex.steps.length] = true; save(); refresh(); };
+    widgets[ex.practice.type](el, done);
+  });
+}
+
+function toggle(i, j) {
+  const k = i + '-' + j;
+  if (state[k]) delete state[k]; else state[k] = true;
+  save();
+  refresh();
+}
+
+function refresh() {
+  let total = 0, done = 0, exDone = 0;
+  exercises.forEach((ex, i) => {
+    let all = true;
+    for (let j = 0; j < stepCount(ex); j++) {
+      total++;
+      const on = !!state[i + '-' + j];
+      if (on) done++; else all = false;
+      const btn = document.getElementById(`st-${i}-${j}`);
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on);
+      btn.querySelector('.step-box').textContent = on ? '✓' : '';
+    }
+    document.getElementById('ex-' + i).classList.toggle('done', all);
+    if (all) exDone++;
+  });
+  document.getElementById('prog-label').textContent = `${done} de ${total} actividades`;
+  document.getElementById('prog-ex').textContent = `⭐ ${exDone} de ${exercises.length} ejercicios`;
+  document.getElementById('prog-fill').style.width = (done / total * 100) + '%';
+  document.getElementById('finish').classList.toggle('show', exDone === exercises.length);
+}
+
+function resetAll() {
+  if (!confirm('¿Quieres borrar tu progreso y empezar de nuevo?')) return;
+  state = {};
+  save();
+  build();
+  refresh();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ================= Teclado dibujado ================= */
+// [código de la tecla, texto en el dibujo, ancho, tipo, nombre para leer]
+const L = c => ['Key' + c, c, 1, '', 'Letra ' + c];
+const D = n => ['Digit' + n, n, 1, '', 'Número ' + n];
+const B = w => [null, '', w, 'blank'];
+const F = n => ['F' + n, 'F' + n, 1, 'fn', 'Tecla de función F' + n];
+const KB_MAIN = [
+  [['Escape', 'Esc', 1.2, 'esp', 'Escape (Esc)'], ...[1,2,3,4,5,6,7,8,9,10,11,12].map(F)],
+  [['Backquote', 'º', 1, '', 'Ordinal (º)'], ...[1,2,3,4,5,6,7,8,9,0].map(D),
+   ['Minus', "'", 1, '', "Apóstrofo (')"], ['Equal', '¡', 1, '', 'Exclamación (¡)'], ['Backspace', '⌫', 2, 'esp', 'Retroceso (borrar)']],
+  [['Tab', 'Tab ⇥', 1.5, 'esp', 'Tabulador (Tab)'], ...'QWERTYUIOP'.split('').map(L),
+   ['BracketLeft', '`', 1, '', 'Acento grave (`)'], ['BracketRight', '+', 1, '', 'Más (+)'], ['Enter', 'Intro', 1.5, '', 'Intro']],
+  [['CapsLock', 'Bloq Mayús', 2.1, 'ctrl', 'Bloqueo de mayúsculas (Bloq Mayús)'], ...'ASDFGHJKL'.split('').map(L),
+   ['Semicolon', 'Ñ', 1, '', 'Letra Ñ'], ['Quote', '´', 1, '', 'Tilde (´)'], ['Backslash', 'Ç', 1, '', 'Letra Ç'], ['Enter', '↵', 0.9, '', 'Intro']],
+  [['ShiftLeft', '⇧', 1.6, 'ctrl', 'Mayúsculas (Mayús)'], ['IntlBackslash', '<', 1, '', 'Menor que (<)'], ...'ZXCVBNM'.split('').map(L),
+   ['Comma', ',', 1, '', 'Coma'], ['Period', '.', 1, '', 'Punto'], ['Slash', '-', 1, '', 'Guion (-)'], ['ShiftRight', '⇧ Mayús', 2.4, 'ctrl', 'Mayúsculas (Mayús)']],
+  [['ControlLeft', 'Ctrl', 1.4, 'ctrl', 'Control (Ctrl)'], ['MetaLeft', '⊞', 1.2, 'ctrl', 'Tecla de Windows'], ['AltLeft', 'Alt', 1.2, 'ctrl', 'Alt'],
+   ['Space', '', 6.6, '', 'Barra espaciadora'], ['AltRight', 'Alt Gr', 1.2, 'ctrl', 'Alt Gr'], ['ControlRight', 'Ctrl', 1.4, 'ctrl', 'Control (Ctrl)']]
+];
+const KB_SIDE = [
+  [B(1), B(1), B(1)],
+  [B(1), ['Home', 'Inicio', 1, 'nav', 'Inicio'], ['PageUp', 'Re Pág', 1, 'nav', 'Retroceder página (Re Pág)']],
+  [['Delete', 'Supr', 1, 'esp', 'Suprimir (Supr)'], ['End', 'Fin', 1, 'nav', 'Fin'], ['PageDown', 'Av Pág', 1, 'nav', 'Avanzar página (Av Pág)']],
+  [B(1), B(1), B(1)],
+  [B(1), ['ArrowUp', '↑', 1, 'nav', 'Flecha arriba'], B(1)],
+  [['ArrowLeft', '←', 1, 'nav', 'Flecha izquierda'], ['ArrowDown', '↓', 1, 'nav', 'Flecha abajo'], ['ArrowRight', '→', 1, 'nav', 'Flecha derecha']]
+];
+const KEYNAMES = {};
+function drawKeyboard() {
+  const row = (r, k) => `<div class="kb-row${k === 0 ? ' f-row' : ''}">${r.map(([code, label, w, type, name]) => {
+    if (code) KEYNAMES[code] = name;
+    const cls = ['key', type === 'blank' ? 'blank' : type ? 'k-' + type : '', (code === 'KeyF' || code === 'KeyJ') ? 'bump' : ''].join(' ');
+    return `<div class="${cls}" style="--w:${w}" ${code ? `data-code="${code}"` : ''}>${label}</div>`;
+  }).join('')}</div>`;
+  document.getElementById('kb-main').innerHTML = KB_MAIN.map(row).join('');
+  document.getElementById('kb-side').innerHTML = KB_SIDE.map(row).join('');
+  // La fila de funciones del bloque lateral es más baja, como la principal
+  document.querySelectorAll('#kb-side .kb-row:first-child .key').forEach(k => k.style.height = '24px');
+}
+function keyName(e) {
+  if (KEYNAMES[e.code]) return KEYNAMES[e.code];
+  if (e.key && e.key.length === 1) return e.key === ' ' ? 'Barra espaciadora' : e.key.toUpperCase();
+  return e.key || e.code;
+}
+(function liveKeyboard() {
+  drawKeyboard();
+  const out = document.getElementById('kb-readout');
+  const keysOf = code => document.querySelectorAll(`.key[data-code="${code}"]`);
+  const caps = e => {
+    if (!e.getModifierState) return;
+    keysOf('CapsLock').forEach(k => k.classList.toggle('locked', e.getModifierState('CapsLock')));
+  };
+  window.addEventListener('keydown', e => {
+    keysOf(e.code).forEach(k => {
+      k.classList.add('on'); clearTimeout(k._t);
+      k._t = setTimeout(() => k.classList.remove('on'), 1500);
+    });
+    out.innerHTML = `Has pulsado:<b>${keyName(e)}</b>`;
+    caps(e);
+  });
+  window.addEventListener('keyup', e => {
+    keysOf(e.code).forEach(k => { clearTimeout(k._t); k._t = setTimeout(() => k.classList.remove('on'), 120); });
+    caps(e);
+  });
+})();
+
+/* ================= Zonas de práctica ================= */
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+function setMsg(el, text, kind) {
+  const m = el.querySelector('.pr-msg');
+  m.className = 'pr-msg' + (kind ? ' ' + kind : '');
+  m.innerHTML = `<span>${text}</span>`;
+}
+function addAgain(el, redo) {
+  const b = document.createElement('button');
+  b.className = 'pr-btn'; b.textContent = '🔄 Repetir';
+  b.onclick = redo;
+  el.querySelector('.pr-msg').appendChild(b);
+}
+const tidy = s => s.replace(/\s+/g, ' ').trim();
+const plain = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/* Escribir una frase y comprobarla */
+function typeMatch(el, done, cfg) {
+  const draw = () => {
+    el.innerHTML = `<div class="model">${cfg.intro}<br><span class="model-text">${esc(cfg.target)}</span></div>
+      <input class="type-in" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${esc(cfg.prefill || '')}" aria-label="Escribe aquí">
+      ${cfg.caps ? '<div class="caps-ind" hidden>🔒 Bloq Mayús está activado: todo sale en mayúsculas</div>' : ''}
+      <div class="pr-msg"><span>${cfg.hint}</span></div>`;
+    const inp = el.querySelector('.type-in'), ind = el.querySelector('.caps-ind');
+    let ok = false;
+    const watchCaps = e => { if (ind && e.getModifierState) ind.hidden = !e.getModifierState('CapsLock'); };
+    inp.addEventListener('keydown', watchCaps);
+    inp.addEventListener('keyup', watchCaps);
+    inp.addEventListener('input', () => {
+      if (ok) return;
+      const v = tidy(inp.value), t = cfg.target;
+      const same = cfg.ignoreCase ? v.toLowerCase() === t.toLowerCase() : v === t;
+      if (same) {
+        ok = true; inp.classList.add('ok');
+        setMsg(el, cfg.success, 'ok'); addAgain(el, draw); done();
+      } else if (v.toLowerCase() === t.toLowerCase()) {
+        setMsg(el, 'Casi. Revisa las <b>mayúsculas</b> y las minúsculas.', 'warn');
+      } else if (plain(v).toLowerCase() === plain(t).toLowerCase()) {
+        setMsg(el, 'Casi. Revisa las <b>tildes</b> y la <b>ñ</b>.', 'warn');
+      } else if (!cfg.prefill && t.startsWith(inp.value.replace(/\s+/g, ' ').replace(/^ /, ''))) {
+        setMsg(el, v ? 'Vas bien, sigue.' : cfg.hint);
+      } else if (!cfg.prefill) {
+        setMsg(el, 'Algo no coincide con el modelo. Bórralo con <kbd>⌫</kbd> y sigue.', 'warn');
+      } else {
+        setMsg(el, 'Todavía no coincide con el modelo. Sigue.');
+      }
+    });
+  };
+  draw();
+}
+
+const widgets = {
+  keys(el, done) {
+    const seq = [['KeyF', 'F'], ['KeyJ', 'J'], ['KeyA', 'A'], ['Semicolon', 'Ñ'], ['KeyE', 'E'], ['KeyO', 'O'],
+                 ['Space', 'Barra espaciadora'], ['Enter', 'Intro']];
+    const draw = () => {
+      el.innerHTML = `<div class="key-game" tabindex="0" role="application" aria-label="Juego de teclas">
+          <div class="kg-label">Haz clic aquí para empezar</div>
+          <div class="kg-key">▶</div>
+          <div class="kg-dots">${seq.map(() => '<i></i>').join('')}</div>
+        </div>
+        <div class="pr-msg"><span>Pulsa cada tecla que aparezca.</span></div>`;
+      const box = el.querySelector('.key-game'), lab = el.querySelector('.kg-label'),
+            k = el.querySelector('.kg-key'), dots = el.querySelectorAll('.kg-dots i');
+      let i = 0;
+      const show = () => {
+        lab.textContent = 'Pulsa la tecla';
+        k.textContent = seq[i][1]; k.classList.toggle('small', seq[i][1].length > 2);
+      };
+      box.addEventListener('focus', () => { if (i < seq.length) show(); });
+      box.addEventListener('blur', () => { if (i < seq.length) lab.textContent = 'Haz clic aquí para seguir'; });
+      box.addEventListener('keydown', e => {
+        if (i >= seq.length || e.key === 'Tab') return;
+        e.preventDefault();
+        if (e.repeat) return;
+        if (e.code === seq[i][0]) {
+          dots[i].classList.add('on'); i++;
+          k.classList.remove('hit'); void k.offsetWidth; k.classList.add('hit');
+          if (i < seq.length) { show(); setMsg(el, '¡Bien!', 'ok'); }
+          else {
+            lab.textContent = '¡Todas!'; k.textContent = '🎉'; k.classList.remove('small');
+            setMsg(el, '¡Muy bien! Ya sabes dónde están.', 'ok'); addAgain(el, draw); done();
+          }
+        } else if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
+          setMsg(el, `Esa es «${keyName(e)}». Busca «${seq[i][1]}».`, 'warn');
+        }
+      });
+    };
+    draw();
+  },
+
+  copy(el, done) {
+    typeMatch(el, done, {
+      intro: 'Escribe esta frase en la casilla:',
+      target: 'hoy hace sol y voy a dar un paseo',
+      hint: 'Haz clic en la casilla blanca y escribe.',
+      success: '¡Perfecto! La has escrito igual que el modelo.',
+      ignoreCase: true
+    });
+  },
+
+  lines(el, done) {
+    const draw = () => {
+      el.innerHTML = `<textarea class="type-area" spellcheck="false" placeholder="Por ejemplo:&#10;pan&#10;leche&#10;manzanas" aria-label="Lista de la compra"></textarea>
+        <div class="pr-msg"><span>Pulsa <kbd>Intro</kbd> después de cada cosa.</span></div>`;
+      const ta = el.querySelector('.type-area');
+      let ok = false;
+      ta.addEventListener('input', () => {
+        if (ok) return;
+        const n = ta.value.split('\n').filter(l => l.trim()).length;
+        if (n >= 3) { ok = true; ta.classList.add('ok'); setMsg(el, '¡Lista hecha! Cada cosa en su línea.', 'ok'); addAgain(el, draw); done(); }
+        else setMsg(el, `Llevas ${n} de 3. Pulsa <kbd>Intro</kbd> para bajar de línea.`);
+      });
+    };
+    draw();
+  },
+
+  accents(el, done) {
+    typeMatch(el, done, {
+      intro: 'Escribe esta frase. Fíjate en las tildes y en la ñ:',
+      target: 'El niño comió melón en el jardín.',
+      hint: 'Recuerda: primero <kbd>´</kbd> y después la vocal.',
+      success: '¡Muy bien! Tildes y ñ en su sitio.'
+    });
+  },
+
+  caps(el, done) {
+    typeMatch(el, done, {
+      intro: 'Escribe esta frase con sus mayúsculas y sus signos:',
+      target: '¡Hola, María! ¿Qué tal estás?',
+      hint: 'Usa <kbd>⇧ Mayús</kbd> para la H, la M, la Q y los signos.',
+      success: '¡Estupendo! Mayúsculas, tildes y signos perfectos.',
+      caps: true
+    });
+  },
+
+  fix(el, done) {
+    typeMatch(el, done, {
+      intro: 'Corrige la frase para que quede así:',
+      target: 'El gato duerme en el sofá.',
+      prefill: 'El gatto duerrrme en el sofá..',
+      hint: 'Pon el cursor junto a la letra que sobra y bórrala con <kbd>⌫</kbd> o con <kbd>Supr</kbd>.',
+      success: '¡Corregida! Ya sabes borrar hacia los dos lados.'
+    });
+  },
+
+  homeend(el, done) {
+    typeMatch(el, done, {
+      intro: 'Convierte el texto de la casilla en esta frase:',
+      target: 'Hoy como pan con tomate.',
+      prefill: 'pan con tomate',
+      hint: 'Haz clic en la casilla, pulsa <kbd>Inicio</kbd> y escribe «Hoy como ». Luego pulsa <kbd>Fin</kbd> y escribe el punto.',
+      success: '¡Muy bien! Has saltado al principio y al final.'
+    });
+  },
+
+  maze(el, done) {
+    const W = 7, H = 5, goal = '6,4';
+    const walls = new Set(['1,0', '1,1', '1,2', '3,2', '3,3', '3,4', '5,0', '5,1', '5,2']);
+    const draw = () => {
+      let p = [0, 0], finished = false;
+      el.innerHTML = `<div class="maze" tabindex="0" role="application" aria-label="Laberinto"></div>
+        <div class="pr-msg"><span>Haz clic en el recuadro y usa las flechas.</span></div>`;
+      const mz = el.querySelector('.maze');
+      const paint = () => {
+        let h = '';
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+          const k = x + ',' + y;
+          const c = (p[0] === x && p[1] === y) ? (finished ? '🥳' : '🧑') : k === goal ? '🏠' : walls.has(k) ? '🌳' : '';
+          h += `<div class="cell${walls.has(k) ? ' wall' : ''}">${c}</div>`;
+        }
+        mz.innerHTML = h;
+      };
+      paint();
+      mz.addEventListener('focus', () => { if (!finished) setMsg(el, 'Ahora usa <kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd>.'); });
+      mz.addEventListener('keydown', e => {
+        const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+        if (!mv || finished) return;
+        e.preventDefault();
+        const nx = p[0] + mv[0], ny = p[1] + mv[1], k = nx + ',' + ny;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) { setMsg(el, 'Por ahí se acaba el camino.', 'warn'); return; }
+        if (walls.has(k)) { setMsg(el, 'Hay un árbol. Busca otro camino.', 'warn'); return; }
+        p = [nx, ny];
+        if (k === goal) { finished = true; setMsg(el, '¡Ha llegado a casa! Manejas muy bien las flechas.', 'ok'); addAgain(el, draw); done(); }
+        else setMsg(el, 'Sigue…');
+        paint();
+      });
+    };
+    draw();
+  },
+
+  form(el, done) {
+    const draw = () => {
+      el.innerHTML = `<div class="mini-form">
+          <label>Nombre<input class="type-in" type="text" autocomplete="off"></label>
+          <label>Calle<input class="type-in" type="text" autocomplete="off"></label>
+          <label>Pueblo o ciudad<input class="type-in" type="text" autocomplete="off"></label>
+        </div>
+        <div class="pr-msg"><span>Haz clic en «Nombre», escríbelo y pulsa <kbd>Tab</kbd>.</span></div>`;
+      const ins = [...el.querySelectorAll('.type-in')];
+      let tabs = 0, ok = false;
+      ins.forEach(inp => {
+        inp.addEventListener('keydown', e => {
+          if (e.key === 'Tab' && !ok) { tabs++; setMsg(el, e.shiftKey ? '¡Eso es! Has vuelto a la casilla anterior.' : '¡Eso es! Has saltado con <kbd>Tab</kbd>.', 'ok'); }
+        });
+        inp.addEventListener('input', () => {
+          if (ok || !ins.every(x => x.value.trim())) return;
+          if (tabs >= 2) {
+            ok = true; ins.forEach(x => x.classList.add('ok'));
+            setMsg(el, '¡Formulario completo! Has usado el tabulador.', 'ok'); addAgain(el, draw); done();
+          } else setMsg(el, 'Están rellenas, pero intenta pasar de una a otra con <kbd>Tab</kbd>, sin el ratón.', 'warn');
+        });
+      });
+    };
+    draw();
+  },
+
+  paste(el, done) {
+    const text = 'Muchas felicidades en tu día';
+    const draw = () => {
+      el.innerHTML = `<div class="src">${text}</div>
+        <input class="type-in" type="text" autocomplete="off" placeholder="Pega aquí la felicitación" aria-label="Pega aquí">
+        <div class="pr-msg"><span>Selecciona la frase de arriba con el ratón y pulsa <kbd>Ctrl</kbd> + <kbd>C</kbd>.</span></div>`;
+      const src = el.querySelector('.src'), inp = el.querySelector('.type-in');
+      let pasted = false;
+      src.addEventListener('copy', () => {
+        if (!pasted) setMsg(el, 'Copiado. Ahora haz clic en la casilla blanca y pulsa <kbd>Ctrl</kbd> + <kbd>V</kbd>.', 'ok');
+      });
+      inp.addEventListener('paste', () => setTimeout(() => {
+        if (!pasted && inp.value.includes('felicidades')) {
+          pasted = true; inp.classList.add('ok');
+          setMsg(el, '¡Pegado! Ahora pulsa <kbd>Ctrl</kbd> + <kbd>Z</kbd> para deshacerlo.', 'ok'); done();
+        }
+      }, 0));
+      inp.addEventListener('input', e => {
+        if (pasted && e.inputType === 'historyUndo') {
+          inp.classList.remove('ok');
+          setMsg(el, '¡Deshecho! Ya dominas copiar, pegar y deshacer.', 'ok'); addAgain(el, draw);
+        } else if (!pasted && e.inputType && e.inputType.startsWith('insertText')) {
+          setMsg(el, 'No hace falta escribirla: cópiala de arriba y pégala.', 'warn');
+        }
+      });
+    };
+    draw();
+  }
+};
+
+load();
+build();
+refresh();
+</script>
+</body>
+</html>
