@@ -390,7 +390,8 @@ const exercises = [
   },
   {
     icon: '📋', color: '#FF6B6B', title: 'Clic derecho: el menú de opciones', type: 'right',
-    explain: `<p>El botón <b>derecho</b> abre un menú con las cosas que puedes hacer con lo que tienes debajo. Para elegir una opción del menú, se usa el botón izquierdo, como siempre.</p>`,
+    explain: `<p>El botón <b>derecho</b> abre un menú con las cosas que puedes hacer con lo que tienes debajo. Para elegir una opción del menú, se usa el botón izquierdo, como siempre.</p>
+      <p>Puedes eliminar cualquier archivo o carpeta: va a la papelera, y desde allí se puede recuperar con «Restaurar».</p>`,
     tip: 'Para cerrar un menú sin elegir nada, haz clic en otra parte o pulsa la tecla <kbd>Esc</kbd>.'
   },
   {
@@ -420,19 +421,6 @@ const exercises = [
     tip: 'Para arrastrar, empieza justo antes de la primera letra y suelta justo después de la última.'
   },
   {
-    icon: '🎨', color: '#FFD93D', title: 'Dibujar sin salirse', type: 'trace',
-    explain: `<p>Pulsa dentro del <b>círculo verde</b> y, sin soltar el botón, recorre el camino hasta la bandera. Si te sales, se empieza de nuevo.</p>`,
-    tip: 'Ve despacio: aquí no gana el más rápido. Es igual que dibujar en Paint.'
-  },
-  {
-    icon: '🎯', color: '#FF6B6B', title: 'Puntería', type: 'target',
-    explain: `<p>Haz clic justo en el <b>círculo rojo del centro</b> de la diana. Cada vez que aciertes, se hará más pequeña.</p>`
-  },
-  {
-    icon: '🧩', color: '#B388FF', title: 'Puzzle', type: 'puzzle',
-    explain: `<p>Arrastra cada pieza hasta su hueco. Fíjate en el dibujo pequeño para saber cómo tiene que quedar.</p>`
-  },
-  {
     icon: '🗂️', color: '#FF9F43', title: 'Seleccionar varios archivos', type: 'multi',
     explain: `<p>Para seleccionar varios archivos a la vez, haz clic en el primero y después mantén pulsada la tecla <kbd>Ctrl</kbd> mientras haces clic en los demás.</p>
       <p>Si haces clic <b>sin</b> <kbd>Ctrl</kbd>, se quita la selección anterior.</p>`,
@@ -447,7 +435,7 @@ const exercises = [
 /* ======================================================
    PROGRESO Y NAVEGACIÓN
    ====================================================== */
-const KEY = 'ejercicios-raton-v2';
+const KEY = 'ejercicios-raton-v3';
 let prog = { done: {}, cur: 0 };
 let current = null, AC = new AbortController();
 const SIG = () => AC.signal;
@@ -554,7 +542,7 @@ function dragGhost(item, layer, opt) {
         if (opt.onStart && opt.onStart() === false) { cleanup(); return; }
         ghost = item.cloneNode(true);
         ghost.classList.add('ghost'); ghost.classList.remove('sel', 'dragging-src');
-        ghost.style.width = item.offsetWidth + 'px';
+        ghost.style.width = Math.min(item.offsetWidth, 230) + 'px';
         if (opt.count && opt.count() > 1) ghost.insertAdjacentHTML('beforeend', `<span class="count">${opt.count()}</span>`);
         layer.appendChild(ghost);
         (opt.sources ? opt.sources() : [item]).forEach(n => n.classList.add('dragging-src'));
@@ -615,6 +603,7 @@ function Desk(stage, height = 400) {
   D.icon = id => area.querySelector(`.d-icon[data-id="${id}"]`);
   D.label = (id, t) => { D.icon(id).querySelector('.d-label').textContent = t; };
   area.addEventListener('click', e => { if (e.target === area) D.select(null); });
+  root.addEventListener('contextmenu', e => e.preventDefault());
   area.addEventListener('contextmenu', e => {
     if (e.target !== area) return;
     e.preventDefault();
@@ -672,6 +661,7 @@ function Desk(stage, height = 400) {
     el.innerHTML = `<div class="win-bar"><span class="win-title">${o.title}</span>
         <span class="win-btns"><button class="wb-min" title="Minimizar">—</button><button class="wb-max" title="Maximizar">▢</button><button class="wb-close" title="Cerrar">✕</button></span></div>
       <div class="win-body">${o.body || ''}</div>${o.resizable ? '<div class="win-grip" title="Arrastra para cambiar el tamaño"></div>' : ''}`;
+    if (o.fixed) el.querySelector('.win-bar').style.cursor = 'default';
     Object.assign(el.style, { left: o.x + 'px', top: o.y + 'px', width: Math.min(o.w, D.W() - 10) + 'px', height: Math.min(o.h, D.H() - 6) + 'px' });
     area.appendChild(el);
     const btn = document.createElement('button');
@@ -689,9 +679,8 @@ function Desk(stage, height = 400) {
       else front(w);
     };
     const bar = el.querySelector('.win-bar');
-    bar.addEventListener('dblclick', e => { if (!e.target.closest('button')) toggleMax(w, fire); });
     bar.addEventListener('pointerdown', e => {
-      if (e.button !== 0 || e.target.closest('button') || w.max) return;
+      if (e.button !== 0 || e.target.closest('button') || w.max || o.fixed) return;
       e.preventDefault(); bar.setPointerCapture(e.pointerId);
       const sx = e.clientX, sy = e.clientY, l0 = el.offsetLeft, t0 = el.offsetTop;
       const mv = ev => {
@@ -760,8 +749,8 @@ const widgets = {
       b.style.setProperty('--bc', colors[Math.floor(Math.random() * colors.length)]);
       const o = { b, y: sky.clientHeight + 10, x: 10 + Math.random() * (sky.clientWidth - 80), speed: 55 + popped * 7, sway: Math.random() * 6 };
       b.style.left = o.x + 'px'; b.style.top = o.y + 'px';
-      b.addEventListener('click', () => {
-        if (b.classList.contains('pop') || !running) return;
+      b.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || b.classList.contains('pop') || !running) return;
         b.classList.add('pop'); popped++;
         stage.querySelector('.sp').textContent = popped;
         setTimeout(() => b.remove(), 220);
@@ -836,62 +825,104 @@ const widgets = {
 
   /* 3. Clic derecho */
   right(el, stage, done) {
-    let renamed = false, deleted = false, emptied = false, inTrash = 0;
+    let renamed = false, deletedB = false, emptied = false, renaming = false;
+    const trash = [];
     const T = Tasks(el, [
       { t: 'Cambia el nombre de <b>Lista</b> por <b>Compra</b>: clic derecho sobre ella, «Cambiar nombre», escribe y pulsa <kbd>Intro</kbd>.', ok: () => renamed },
-      { t: 'Elimina <b>Borrador</b>: clic derecho sobre él y «Eliminar».', ok: () => deleted },
+      { t: 'Elimina <b>Borrador</b>: clic derecho sobre él y «Eliminar».', ok: () => deletedB },
       { t: 'Vacía la papelera: clic derecho sobre ella y «Vaciar papelera».', ok: () => emptied }
     ], () => winAll(el, done, '¡Estupendo! Ya manejas el menú del clic derecho.'));
     const D = Desk(stage);
-    [['papelera', '🗑️', 'Papelera'], ['lista', '📄', 'Lista'], ['borrador', '📄', 'Borrador'], ['fotos', '📁', 'Fotos']]
-      .forEach(([id, emoji, label], k) => D.addIcon({ id, emoji, label, x: 14 + (k % 2) * 100, y: 10 + Math.floor(k / 2) * 100 }));
-    D.ev.iconClick = () => setMsg(el, 'Eso ha sido el botón izquierdo. Para el menú, usa el <b>derecho</b>.', 'warn');
+    D.addIcon({ id: 'papelera', emoji: '🗑️', label: 'Papelera', x: 14, y: 10 });
+    const home = {};
+    [['lista', '📄', 'Lista'], ['borrador', '📄', 'Borrador'], ['fotos', '📁', 'Fotos'], ['recetas', '📄', 'Recetas'], ['viaje', '📁', 'Viaje']]
+      .forEach(([id, emoji, label], k) => {
+        home[id] = { id, emoji, label, x: 14 + ((k + 1) % 2) * 100, y: 10 + Math.floor((k + 1) / 2) * 96 };
+        D.addIcon(home[id]);
+      });
+
+    D.ev.iconClick = () => { if (!renaming) setMsg(el, 'Eso ha sido el botón izquierdo, que sirve para seleccionar. Para el menú, usa el <b>derecho</b>.', 'warn'); };
     D.ev.deskMenu = () => setMsg(el, 'Este es el menú del escritorio. Prueba a hacer clic derecho <b>sobre un icono</b>.');
+
+    const openItem = id => {
+      if (id === 'papelera') { openTrash(); return; }
+      const it = home[id];
+      D.openWin({ id, title: `${it.emoji} ${it.label}`, x: 230, y: 20, w: 300, h: 200,
+        body: it.emoji === '📁' ? '<div class="empty">Esta carpeta está vacía.</div>' : '<div class="doc">(Documento de ejemplo)</div>' });
+    };
+    D.ev.iconDbl = id => { if (!renaming) openItem(id); };
 
     const rename = id => {
       const lab = D.icon(id).querySelector('.d-label');
       const old = lab.textContent;
-      lab.innerHTML = `<input type="text" value="${old}">`;
+      renaming = true;
+      lab.innerHTML = '<input type="text">';
       const inp = lab.querySelector('input');
-      inp.focus(); inp.select();
+      inp.value = old; inp.focus(); inp.select();
       setMsg(el, 'Escribe el nombre nuevo y pulsa <kbd>Intro</kbd>.');
       let closed = false;
       const commit = () => {
-        if (closed) return; closed = true;
+        if (closed) return; closed = true; renaming = false;
         const v = inp.value.trim() || old;
-        lab.textContent = v;
+        lab.textContent = v; home[id].label = v;
         if (id === 'lista') {
           if (v.toLowerCase() === 'compra') { renamed = true; setMsg(el, '¡Nombre cambiado!', 'ok'); T.update(); }
           else setMsg(el, `Se ha quedado como «${v}». Tiene que llamarse <b>Compra</b>: vuelve a probar.`, 'warn');
-        }
+        } else setMsg(el, `Nombre cambiado a «${v}».` + (renamed ? '' : ' Recuerda que al que hay que cambiárselo es a «Lista».'));
       };
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') commit();
-        if (e.key === 'Escape') { closed = true; lab.textContent = old; }
+        if (e.key === 'Escape') { closed = true; renaming = false; lab.textContent = old; }
       });
       inp.addEventListener('blur', commit);
-      inp.addEventListener('pointerdown', e => e.stopPropagation());
     };
-    const updTrash = () => D.label('papelera', inTrash ? `Papelera (${inTrash})` : 'Papelera');
+
+    const updTrash = () => D.label('papelera', trash.length ? `Papelera (${trash.length})` : 'Papelera');
+    const renderTrash = () => {
+      const w = D.wins.papelera; if (!w) return;
+      const body = w.el.querySelector('.win-body');
+      body.innerHTML = trash.length
+        ? `<div class="explorer">${trash.map(t => `<div class="x-item" data-id="${t.id}"><span class="xe">${t.emoji}</span>${t.label}</div>`).join('')}</div>
+           <p class="empty" style="padding-top:12px">Para recuperar algo: clic derecho y «Restaurar».</p>`
+        : '<div class="empty">La papelera está vacía.</div>';
+      body.querySelectorAll('.x-item').forEach(n => n.addEventListener('contextmenu', e => {
+        e.preventDefault(); e.stopPropagation();
+        D.menu(e, [{ label: 'Restaurar', act: () => restore(n.dataset.id) }]);
+      }));
+    };
+    const openTrash = () => { D.openWin({ id: 'papelera', title: '🗑️ Papelera', x: 230, y: 20, w: 320, h: 220 }); renderTrash(); };
     const remove = id => {
-      if (id !== 'borrador') { setMsg(el, 'Ese no tocaba borrarlo, así que lo dejamos donde estaba. Busca «Borrador».', 'warn'); return; }
-      D.icon(id).remove(); inTrash++; deleted = true; updTrash();
-      setMsg(el, 'Ha ido a la papelera. Fíjate: ahora pone «Papelera (1)».', 'ok'); T.update();
+      const it = home[id];
+      D.icon(id).remove(); trash.push(it); updTrash(); renderTrash();
+      D.closeWin(id);
+      if (id === 'borrador') deletedB = true;
+      let m = `«${it.label}» ha ido a la papelera.`;
+      if (id === 'lista' && !renamed) m += ' Era la que había que renombrar: recupérala abriendo la Papelera, clic derecho sobre ella y «Restaurar».';
+      setMsg(el, m, id === 'lista' && !renamed ? 'warn' : 'ok');
+      T.update();
+    };
+    const restore = id => {
+      const k = trash.findIndex(t => t.id === id); if (k < 0) return;
+      trash.splice(k, 1); D.addIcon(home[id]); updTrash(); renderTrash();
+      setMsg(el, `«${home[id].label}» ha vuelto al escritorio.`, 'ok');
+    };
+    const empty = () => {
+      if (!trash.length) { setMsg(el, 'La papelera ya está vacía.' + (deletedB ? '' : ' Primero elimina «Borrador».'), 'warn'); return; }
+      const hadB = trash.some(t => t.id === 'borrador');
+      const lostL = trash.some(t => t.id === 'lista') && !renamed;
+      trash.length = 0; updTrash(); renderTrash();
+      if (hadB) emptied = true;
+      if (lostL) { home.lista.label = 'Lista'; D.addIcon(home.lista); setMsg(el, 'Papelera vaciada. Hemos vuelto a poner «Lista» en el escritorio para que puedas cambiarle el nombre.', 'warn'); }
+      else if (!hadB) setMsg(el, 'Papelera vaciada. Recuerda que también hay que eliminar «Borrador» y vaciarla después.', 'warn');
+      else setMsg(el, 'Papelera vaciada.', 'ok');
+      T.update();
     };
     D.ev.iconMenu = (id, n, e) => {
-      if (id === 'papelera') {
-        D.menu(e, [{ label: 'Abrir', act: () => openTrash() }, { sep: true },
-          { label: 'Vaciar papelera', act: () => {
-            if (!inTrash) { setMsg(el, 'La papelera ya está vacía. Primero elimina «Borrador».', 'warn'); return; }
-            inTrash = 0; emptied = true; updTrash(); D.closeWin('papelera'); T.update();
-          } }]);
-      } else {
-        D.menu(e, [{ label: 'Abrir', act: () => D.openWin({ id, title: `${id === 'fotos' ? '📁 Fotos' : '📄 ' + n.innerText.trim()}`, x: 230, y: 20, w: 300, h: 200, body: '<div class="empty">(vacío)</div>' }) },
-          { sep: true }, { label: 'Cambiar nombre', act: () => rename(id) }, { label: 'Eliminar', act: () => remove(id) }]);
-      }
+      if (renaming) return;
+      if (id === 'papelera') D.menu(e, [{ label: 'Abrir', act: openTrash }, { sep: true }, { label: 'Vaciar papelera', act: empty }]);
+      else D.menu(e, [{ label: 'Abrir', act: () => openItem(id) }, { sep: true },
+        { label: 'Cambiar nombre', act: () => rename(id) }, { label: 'Eliminar', act: () => remove(id) }]);
     };
-    const openTrash = () => D.openWin({ id: 'papelera', title: '🗑️ Papelera', x: 230, y: 20, w: 300, h: 200,
-      body: inTrash ? '<div class="explorer"><div class="x-item"><span class="xe">📄</span>Borrador</div></div>' : '<div class="empty">La papelera está vacía.</div>' });
     setMsg(el, 'Haz clic con el botón <b>derecho</b> sobre «Lista».');
   },
 
@@ -958,7 +989,7 @@ const widgets = {
       () => winAll(el, done, '¡Todo ordenado! Ya sabes arrastrar y soltar.'));
     stage.innerHTML = `<div class="sort">
         <div class="win static"><div class="win-bar"><span class="win-title">📁 Descargas</span><span class="win-btns"><button>—</button><button>▢</button><button>✕</button></span></div>
-          <div class="win-body"><div class="explorer">${files.map(([e, n, k]) => `<div class="x-item" data-k="${k}"><span class="xe">${e}</span>${n}</div>`).join('')}</div></div></div>
+          <div class="win-body"><div class="explorer">${files.map(([e, n, k]) => `<div class="x-item" data-k="${k}" data-n="${n}"><span class="xe">${e}</span>${n}</div>`).join('')}</div></div></div>
         <div class="folders">${Object.entries(kinds).map(([k, [n]]) => `<div class="folder-t" data-k="${k}"><span class="fe">📁</span><div><div class="fn">${n}</div><div class="fc">0 archivos</div></div><span class="fl"></span></div>`).join('')}</div>
       </div>`;
     const folders = [...stage.querySelectorAll('.folder-t')];
@@ -966,7 +997,7 @@ const widgets = {
       onHover: (x, y) => folders.forEach(f => f.classList.toggle('drop', inside(f, x, y))),
       onDrop: (x, y) => {
         const f = folders.find(f => inside(f, x, y));
-        const name = it.textContent.trim();
+        const name = it.dataset.n;
         if (!f) { setMsg(el, 'Se soltó antes de llegar. No sueltes el botón hasta estar encima de la carpeta.', 'warn'); return; }
         if (f.dataset.k !== it.dataset.k) { setMsg(el, `«${name}» no va ahí: es de ${kinds[it.dataset.k][1]}.`, 'warn'); return; }
         it.remove(); placed++;
@@ -1006,15 +1037,27 @@ const widgets = {
     D.ev.win = (t, id, w) => {
       if (t === 'move' && !moved) {
         const l = w.el.offsetLeft, tp = w.el.offsetTop;
-        if (Math.abs(l - tx) < 35 && Math.abs(tp - ty) < 35) {
+        if (Math.abs(l - tx) < 45 && Math.abs(tp - ty) < 45) {
           w.el.style.left = tx + 'px'; w.el.style.top = ty + 'px';
           moved = true; outline.remove(); setMsg(el, '¡Encajada! Ahora escóndela con el botón —.', 'ok');
         } else setMsg(el, 'Un poco más. Tiene que quedar encima del recuadro amarillo.');
       }
-      if (t === 'min' && moved) { mini = true; setMsg(el, 'Escondida. Mira abajo, en la barra de tareas: ahí sigue.', 'ok'); }
-      if (t === 'restore' && mini) { rest = true; setMsg(el, '¡Aquí está otra vez!', 'ok'); }
-      if (t === 'max' && rest) { maxi = true; setMsg(el, 'Ahora ocupa toda la pantalla.', 'ok'); }
-      if (t === 'unmax' && maxi) { unmax = true; setMsg(el, 'Ha vuelto a su tamaño. Ya solo queda cerrarla.', 'ok'); }
+      if (t === 'min') {
+        if (moved) { mini = true; setMsg(el, 'Escondida. Mira abajo, en la barra de tareas: ahí sigue.', 'ok'); }
+        else setMsg(el, 'La has escondido antes de tiempo. Haz clic en su botón de la barra de tareas, abajo, para recuperarla.', 'warn');
+      }
+      if (t === 'restore') {
+        if (mini) { rest = true; setMsg(el, '¡Aquí está otra vez! Ahora hazla grande con ▢.', 'ok'); }
+        else setMsg(el, 'Recuperada. Sigue con la tarea marcada en amarillo.');
+      }
+      if (t === 'max') {
+        if (rest) { maxi = true; setMsg(el, 'Ahora ocupa todo el escritorio. Devuélvela a su tamaño con ❐.', 'ok'); }
+        else setMsg(el, 'Así ocupa todo el escritorio y no se puede mover. Pulsa ❐ para devolverla a su tamaño y sigue con la tarea marcada.', 'warn');
+      }
+      if (t === 'unmax') {
+        if (maxi) { unmax = true; setMsg(el, 'Ha vuelto a su tamaño. Ya solo queda cerrarla con la ✕.', 'ok'); }
+        else setMsg(el, 'Ha vuelto a su tamaño. Sigue con la tarea marcada en amarillo.');
+      }
       if (t === 'close') {
         if (unmax) closed = true;
         else setMsg(el, 'La has cerrado antes de tiempo. Ábrela otra vez con doble clic en «Calendario».', 'warn');
@@ -1036,7 +1079,7 @@ const widgets = {
     const outline = document.createElement('div');
     outline.className = 'outline';
     D.area.appendChild(outline);
-    let winEl = D.openWin({ id: 'notas', title: '📝 Notas', x: 20, y: 16, w: 250, h: 160, resizable: true,
+    let winEl = D.openWin({ id: 'notas', title: '📝 Notas', x: 20, y: 16, w: 250, h: 160, resizable: true, fixed: true,
       body: '<div class="doc">Comprar pan.\nLlamar a Pilar.\nRecoger las gafas.</div>' });
     const place = () => {
       if (step >= 2) { outline.remove(); return; }
@@ -1061,10 +1104,12 @@ const widgets = {
         }
       }
       if (t === 'close') {
-        winEl = D.openWin({ id: 'notas', title: '📝 Notas', x: 20, y: 16, w: 250, h: 160, resizable: true, body: '<div class="doc">Comprar pan.\nLlamar a Pilar.\nRecoger las gafas.</div>' });
+        winEl = D.openWin({ id: 'notas', title: '📝 Notas', x: 20, y: 16, w: 250, h: 160, resizable: true, fixed: true, body: '<div class="doc">Comprar pan.\nLlamar a Pilar.\nRecoger las gafas.</div>' });
         place(); setMsg(el, 'En este ejercicio no hace falta cerrarla. Te la volvemos a abrir.', 'warn');
       }
-      if (t === 'max' || t === 'unmax') place();
+      if (t === 'max') setMsg(el, 'Así ocupa todo y no se puede estirar. Pulsa ❐ para devolverla a su tamaño.', 'warn');
+      if (t === 'min') setMsg(el, 'La has escondido. Haz clic en su botón de la barra de tareas para recuperarla.', 'warn');
+      if (t === 'max' || t === 'unmax' || t === 'restore') place();
     };
     setMsg(el, 'Busca la esquina de abajo a la derecha de la ventana, la de las rayitas.');
   },
@@ -1080,145 +1125,36 @@ const widgets = {
     ], () => winAll(el, done, '¡Perfecto! Dominas las tres formas de seleccionar.'));
     stage.innerHTML = `<p class="sel-text">${P}</p>`;
     const p = stage.querySelector('.sel-text');
+    let lastOk = '', warnT = null;
     const check = () => {
       const s = window.getSelection();
-      if (!s.rangeCount || !p.contains(s.anchorNode)) return;
+      if (!s.rangeCount || !(p.contains(s.anchorNode) || p.contains(s.focusNode))) return;
       const txt = s.toString().replace(/\s+/g, ' ').trim().replace(/[.,]$/, '');
       if (!txt || T.cur >= 3) return;
       const step = T.cur;
       if (step === 0 && txt === 'jueves') a = true;
       else if (step === 1 && txt === 'a las cinco de la tarde') b = true;
       else if (step === 2 && txt === P.replace(/\.$/, '')) c = true;
-      if (!T.update()) {
+      if (T.update()) {
+        clearTimeout(warnT); lastOk = txt;
+        if (T.cur < 3) setMsg(el, '¡Eso es!', 'ok');
+        return;
+      }
+      if (txt === lastOk) return;
+      // El aviso espera un poco: en un triple clic, el segundo clic marca una palabra antes de marcar el párrafo
+      clearTimeout(warnT);
+      warnT = setTimeout(() => {
+        if (T.cur !== step) return;
         const shown = txt.length > 40 ? txt.slice(0, 40) + '…' : txt;
         setMsg(el, `Has seleccionado «${shown}». ${step === 1 ? 'Tiene que ser exactamente «a las cinco de la tarde».' : 'Prueba otra vez.'}`, 'warn');
-      } else setMsg(el, '¡Eso es!', 'ok');
+      }, 450);
     };
-    p.addEventListener('mouseup', () => setTimeout(check, 30));
-    p.addEventListener('touchend', () => setTimeout(check, 300));
+    document.addEventListener('mouseup', () => setTimeout(check, 30), { signal: SIG() });
+    p.addEventListener('touchend', () => setTimeout(check, 400));
     setMsg(el, 'Empieza con un doble clic sobre «jueves».');
   },
 
-  /* 9. Dibujar sin salirse */
-  trace(el, stage, done) {
-    let lvl = 0;
-    const T = Tasks(el, [
-      { t: '<b>Nivel 1:</b> del círculo verde a la bandera, por el camino ancho.', ok: () => lvl >= 1 },
-      { t: '<b>Nivel 2:</b> lo mismo, con un camino más estrecho.', ok: () => lvl >= 2 }
-    ], () => winAll(el, done, '¡Pulso de cirujano! Has completado los dos caminos.'));
-    stage.innerHTML = '<canvas class="trace" width="680" height="320"></canvas>';
-    const cv = stage.querySelector('canvas'), ctx = cv.getContext('2d');
-    const path = new Path2D();
-    path.moveTo(60, 255);
-    path.bezierCurveTo(190, 265, 150, 70, 300, 75);
-    path.bezierCurveTo(450, 80, 380, 265, 530, 255);
-    path.bezierCurveTo(640, 245, 640, 120, 615, 60);
-    const S = { x: 60, y: 255 }, E = { x: 615, y: 60 };
-    const widths = [50, 30];
-    let drawing = false, pts = [];
-    const width = () => widths[Math.min(lvl, 1)];
-    const paint = () => {
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.setLineDash([]);
-      ctx.strokeStyle = '#2a4170'; ctx.lineWidth = width() + 10; ctx.stroke(path);
-      ctx.strokeStyle = '#e8eef9'; ctx.lineWidth = width(); ctx.stroke(path);
-      ctx.setLineDash([8, 10]); ctx.strokeStyle = '#b7c4dc'; ctx.lineWidth = 2; ctx.stroke(path); ctx.setLineDash([]);
-      ctx.fillStyle = '#25D366'; ctx.beginPath(); ctx.arc(S.x, S.y, width() / 2 + 4, 0, Math.PI * 2); ctx.fill();
-      ctx.font = '40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🏁', E.x + 6, E.y - 6);
-      if (pts.length > 1) {
-        ctx.strokeStyle = '#4DA3FF'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-        pts.forEach(q => ctx.lineTo(q.x, q.y)); ctx.stroke();
-      }
-    };
-    const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
-    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-    const onPath = q => { ctx.lineWidth = width() + 6; ctx.lineCap = 'round'; return ctx.isPointInStroke(path, q.x, q.y); };
-    cv.addEventListener('pointerdown', e => {
-      if (lvl >= 2 || e.button !== 0) return;
-      const q = pos(e);
-      if (dist(q, S) > width() / 2 + 10) { setMsg(el, 'Empieza pulsando dentro del <b>círculo verde</b>.', 'warn'); return; }
-      e.preventDefault(); cv.setPointerCapture(e.pointerId);
-      drawing = true; pts = [q]; setMsg(el, 'Sin soltar el botón…');
-    });
-    cv.addEventListener('pointermove', e => {
-      if (!drawing) return;
-      const q = pos(e);
-      if (!onPath(q)) { drawing = false; pts = []; paint(); setMsg(el, 'Te has salido del camino. Vuelve a empezar desde el círculo verde.', 'warn'); return; }
-      pts.push(q);
-      if (dist(q, E) < width() / 2 + 6) {
-        drawing = false; lvl++; pts = []; paint(); T.update();
-        if (lvl < 2) setMsg(el, '¡Conseguido! Ahora, un camino más estrecho.', 'ok');
-        return;
-      }
-      paint();
-    });
-    cv.addEventListener('pointerup', () => {
-      if (!drawing) return;
-      drawing = false; pts = []; paint();
-      setMsg(el, 'Has soltado el botón antes de llegar. Mantenlo pulsado todo el camino.', 'warn');
-    });
-    paint();
-    setMsg(el, 'Pulsa en el círculo verde y no sueltes hasta la bandera.');
-  },
-
-  /* 10. Puntería */
-  target(el, stage, done) {
-    const sizes = [120, 100, 82, 66, 54];
-    let hits = 0;
-    const T = Tasks(el, [{ t: `Acierta <b>${sizes.length} veces</b> en el centro rojo de la diana.`, ok: () => hits >= sizes.length }],
-      () => winAll(el, done, '¡Cinco dianas! Tienes muy buena puntería.'));
-    stage.innerHTML = '<div class="target-area"><button class="target" aria-label="Diana"></button></div>';
-    const area = stage.querySelector('.target-area'), t = stage.querySelector('.target');
-    const place = () => {
-      const s = sizes[Math.min(hits, sizes.length - 1)];
-      t.style.width = t.style.height = s + 'px';
-      t.style.left = (10 + Math.random() * Math.max(0, area.clientWidth - s - 20)) + 'px';
-      t.style.top = (10 + Math.random() * Math.max(0, area.clientHeight - s - 20)) + 'px';
-    };
-    place();
-    t.addEventListener('click', e => {
-      if (hits >= sizes.length || e.detail === 0) return;
-      const r = t.getBoundingClientRect();
-      const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) / (r.width / 2);
-      if (d <= 0.25) {
-        hits++; T.update();
-        if (hits < sizes.length) { setMsg(el, `¡En el centro! Llevas ${hits} de ${sizes.length}.`, 'ok'); place(); }
-      } else setMsg(el, d <= 0.5 ? 'Muy cerca. Un poco más al centro.' : 'Apunta al círculo rojo del medio.', 'warn');
-    });
-    setMsg(el, 'Apunta con calma y haz clic en el centro.');
-  },
-
-  /* 11. Puzzle */
-  puzzle(el, stage, done) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#cbe8ff"/></linearGradient></defs><rect width="300" height="300" fill="url(#s)"/><circle cx="240" cy="62" r="34" fill="#FFD93D"/><path d="M22 70 q16-18 34 0 q16-14 34 0z" fill="#fff"/><path d="M120 42 q14-14 28 0 q14-12 28 0z" fill="#fff"/><path d="M0 190 Q80 135 160 182 T300 168 V300 H0Z" fill="#6BCB77"/><path d="M0 235 Q100 205 200 238 T300 228 V300 H0Z" fill="#3fa14f"/><rect x="58" y="150" width="86" height="72" fill="#f3e2c7"/><path d="M48 156 L101 106 L154 156Z" fill="#c0392b"/><rect x="90" y="186" width="22" height="36" fill="#7a4a2a"/><rect x="66" y="166" width="17" height="17" fill="#4DA3FF"/><rect x="120" y="166" width="17" height="17" fill="#4DA3FF"/><rect x="204" y="176" width="12" height="54" fill="#7a4a2a"/><circle cx="210" cy="162" r="32" fill="#2e8b57"/><circle cx="196" cy="150" r="5" fill="#FF6B6B"/><circle cx="222" cy="170" r="5" fill="#FF6B6B"/><path d="M0 268 Q150 252 300 272 V300 H0Z" fill="#4DA3FF" opacity=".7"/></svg>`;
-    const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-    let placed = 0;
-    const T = Tasks(el, [{ t: 'Coloca las <b>9 piezas</b> en su sitio.', ok: () => placed === 9 }],
-      () => winAll(el, done, '¡Puzzle completo!'));
-    const small = window.matchMedia('(max-width: 640px)').matches, S = small ? 64 : 80;
-    const order = [...Array(9).keys()].sort(() => Math.random() - 0.5);
-    stage.innerHTML = `<div class="puzzle">
-        <div class="board">${[...Array(9).keys()].map(k => `<div class="slot" data-k="${k}"></div>`).join('')}</div>
-        <div class="tray">${order.map(k => `<div class="piece" data-k="${k}" style="background-image:url('${url}');background-size:${S * 3}px ${S * 3}px;background-position:${-(k % 3) * S}px ${-Math.floor(k / 3) * S}px"></div>`).join('')}</div>
-        <div class="ref"><div style="background-image:url('${url}')"></div>Así tiene que quedar</div>
-      </div>`;
-    const slots = [...stage.querySelectorAll('.slot')];
-    stage.querySelectorAll('.piece').forEach(pc => dragGhost(pc, stage, {
-      onHover: (x, y) => slots.forEach(s => s.classList.toggle('drop', !s.children.length && inside(s, x, y))),
-      onDrop: (x, y) => {
-        const s = slots.find(s => inside(s, x, y));
-        if (!s) { setMsg(el, 'Suelta la pieza encima de un hueco del tablero.', 'warn'); return; }
-        if (s.children.length) { setMsg(el, 'Ese hueco ya está ocupado.', 'warn'); return; }
-        if (s.dataset.k !== pc.dataset.k) { setMsg(el, 'Esa pieza no va ahí. Fíjate en el dibujo pequeño.', 'warn'); return; }
-        s.appendChild(pc); pc.classList.add('locked'); placed++;
-        setMsg(el, placed < 9 ? `¡Encaja! Quedan ${9 - placed}.` : '', 'ok'); T.update();
-      }
-    }));
-    setMsg(el, 'Arrastra una pieza hasta su hueco.');
-  },
-
-  /* 12. Seleccionar varios con Ctrl */
+  /* 9. Seleccionar varios con Ctrl */
   multi(el, stage, done) {
     const items = [['n1', '🖼️', 'Navidad 1'], ['playa', '🖼️', 'Playa'], ['carta', '📄', 'Carta'], ['n2', '🖼️', 'Navidad 2'],
                    ['boda', '🖼️', 'Boda'], ['vill', '🎵', 'Villancico'], ['cumple', '🖼️', 'Cumpleaños'], ['n3', '🖼️', 'Navidad 3']];
@@ -1245,9 +1181,11 @@ const widgets = {
         else { box.querySelectorAll('.sel').forEach(s => s.classList.remove('sel')); n.classList.add('sel'); }
         if (!ctrl && NAV.includes(n.dataset.f) && before.some(k => NAV.includes(k) && k !== n.dataset.f))
           setMsg(el, 'Al hacer clic sin <kbd>Ctrl</kbd> se ha quitado la selección anterior. Mantén <kbd>Ctrl</kbd> pulsada mientras haces clic.', 'warn');
-        else if (T.cur === 0) {
+        else {
           const k = selected().filter(x => NAV.includes(x)).length, other = selected().length - k;
-          setMsg(el, other ? 'Hay seleccionado algo que no es de Navidad. Haz <kbd>Ctrl</kbd> + clic sobre él para quitarlo.' : `Llevas ${k} de 3.`, other ? 'warn' : '');
+          if (other) setMsg(el, 'Hay seleccionado algo que no es de Navidad. Haz <kbd>Ctrl</kbd> + clic sobre él para quitarlo.', 'warn');
+          else if (k < 3) setMsg(el, `Llevas ${k} de 3.`);
+          else setMsg(el, 'Las tres seleccionadas. Ahora arrastra una de ellas a la carpeta «Navidad».', 'ok');
         }
         selOk = selOk || exact(); T.update();
       });
@@ -1269,7 +1207,7 @@ const widgets = {
     setMsg(el, 'Haz clic en «Navidad 1» y luego usa <kbd>Ctrl</kbd> + clic.');
   },
 
-  /* 13. Desafío final */
+  /* 10. Desafío final */
   final(el, stage, done) {
     let opened = false, found = false, moved = false, closed = false, emptied = false, inTrash = 3;
     const T = Tasks(el, [
@@ -1290,20 +1228,20 @@ const widgets = {
     D.ev.iconDbl = id => {
       if (id === 'desc') {
         D.openWin({ id: 'desc', title: '📁 Descargas', x: Math.min(140, D.W() - 330), y: 10, w: 330, h: 230,
-          body: list.map(t => `<div class="x-row${t.includes('pueblo') ? ' photo' : ''}"><span class="xe">${t.slice(0, 2)}</span>${t.slice(3)}</div>`).join(''),
+          body: list.filter(t => !(moved && t.includes('pueblo'))).map(t => `<div class="x-row${t.includes('pueblo') ? ' photo' : ''}"><span class="xe">${t.slice(0, 2)}</span>${t.slice(3)}</div>`).join(''),
           onOpen: w => {
             const body = w.querySelector('.win-body'), ph = w.querySelector('.photo');
             explorerItems(body);
-            body.addEventListener('scroll', () => {
+            if (ph) body.addEventListener('scroll', () => {
               const r = ph.getBoundingClientRect(), b = body.getBoundingClientRect();
-              if (!found && r.top >= b.top - 4 && r.bottom <= b.bottom + 4) { found = true; T.update(); setMsg(el, '¡La encontraste! Ahora arrástrala a «Fotos».', 'ok'); }
+              if (!found && r.top >= b.top - 4 && r.bottom <= b.bottom + 4) { found = true; setMsg(el, '¡La encontraste! Ahora arrástrala a «Fotos».', 'ok'); T.update(); }
             });
             if (ph) dragGhost(ph, D.root, {
               onHover: (x, y) => D.icon('fotos').classList.toggle('drop', inside(D.icon('fotos'), x, y)),
               onDrop: (x, y) => {
                 if (!inside(D.icon('fotos'), x, y)) { setMsg(el, 'Suéltala encima de la carpeta «Fotos» del escritorio.', 'warn'); return; }
-                found = true; ph.remove(); moved = true; D.label('fotos', 'Fotos (1)'); T.update();
-                setMsg(el, '¡Guardada en Fotos! Ahora cierra la ventana.', 'ok');
+                found = true; ph.remove(); moved = true; D.label('fotos', 'Fotos (1)');
+                setMsg(el, '¡Guardada en Fotos! Ahora cierra la ventana.', 'ok'); T.update();
               }
             });
           } });
@@ -1318,14 +1256,14 @@ const widgets = {
     D.ev.iconMenu = (id, n, e) => {
       if (id === 'papelera') D.menu(e, [{ label: 'Abrir', act: () => D.ev.iconDbl('papelera') }, { sep: true }, { label: 'Vaciar papelera', act: () => {
         if (!inTrash) { setMsg(el, 'Ya está vacía.'); return; }
-        if (T.cur < 4) { setMsg(el, 'Muy bien, pero déjalo para el final: sigue las tareas en orden.', 'warn'); return; }
-        inTrash = 0; D.label('papelera', 'Papelera'); emptied = true; T.update();
+        inTrash = 0; D.label('papelera', 'Papelera'); emptied = true; D.closeWin('papelera');
+        setMsg(el, 'Papelera vaciada.', 'ok'); T.update();
       } }]);
-      else D.menu(e, [{ label: 'Abrir', act: () => D.ev.iconDbl(id) }, { sep: true }, { label: 'Cambiar nombre' }, { label: 'Eliminar' }]);
+      else D.menu(e, [{ label: 'Abrir', act: () => D.ev.iconDbl(id) }]);
     };
     D.ev.win = (t, id) => {
       if (t === 'close' && id === 'desc') {
-        if (moved) { closed = true; T.update(); setMsg(el, 'Ya solo queda vaciar la papelera.', 'ok'); }
+        if (moved) { closed = true; setMsg(el, emptied ? '' : 'Ya solo queda vaciar la papelera.', 'ok'); T.update(); }
         else { opened = false; found = false; T.update(); setMsg(el, 'La has cerrado antes de tiempo. Vuelve a abrir «Descargas».', 'warn'); }
       }
     };
