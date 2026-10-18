@@ -533,6 +533,23 @@
     }
     .btn-return:hover { background: var(--sage); color: #fff; }
 
+    .btn-clear-hist {
+      background: none;
+      color: var(--rose);
+      border: 1px solid rgba(192,88,74,0.3);
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 0.72rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+      min-height: 30px;
+    }
+    .btn-clear-hist:hover { background: var(--rose); color: #fff; }
+    .btn-clear-hist:disabled { opacity: 0.4; cursor: default; background: none; color: var(--rose); }
+
     /* ── TOAST ── */
     #toast {
       position: fixed;
@@ -628,7 +645,10 @@
     <div class="section">
       <div class="section-header">
         <span class="section-title">✅ Historial de tareas realizadas</span>
-        <span class="badge green" id="badge-hist">0</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="badge green" id="badge-hist">0</span>
+          <button class="btn-clear-hist" id="btn-clear-hist" onclick="borrarHistorial()">🗑 Borrar todo</button>
+        </div>
       </div>
       <div id="hist-content"></div>
     </div>
@@ -844,17 +864,26 @@
   }
 
   /* ── Drag & Drop helpers ── */
+  // Sirven para las dos listas: tareas de hoy y pendientes anteriores
   let dragSrcIndex = null;
+  let dragSrcList  = null;
+
+  const LISTAS_ARRASTRABLES = {
+    'list-hoy':        { key: KEY_HOY,  render: () => renderHoy() },
+    'list-pendientes': { key: KEY_PEND, render: () => renderPendientes() }
+  };
 
   function onDragStart(e) {
     dragSrcIndex = parseInt(this.dataset.index);
+    dragSrcList  = this.parentNode.id;
     this.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
   }
   function onDragOver(e) {
+    if (this.parentNode.id !== dragSrcList) return; // no mezclar listas
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('#list-hoy .task-item').forEach(el => el.classList.remove('drag-over'));
+    this.parentNode.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over'));
     this.classList.add('drag-over');
   }
   function onDragLeave() {
@@ -862,20 +891,24 @@
   }
   function onDrop(e) {
     e.stopPropagation();
+    const listId = this.parentNode.id;
     const targetIndex = parseInt(this.dataset.index);
-    if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
-    const tareas = cargar(KEY_HOY);
+    if (dragSrcIndex === null || listId !== dragSrcList || dragSrcIndex === targetIndex) return;
+    const lista = LISTAS_ARRASTRABLES[listId];
+    if (!lista) return;
+    const tareas = cargar(lista.key);
     const [moved] = tareas.splice(dragSrcIndex, 1);
     tareas.splice(targetIndex, 0, moved);
-    guardar(KEY_HOY, tareas);
-    renderHoy();
+    guardar(lista.key, tareas);
+    lista.render();
     showToast('↕️ Orden actualizado');
   }
   function onDragEnd() {
-    document.querySelectorAll('#list-hoy .task-item').forEach(el => {
+    document.querySelectorAll('.task-list .task-item').forEach(el => {
       el.classList.remove('dragging', 'drag-over');
     });
     dragSrcIndex = null;
+    dragSrcList  = null;
   }
 
   /* ══════════════════════════════════════
@@ -895,7 +928,10 @@
     tareas.forEach((t, i) => {
       const li = document.createElement('li');
       li.className = 'task-item';
+      li.dataset.index = i;
+      li.draggable = true;
       li.innerHTML = `
+        <span class="drag-handle" title="Arrastrar para reordenar">⠿</span>
         <div class="task-body">
           <span class="task-label" id="label-pend-${i}">${escHtml(t.texto)}</span>
           <div class="task-actions" id="actions-pend-${i}">
@@ -907,6 +943,13 @@
               onclick="eliminarPendiente(${i})">✕</button>
           </div>
         </div>`;
+
+      li.addEventListener('dragstart', onDragStart);
+      li.addEventListener('dragover',  onDragOver);
+      li.addEventListener('dragleave', onDragLeave);
+      li.addEventListener('drop',      onDrop);
+      li.addEventListener('dragend',   onDragEnd);
+
       ul.appendChild(li);
     });
   }
@@ -918,6 +961,7 @@
     const tareas = cargar(KEY_REALIZADAS);
     const cont = document.getElementById('hist-content');
     document.getElementById('badge-hist').textContent = tareas.length;
+    document.getElementById('btn-clear-hist').disabled = !tareas.length;
 
     if (!tareas.length) {
       cont.innerHTML = '<div class="empty-state" style="padding:28px">No hay tareas completadas aún.</div>';
@@ -1187,6 +1231,19 @@
     renderHoy();
     renderPendientes();
     showToast('↩ Tarea devuelta a hoy');
+  }
+
+  /* ── Borrar todo el historial ── */
+  function borrarHistorial() {
+    const realizadas = cargar(KEY_REALIZADAS);
+    if (!realizadas.length) return;
+    const ok = confirm(
+      `¿Borrar todo el historial?\n\nSe eliminarán ${realizadas.length} tarea(s) realizada(s). Esta acción no se puede deshacer.`
+    );
+    if (!ok) return;
+    guardar(KEY_REALIZADAS, []);
+    renderHistorial();
+    showToast('🗑 Historial borrado');
   }
 
   /* ── Toggle historial ── */
