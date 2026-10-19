@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
   :root {
     --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43;
@@ -117,6 +118,12 @@
   .refinfo { background:rgba(255,255,255,.05); border-radius:12px; padding:10px 14px; font-weight:700; margin-bottom:10px; }
   #p-prompt { min-height:260px; font-size:.85rem; font-family:ui-monospace,Consolas,monospace; font-weight:400; }
   .keyrow { display:flex; gap:8px; } .keyrow input { flex:1; min-width:0; }
+  .keylink { color:var(--c1); font-weight:800; font-size:.82rem; text-decoration:none; } .keylink:hover { text-decoration:underline; }
+  /* Barras de desplazamiento visibles también en los cuadros de texto */
+  textarea { scrollbar-width:auto; scrollbar-color:var(--c6) rgba(255,255,255,.06); }
+  textarea::-webkit-scrollbar { width:12px; }
+  textarea::-webkit-scrollbar-track { background:rgba(255,255,255,.05); border-radius:12px; }
+  textarea::-webkit-scrollbar-thumb { background:var(--c6); border-radius:10px; border:3px solid var(--card); }
 
   .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:200; background:rgba(10,22,40,.96); color:#fff; padding:12px 20px; border-radius:14px; font-weight:800; border:2px solid var(--c3); opacity:0; transition:opacity .25s; pointer-events:none; max-width:90vw; text-align:center; }
   .toast.on { opacity:1; }
@@ -138,10 +145,10 @@
   <div class="layout">
     <section>
       <label class="drop" id="drop">
-        <input type="file" id="files" accept=".docx,.md,.txt" multiple hidden>
+        <input type="file" id="files" accept=".docx,.pdf,.md,.txt" multiple hidden>
         <span class="big">📄</span>
-        <b>Arrastra aquí los temas en Word</b>
-        <span>o toca para elegirlos (.docx; también vale .md o .txt)</span>
+        <b>Arrastra aquí los temas en Word o PDF</b>
+        <span>o toca para elegirlos (.docx o .pdf; también vale .md o .txt)</span>
       </label>
 
       <div id="list"></div>
@@ -195,9 +202,10 @@
     </div>
     <div class="fld"><label for="p-key">Clave de la API</label>
       <div class="keyrow"><input type="password" id="p-key" autocomplete="off" spellcheck="false"><button class="btn sm" id="b-eye" type="button">👁️</button></div>
+      <a class="keylink" id="p-keylink" href="#" target="_blank" rel="noopener">Conseguir clave gratuita ↗</a>
     </div>
     <div class="grid2">
-      <div class="fld"><label for="p-model">Modelo</label><input id="p-model" list="models" spellcheck="false"><datalist id="models"></datalist></div>
+      <div class="fld"><label for="p-model">Modelo</label><div class="keyrow"><select id="p-model"></select><button class="btn sm" id="b-models" type="button" title="Cargar los modelos disponibles con tu clave">↻</button></div></div>
       <div class="fld"><label for="p-max">Máximo de tokens</label><input id="p-max" type="number" min="4000" step="1000"></div>
     </div>
 
@@ -235,9 +243,12 @@ const CFG_KEY = "gensim-config-v1";
 const EXTRA_KEY = "gensim-extra-v1";
 
 const PROV = {
-  gemini:  { name:"Gemini",  model:"gemini-flash-latest",  max:65536, models:["gemini-flash-latest","gemini-2.5-pro","gemini-2.5-flash"] },
-  mistral: { name:"Mistral", model:"mistral-large-latest", max:32000, models:["mistral-large-latest","mistral-medium-latest","codestral-latest"] }
+  gemini:  { name:"Gemini",  model:"gemini-flash-latest",  max:65536, models:["gemini-flash-latest","gemini-flash-lite-latest","gemini-2.5-flash"],
+             keyUrl:"https://aistudio.google.com/apikey",   suiteKey:"castroverde_ana_gemini_key",  maxDoc:150000 },
+  mistral: { name:"Mistral", model:"mistral-large-latest", max:32000, models:["mistral-large-latest","mistral-medium-latest","codestral-latest"],
+             keyUrl:"https://console.mistral.ai/api-keys", suiteKey:"castroverde_ana_mistral_key", maxDoc:100000 }
 };
+const LIST_KEY = "gensim-models-v1";   // modelos cargados con ↻ y su límite de salida
 
 const DEFAULT_PROMPT = `Eres un desarrollador web y profesor de informática para personas mayores en los cursos de Cruz Roja en Valladolid. Creas simulaciones interactivas, de una sola página HTML, para que los alumnos aprendan el tema de un documento del curso.
 
@@ -282,12 +293,21 @@ const DEFAULT_REF = (() => {
 let cfg = { provider:"gemini", keys:{}, models:{}, max:{}, prompt:"", refHtml:"", refName:"" };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY)) || {}); } catch (e) {}
 if (!PROV[cfg.provider]) cfg.provider = "gemini";
+// Mismas claves que el resto de la suite: si aquí no hay, se toman de allí
+for (const p in PROV) { if (!cfg.keys[p]) { try { cfg.keys[p] = localStorage.getItem(PROV[p].suiteKey) || ""; } catch (e) {} } }
+let modelLists = {};
+try { modelLists = JSON.parse(localStorage.getItem(LIST_KEY)) || {}; } catch (e) {}
+// Límite real de salida del modelo (si se conoce), para no pedir más de lo que admite
+const outLimit = (p, m) => { const x = (modelLists[p] || []).find(o => o.id === m); return x && x.out ? x.out : 0; };
 const model  = p => cfg.models[p] || PROV[p].model;
-const maxTok = p => +cfg.max[p] || PROV[p].max;
+const maxTok = p => { const want = +cfg.max[p] || PROV[p].max, lim = outLimit(p, model(p)); return lim ? Math.min(want, lim) : want; };
 const prompt = () => cfg.prompt || DEFAULT_PROMPT;
 const refHtml = () => cfg.refHtml || DEFAULT_REF;
 function saveCfg(){
-  try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); return true; }
+  try {
+    for (const p in PROV) { if (cfg.keys[p]) localStorage.setItem(PROV[p].suiteKey, cfg.keys[p]); }
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); return true;
+  }
   catch (e) { toast("⚠️ No se han podido guardar los ajustes (el ejemplo es demasiado grande)"); return false; }
 }
 
@@ -336,6 +356,21 @@ async function readDoc(f){
     if (!window.mammoth) throw new Error("No se ha cargado el lector de Word. Revisa la conexión y recarga la página.");
     const r = await mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() }, { convertImage: mammoth.images.imgElement(() => ({ src: "" })) });
     return htmlToText(r.value);
+  }
+  if (ext === "pdf") {
+    if (!window.pdfjsLib) throw new Error("No se ha cargado el lector de PDF. Revisa la conexión y recarga la página.");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+    const pages = [];
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const tc = await (await pdf.getPage(n)).getTextContent();
+      let line = "", text = "";
+      tc.items.forEach(i => { line += i.str; if (i.hasEOL) { text += line + "\n"; line = ""; } });
+      pages.push((text + line).trim());
+    }
+    const t = pages.join("\n\n").trim();
+    if (t.length < 80) throw new Error("No se ha podido leer el texto del PDF (¿es un PDF escaneado?).");
+    return t;
   }
   if (ext === "md" || ext === "txt") return (await f.text()).trim();
   if (ext === "doc") throw new Error("Es un Word antiguo (.doc). Ábrelo en Word y guárdalo como .docx.");
@@ -484,9 +519,10 @@ function apiRequest(provider, system, messages){
   if (provider === "gemini") return {
     url: "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(m) + ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key),
     headers: { "Content-Type":"application/json" },
-    body: { systemInstruction:{ parts:[{ text:system }] },
-            contents: messages.map(x => ({ role: x.role === "assistant" ? "model" : "user", parts:[{ text:x.content }] })),
-            generationConfig:{ maxOutputTokens:max, temperature:0.7 } },
+    body: Object.assign(/^gemma/i.test(m) ? {} : { systemInstruction:{ parts:[{ text:system }] } }, {
+            contents: messages.map((x, i) => ({ role: x.role === "assistant" ? "model" : "user",
+                                                parts:[{ text: (i === 0 && /^gemma/i.test(m) ? system + "\n\n" : "") + x.content }] })),
+            generationConfig:{ maxOutputTokens:max, temperature:0.7 } }),
     parse: (o, s) => {
       const c = o.candidates && o.candidates[0];
       if (!c) return;
@@ -574,12 +610,18 @@ async function generate(it, change){
   }
 }
 
+// Recorte de documentos muy largos para no pasarse del contexto del plan gratuito
+function trimDoc(it){
+  const max = PROV[cfg.provider].maxDoc || 100000;
+  it.trimmed = it.text.length > max;
+  return it.trimmed ? it.text.slice(0, max) + "\n\n[...documento recortado por longitud...]" : it.text;
+}
 function buildUserMsg(it){
   const extra = extraT.value.trim();
   return "TIPO DE DISPOSITIVO: " + (it.dev === "movil" ? "Móvil" : "Ordenador") + "\n" +
     "TÍTULO DE LA SIMULACIÓN: " + it.title.trim() + "\n\n" +
     "===== EJEMPLO DE REFERENCIA (solo como modelo de estilo y estructura) =====\n" + refHtml() + "\n===== FIN DEL EJEMPLO =====\n\n" +
-    "===== TEMA (contenido del documento) =====\n" + it.text + "\n===== FIN DEL TEMA =====\n\n" +
+    "===== TEMA (contenido del documento) =====\n" + trimDoc(it) + "\n===== FIN DEL TEMA =====\n\n" +
     (extra ? "INDICACIONES ADICIONALES DEL PROFESOR:\n" + extra + "\n\n" : "") +
     "Crea ahora la simulación completa sobre este tema.";
 }
@@ -595,12 +637,12 @@ async function runQueue(){
   for (;;) {
     const it = items.find(i => i.status === "pending" || i.status === "error");
     if (!it || ctrl.signal.aborted) break;
-    if (!first) { await sleep(2500); if (ctrl.signal.aborted) break; }
+    if (!first) { await sleep(4000); if (ctrl.signal.aborted) break; }
     first = false;
     it.status = "working"; it.chgOpen = false; updateCard(it);
     try {
       const html = await generate(it, null);
-      it.html = html; it.saved = false; it.status = "done"; it.msg = "Lista (" + kb(html.length) + "). Pruébala antes de subirla.";
+      it.html = html; it.saved = false; it.status = "done"; it.msg = "Lista (" + kb(html.length) + ")" + (it.trimmed ? ", con el tema recortado por ser muy largo" : "") + ". Pruébala antes de subirla.";
       updateCard(it); showPreview(it);
     } catch (e) {
       if (e.name === "AbortError") { it.status = it.html ? "done" : "pending"; it.msg = "Detenida."; updateCard(it); break; }
@@ -697,9 +739,47 @@ function fillProv(p){
   draftProv = p;
   $("p-prov").value = p;
   $("p-key").value = cfg.keys[p] || "";
-  $("p-model").value = model(p);
+  fillModels(p, model(p));
   $("p-max").value = maxTok(p);
-  $("models").innerHTML = PROV[p].models.map(m => '<option value="' + m + '">').join("");
+
+  $("p-keylink").href = PROV[p].keyUrl;
+}
+// Desplegable de modelos: siempre muestra todos (los de la lista y el elegido)
+function fillModels(p, cur){
+  const ids = [...new Set([...PROV[p].models, ...((modelLists[p] || []).map(o => o.id))])];
+  if (cur && !ids.includes(cur)) ids.unshift(cur);
+  $("p-model").innerHTML = ids.map(m => '<option value="' + esc(m) + '"' + (m === cur ? " selected" : "") + '>' + esc(m) + '</option>').join("");
+}
+// ↻ Cargar la lista real de modelos de la cuenta (así no se elige uno que no existe)
+async function loadModels(){
+  const p = draftProv, key = $("p-key").value.trim();
+  if (!key) return toast("Escribe primero la clave de " + PROV[p].name);
+  const b = $("b-models"); b.disabled = true;
+  try {
+    let list = [];
+    if (p === "gemini") {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=" + encodeURIComponent(key));
+      if (!r.ok) throw new Error(r.status === 400 || r.status === 403 ? "clave no válida" : "error " + r.status);
+      list = ((await r.json()).models || [])
+        // Gemma no admite instrucciones de sistema y su salida es corta: no sirve para simulaciones
+        .filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|robotics|computer)/.test(m.name))
+        .map(m => ({ id:m.name.replace(/^models\//, ""), out:m.outputTokenLimit || 0 }));
+    } else {
+      const r = await fetch("https://api.mistral.ai/v1/models", { headers:{ "Authorization":"Bearer " + key } });
+      if (!r.ok) throw new Error(r.status === 401 ? "clave no válida" : "error " + r.status);
+      const seen = {};
+      list = ((await r.json()).data || [])
+        .filter(m => !(m.capabilities && m.capabilities.completion_chat === false) && !/(embed|ocr|moderation|voxtral|transcri)/i.test(m.id))
+        .map(m => ({ id:m.id, out:0 })).filter(m => !seen[m.id] && (seen[m.id] = 1));
+    }
+    if (!list.length) throw new Error("la lista ha llegado vacía");
+    list.sort((a, b) => a.id.localeCompare(b.id));
+    modelLists[p] = list;
+    try { localStorage.setItem(LIST_KEY, JSON.stringify(modelLists)); } catch (e) {}
+    fillModels(p, $("p-model").value);
+    toast("✅ " + list.length + " modelos disponibles: despliega la casilla «Modelo»");
+  } catch (e) { toast("❌ No se ha podido cargar la lista: " + e.message, 4500); }
+  b.disabled = false;
 }
 function refInfo(){
   const own = draftRef !== null ? draftRef.html : cfg.refHtml;
@@ -725,6 +805,7 @@ $("b-close").onclick = () => { $("modal").hidden = true; };
 $("modal").addEventListener("pointerdown", e => { if (e.target === $("modal")) $("modal").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key === "Escape") $("modal").hidden = true; });
 $("p-prov").onchange = e => { keepDraft(); fillProv(e.target.value); };
+$("b-models").onclick = loadModels;
 $("b-eye").onclick = () => { const k = $("p-key"); k.type = k.type === "password" ? "text" : "password"; };
 $("ref-file").onchange = async e => {
   const f = e.target.files[0]; e.target.value = "";
