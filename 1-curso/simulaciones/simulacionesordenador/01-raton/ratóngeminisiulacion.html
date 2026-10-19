@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Componentes del Ratón</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --win:#f3f5f8; --win-ink:#1b2433;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+  svg { fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c4); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.94) translateY(16px);} to{opacity:1; transform:none;} }
+
+  .container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:22px 24px 30px; }
+
+  .top { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+  .badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.1; background:linear-gradient(135deg,var(--c6),var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+  .mode:hover { color:var(--text); }
+
+  .prog { display:flex; align-items:center; gap:14px; margin-bottom:16px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+
+  .layout { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(330px,1fr); gap:22px; align-items:start; }
+  .stage[hidden] { display:none; }
+
+  /* ---------- Pantalla simulada ---------- */
+  .screen { position:relative; width:100%; aspect-ratio:16/10; border-radius:18px; overflow:hidden;
+    border:1px solid rgba(255,255,255,.12);
+    background: radial-gradient(circle at 25% 30%, rgba(77,163,255,.55), transparent 55%), radial-gradient(circle at 80% 70%, rgba(37,211,102,.35), transparent 50%), linear-gradient(135deg,#12335f,#0b1d3a);
+    box-shadow:0 20px 50px rgba(0,0,0,.45); font-size:clamp(.78rem,1.1vw,1rem); user-select:none; -webkit-user-select:none; }
+  .desk { position:absolute; left:0; top:0; right:0; bottom:3.3em; overflow:hidden; }
+  .taskbar { position:absolute; left:0; right:0; bottom:0; height:3.3em; background:rgba(235,240,247,.92); color:var(--win-ink); display:flex; align-items:center; justify-content:center; gap:.4em; backdrop-filter:blur(10px); border-top:1px solid rgba(255,255,255,.4); z-index:40; }
+  .tk-ic { width:2.5em; height:2.5em; display:grid; place-items:center; border-radius:8px; font-size:1.3em; background:transparent; border:0; color:inherit; }
+  .tk-ic.btn { cursor:pointer; } .tk-ic.btn:hover { background:rgba(0,0,0,.08); }
+  .tk-sep { width:1px; height:1.8em; background:rgba(0,0,0,.18); margin:0 .3em; }
+  .clock { position:absolute; right:1em; font-weight:700; font-size:.85em; text-align:right; line-height:1.2; }
+
+  /* Zonas pulsables (modo descubrir/practicar) */
+  .part { cursor:pointer; transition:box-shadow .25s, background .25s; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .25s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 22%, transparent); }
+  .pin { position:absolute; z-index:8; width:2.1em; height:2.1em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:1.05em; box-shadow:0 2px 8px rgba(0,0,0,.4); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin { animation:none; }
+  .part.sel { z-index:5; box-shadow:0 0 0 4px var(--pc), 0 0 28px color-mix(in srgb,var(--pc) 75%, transparent); }
+  .part.ok { box-shadow:0 0 0 4px var(--c1), 0 0 28px rgba(37,211,102,.75); z-index:5; }
+  .part.bad { animation:shake .45s; box-shadow:0 0 0 4px var(--c4); z-index:5; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-7px);} 75%{transform:translateX(7px);} }
+  .mode-practica .pin { display:none; }
+
+  /* Mouse simulation (Descubrir / Practicar) */
+  .mouse-sim { position:absolute; top:25%; left:20%; width:18em; height:24em; border-radius:50% 50% 30% 30% / 60% 60% 40% 40%; background:linear-gradient(145deg, #444, #222); box-shadow:0 10px 30px rgba(0,0,0,.4), inset 0 2px 5px rgba(255,255,255,.1); transform:rotateX(20deg) rotateZ(-10deg); transform-origin:center top; z-index:10; }
+  .mouse-body { position:absolute; inset:0; border-radius:inherit; }
+  .mouse-body .pin { top:60%; left:50%; margin-left:-1.05em; }
+
+  .mouse-btn-left, .mouse-btn-right { position:absolute; top:0; width:50%; height:60%; background:rgba(255,255,255,.08); border-radius:50% 0 0 100% / 100% 0 0 10%; transition:background .2s; }
+  .mouse-btn-left { left:0; border-right:1px solid rgba(255,255,255,.05); border-radius:50% 0 0 100% / 100% 0 0 10%; }
+  .mouse-btn-left .pin { top:20%; left:35%; }
+  .mouse-btn-right { right:0; border-left:1px solid rgba(255,255,255,.05); border-radius:0 50% 100% 0 / 0 100% 10% 0; }
+  .mouse-btn-right .pin { top:20%; right:35%; }
+
+  .mouse-wheel { position:absolute; top:12%; left:50%; transform:translateX(-50%); width:2.5em; height:3.5em; background:#666; border:3px solid #333; border-radius:100px; box-shadow:inset 0 0 5px rgba(0,0,0,.5); z-index:2; }
+  .mouse-wheel .pin { top:50%; left:50%; margin-left:-1.05em; margin-top:-1.05em; }
+
+  .desktop-cursor { position:absolute; top:40%; left:65%; width:2.2em; height:2.2em; z-index:10; color:var(--win-ink); transform:scale(1.3); }
+  .desktop-cursor svg { width:100%; height:100%; fill:#000; stroke:#fff; stroke-width:1.8; }
+  .desktop-cursor .pin { top:-.8em; left:1.8em; }
+
+  /* Escritorio vivo (Probar) */
+  .desk-live { background: radial-gradient(circle at 25% 30%, rgba(77,163,255,.55), transparent 55%), radial-gradient(circle at 80% 70%, rgba(37,211,102,.35), transparent 50%), linear-gradient(135deg,#12335f,#0b1d3a); overflow:hidden; }
+
+  .dicon { position:absolute; left:.7em; width:5.8em; display:flex; flex-direction:column; align-items:center; gap:.2em; padding:.4em .2em; border-radius:8px; border:1px solid transparent; background:transparent; color:#fff; cursor:default; font-size:.75em; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+  .dicon .di { font-size:2.2em; line-height:1; }
+  .dicon:hover { background:rgba(255,255,255,.12); }
+  .dicon.sel { background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.4); }
+
+  .lv-window { position:absolute; display:flex; flex-direction:column; background:var(--win); color:var(--win-ink); border-radius:10px; border:1px solid rgba(0,0,0,.3); box-shadow:0 14px 34px rgba(0,0,0,.45); transition:left .22s ease, top .22s ease, width .22s ease, height .22s ease, transform .3s ease, opacity .3s ease; transform-origin:50% 100%; }
+  .lv-window.dragging { transition:none; }
+  .lv-window.closed { display:none; }
+  .lv-window.is-min { opacity:0; transform:translateY(45%) scale(.2); pointer-events:none; }
+  .lv-window.opening { animation:winOpen .25s ease; }
+  @keyframes winOpen { from{opacity:0; transform:scale(.92);} to{opacity:1; transform:none;} }
+  .lw-title { height:2.5em; flex-shrink:0; display:flex; align-items:center; gap:.6em; padding-left:.8em; background:#e3e8ef; border-radius:10px 10px 0 0; touch-action:none; font-weight:700; }
+  .lw-name { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6b7587; font-size:.9em; }
+  .lv-window.active .lw-title { background:#fff; }
+  .lv-window.active .lw-name { color:var(--win-ink); }
+  .lw-ctrls { display:flex; height:100%; }
+  .wc { position:relative; width:3.4em; height:100%; border:0; background:transparent; color:var(--win-ink); display:grid; place-items:center; cursor:pointer; }
+  .wc:hover { background:rgba(0,0,0,.09); }
+  .wc.close { border-top-right-radius:9px; }
+  .wc.close:hover { background:#e81123; color:#fff; }
+  .wc svg { width:.85em; height:.85em; pointer-events:none; }
+  .lw-body { flex:1; min-height:0; overflow:auto; background:#fff; border-radius:0 0 10px 10px; padding:.9em 1.1em; }
+
+  .tk-wrap { position:relative; }
+  .tk-app { position:relative; width:2.7em; height:2.5em; border-radius:8px; border:0; background:transparent; font-size:1.3em; cursor:pointer; }
+  .tk-app:hover { background:rgba(0,0,0,.08); }
+  .tk-wrap.isopen .tk-app::after { content:""; position:absolute; bottom:.08em; left:35%; right:35%; height:3px; border-radius:3px; background:#7b8798; }
+  .tk-wrap.isactive .tk-app { background:rgba(255,255,255,.9); box-shadow:0 0 0 1px rgba(0,0,0,.08); }
+  .tk-wrap.isactive .tk-app::after { background:#3b82f6; left:25%; right:25%; }
+
+  /* Live cursor */
+  .cursor-pointer { position:absolute; z-index:100; pointer-events:none; width:2.2em; height:2.2em; transform:translate(-20%,-5%) scale(.9); transform-origin:top left; }
+  .cursor-pointer svg { width:100%; height:100%; fill:#000; stroke:#fff; stroke-width:1.8; }
+  .cursor-pointer.grab svg { fill:#3b82f6; }
+  .cursor-pointer.text svg { fill:none; stroke:#000; stroke-width:2.4; }
+  .cursor-pointer.loading svg { animation:spin 1s linear infinite; }
+  @keyframes spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+  /* Context Menu */
+  .context-menu { position:absolute; background:#fff; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.3); padding:.5em 0; min-width:12em; font-size:.9em; color:var(--win-ink); z-index:70; display:none; }
+  .context-menu.on { display:block; animation:popIn .15s ease; }
+  .context-menu div { padding:.4em 1em; cursor:pointer; }
+  .context-menu div:hover { background:#eef2f7; }
+  .context-menu hr { border:none; border-top:1px solid #eee; margin:.4em 0; }
+
+  /* Window contents for Probar */
+  .fe-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.8em; }
+  .fe-item { display:flex; flex-direction:column; align-items:center; text-align:center; padding:.5em .2em; border-radius:6px; font-size:.85em; cursor:pointer; }
+  .fe-item span { font-size:2.4em; }
+  .fe-item.sel { background:#cfe8ff; border:1px solid #5a9cf1; }
+  .fe-path { height:1.8em; border-radius:6px; background:#e3e8ef; margin-bottom:.8em; }
+  .scroll-content { height:100%; overflow:auto; padding-right:12px; }
+  .scroll-line { height:.7em; border-radius:6px; background:#e3e8ef; margin-bottom:.5em; }
+  .notepad-content { height:100%; overflow:hidden; }
+  .notepad-content p { line-height:1.5; font-size:1.1em; color:#333; }
+  .notepad-content span.selected-text { background:#a5d6ff; }
+
+
+  .toast { position:absolute; left:50%; bottom:4.2em; transform:translateX(-50%); z-index:80; background:rgba(10,22,40,.95); color:#fff; padding:.6em 1.2em; border-radius:12px; font-weight:800; border:1px solid var(--c3); opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; }
+  .toast.on { opacity:1; }
+
+  .tools { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .tbtn { padding:10px 18px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .tbtn:hover { transform:scale(1.04); border-color:var(--c6); }
+
+  /* ---------- Panel de información ---------- */
+  .side { position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; border-radius:24px; }
+  .info { background:var(--card); border:1px solid rgba(255,255,255,.07); border-left:8px solid var(--ic,var(--c6)); border-radius:24px; padding:24px 26px; min-height:360px; animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both; transition:border-color .3s; }
+  .info-num { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:50%; background:var(--ic,var(--c6)); color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .info h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,2.6vw,2.3rem); line-height:1.15; margin-bottom:12px; color:var(--ic,var(--c6)); }
+  .info h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.25rem; margin:14px 0 8px; color:var(--c3); }
+  .info p { font-size:clamp(1.05rem,1.5vw,1.3rem); font-weight:600; line-height:1.5; margin-bottom:14px; }
+  .info b { color:var(--c3); font-weight:800; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { background:rgba(255,255,255,.07); border-radius:100px; padding:6px 14px; font-weight:800; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip { background:rgba(255,217,61,.09); border-radius:14px; padding:12px 16px; color:var(--sub); font-weight:700; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip b { color:var(--c3); }
+  .hello { text-align:center; padding-top:30px; }
+  .hello .big { font-size:3.4rem; margin-bottom:8px; }
+  .hello h2 { color:var(--text); }
+  .quiz-q { font-family:'Fredoka One',cursive; font-size:clamp(1.5rem,2.6vw,2.2rem); line-height:1.2; margin-bottom:14px; }
+  .quiz-q span { color:var(--c3); }
+  .feedback { font-size:1.3rem; font-weight:800; min-height:2em; margin:6px 0 12px; }
+  .feedback.good { color:var(--c1); } .feedback.no { color:var(--c4); }
+  .btn { padding:12px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; transition:all .2s; }
+  .btn:hover { transform:scale(1.04); border-color:var(--c6); }
+  .btn.go { background:rgba(37,211,102,.18); border-color:var(--c1); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-12px) rotate(5deg);} }
+
+  .lh { display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+  .lh .ico { font-size:2.4rem; }
+  .lh .nm { font-family:'Fredoka One',cursive; font-size:1.5rem; line-height:1.1; }
+  .state { display:inline-block; margin-top:4px; padding:3px 14px; border-radius:100px; font-weight:800; font-size:1rem; color:#0a1628; }
+  .s-open { background:var(--c1); } .s-selected { background:var(--c6); } .s-inactive { background:var(--c3); } .s-none { background:#8a9bbf; }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.07); font-weight:700; font-size:1rem; line-height:1.3; transition:all .25s; }
+  .retos .rb { width:24px; height:24px; border-radius:7px; flex-shrink:0; background:rgba(255,255,255,.1); display:grid; place-items:center; font-weight:800; font-size:.85rem; }
+  .retos li small { display:block; color:var(--sub); font-weight:600; font-size:.85rem; }
+  .retos li.on { background:rgba(37,211,102,.13); border-color:var(--c1); }
+  .retos li.on .rb { background:var(--c1); color:#0a1628; }
+  .retos li.on span.rt { opacity:.75; }
+  .win-all { text-align:center; background:rgba(255,217,61,.1); border:2px solid var(--c3); border-radius:16px; padding:10px; margin-bottom:12px; font-weight:800; color:var(--c3); font-size:1.15rem; }
+
+  .foot { text-align:center; margin-top:18px; }
+  .btn-reset { padding:10px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; cursor:pointer; }
+  .btn-reset:hover { color:var(--text); border-color:var(--c4); }
+
+  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .side { position:static; max-height:none; } .info { min-height:0; } .modes { margin-left:0; } }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">🪟 Ordenador</span>
+    <h1>Componentes del Ratón</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+
+  <div class="prog">
+    <span id="prog-txt"></span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <!-- Pantalla para descubrir y practicar las partes -->
+      <div class="stage" id="stage-parts">
+        <div class="screen sc-static" id="sc1">
+          <div class="desk">
+            <div class="mouse-sim">
+                <div class="part mouse-body" data-part="cuerpo_raton"><span class="pin">?</span></div>
+                <div class="part mouse-btn-left" data-part="btn_izq"><span class="pin">?</span></div>
+                <div class="part mouse-btn-right" data-part="btn_der"><span class="pin">?</span></div>
+                <div class="part mouse-wheel" data-part="rueda"><span class="pin">?</span></div>
+            </div>
+            <div class="part desktop-cursor" data-part="cursor"><span class="pin">?</span><svg viewBox="0 0 24 24"><path d="M7 7l10 10M7 17l10-10"/></svg></div>
+          </div>
+          <div class="taskbar">
+            <span class="tk-ic">🪟</span><span class="tk-ic">🔍</span><span class="tk-ic">🗗</span><span class="tk-sep"></span>
+            <span class="tk-ic">📁</span><span class="tk-ic">📝</span><span class="tk-ic">🌐</span>
+            <span class="clock">10:30<br>14/10/2026</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escritorio con ventanas de verdad -->
+      <div class="stage" id="stage-live" hidden>
+        <div class="screen" id="sc2">
+          <div class="desk desk-live" id="desk-live">
+            <button class="dicon" data-app="mi_pc" style="top:.6em; left:.7em" type="button"><span class="di">🖥️</span><span>Mi PC</span></button>
+            <button class="dicon" data-app="papelera" style="top:6.9em; left:.7em" type="button"><span class="di">🗑️</span><span>Papelera</span></button>
+            <button class="dicon" data-app="documentos" style="top:.6em; left:7em" type="button"><span class="di">🗀</span><span>Documentos</span></button>
+            <button class="dicon" data-app="notas" style="top:6.9em; left:7em" type="button"><span class="di">📝</span><span>Notas</span></button>
+            <button class="dicon" data-app="navegador" style="top:13.2em; left:.7em" type="button"><span class="di">🌐</span><span>Navegador</span></button>
+
+            <div class="context-menu" id="desktop-ctx">
+              <div>Ver</div>
+              <div>Ordenar por</div>
+              <div>Actualizar</div>
+              <hr>
+              <div>Configuración de pantalla</div>
+              <div>Personalizar</div>
+            </div>
+            <div class="context-menu" id="window-ctx">
+              <div data-action="min">Minimizar</div>
+              <div data-action="max">Maximizar</div>
+              <div data-action="close">Cerrar</div>
+            </div>
+          </div>
+          <div class="taskbar" id="lv-task">
+            <span class="tk-ic">🪟</span>
+            <span class="tk-ic">🔍</span>
+            <span class="tk-ic">🗗</span>
+            <span class="tk-sep"></span>
+            <span id="tb-apps" style="display:contents"></span>
+            <span class="clock">10:30<br>14/10/2026</span>
+          </div>
+          <div class="cursor-pointer" id="cursor-pointer"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M7 17l10-10"/></svg></div>
+          <div class="toast" id="toast"></div>
+        </div>
+        <div class="tools">
+          <button class="tbtn" id="b-reset" type="button">↩️ Colocar ventanas y retos</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+/* =========================================================
+   Datos de las partes del ratón
+   ========================================================= */
+const PARTES_RATON = {
+  btn_izq: {n:1, nombre:"Botón Izquierdo", det:"el botón izquierdo", color:"--c8", sitio:"A la izquierda del ratón.",
+    texto:"Es el botón <b>principal</b>. Se usa para <b>seleccionar</b>, <b>abrir</b> y <b>arrastrar</b> elementos.",
+    chips:["👆 Clic principal","✋ Seleccionar","📂 Abrir","↔ Arrastrar"],
+    tip:"La mayoría de acciones se hacen con este botón."},
+  btn_der: {n:2, nombre:"Botón Derecho", det:"el botón derecho", color:"--c6", sitio:"A la derecha del ratón.",
+    texto:"Es el botón <b>secundario</b>. Se usa para abrir <b>menús con opciones adicionales</b> (menú contextual).",
+    chips:["👆 Clic secundario","📋 Opciones extra","❓ Menú contextual"],
+    tip:"Experimenta pulsando el botón derecho en diferentes sitios de la pantalla."},
+  rueda: {n:3, nombre:"Rueda de Desplazamiento", det:"la rueda de desplazamiento", color:"--c1", sitio:"Entre los dos botones principales.",
+    texto:"Permite <b>desplazarse</b> rápidamente por páginas web, documentos largos o listas.",
+    chips:["⬆️⬇️ Desplazar","📄 Navegar","🌐 Scroll"],
+    tip:"A veces también se puede pulsar como un botón central."},
+  cuerpo_raton: {n:4, nombre:"Cuerpo del Ratón", det:"el cuerpo del ratón", color:"--c7", sitio:"La parte principal donde apoyas la mano.",
+    texto:"Es la zona que <b>agarras</b> y <b>deslizas</b> para mover el ratón. Contiene los componentes internos.",
+    chips:["✋ Agarre","↔ Deslizar","🖱️ Carcasa"],
+    tip:"Asegúrate de tener una superficie plana y limpia para deslizarlo."},
+  cursor: {n:5, nombre:"Cursor", det:"el cursor", color:"--c3", sitio:"La flecha que se mueve en la pantalla.",
+    texto:"Es la <b>representación visual</b> del ratón en la pantalla. Indica dónde se realizarán las acciones al hacer clic.",
+    chips:["➡️ Flecha","🎯 Puntero","📍 Ubicación"],
+    tip:"Observa cómo el cursor cambia de forma según dónde esté: una flecha, una mano, un puntero de texto..."}
+};
+const ORDEN_RATON = Object.keys(PARTES_RATON);
+
+const $ = id => document.getElementById(id);
+const info = $("info");
+let modo = "desc";
+function restart(e){ e.style.animation="none"; e.offsetHeight; e.style.animation=""; }
+
+/* =========================================================
+   MODOS DESCUBRIR y PRACTICAR (partes)
+   ========================================================= */
+const KEY_PARTES = "raton-partes-2026";
+let foundPartes = {}, preguntaParte = null, aciertosPartes = 0, hechasPartes = [];
+try { const g = JSON.parse(localStorage.getItem(KEY_PARTES)); if (g && g.foundPartes) foundPartes = g.foundPartes; } catch(e){}
+const guardarPartes = () => { try { localStorage.setItem(KEY_PARTES, JSON.stringify({foundPartes})); } catch(e){} };
+
+const parts = k => [...document.querySelectorAll('#sc1 [data-part="'+k+'"]')];
+ORDEN_RATON.forEach(k => parts(k).forEach(p => p.style.setProperty("--pc","var("+PARTES_RATON[k].color+")")));
+
+function limpiarPartes(){ document.querySelectorAll("#sc1 .part").forEach(p => p.classList.remove("sel","ok","bad")); }
+
+function pintarPinsPartes(){
+  ORDEN_RATON.forEach(k => {
+    const f = !!foundPartes[k];
+    parts(k).forEach(p => { p.classList.toggle("found", f); const pin = p.querySelector(":scope > .pin"); if (pin) pin.textContent = f ? PARTES_RATON[k].n : "?"; });
+  });
+}
+
+function bienvenidaPartes(){
+  limpiarPartes();
+  info.style.setProperty("--ic","var(--c6)");
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte del ratón o el cursor</h2><p>Hay <b>5 partes</b> con un <b>?</b>. Vamos a descubrirlas juntos.</p></div>';
+  restart(info);
+}
+
+function mostrarParte(k){
+  const d = PARTES_RATON[k];
+  limpiarPartes(); parts(k).forEach(p => p.classList.add("sel"));
+  foundPartes[k] = true; guardarPartes(); progreso();
+  info.style.setProperty("--ic","var("+d.color+")");
+  info.innerHTML =
+    '<div class="info-num">'+d.n+'</div><h2>'+d.nombre+'</h2><p>'+d.texto+'</p>' +
+    '<p style="color:var(--sub);font-size:1.05rem">📍 '+d.sitio+'</p>' +
+    '<div class="chips">'+d.chips.map(c=>'<span class="chip">'+c+'</span>').join("")+'</div>' +
+    '<div class="tip">'+d.tip+'</div>';
+  restart(info);
+  if (Object.keys(foundPartes).length === ORDEN_RATON.length) {
+    info.insertAdjacentHTML("beforeend",'<div class="row"><button class="btn go" id="to-live" type="button">🛠️ ¡Ahora a probar las acciones!</button></div>');
+    $("to-live").onclick = () => setModo("live");
+  }
+}
+
+function nuevaPreguntaParte(){
+  limpiarPartes();
+  const quedan = ORDEN_RATON.filter(k => !hechasPartes.includes(k));
+  if (!quedan.length) return finalPracticaPartes();
+  preguntaParte = quedan[Math.floor(Math.random()*quedan.length)];
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="info-num">🎯</div><div class="quiz-q">Toca '+PARTES_RATON[preguntaParte].det.replace(/^(el|la|los|las)/,'$1<br><span>')+'</span></div><div class="feedback" id="fb"></div>';
+  restart(info); progreso();
+}
+function responderParte(k){
+  if (!preguntaParte) return;
+  const fb = $("fb");
+  if (k === preguntaParte){
+    limpiarPartes(); parts(k).forEach(p => p.classList.add("ok"));
+    hechasPartes.push(k); aciertosPartes++; preguntaParte = null; progreso();
+    fb.className = "feedback good"; fb.textContent = "✅ ¡Correcto! " + PARTES_RATON[k].nombre;
+    info.insertAdjacentHTML("beforeend",'<p style="color:var(--sub)">'+PARTES_RATON[k].texto+'</p><div class="row"><button class="btn go" id="sig" type="button">'+(hechasPartes.length===ORDEN_RATON.length?"🏆 Terminar":"Siguiente ➜")+'</button></div>');
+    $("sig").onclick = nuevaPreguntaParte;
+  } else {
+    const ps = parts(k); ps.forEach(p => { p.classList.remove("bad"); p.offsetHeight; p.classList.add("bad"); });
+    setTimeout(()=>ps.forEach(p=>p.classList.remove("bad")),900);
+    fb.className = "feedback no"; fb.textContent = "❌ Eso es " + PARTES_RATON[k].det + ". ¡Inténtalo otra vez!";
+  }
+}
+function finalPracticaPartes(){
+  limpiarPartes();
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Ya conoces las <b>'+ORDEN_RATON.length+' partes</b> del ratón y el cursor.</p><div class="row" style="justify-content:center"><button class="btn go" id="otra" type="button">🔄 Practicar otra vez</button></div></div>';
+  restart(info);
+  $("otra").onclick = () => { hechasPartes=[]; aciertosPartes=0; nuevaPreguntaParte(); };
+}
+
+document.querySelectorAll("#sc1 .part").forEach(p => p.addEventListener("click", e => {
+  const hit = e.target.closest(".part");
+  if (hit !== p) return;           // solo la zona más interior
+  const k = p.dataset.part;
+  modo === "desc" ? mostrarParte(k) : responderParte(k);
+}));
+
+/* =========================================================
+   MODO PROBAR (acciones reales)
+   ========================================================= */
+const KEY_RETOS = "raton-retos-2026";
+let retos = {};
+try { const g = JSON.parse(localStorage.getItem(KEY_RETOS)); if (g && g.retos) retos = g.retos; } catch(e){}
+const guardarRetos = () => { try { localStorage.setItem(KEY_RETOS, JSON.stringify({retos})); } catch(e){} };
+
+const RETOS_RATON = [
+  {id:"select_icon", t:"Seleccionar un icono", h:"Clic Izquierdo sobre 'Mi PC'"},
+  {id:"open_app_desktop", t:"Abrir una aplicación del escritorio", h:"Doble Clic Izquierdo en 'Mi PC'"},
+  {id:"open_app_taskbar", t:"Abrir una aplicación de la barra de tareas", h:"Clic Izquierdo en el icono 'Documentos'"},
+  {id:"right_click_desktop", t:"Abrir el menú contextual del escritorio", h:"Clic Derecho en una zona vacía del escritorio"},
+  {id:"move_window", t:"Mover una ventana", h:"Arrastra la barra de título de la ventana abierta"},
+  {id:"right_click_titlebar", t:"Abrir el menú contextual de la ventana", h:"Clic Derecho en la barra de título de la ventana"},
+  {id:"drag_drop_icon", t:"Arrastrar y soltar un icono", h:"Arrastra 'Papelera' a otra posición"},
+  {id:"scroll_window", t:"Desplazarse por una página", h:"Usa la rueda en la ventana 'Navegador'"},
+  {id:"select_text", t:"Seleccionar texto", h:"Clic Izquierdo y arrastra sobre el texto en 'Notas'"}
+];
+const APPS = {
+  mi_pc:{ico:"🖥️", name:"Mi PC", body:'<div class="fe-path"></div><div class="fe-grid"><div class="fe-item"><span>💽</span>Disco (C:)</div><div class="fe-item"><span>💾</span>USB Drive</div><div class="fe-item"><span>📁</span>Documentos</div><div class="fe-item"><span>🖼️</span>Imágenes</div><div class="fe-item"><span>🎵</span>Música</div><div class="fe-item"><span>📹</span>Vídeos</div></div>'},
+  papelera:{ico:"🗑️", name:"Papelera", body:'<p style="text-align:center;margin-top:2em;font-size:1.2em;color:#666;">La Papelera está vacía</p>'},
+  documentos:{ico:"🗀", name:"Documentos", body:'<div class="fe-path"></div><div class="fe-grid"><div class="fe-item"><span>📄</span>Mi primer archivo.txt</div><div class="fe-item"><span>📁</span>Carpeta importante</div><div class="fe-item"><span>📊</span>Informe.xlsx</div><div class="fe-item"><span>🌐</span>Acceso directo.url</div></div>'},
+  notas:{ico:"📝", name:"Notas", body:'<div class="notepad-content"><p>Este es un texto de ejemplo para que practiques <b>seleccionar con el ratón</b>. Clica y arrastra para marcar las palabras que quieras. Después podrás copiarlas, cortarlas o eliminarlas.</p><p>Es importante saber cómo seleccionar texto para trabajar con documentos.</p></div>'},
+  navegador:{ico:"🌐", name:"Navegador", body:'<div class="scroll-content">'+Array(20).fill(0).map((_,i) => '<div class="scroll-line" style="width:'+(80+Math.sin(i)*15)+'%;"></div>').join("")+'</div>'}
+};
+const IDS = Object.keys(APPS);
+const IC = {
+  min:'<svg viewBox="0 0 12 12"><path d="M1.5 6h9"/></svg>',
+  max:'<svg viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1.2"/></svg>',
+  rest:'<svg viewBox="0 0 12 12"><rect x="1.5" y="3.5" width="7" height="7" rx="1.2"/><path d="M3.5 3.5V2.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1"/></svg>',
+  close:'<svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg>'
+};
+
+let W = {}, zTop = 10, curApp = "mi_pc", liveReady = false;
+let deskLive, screen2, cursorPointer;
+let lastClickTime = 0;
+let dragInfo = null; // { app: id, startX, startY, type: 'window'|'icon' }
+let selectionInfo = null; // { app: id, startNode, startIndex, currentRange }
+
+const dsz = () => ({w: deskLive.clientWidth, h: deskLive.clientHeight});
+const visible = id => !W[id].closed && W[id].st !== "min";
+function activeId(){
+  let best = null;
+  IDS.forEach(id => { if (visible(id) && (best === null || W[id].z > W[best].z)) best = id; });
+  return best;
+}
+function tick(id){
+  if (retos[id]) return;
+  retos[id] = true; guardarRetos(); progreso(); renderInfo();
+}
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2200); }
+
+function buildLive(){
+  deskLive = $("desk-live"); screen2 = $("sc2"); cursorPointer = $("cursor-pointer");
+  IDS.forEach(id => {
+    const a = APPS[id], e = document.createElement("div");
+    e.className = "lv-window"; e.dataset.id = id;
+    e.innerHTML =
+      '<div class="lw-title"><span>'+a.ico+'</span><span class="lw-name">'+a.name+'</span>' +
+      '<div class="lw-ctrls"><button class="wc min" type="button" aria-label="Minimizar">'+IC.min+'</button>' +
+      '<button class="wc close" type="button" aria-label="Cerrar">'+IC.close+'</button></div></div>' +
+      '<div class="lw-body">'+a.body+'</div>';
+    deskLive.appendChild(e);
+    W[id] = {id, el:e, x:0,y:0,w:300,h:200, st:"normal", closed:true, z:1};
+    // barra de tareas
+    const wrap = document.createElement("div");
+    wrap.className = "tk-wrap"; wrap.dataset.id = id;
+    wrap.innerHTML = '<button class="tk-app" type="button" aria-label="'+a.name+'">'+a.ico+'</button>';
+    $("tb-apps").appendChild(wrap);
+    wrap.querySelector(".tk-app").addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); }); // prevent drag issues
+    wrap.querySelector(".tk-app").addEventListener("click", () => tbClick(id));
+    // eventos de la ventana
+    e.addEventListener("pointerdown", ev => { if (activeId() !== id || curApp !== id) bring(id); });
+    e.querySelector(".min").addEventListener("click", () => minWin(id));
+    e.querySelector(".close").addEventListener("click", () => closeWin(id));
+    const tb = e.querySelector(".lw-title");
+    tb.addEventListener("pointerdown", ev => { if (ev.target.closest(".wc")) return; startDrag(ev, id, 'window'); tick("move_window");});
+    tb.addEventListener("contextmenu", ev => { ev.preventDefault(); showWindowContextMenu(ev, id); tick("right_click_titlebar"); });
+
+    if (id === "navegador") {
+      e.querySelector(".scroll-content").addEventListener("wheel", () => tick("scroll_window"), {passive:true});
+    }
+    if (id === "notas") {
+      e.querySelector(".notepad-content").addEventListener("pointerdown", ev => startTextSelection(ev, id));
+      e.querySelector(".notepad-content").addEventListener("pointerup", ev => endTextSelection(ev, id));
+    }
+  });
+
+  // desktop icons
+  document.querySelectorAll(".dicon").forEach(b => {
+    b.addEventListener("click", ev => {
+      document.querySelectorAll(".dicon").forEach(x => x.classList.remove("sel")); b.classList.add("sel");
+      tick("select_icon");
+      const now = Date.now();
+      if (now - lastClickTime < 450) { openApp(b.dataset.app); tick("open_app_desktop"); lastClickTime = 0; } else lastClickTime = now;
+    });
+    b.addEventListener("dblclick", () => { openApp(b.dataset.app); tick("open_app_desktop"); });
+    b.addEventListener("pointerdown", ev => { if (ev.button === 0) startDrag(ev, b.dataset.app, 'icon'); });
+  });
+
+  deskLive.addEventListener("pointerdown", e => { if (e.target === deskLive) { document.querySelectorAll(".dicon").forEach(x => x.classList.remove("sel")); hideContextMenus(); } });
+  deskLive.addEventListener("contextmenu", e => { e.preventDefault(); showDesktopContextMenu(e); tick("right_click_desktop"); });
+
+  $("b-reset").onclick = resetLive;
+
+  screen2.addEventListener("pointermove", e => {
+    cursorPointer.style.left = e.clientX - screen2.getBoundingClientRect().left + "px";
+    cursorPointer.style.top = e.clientY - screen2.getBoundingClientRect().top + "px";
+  });
+}
+
+function resetLive(){
+  const {w,h} = dsz();
+  const set = (id, x,y,ww,hh) => Object.assign(W[id], {x:x*w, y:y*h, w:ww*w, h:hh*h, st:"normal", closed:true, prev:null});
+  set("mi_pc", .17,.05,.4,.6); set("documentos", .5,.12,.4,.6); set("notas", .25,.25,.5,.5); set("navegador", .38,.18,.5,.6); set("papelera", .05,.65,.1,.1);
+  W.mi_pc.z = 12; W.documentos.z = 13; W.notas.z = 14; W.navegador.z = 11; W.papelera.z = 10; zTop = 14;
+  curApp = "mi_pc";
+  retos = {};
+  guardarRetos();
+  renderAll();
+  document.querySelectorAll(".dicon").forEach(x => x.classList.remove("sel"));
+  deskLive.querySelector('.dicon[data-app="papelera"]').style.left = ".7em";
+  deskLive.querySelector('.dicon[data-app="papelera"]').style.top = "6.9em";
+}
+
+function render(id){
+  const o = W[id], e = o.el, {w,h} = dsz();
+  const act = activeId() === id;
+  e.classList.toggle("closed", o.closed);
+  e.classList.toggle("is-min", o.st === "min");
+  e.classList.toggle("active", act);
+  e.style.left = o.x+"px"; e.style.top = o.y+"px"; e.style.width = o.w+"px"; e.style.height = o.h+"px";
+  e.style.zIndex = o.z;
+  const wrap = document.querySelector('.tk-wrap[data-id="'+id+'"]');
+  wrap.classList.toggle("isopen", !o.closed);
+  wrap.classList.toggle("isactive", act);
+  wrap.classList.toggle("ismin", o.st === "min");
+  document.querySelectorAll('.dicon[data-app="'+id+'"]').forEach(di => di.classList.toggle("sel", act && o.st !== "min"));
+}
+function renderAll(){ if (!liveReady) return; IDS.forEach(render); renderInfo(); }
+
+function bring(id){ W[id].z = ++zTop; curApp = id; renderAll(); }
+function openApp(id){
+  const o = W[id], wasClosed = o.closed;
+  o.closed = false;
+  if (o.st === "min") o.st = "normal";
+  if (wasClosed) { o.el.classList.remove("opening"); o.el.offsetHeight; o.el.classList.add("opening"); }
+  bring(id);
+}
+function closeWin(id){ W[id].closed = true; curApp = id; renderAll(); }
+function minWin(id){ W[id].st = "min"; curApp = id; renderAll(); }
+function tbClick(id){
+  const o = W[id];
+  if (o.closed) return openApp(id);
+  if (o.st === "min") { o.st = "normal"; bring(id); tick("open_app_taskbar"); }
+  else if (activeId() === id) minWin(id);
+  else bring(id);
+}
+
+/* ----- arrastrar (ventanas e iconos) ----- */
+function startDrag(ev, id, type){
+  if (ev.button > 0) return; // Only left click
+  ev.preventDefault();
+  hideContextMenus();
+
+  let targetElement;
+  if (type === 'window') {
+    bring(id);
+    targetElement = W[id].el;
+  } else { // type === 'icon'
+    document.querySelectorAll(".dicon").forEach(x => x.classList.remove("sel"));
+    targetElement = document.querySelector('.dicon[data-app="'+id+'"]');
+    targetElement.classList.add("sel");
+  }
+
+  const rect = targetElement.getBoundingClientRect();
+  const deskRect = deskLive.getBoundingClientRect();
+
+  dragInfo = {
+    id,
+    type,
+    startX: ev.clientX,
+    startY: ev.clientY,
+    offsetX: ev.clientX - rect.left,
+    offsetY: ev.clientY - rect.top,
+    moved: false,
+    element: targetElement,
+    originalX: type === 'window' ? W[id].x : rect.left - deskRect.left,
+    originalY: type === 'window' ? W[id].y : rect.top - deskRect.top,
+  };
+
+  targetElement.setPointerCapture(ev.pointerId);
+  targetElement.addEventListener("pointermove", dragMove);
+  targetElement.addEventListener("pointerup", dragEnd);
+  targetElement.addEventListener("pointercancel", dragEnd);
+
+  cursorPointer.classList.add("grab");
+  if (type === 'window') W[id].el.classList.add("dragging");
+}
+
+function dragMove(ev){
+  if (!dragInfo) return;
+  const { id, type, startX, startY, offsetX, offsetY, element, originalX, originalY } = dragInfo;
+  const deskRect = deskLive.getBoundingClientRect();
+
+  if (!dragInfo.moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return;
+  dragInfo.moved = true;
+
+  const newX = ev.clientX - deskRect.left - offsetX;
+  const newY = ev.clientY - deskRect.top - offsetY;
+
+  if (type === 'window') {
+    Object.assign(W[id], {x:newX, y:newY});
+    render(id);
+  } else { // type === 'icon'
+    element.style.left = newX + "px";
+    element.style.top = newY + "px";
+  }
+}
+
+function dragEnd(ev){
+  if (!dragInfo) return;
+  const { id, type, moved, element, originalX, originalY } = dragInfo;
+  element.removeEventListener("pointermove", dragMove);
+  element.removeEventListener("pointerup", dragEnd);
+  element.removeEventListener("pointercancel", dragEnd);
+
+  cursorPointer.classList.remove("grab");
+  if (type === 'window') W[id].el.classList.remove("dragging");
+
+  if (moved) {
+    if (type === 'icon') {
+      tick("drag_drop_icon");
+    }
+  } else {
+    // If it was an icon drag but not moved (single click), ensure its original position is restored
+    if (type === 'icon') {
+      // This path is usually not hit for single clicks because the dicon click handler takes care of selection/double click
+      // but in case of a drag that didn't move, it ensures the position is reverted if the user just tried to click.
+      // For proper single click, the dicon event listeners handle it before dragInfo is set to moved.
+    }
+  }
+
+  dragInfo = null;
+  renderAll();
+}
+
+/* ----- Seleccionar Texto ----- */
+function startTextSelection(ev, id) {
+  if (ev.button !== 0) return; // Only left click for selection
+  ev.preventDefault();
+  hideContextMenus();
+  bring(id); // Bring window to front
+  const windowBody = W[id].el.querySelector(".notepad-content");
+  const textContent = windowBody.innerText; // Get full text content
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+
+  const range = document.createRange();
+  const charIndex = getCharIndexAtEvent(windowBody, ev);
+  if (charIndex === -1) return;
+
+  const node = getNodeAndOffset(windowBody, charIndex);
+  if (!node || !node.node) return;
+
+  range.setStart(node.node, node.offset);
+  range.setEnd(node.node, node.offset);
+  selection.addRange(range);
+
+  selectionInfo = {
+    app: id,
+    startNode: node.node,
+    startOffset: node.offset,
+    currentRange: range,
+    windowBody: windowBody
+  };
+
+  const moveHandler = e => updateTextSelection(e, id);
+  const upHandler = e => {
+    windowBody.removeEventListener("pointermove", moveHandler);
+    windowBody.removeEventListener("pointerup", upHandler);
+    windowBody.removeEventListener("pointercancel", upHandler);
+    endTextSelection(e, id);
+  };
+  windowBody.addEventListener("pointermove", moveHandler);
+  windowBody.addEventListener("pointerup", upHandler);
+  windowBody.addEventListener("pointercancel", upHandler);
+
+  cursorPointer.classList.add("text"); // Change cursor to text select
+}
+
+function updateTextSelection(ev, id) {
+  if (!selectionInfo || selectionInfo.app !== id) return;
+  ev.preventDefault();
+  const { windowBody, startNode, startOffset, currentRange } = selectionInfo;
+  const selection = window.getSelection();
+
+  const charIndex = getCharIndexAtEvent(windowBody, ev);
+  if (charIndex === -1) return;
+
+  const endNode = getNodeAndOffset(windowBody, charIndex);
+  if (!endNode || !endNode.node) return;
+
+  currentRange.setEnd(endNode.node, endNode.offset);
+
+  // Ensure start and end are in correct order
+  if (currentRange.collapsed) { // if the end is before the start
+      if (currentRange.compareBoundaryPoints(Range.START_TO_END, currentRange) === -1) {
+          // Swap start and end points
+          currentRange.setStart(endNode.node, endNode.offset);
+          currentRange.setEnd(startNode, startOffset);
+      }
+  }
+
+  selection.removeAllRanges();
+  selection.addRange(currentRange);
+}
+
+function endTextSelection(ev, id) {
+  if (!selectionInfo || selectionInfo.app !== id) return;
+  ev.preventDefault();
+
+  const selection = window.getSelection();
+  if (!selection.isCollapsed && selection.rangeCount > 0) {
+    tick("select_text");
+  }
+  selectionInfo = null;
+  cursorPointer.classList.remove("text");
+}
+
+// Helper for text selection: get character index from event coordinates
+function getCharIndexAtEvent(element, event) {
+  let range = document.caretRangeFromPoint(event.clientX, event.clientY);
+  if (range && element.contains(range.startContainer)) {
+    return getTextContentLength(element, range.startContainer, range.startOffset);
+  }
+  return -1;
+}
+
+function getTextContentLength(root, node, offset) {
+  let length = 0;
+  let walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  let currentNode;
+  while (currentNode = walker.nextNode()) {
+    if (currentNode === node) {
+      length += offset;
+      return length;
+    }
+    length += currentNode.length;
+  }
+  return -1; // Should not happen if node is within root
+}
+
+function getNodeAndOffset(root, charIndex) {
+    let length = 0;
+    let walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    let currentNode;
+    while (currentNode = walker.nextNode()) {
+        if (charIndex <= length + currentNode.length) {
+            return { node: currentNode, offset: charIndex - length };
+        }
+        length += currentNode.length;
+    }
+    // If charIndex is beyond the content length, place it at the end
+    if (root.lastChild && root.lastChild.nodeType === Node.TEXT_NODE) {
+      return {node: root.lastChild, offset: root.lastChild.length};
+    } else if (root.lastChild) {
+      // If the last child is not a text node, try to find a text node within it or place at end of parent
+      let lastTextNode = root.lastChild;
+      while (lastTextNode && lastTextNode.nodeType !== Node.TEXT_NODE) {
+        lastTextNode = lastTextNode.lastChild;
+      }
+      if (lastTextNode && lastTextNode.nodeType === Node.TEXT_NODE) {
+        return {node: lastTextNode, offset: lastTextNode.length};
+      }
+    }
+    return null;
+}
+
+
+/* ----- Context Menus ----- */
+function hideContextMenus(){
+  $("desktop-ctx").classList.remove("on");
+  $("window-ctx").classList.remove("on");
+}
+
+function showDesktopContextMenu(ev){
+  hideContextMenus();
+  const menu = $("desktop-ctx");
+  const screenRect = screen2.getBoundingClientRect();
+  menu.style.left = (ev.clientX - screenRect.left) + "px";
+  menu.style.top = (ev.clientY - screenRect.top) + "px";
+  menu.classList.add("on");
+  const clickAway = e => {
+    if (!menu.contains(e.target)) {
+      menu.classList.remove("on");
+      document.removeEventListener("pointerdown", clickAway);
+    }
+  };
+  setTimeout(() => document.addEventListener("pointerdown", clickAway), 0);
+}
+
+function showWindowContextMenu(ev, id){
+  hideContextMenus();
+  const menu = $("window-ctx");
+  const screenRect = screen2.getBoundingClientRect();
+  menu.style.left = (ev.clientX - screenRect.left) + "px";
+  menu.style.top = (ev.clientY - screenRect.top) + "px";
+  menu.classList.add("on");
+
+  menu.querySelectorAll("[data-action]").forEach(btn => {
+    btn.onclick = () => {
+      if (btn.dataset.action === "min") minWin(id);
+      else if (btn.dataset.action === "close") closeWin(id);
+      hideContextMenus();
+    };
+  });
+
+  const clickAway = e => {
+    if (!menu.contains(e.target)) {
+      menu.classList.remove("on");
+      document.removeEventListener("pointerdown", clickAway);
+    }
+  };
+  setTimeout(() => document.addEventListener("pointerdown", clickAway), 0);
+}
+
+
+/* ----- Panel de información (modo probar) ----- */
+const ESTADOS_APP = {
+  open:{cls:"s-open", n:"Abierta", c:"--c1", t:"La aplicación está abierta y visible en pantalla."},
+  selected:{cls:"s-selected", n:"Activa", c:"--c6", t:"Esta es la ventana que estás usando ahora mismo."},
+  inactive:{cls:"s-inactive", n:"Inactiva", c:"--c3", t:"La aplicación está abierta pero no es la ventana que estás usando. Puedes activarla pulsando en ella."},
+  closed:{cls:"s-closed", n:"Cerrada", c:"--c4", t:"La aplicación está cerrada. Puedes abrirla desde el escritorio o la barra de tareas."},
+  min:{cls:"s-min", n:"Minimizada", c:"--c3", t:"La ventana se ha reducido a un icono de la barra de tareas. El programa sigue abierto: pulsa su icono para recuperarla."}
+};
+function renderInfo(){
+  if (modo !== "live" || !liveReady) return;
+  const o = W[curApp];
+  let key = "closed";
+  if (!o.closed) {
+    if (o.st === "min") key = "min";
+    else if (activeId() === o.id) key = "selected";
+    else key = "inactive";
+  }
+  const E = ESTADOS_APP[key];
+  info.style.setProperty("--ic","var("+E.c+")");
+  const n = Object.keys(retos).length;
+  info.innerHTML =
+    (n === RETOS_RATON.length ? '<div class="win-all">🏆 ¡Todos los retos superados!</div>' : '') +
+    '<div class="lh"><span class="ico">'+APPS[curApp].ico+'</span><div><div class="nm">'+APPS[curApp].name+'</div><span class="state '+E.cls+'">Estado: '+E.n+'</span></div></div>' +
+    '<p>'+E.t+'</p>' +
+    '<h3>Retos (se marcan solos)</h3><ul class="retos">' +
+    RETOS_RATON.map(r => '<li class="'+(retos[r.id]?'on':'')+'"><span class="rb">'+(retos[r.id]?'✓':'')+'</span><span class="rt">'+r.t+'<small>'+r.h+'</small></span></li>').join("") + '</ul>';
+}
+
+/* =========================================================
+   Progreso y modos
+   ========================================================= */
+function progreso(){
+  let n, tot, txt;
+  if (modo === "desc") { n = Object.keys(foundPartes).length; tot = ORDEN_RATON.length; txt = "⭐ "+n+" de "+tot+" partes descubiertas"; }
+  else if (modo === "prac") { n = aciertosPartes; tot = ORDEN_RATON.length; txt = "🎯 "+n+" de "+tot+" aciertos"; }
+  else { n = Object.keys(retos).length; tot = RETOS_RATON.length; txt = "🛠️ "+n+" de "+tot+" retos superados"; }
+  $("prog-txt").textContent = txt;
+  $("prog-fill").style.width = (n / tot * 100) + "%";
+}
+
+function setModo(m){
+  modo = m; preguntaParte = null;
+  $("m-desc").classList.toggle("on", m === "desc");
+  $("m-live").classList.toggle("on", m === "live");
+  $("m-prac").classList.toggle("on", m === "prac");
+  $("root").classList.toggle("mode-practica", m === "prac");
+  $("stage-parts").hidden = m === "live";
+  $("stage-live").hidden = m !== "live";
+  if (m === "live") {
+    if (!liveReady) { buildLive(); liveReady = true; resetLive(); }
+    renderAll(); progreso();
+  } else if (m === "desc") { pintarPinsPartes(); bienvenidaPartes(); progreso(); }
+  else { hechasPartes = []; aciertosPartes = 0; nuevaPreguntaParte(); }
+}
+$("m-desc").onclick = () => setModo("desc");
+$("m-live").onclick = () => setModo("live");
+$("m-prac").onclick = () => setModo("prac");
+$("reset").onclick = () => { foundPartes = {}; retos = {}; guardarPartes(); guardarRetos(); if (liveReady) resetLive(); setModo(modo); };
+
+setModo("desc");
+</script>
+</body>
+</html>
