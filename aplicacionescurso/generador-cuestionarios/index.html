@@ -1,1027 +1,543 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de cuestionarios</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>
-  :root {
-    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
-    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+<html lang="es"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicaciones del libro</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&amp;family=DM+Sans:wght@300;400;500&amp;display=swap" rel="stylesheet">
 
-  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; animation: float 14s ease-in-out infinite alternate; }
-  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
-  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
-  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
-  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  <style>
+    :root {
+      --bg-from: #0f0c29; --bg-mid: #302b63; --bg-to: #24243e;
+      --card-bg: rgba(255,255,255,0.07); --card-border: rgba(255,255,255,0.13);
+      --card-hover: rgba(255,255,255,0.14); --accent: #e8c76b; --accent2: #f07f5a;
+      --text: #f0eef8; --text-muted: rgba(240,238,248,0.55);
+      --radius: 18px; --radius-sm: 10px; --shadow: 0 8px 40px rgba(0,0,0,0.45);
+      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
 
-  .container { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; padding: 36px 20px 60px; }
-  .header { text-align: center; margin-bottom: 30px; }
-  .badge {
-    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
-    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
-    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 14px;
-  }
-  h1 {
-    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.6rem);
-    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .lead { color: var(--sub); font-weight: 600; margin-top: 8px; }
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
 
-  .card {
-    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 24px; padding: 26px 28px; margin-bottom: 20px; animation: fadeIn 0.35s ease;
-  }
-  .card h2 { font-family: 'Fredoka One', cursive; font-weight: 400; font-size: 1.25rem; margin-bottom: 14px; }
-  .hint { color: var(--sub); font-size: 0.9rem; font-weight: 600; line-height: 1.5; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-mid) 50%, var(--bg-to) 100%);
+      min-height: 100vh; color: var(--text); overflow-x: hidden;
+    }
 
-  .drop {
-    border: 2px dashed rgba(255,255,255,0.18); border-radius: 16px; padding: 26px;
-    text-align: center; cursor: pointer; transition: 0.2s; font-weight: 700;
-  }
-  .drop:hover, .drop.over { border-color: var(--c1); background: rgba(33,115,70,0.12); }
-  .drop .big { font-size: 2.2rem; display: block; margin-bottom: 6px; }
-  .file-info { margin-top: 12px; font-weight: 700; color: var(--c5); display: none; }
+    header { text-align:center; padding:56px 24px 32px; }
+    header h1 {
+      font-family: 'Syne', sans-serif; font-weight:800; font-size: clamp(2rem,5vw,3.2rem);
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    header p { margin-top:8px; color:var(--text-muted); }
 
-  label.lbl { display: block; font-weight: 800; font-size: 0.85rem; color: var(--sub); margin: 18px 0 8px; }
-  input[type=text], input[type=password], select {
-    width: 100%; background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
-    border-radius: 12px; padding: 12px 14px; color: var(--text); font: 600 1rem 'Nunito', sans-serif;
-  }
-  select option { background: var(--card); }
-  input:focus, select:focus, button:focus-visible { outline: none; border-color: var(--c1); box-shadow: 0 0 0 3px rgba(33,115,70,0.35); }
+    #app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px 120px;
+    }
 
-  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .seg-btn {
-    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
-    border-radius: 14px; padding: 14px 18px; color: var(--text); font: 700 1rem 'Nunito', sans-serif;
-    cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; justify-content: center;
-  }
-  .seg-btn:hover { border-color: var(--c1); }
-  .seg-btn.on { background: rgba(33,115,70,0.3); border-color: var(--c1); }
-  .detect { margin-top: 10px; }
+    .app-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 28px 16px 22px;
+      text-align: center;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(12px);
+      cursor: grab;
+      transition: all var(--transition);
+      animation: cardIn 0.5s ease both;
+      user-select: none;
+      position: relative;
+    }
 
-  details.ajustes summary { cursor: pointer; font-family: 'Fredoka One', cursive; font-size: 1.25rem; list-style: none; }
-  details.ajustes summary::-webkit-details-marker { display: none; }
-  details.ajustes summary::before { content: '⚙️ '; }
-  details.ajustes summary .estado { font-family: 'Nunito'; font-size: 0.85rem; color: var(--sub); font-weight: 700; margin-left: 8px; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 600px) { .row2 { grid-template-columns: 1fr; } }
+    .app-card:hover { transform: translateY(-5px) scale(1.03); }
+    .app-card:active { cursor: grabbing; }
 
-  .btn-main {
-    display: block; width: 100%; padding: 16px; border-radius: 14px; border: none;
-    font: 800 1.1rem 'Nunito', sans-serif; background: linear-gradient(135deg, var(--c3), #f59e0b);
-    color: #0a1628; cursor: pointer; transition: 0.2s;
-  }
-  .btn-main:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
-  .btn-main:disabled { opacity: 0.5; cursor: wait; }
-  .btn-sec {
-    border: none; cursor: pointer; font: 800 0.95rem 'Nunito', sans-serif; color: #fff;
-    background: linear-gradient(135deg, var(--c1), var(--c2)); padding: 12px 20px; border-radius: 12px; transition: 0.2s;
-  }
-  .btn-sec:hover { transform: translateY(-2px); }
-  .acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .app-card.dragging {
+      opacity: 0.35;
+      transform: scale(0.92);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+      z-index: 50;
+    }
 
-  .status { margin-top: 14px; padding: 14px; border-radius: 12px; font-weight: 700; line-height: 1.5; display: none; }
-  .status.info { display: block; background: rgba(255,217,61,0.1); color: var(--c3); border: 1px solid rgba(255,217,61,0.4); }
-  .status.ok { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
-  .status.err { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+    .app-card.drag-over {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(232,199,107,0.35);
+      transform: scale(1.06);
+    }
 
-  #resultado { display: none; }
-  iframe { width: 100%; height: 680px; border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; background: var(--bg); }
+    .app-icon { font-size: 2.8rem; transition: transform var(--transition); }
+    .app-card:hover .app-icon { transform: scale(1.2) rotate(-5deg); }
 
-  details.revision { margin-top: 16px; }
-  details.revision summary { cursor: pointer; font-weight: 800; color: var(--sub); }
-  .rev-item { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); line-height: 1.5; }
-  .rev-item:last-child { border-bottom: none; }
-  .rev-q { font-weight: 700; }
-  .rev-a { color: var(--c5); font-weight: 700; }
-  .rev-tipo { font-size: 0.75rem; color: var(--sub); font-weight: 800; }
+    .app-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.92rem; }
 
-  @media (prefers-reduced-motion: reduce) { .blob, .card { animation: none; } }
+    @keyframes cardIn {
+      from { opacity:0; transform:translateY(25px) scale(0.9); }
+      to { opacity:1; transform:none; }
+    }
 
-  /* Lista de temas */
-  #lista { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-  .tema { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 14px 16px; transition: border-color 0.2s; }
-  .tema.creando { border-color: var(--c3); }
-  .tema.ok { border-color: rgba(33,115,70,0.7); }
-  .tema.error { border-color: var(--c4); }
-  .tema.viendo { box-shadow: 0 0 0 3px rgba(255,217,61,0.35); }
-  .tema-cab { display: flex; align-items: center; gap: 10px; font-weight: 800; margin-bottom: 10px; }
-  .tema-fich { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .x { background: none; border: none; color: var(--sub); font-size: 1.1rem; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
-  .x:hover:not(:disabled) { color: var(--c4); }
-  .x:disabled { opacity: 0.3; cursor: default; }
-  .tema-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
-  .mini-seg { display: flex; gap: 6px; }
-  .mini-seg button {
-    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08); border-radius: 10px;
-    padding: 6px 12px; color: var(--text); font: 700 0.9rem 'Nunito', sans-serif; cursor: pointer;
-  }
-  .mini-seg button:hover { border-color: var(--c1); }
-  .mini-seg button.on { background: rgba(33,115,70,0.3); border-color: var(--c1); }
-  .tema-detect { font-size: 0.82rem; flex: 1; min-width: 180px; }
-  .tema-msg { margin-top: 8px; font-weight: 700; font-size: 0.9rem; line-height: 1.4; }
-  .tema-msg:empty { display: none; }
-  .tema.creando .tema-msg { color: var(--c3); }
-  .tema.error .tema-msg { color: var(--c4); }
-  .tema-acc { gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .btn-mini { border: none; cursor: pointer; font: 800 0.85rem 'Nunito', sans-serif; color: #fff; background: rgba(33,115,70,0.45); padding: 8px 14px; border-radius: 10px; }
-  .btn-mini:hover { background: var(--c1); }
-  .btn-main.stop { background: linear-gradient(135deg, var(--c4), #e04848); color: #fff; }
-  .preview-cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .preview-cab h2 { margin: 0; }
-  #preview-titulo { color: var(--sub); font-weight: 700; margin-bottom: 10px; }
-</style>
+    #btn-config {
+      position:fixed; bottom:28px; right:28px; z-index:100;
+      width:56px; height:56px; border-radius:50%;
+      background:rgba(232,199,107,0.2); border:2px solid rgba(232,199,107,0.5);
+      color:var(--accent); font-size:1.6rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 6px 25px rgba(0,0,0,0.4);
+    }
+
+    #modal-overlay {
+      position:fixed; inset:0; z-index:200;
+      background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+      display:none; align-items:center; justify-content:center; padding:20px;
+    }
+
+    #modal {
+      background: rgba(18,15,40,0.98);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      width: 100%; max-width: 540px;
+      max-height: 92vh; overflow-y: auto;
+      padding: 32px; box-shadow: var(--shadow);
+    }
+
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .section-title { font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin:20px 0 12px; }
+
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    label { display:block; font-size:0.78rem; color:var(--text-muted); margin-bottom:5px; }
+    input[type="text"] {
+      width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+      border-radius:var(--radius-sm); padding:10px 12px; color:var(--text);
+    }
+
+    .btn { border:none; border-radius:var(--radius-sm); padding:10px 18px; cursor:pointer; transition:all var(--transition); }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1530; font-weight:600; }
+
+    .admin-item {
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+      border-radius:var(--radius-sm); padding:12px 14px; display:flex; align-items:center; gap:12px;
+      flex-wrap:wrap;
+      cursor: grab;
+      transition: all 0.15s;
+    }
+    .admin-item:active { cursor: grabbing; }
+    .admin-item.dragging-admin {
+      opacity: 0.4;
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-item.drag-over-admin {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(232,199,107,0.5);
+    }
+
+    .edit-form { display:none; flex-direction:column; gap:10px; margin-top:12px; width:100%; }
+    .edit-form.visible { display:flex; }
+
+    #toast {
+      position:fixed; bottom:100px; right:28px; z-index:300;
+      background:rgba(18,15,40,0.95); border:1px solid rgba(255,255,255,0.15);
+      padding:12px 20px; border-radius:12px; font-size:0.9rem;
+      opacity:0; transform:translateY(15px); transition:all 0.3s;
+    }
+    #toast.show { opacity:1; transform:none; }
+  </style>
 </head>
 <body>
 
-<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+  <header>
+    <h1>✦ Aplicaciones del libro</h1>
+    <p>Todas tus aplicaciones, en un solo lugar</p>
+  </header>
 
-<div class="container">
-  <div class="header">
-    <div class="badge">📝 Cruz Roja · Curso de tecnología</div>
-    <h1>Generador de cuestionarios</h1>
-    <p class="lead">Carga uno o varios temas en Markdown y obtén un cuestionario de 10 preguntas por tema, listo para subir.</p>
-  </div>
+  <main id="app-grid"><div class="app-card" draggable="true" data-id="eqznslp">
+          <span class="app-icon">🥇</span>
+          <span class="app-name">Individuales</span>
+        </div><div class="app-card" draggable="true" data-id="kvvkoer">
+          <span class="app-icon">🚥</span>
+          <span class="app-name">Secuenciales</span>
+        </div><div class="app-card" draggable="true" data-id="kdjhbjg">
+          <span class="app-icon">📋</span>
+          <span class="app-name">Generador de Cuestionarios</span>
+        </div></main>
 
-  <!-- 1. Temas -->
-  <div class="card">
-    <h2>1. Los temas</h2>
-    <div class="drop" id="drop" tabindex="0">
-      <span class="big">📄</span>
-      Arrastra aquí uno o varios ficheros .md, o haz clic para elegirlos
-    </div>
-    <input type="file" id="fichero" accept=".md,.markdown,.txt" multiple hidden>
-    <div id="lista"></div>
-    <p class="hint" id="lista-hint" style="margin-top:12px; display:none">Revisa el título y el curso de cada tema antes de crear. Puedes añadir más ficheros cuando quieras.</p>
-  </div>
+  <button id="btn-config" title="Administración">⚙️</button>
 
-  <!-- 2. Ajustes de la IA -->
-  <div class="card">
-    <details class="ajustes" id="ajustes">
-      <summary>Ajustes de la IA <span class="estado" id="ajustes-estado"></span></summary>
-      <div class="row2">
+  <div id="modal-overlay" style="display:none;">
+    <div id="modal">
+      <div class="modal-header">
+        <h2>⚙️ Administración</h2>
+        <button id="btn-close-modal" style="background:none;border:none;font-size:1.8rem;color:#aaa;cursor:pointer;">✕</button>
+      </div>
+
+      <p class="section-title">➕ Añadir nueva aplicación</p>
+      <div class="form-row">
         <div>
-          <label class="lbl" for="proveedor">Servicio</label>
-          <select id="proveedor"></select>
+          <label for="new-name">Nombre *</label>
+          <input type="text" id="new-name" placeholder="Mi App">
         </div>
         <div>
-          <label class="lbl" for="modelo">Modelo</label>
-          <input type="text" id="modelo">
+          <label for="new-folder">Carpeta / URL *</label>
+          <input type="text" id="new-folder" placeholder="mi-app/">
         </div>
       </div>
-      <label class="lbl" for="clave">Clave de la API</label>
-      <input type="password" id="clave" placeholder="Pega aquí tu clave" autocomplete="off">
-      <p class="hint" style="margin-top:8px">La clave y el modelo se guardan solo en este navegador, uno por servicio.</p>
-    </details>
-  </div>
-
-  <button class="btn-main" id="btn-crear" disabled>✨ Crear cuestionarios</button>
-  <div class="status" id="status"></div>
-
-  <!-- 3. Resultados -->
-  <div class="card" id="resultado" style="margin-top:20px">
-    <div class="preview-cab">
-      <h2>3. Resultados</h2>
-      <button class="btn-sec" id="btn-zip">📦 Descargar todos (ZIP)</button>
-    </div>
-    <p class="hint" style="margin-bottom:14px">El ZIP trae una carpeta por tema, con el nombre del fichero .md y su index.html dentro.</p>
-    <div id="preview-titulo"></div>
-    <iframe id="preview" title="Vista previa del cuestionario"></iframe>
-    <details class="revision">
-      <summary>Ver las 10 preguntas con su respuesta correcta</summary>
-      <div id="revision"></div>
-    </details>
-  </div>
-</div>
-<!-- Plantilla del cuestionario (mismo estilo que el ejemplo). No contiene comentarios HTML a propósito. -->
-<script type="text/plain" id="plantilla">
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz: {{TITULO}}</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
-    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
-    min-height: 100vh; overflow-x: hidden;
-  }
-
-  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .blob {
-    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
-    animation: float 14s ease-in-out infinite alternate;
-  }
-  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
-  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
-  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
-
-  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
-
-  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: clamp(12px, 3vh, 40px) 20px; }
-
-  .header { text-align: center; margin-bottom: clamp(10px, 3vh, 40px); }
-  .badge {
-    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
-    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
-    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: clamp(6px, 1.5vh, 16px);
-  }
-  h1 {
-    font-family: 'Fredoka One', cursive; font-size: clamp(1.6rem, min(5vw, 6vh), 2.8rem);
-    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
-  }
-
-  .progress-wrap { margin-bottom: clamp(12px, 3vh, 30px); }
-  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
-  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
-
-  .question-card {
-    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 24px; padding: clamp(18px, 4vh, 36px) clamp(18px, 4vw, 36px); margin-bottom: clamp(12px, 2.5vh, 24px);
-    animation: fadeIn 0.35s ease;
-  }
-
-  .q-type-badge {
-    display: inline-flex; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
-    padding: 4px 12px; border-radius: 100px; margin-bottom: clamp(8px, 2vh, 18px);
-    background: rgba(33,115,70,0.2); color: #4ade80;
-  }
-
-  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; }
-  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; margin-bottom: clamp(12px, 2.5vh, 20px); }
-
-  .options { display: flex; flex-direction: column; gap: clamp(8px, 1.5vh, 12px); }
-  .option-btn {
-    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
-    border-radius: 14px; padding: 14px 20px; color: var(--text);
-    font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer;
-    display: flex; align-items: center; gap: 14px; transition: 0.2s;
-  }
-  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
-  .option-btn:disabled { cursor: default; }
-  .option-letter {
-    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08);
-    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
-  }
-
-  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
-  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
-
-  .feedback { display: block; visibility: hidden; margin-top: clamp(12px, 2.5vh, 20px); padding: 15px; border-radius: 12px; font-weight: 700; line-height: 1.5; animation: fadeIn 0.3s ease; }
-  .feedback.correct-fb { visibility: visible; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
-  .feedback.wrong-fb { visibility: visible; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-  .btn-next {
-    display: block; visibility: hidden; width: 100%; max-width: 220px; margin: 0 0 0 auto;
-    padding: 14px; border-radius: 14px; border: none; font-weight: 800; font-family: inherit;
-    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
-    transition: 0.2s;
-  }
-  .btn-next.visible { visibility: visible; }
-  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
-
-  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; }
-  .score-circle {
-    width: 130px; height: 130px; border-radius: 50%; border: 8px solid var(--c1);
-    display: flex; align-items: center; justify-content: center; margin: 20px auto;
-    font-size: 1.9rem; font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
-  }
-  .score-circle small { font-family: 'Nunito'; font-size: 0.8rem; color: var(--sub); font-weight: 700; }
-  .hidden { display: none !important; }
-
-  .result-sub { color: var(--sub); font-weight: 700; margin-top: 8px; }
-  .btn-restart { margin-top: 30px; cursor: pointer; border: none; font-family: inherit; }
-</style>
-</head>
-<body>
-
-<div class="bg-blobs">
-  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
-</div>
-
-<div class="container">
-  <div class="header">
-    <div class="badge">{{BADGE}}</div>
-    <h1>{{TITULO}}</h1>
-  </div>
-
-  <div id="quiz-area">
-    <div class="progress-wrap">
-      <div class="progress-label">
-        <span id="prog-label">Pregunta 1 de 10</span>
-        <span id="prog-score">⭐ 0 pts</span>
+      <div class="form-row" style="grid-template-columns:80px 1fr;">
+        <div>
+          <label for="new-icon">Icono</label>
+          <input type="text" id="new-icon" placeholder="📦" maxlength="4">
+        </div>
       </div>
-      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
-    </div>
+      <button class="btn btn-primary" id="btn-add-app">➕ Añadir aplicación</button>
 
-    <div class="question-card">
-      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
-      <div class="q-number" id="q-number">Cargando...</div>
-      <div class="q-text" id="q-text"></div>
-      <div id="q-options" class="options"></div>
-      <div id="q-feedback" class="feedback"></div>
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
+
+      <p class="section-title">📋 Aplicaciones actuales (arrastra para reordenar)</p>
+      <div id="apps-admin-list"><div class="admin-item" data-id="eqznslp" draggable="true">
+          <span class="app-icon" style="font-size:1.6rem;">🥇</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;">Individuales</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">individuales/</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-edit btn-edit-app" data-id="eqznslp" style="padding:6px 10px;">✏️</button>
+            <button class="btn btn-danger btn-delete-app" data-id="eqznslp" style="padding:6px 10px;">🗑</button>
+          </div>
+          <div class="edit-form" id="edit-form-eqznslp">
+            <div class="form-row">
+              <div><label>Nombre</label><input type="text" class="edit-name" value="Individuales"></div>
+              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="individuales/"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
+              <div><label>Icono</label><input type="text" class="edit-icon" value="🥇" maxlength="4"></div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-save-edit" data-id="eqznslp" style="padding:8px 16px;">Guardar cambios</button>
+              <button class="btn btn-edit btn-cancel-edit" data-id="eqznslp" style="padding:8px 16px;">Cancelar</button>
+            </div>
+          </div>
+        </div><div class="admin-item" data-id="kvvkoer" draggable="true">
+          <span class="app-icon" style="font-size:1.6rem;">🚥</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;">Secuenciales</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">secuenciales/</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-edit btn-edit-app" data-id="kvvkoer" style="padding:6px 10px;">✏️</button>
+            <button class="btn btn-danger btn-delete-app" data-id="kvvkoer" style="padding:6px 10px;">🗑</button>
+          </div>
+          <div class="edit-form" id="edit-form-kvvkoer">
+            <div class="form-row">
+              <div><label>Nombre</label><input type="text" class="edit-name" value="Secuenciales"></div>
+              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="secuenciales/"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
+              <div><label>Icono</label><input type="text" class="edit-icon" value="🚥" maxlength="4"></div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-save-edit" data-id="kvvkoer" style="padding:8px 16px;">Guardar cambios</button>
+              <button class="btn btn-edit btn-cancel-edit" data-id="kvvkoer" style="padding:8px 16px;">Cancelar</button>
+            </div>
+          </div>
+        </div><div class="admin-item" data-id="kdjhbjg" draggable="true">
+          <span class="app-icon" style="font-size:1.6rem;">📋</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;">Generador de Cuestionarios</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">generador-cuestionarios/</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-edit btn-edit-app" data-id="kdjhbjg" style="padding:6px 10px;">✏️</button>
+            <button class="btn btn-danger btn-delete-app" data-id="kdjhbjg" style="padding:6px 10px;">🗑</button>
+          </div>
+          <div class="edit-form" id="edit-form-kdjhbjg">
+            <div class="form-row">
+              <div><label>Nombre</label><input type="text" class="edit-name" value="Generador de Cuestionarios"></div>
+              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="generador-cuestionarios/"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
+              <div><label>Icono</label><input type="text" class="edit-icon" value="📋" maxlength="4"></div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-save-edit" data-id="kdjhbjg" style="padding:8px 16px;">Guardar cambios</button>
+              <button class="btn btn-edit btn-cancel-edit" data-id="kdjhbjg" style="padding:8px 16px;">Cancelar</button>
+            </div>
+          </div>
+        </div></div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
+
+      <button class="btn btn-primary" id="btn-download" style="width:100%;padding:14px;">⬇️ Descargar index.html actualizado</button>
     </div>
-    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
   </div>
 
-  <div class="results" id="results">
-    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
-    <div class="score-circle" id="score-num">0/10</div>
-    <h2 id="result-msg"></h2>
-    <p class="result-sub" id="result-sub"></p>
-    <button class="badge btn-restart" onclick="restartQuiz()">🔄 Reiniciar Quiz</button>
-  </div>
-</div>
+  <div id="toast" class="">✅ "Generador de Cuestionarios" añadida</div>
 
-<script>
-const questions = {{PREGUNTAS}};
-const DOMINIO = {{DOMINIO}};
-
-let currentIdx = 0;
-let score = 0;
-let answered = false;
-const TOTAL = questions.length;
-
-function esc(t) {
-  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function loadQuestion() {
-  answered = false;
-  const qData = questions[currentIdx];
-
-  document.getElementById('q-type').textContent =
-    qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
-  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
-  document.getElementById('q-text').textContent = qData.q;
-  document.getElementById('btn-next').classList.remove('visible');
-
-  const fb = document.getElementById('q-feedback');
-  fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${esc(qData.expl)}`;
-  fb.className = 'feedback';
-
-  const optionsDiv = document.getElementById('q-options');
-  optionsDiv.innerHTML = '';
-
-  qData.options.forEach((opt, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'option-btn';
-    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${esc(opt)}</span>`;
-    btn.onclick = () => checkAnswer(i);
-    optionsDiv.appendChild(btn);
-  });
-
-  const pct = (currentIdx / TOTAL) * 100;
-  document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
-  document.getElementById('btn-next').textContent =
-    currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
-
-  ajustarPantalla();
-}
-
-function checkAnswer(idx) {
-  if (answered) return;
-  answered = true;
-
-  const qData = questions[currentIdx];
-  const btns = document.querySelectorAll('.option-btn');
-  const fb = document.getElementById('q-feedback');
-
-  btns.forEach(b => b.disabled = true);
-
-  if (idx === qData.correct) {
-    btns[idx].classList.add('correct');
-    score++;
-    fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${esc(qData.expl)}`;
-    fb.className = 'feedback correct-fb';
-  } else {
-    btns[idx].classList.add('wrong');
-    btns[qData.correct].classList.add('correct');
-    fb.innerHTML = `<strong>💡 Nota:</strong><br>${esc(qData.expl)}`;
-    fb.className = 'feedback wrong-fb';
+  <script>
+    // __APPS_START__
+    let apps = [
+  {
+    "id": "eqznslp",
+    "name": "Individuales",
+    "url": "individuales/",
+    "icon": "🥇"
+  },
+  {
+    "id": "kvvkoer",
+    "name": "Secuenciales",
+    "url": "secuenciales/",
+    "icon": "🚥"
+  },
+  {
+    "id": "kdjhbjg",
+    "name": "Generador de Cuestionarios",
+    "url": "generador-cuestionarios/",
+    "icon": "📋"
   }
+];
+    // __APPS_END__
 
-  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
-  document.getElementById('btn-next').classList.add('visible');
-}
+    function uid() { return Math.random().toString(36).slice(2,9); }
 
-function nextQuestion() {
-  currentIdx++;
-  if (currentIdx < TOTAL) {
-    loadQuestion();
-  } else {
-    showResults();
-  }
-}
-
-function showResults() {
-  document.getElementById('quiz-area').classList.add('hidden');
-  document.getElementById('results').style.display = 'block';
-
-  const pct = Math.round((score / TOTAL) * 100);
-  document.getElementById('score-num').innerHTML = `${score}/${TOTAL}<small>${pct}%</small>`;
-
-  let emoji, msg, sub;
-  if (pct === 100)    { emoji = '🏆'; msg = '¡Perfecto! Dominas ' + DOMINIO; sub = 'Respondiste todo correctamente.'; }
-  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';       sub = 'Solo te faltó un detalle.'; }
-  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';               sub = 'Vas por buen camino, repasa lo fallado.'; }
-  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';           sub = 'Vuelve a leer el material y reinténtalo.'; }
-  else                { emoji = '💪'; msg = '¡No te rindas!';               sub = 'Revisa el tema desde el principio.'; }
-
-  document.getElementById('result-emoji').textContent = emoji;
-  document.getElementById('result-msg').textContent = msg;
-  document.getElementById('result-sub').textContent = sub;
-  document.getElementById('prog-fill').style.width = '100%';
-  ajustarPantalla();
-}
-
-function restartQuiz() {
-  currentIdx = 0;
-  score = 0;
-  answered = false;
-  document.getElementById('prog-score').textContent = '⭐ 0 pts';
-  document.getElementById('results').style.display = 'none';
-  document.getElementById('quiz-area').classList.remove('hidden');
-  loadQuestion();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-const ZOOM_MINIMO = 0.6;
-
-function ajustarPantalla() {
-  const c = document.querySelector('.container');
-  c.style.zoom = 1;
-  const altoContenido = c.offsetHeight;
-  const altoVentana = document.documentElement.clientHeight;
-  let z = Math.min(1, altoVentana / altoContenido);
-  z = Math.max(ZOOM_MINIMO, Math.floor(z * 100) / 100);
-  c.style.zoom = z;
-}
-
-let temporizador;
-window.addEventListener('resize', () => {
-  clearTimeout(temporizador);
-  temporizador = setTimeout(ajustarPantalla, 100);
-});
-
-window.onload = () => {
-  loadQuestion();
-  if (document.fonts) document.fonts.ready.then(ajustarPantalla);
-};
-<\/script>
-</body>
-</html>
-</script>
-
-<script>
-// ===================== Configuración =====================
-const PROVEEDORES = {
-  claude:  { nombre: 'Claude (Anthropic)', modelo: 'claude-sonnet-5-5' },
-  gemini:  { nombre: 'Gemini (Google)',    modelo: 'gemini-flash-latest' },
-  groq:    { nombre: 'Groq (Llama)',       modelo: 'llama-3.3-70b-versatile' },
-  mistral: { nombre: 'Mistral',            modelo: 'mistral-large-latest' }
-};
-const LS = 'gencuest_';
-const PAUSA_ENTRE_TEMAS = 1500;   // ms entre un tema y el siguiente
-const ESPERA_REINTENTO = 8000;    // ms antes de reintentar un tema que ha fallado
-
-// Pistas para detectar el curso: [palabra, peso]
-const PISTAS = {
-  movil: [['movil',3],['moviles',3],['smartphone',3],['telefono',2],['android',3],['xiaomi',3],['redmi',3],['miui',3],
-          ['whatsapp',2],['play store',3],['pantalla tactil',3],['desliza',2],['deslizar',2],['toca',2],['tocar',2],
-          ['pulsacion larga',3],['manten pulsado',1],['notificaciones',1],['tablet',2],['llamada',1],['llamadas',1],['sms',2]],
-  ordenador: [['ordenador',3],['ordenadores',3],['pc',3],['portatil',3],['windows',3],['raton',3],['clic',2],['doble clic',2],
-          ['escritorio',2],['explorador de archivos',3],['barra de tareas',3],['menu inicio',3],['boton derecho',2],
-          ['teclado',1],['monitor',2],['pendrive',2],['usb',1],['word',2],['excel',2],['ventana',1],['ventanas',1]]
-};
-
-// ===================== Estado =====================
-let temas = [];          // { id, nombre, texto, titulo, dispositivo, segura, manual, detectTxt, estado, msg, datos, html, el }
-let sigId = 1;
-let procesando = false;
-let detener = false;
-let viendo = null;       // tema que se ve en la vista previa
-
-const $ = id => document.getElementById(id);
-
-// ===================== Utilidades =====================
-function normalizar(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-function escHTML(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function barajar(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  return a;
-}
-const pausa = ms => new Promise(r => setTimeout(r, ms));
-function estado(msg, tipo) { const s = $('status'); s.textContent = msg; s.className = 'status ' + tipo; }
-function descargar(contenido, nombre) {
-  const blob = contenido instanceof Blob ? contenido : new Blob([contenido], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = nombre; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-function nombreCarpeta(nombre) {
-  return nombre.replace(/\.[^.]+$/, '').trim().replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-') || 'tema';
-}
-
-// ===================== Carga de ficheros =====================
-const drop = $('drop');
-drop.onclick = () => $('fichero').click();
-drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fichero').click(); } };
-drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
-drop.ondragleave = () => drop.classList.remove('over');
-drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); anadirFicheros(e.dataTransfer.files); };
-$('fichero').onchange = e => { anadirFicheros(e.target.files); e.target.value = ''; };
-
-function leerFichero(f) {
-  return new Promise((ok, ko) => {
-    const r = new FileReader();
-    r.onload = () => ok({ f, texto: r.result });
-    r.onerror = () => ko(new Error('No se pudo leer ' + f.name));
-    r.readAsText(f, 'UTF-8');
-  });
-}
-
-async function anadirFicheros(lista) {
-  const todos = [...lista];
-  const fs = todos.filter(f => /\.(md|markdown|txt)$/i.test(f.name)).sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true }));
-  if (!fs.length) { estado('Solo se admiten ficheros .md, .markdown o .txt.', 'err'); return; }
-  const leidos = await Promise.all(fs.map(leerFichero));
-  for (const { f, texto } of leidos) {
-    const d = detectar(texto, f.name);
-    const t = {
-      id: sigId++, nombre: f.name, texto, titulo: sacarTitulo(texto, f.name),
-      dispositivo: d.dispositivo, segura: d.segura, manual: false, detectTxt: d.txt,
-      estado: 'pendiente', msg: '', datos: null, html: '', el: null
-    };
-    temas.push(t);
-    crearItem(t);
-  }
-  const ignorados = todos.length - fs.length;
-  if (ignorados) estado(`Se han ignorado ${ignorados} fichero(s) que no son .md.`, 'info');
-  else $('status').className = 'status';
-  actualizarGeneral();
-}
-
-function sacarTitulo(texto, nombre) {
-  const h = texto.match(/^\s*#\s+(.+?)\s*#*\s*$/m);
-  return h ? h[1].replace(/[*_`]/g, '').trim() : nombre.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-}
-
-function detectar(texto, nombre) {
-  const t = ' ' + normalizar(texto) + ' ';
-  const fn = normalizar(nombre);
-  const puntos = { movil: 0, ordenador: 0 };
-  const halladas = { movil: [], ordenador: [] };
-  for (const disp of ['movil', 'ordenador']) {
-    for (const [p, peso] of PISTAS[disp]) {
-      const re = new RegExp('(^|[^a-z0-9])' + p.replace(/ /g, '\\s+') + '(?=[^a-z0-9]|$)', 'g');
-      const n = (t.match(re) || []).length;
-      if (n) { puntos[disp] += n * peso; halladas[disp].push(p); }
+    function showToast(msg, duration=2400) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
     }
-  }
-  if (/movil|android|smartphone/.test(fn)) puntos.movil += 15;
-  if (/ordenador|windows|\bpc\b/.test(fn)) puntos.ordenador += 15;
 
-  const total = puntos.movil + puntos.ordenador;
-  const dif = Math.abs(puntos.movil - puntos.ordenador);
-  const segura = dif >= 3 && dif >= 0.25 * total;
-  if (total === 0 || dif === 0) return { dispositivo: null, segura: false, txt: '🤔 No está claro; lo decidirá la IA (o elígelo tú).' };
-  const gana = puntos.movil > puntos.ordenador ? 'movil' : 'ordenador';
-  return {
-    dispositivo: gana, segura,
-    txt: segura ? `🔎 Detectado por: ${halladas[gana].slice(0, 4).join(', ')}` : '🤔 Hay dudas; la IA lo confirmará.'
-  };
-}
+    function renderGrid() {
+      const grid = document.getElementById('app-grid');
+      grid.innerHTML = '';
 
-// ===================== Lista de temas =====================
-function crearItem(t) {
-  const el = document.createElement('div');
-  el.className = 'tema';
-  el.innerHTML = `
-    <div class="tema-cab"><span class="tema-icono"></span><span class="tema-fich"></span>
-      <button class="x" type="button" title="Quitar este tema" aria-label="Quitar este tema">✕</button></div>
-    <input type="text" class="tema-titulo" aria-label="Título del cuestionario">
-    <div class="tema-fila">
-      <div class="mini-seg">
-        <button type="button" data-disp="ordenador">💻 Ordenador</button>
-        <button type="button" data-disp="movil">📱 Móvil</button>
-      </div>
-      <span class="hint tema-detect"></span>
-    </div>
-    <div class="tema-msg"></div>
-    <div class="tema-acc">
-      <button class="btn-mini b-ver" type="button">👁️ Ver</button>
-      <button class="btn-mini b-desc" type="button">⬇️ Descargar index.html</button>
-      <button class="btn-mini b-rep" type="button">🔄 Otras preguntas</button>
-    </div>`;
-  el.querySelector('.tema-fich').textContent = t.nombre;
+      apps.forEach(app => {
+        const card = document.createElement('div');
+        card.className = 'app-card';
+        card.draggable = true;
+        card.dataset.id = app.id;
+        card.innerHTML = `
+          <span class="app-icon">${app.icon}</span>
+          <span class="app-name">${app.name}</span>
+        `;
 
-  const inp = el.querySelector('.tema-titulo');
-  inp.value = t.titulo;
-  let tm;
-  inp.oninput = () => {
-    t.titulo = inp.value;
-    clearTimeout(tm);
-    tm = setTimeout(() => { if (t.datos) montar(t); }, 500);
-  };
+        card.addEventListener('click', (e) => {
+          if (!card.classList.contains('dragging')) {
+            window.location.href = app.url;
+          }
+        });
 
-  el.querySelectorAll('.mini-seg button').forEach(b => b.onclick = () => {
-    t.dispositivo = b.dataset.disp; t.manual = true; t.detectTxt = '👆 Elegido a mano';
-    if (t.datos) montar(t);
-    actualizarItem(t);
-  });
+        grid.appendChild(card);
+      });
 
-  el.querySelector('.x').onclick = () => {
-    if (t.estado === 'creando') return;
-    temas = temas.filter(x => x !== t);
-    el.remove();
-    if (viendo === t) { viendo = temas.find(x => x.estado === 'ok') || null; mostrarPreview(); }
-    actualizarGeneral();
-  };
-  el.querySelector('.b-ver').onclick = () => {
-    viendo = t; mostrarPreview();
-    $('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-  el.querySelector('.b-desc').onclick = () => descargar(t.html, 'index.html');
-  el.querySelector('.b-rep').onclick = () => { if (!procesando) procesarUno(t); };
-
-  t.el = el;
-  $('lista').appendChild(el);
-  actualizarItem(t);
-}
-
-function actualizarItem(t) {
-  const el = t.el;
-  if (!el) return;
-  el.className = 'tema ' + t.estado + (viendo === t ? ' viendo' : '');
-  el.querySelector('.tema-icono').textContent = { pendiente: '⏳', creando: '⚙️', ok: '✅', error: '❌' }[t.estado];
-  el.querySelectorAll('.mini-seg button').forEach(b => b.classList.toggle('on', b.dataset.disp === t.dispositivo));
-  el.querySelector('.tema-detect').textContent = t.detectTxt;
-  el.querySelector('.tema-msg').textContent = t.msg;
-  el.querySelector('.tema-acc').style.display = (t.estado === 'ok' || t.estado === 'error') ? 'flex' : 'none';
-  el.querySelector('.b-ver').style.display = t.estado === 'ok' ? '' : 'none';
-  el.querySelector('.b-desc').style.display = t.estado === 'ok' ? '' : 'none';
-  el.querySelector('.b-rep').textContent = t.estado === 'error' ? '🔄 Reintentar' : '🔄 Otras preguntas';
-  el.querySelector('.x').disabled = t.estado === 'creando';
-}
-
-function actualizarGeneral() {
-  const btn = $('btn-crear');
-  const pendientes = temas.filter(t => t.estado === 'pendiente' || t.estado === 'error').length;
-  btn.classList.toggle('stop', procesando);
-  if (procesando) {
-    btn.disabled = detener;
-    btn.textContent = detener ? '⏳ Deteniendo al acabar este tema...' : '⏹ Detener al acabar el tema actual';
-  } else {
-    btn.disabled = pendientes === 0;
-    btn.textContent = pendientes === 0 ? '✨ Crear cuestionarios'
-      : pendientes === 1 ? '✨ Crear 1 cuestionario' : `✨ Crear ${pendientes} cuestionarios`;
-  }
-  $('lista-hint').style.display = temas.length ? 'block' : 'none';
-  $('resultado').style.display = temas.some(t => t.estado === 'ok') ? 'block' : 'none';
-}
-
-// ===================== Ajustes de la IA =====================
-const sel = $('proveedor');
-for (const [k, p] of Object.entries(PROVEEDORES)) {
-  const o = document.createElement('option'); o.value = k; o.textContent = p.nombre; sel.appendChild(o);
-}
-function cargarAjustes() {
-  const prov = sel.value;
-  $('modelo').value = localStorage.getItem(LS + 'modelo_' + prov) || PROVEEDORES[prov].modelo;
-  $('clave').value = localStorage.getItem(LS + 'clave_' + prov) || '';
-  actualizarEstadoAjustes();
-}
-function actualizarEstadoAjustes() {
-  $('ajustes-estado').textContent = $('clave').value
-    ? `${PROVEEDORES[sel.value].nombre} · ${$('modelo').value}` : 'falta la clave';
-}
-sel.value = localStorage.getItem(LS + 'proveedor') || 'claude';
-cargarAjustes();
-if (!$('clave').value) $('ajustes').open = true;
-sel.onchange = () => { localStorage.setItem(LS + 'proveedor', sel.value); cargarAjustes(); };
-$('modelo').oninput = () => { localStorage.setItem(LS + 'modelo_' + sel.value, $('modelo').value.trim()); actualizarEstadoAjustes(); };
-$('clave').oninput = () => { localStorage.setItem(LS + 'clave_' + sel.value, $('clave').value.trim()); actualizarEstadoAjustes(); };
-
-function comprobarClave() {
-  if ($('clave').value.trim()) return true;
-  $('ajustes').open = true;
-  estado('Falta la clave de la API en «Ajustes de la IA».', 'err');
-  $('clave').focus();
-  return false;
-}
-
-// ===================== Prompt =====================
-function construirPrompt(t) {
-  let contexto;
-  if (t.dispositivo === 'movil' && (t.manual || t.segura))
-    contexto = 'Es un tema del curso de MÓVIL. El móvil de referencia de las clases es un Android Xiaomi (MIUI).';
-  else if (t.dispositivo === 'ordenador' && (t.manual || t.segura))
-    contexto = 'Es un tema del curso de ORDENADOR, con Windows.';
-  else
-    contexto = 'Decide tú, leyendo el tema, si es del curso de MÓVIL (Android, Xiaomi con MIUI) o del curso de ORDENADOR (Windows).';
-
-  const sistema = 'Eres un profesor voluntario de Cruz Roja que da clases de tecnología a personas mayores que están empezando. ' +
-    'Preparas cuestionarios de repaso claros, amables y sin trampas. Respondes siempre con JSON válido y nada más.';
-
-  const usuario = `${contexto}
-
-Crea un cuestionario de repaso de EXACTAMENTE 10 preguntas sobre el tema que va al final.
-
-Reglas:
-- 8 preguntas de opción múltiple con 3 opciones cada una, y 2 de verdadero o falso. Coloca las de verdadero o falso hacia la mitad (por ejemplo, la 6 y la 7).
-- Pregunta solo por lo que explica el tema. No añadas nada que no aparezca en él.
-- Español de España, tuteo, frases cortas y vocabulario sencillo. Si usas un término técnico, aclara entre paréntesis qué es, como "un dibujo (icono)".
-- Mezcla preguntas de recordar ("¿Para qué sirve...?") con situaciones prácticas ("Estás... ¿qué harías?").
-- Las opciones incorrectas deben ser creíbles, pero claramente erróneas para quien haya estudiado el tema. Nunca uses "todas las anteriores" ni "ninguna de las anteriores".
-- Las tres opciones deben tener una longitud parecida; que la correcta no sea siempre la más larga.
-- "expl": 1 o 2 frases que expliquen por qué la respuesta correcta lo es. En las de verdadero o falso, empieza por "Verdadero." o "Falso.".
-- "correct": índice (empezando en 0) de la opción correcta.
-- "dominio": lo que domina quien acierta todo, para completar la frase "¡Perfecto! Dominas ..."; máximo 4 palabras, con artículo si hace falta (ejemplos: "el ratón", "WhatsApp", "los ajustes del móvil").
-- "emoji": un solo emoji relacionado con el tema.
-- "dispositivo": "movil" u "ordenador".
-
-Formato exacto de la respuesta (solo este JSON, sin texto antes ni después, sin \`\`\`):
-{
-  "dispositivo": "ordenador",
-  "emoji": "🖱️",
-  "dominio": "el ratón",
-  "preguntas": [
-    { "q": "¿...?", "options": ["...", "...", "..."], "correct": 1, "expl": "..." },
-    { "q": "¿...?", "options": ["Verdadero", "Falso"], "correct": 0, "type": "boolean", "expl": "Verdadero. ..." }
-  ]
-}
-
-=== TEMA ===
-${t.texto}
-=== FIN DEL TEMA ===`;
-  return { sistema, usuario };
-}
-
-// ===================== Llamadas a las API =====================
-async function leerError(r, nombre) {
-  let t = '';
-  try { const j = await r.json(); t = j.error?.message || j.message || JSON.stringify(j); }
-  catch { t = r.statusText; }
-  let definitivo = false;
-  if (r.status === 401 || r.status === 403) { t = 'la clave no es válida o no tiene permiso. ' + t; definitivo = true; }
-  if (r.status === 404) { t = 'no existe ese modelo; revisa el nombre en Ajustes. ' + t; definitivo = true; }
-  if (r.status === 429) t = 'demasiadas peticiones o sin saldo. ' + t;
-  const e = new Error(`${nombre} respondió con error ${r.status}: ${t}`);
-  e.definitivo = definitivo;   // no merece la pena reintentar
-  return e;
-}
-
-async function llamarIA(sistema, usuario) {
-  const prov = sel.value;
-  const modelo = $('modelo').value.trim() || PROVEEDORES[prov].modelo;
-  const clave = $('clave').value.trim();
-  const nombre = PROVEEDORES[prov].nombre;
-  let r;
-
-  if (prov === 'claude') {
-    r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': clave,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({ model: modelo, max_tokens: 6000, system: sistema, messages: [{ role: 'user', content: usuario }] })
-    });
-    if (!r.ok) throw await leerError(r, nombre);
-    const j = await r.json();
-    return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-  }
-
-  if (prov === 'gemini') {
-    r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent?key=${encodeURIComponent(clave)}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sistema }] },
-        contents: [{ role: 'user', parts: [{ text: usuario }] }],
-        generationConfig: { temperature: 0.7, responseMimeType: 'application/json' }
-      })
-    });
-    if (!r.ok) throw await leerError(r, nombre);
-    const j = await r.json();
-    return (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n');
-  }
-
-  // Groq y Mistral usan el mismo formato
-  const url = prov === 'groq'
-    ? 'https://api.groq.com/openai/v1/chat/completions'
-    : 'https://api.mistral.ai/v1/chat/completions';
-  r = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + clave },
-    body: JSON.stringify({
-      model: modelo, temperature: 0.7,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'system', content: sistema }, { role: 'user', content: usuario }]
-    })
-  });
-  if (!r.ok) throw await leerError(r, nombre);
-  const j = await r.json();
-  return j.choices?.[0]?.message?.content || '';
-}
-
-// ===================== Validación =====================
-function extraerJSON(texto) {
-  const limpio = texto.replace(/```json|```/g, '').trim();
-  const a = limpio.indexOf('{'), b = limpio.lastIndexOf('}');
-  if (a < 0 || b < a) throw new Error('La IA no ha devuelto un cuestionario reconocible.');
-  try { return JSON.parse(limpio.slice(a, b + 1)); }
-  catch { throw new Error('La respuesta de la IA llegó cortada o mal formada.'); }
-}
-
-function validar(d) {
-  if (!d || !Array.isArray(d.preguntas)) throw new Error('La respuesta de la IA no trae la lista de preguntas.');
-  const buenas = d.preguntas.filter(p =>
-    p && typeof p.q === 'string' && p.q.trim() &&
-    Array.isArray(p.options) && p.options.length >= 2 &&
-    Number.isInteger(Number(p.correct)) && Number(p.correct) >= 0 && Number(p.correct) < p.options.length &&
-    typeof p.expl === 'string' && p.expl.trim());
-  if (buenas.length < 10) throw new Error(`La IA solo ha devuelto ${buenas.length} preguntas válidas de 10.`);
-
-  const preguntas = buenas.slice(0, 10).map(p => {
-    const ops = p.options.map(o => String(o).trim());
-    const correcta = ops[Number(p.correct)];
-    const esVF = p.type === 'boolean' || (ops.length === 2 && /^verdader/i.test(ops[0]) && /^fals/i.test(ops[1]));
-    if (esVF) return { q: p.q.trim(), options: ['Verdadero', 'Falso'], correct: /^verdader/i.test(correcta) ? 0 : 1, type: 'boolean', expl: p.expl.trim() };
-    // Se barajan las opciones para que la correcta no caiga siempre en la misma letra
-    const mezcla = barajar(ops);
-    return { q: p.q.trim(), options: mezcla, correct: mezcla.indexOf(correcta), expl: p.expl.trim() };
-  });
-
-  const disp = (d.dispositivo === 'movil' || d.dispositivo === 'ordenador') ? d.dispositivo : null;
-  const emoji = typeof d.emoji === 'string' && d.emoji.trim() && d.emoji.trim().length <= 8 ? d.emoji.trim() : null;
-  const dominio = typeof d.dominio === 'string' && d.dominio.trim() ? d.dominio.trim().replace(/[.!]+$/, '') : 'el tema';
-  return { preguntas, dispositivo: disp, emoji, dominio };
-}
-
-// ===================== Montaje del cuestionario =====================
-function montar(t) {
-  const titulo = t.titulo.trim() || 'Cuestionario';
-  const disp = t.dispositivo || t.datos.dispositivo || 'ordenador';
-  const emoji = t.datos.emoji || (disp === 'movil' ? '📱' : '💻');
-  const badge = `${emoji} Curso de ${disp === 'movil' ? 'Móvil' : 'Ordenador'}`;
-  const json = v => JSON.stringify(v, null, 2).replace(/</g, '\\u003c');
-
-  const sustituciones = {
-    '{{TITULO}}': escHTML(titulo),
-    '{{BADGE}}': escHTML(badge),
-    '{{PREGUNTAS}}': json(t.datos.preguntas),
-    '{{DOMINIO}}': json(t.datos.dominio)
-  };
-  let html = $('plantilla').textContent.trim().replace('<\\/script>', '</' + 'script>');
-  for (const [k, v] of Object.entries(sustituciones)) html = html.split(k).join(v);
-  t.html = html + '\n';
-  if (viendo === t) mostrarPreview();
-}
-
-function mostrarPreview() {
-  temas.forEach(actualizarItem);
-  if (!viendo || !viendo.html) {
-    $('preview-titulo').textContent = 'Pulsa «Ver» en un tema para probarlo aquí.';
-    $('preview').srcdoc = '';
-    $('revision').innerHTML = '';
-    return;
-  }
-  $('preview-titulo').textContent = `Vista previa: ${viendo.titulo || viendo.nombre}`;
-  $('preview').srcdoc = viendo.html;
-  $('revision').innerHTML = viendo.datos.preguntas.map((p, i) => `
-    <div class="rev-item">
-      <div class="rev-tipo">${i + 1}. ${p.type === 'boolean' ? 'Verdadero o falso' : 'Opción múltiple'}</div>
-      <div class="rev-q">${escHTML(p.q)}</div>
-      <div class="rev-a">✔ ${String.fromCharCode(65 + p.correct)}) ${escHTML(p.options[p.correct])}</div>
-    </div>`).join('');
-}
-
-// ===================== Proceso secuencial =====================
-async function procesar(t) {
-  t.estado = 'creando'; t.msg = 'Preguntando a la IA...'; actualizarItem(t);
-  for (let intento = 1; intento <= 2; intento++) {
-    try {
-      const { sistema, usuario } = construirPrompt(t);
-      const texto = await llamarIA(sistema, usuario);
-      t.datos = validar(extraerJSON(texto));
-      if (!t.manual && !t.segura && t.datos.dispositivo) {
-        t.dispositivo = t.datos.dispositivo;
-        t.detectTxt = '🤖 Decidido por la IA';
-      }
-      t.estado = 'ok'; t.msg = '';
-      montar(t);
-      actualizarItem(t); actualizarGeneral();
-      return true;
-    } catch (e) {
-      const msg = e instanceof TypeError
-        ? 'No se pudo conectar con el servicio. Comprueba internet o prueba con otro servicio.'
-        : e.message;
-      if (intento === 1 && !e.definitivo && !detener) {
-        t.msg = `Ha fallado (${msg}) Reintentando en unos segundos...`;
-        actualizarItem(t);
-        await pausa(ESPERA_REINTENTO);
-        t.msg = 'Segundo intento...'; actualizarItem(t);
-        continue;
-      }
-      t.estado = 'error'; t.msg = msg;
-      actualizarItem(t); actualizarGeneral();
-      return false;
+      initDragAndDropGrid();
     }
-  }
-}
 
-async function crearTodos() {
-  const cola = temas.filter(t => t.estado === 'pendiente' || t.estado === 'error');
-  if (!cola.length) return;
-  if (!comprobarClave()) return;
+    let draggedGridCard = null;
 
-  procesando = true; detener = false; actualizarGeneral();
-  let hechos = 0, fallos = 0;
-  for (let i = 0; i < cola.length; i++) {
-    if (detener) break;
-    const t = cola[i];
-    if (!temas.includes(t)) continue;
-    estado(`Creando ${i + 1} de ${cola.length}: ${t.nombre}. Cada tema suele tardar entre 10 y 40 segundos.`, 'info');
-    (await procesar(t)) ? hechos++ : fallos++;
-    if (!viendo && t.estado === 'ok') { viendo = t; mostrarPreview(); }
-    if (i < cola.length - 1 && !detener) await pausa(PAUSA_ENTRE_TEMAS);
-  }
-  procesando = false; detener = false; actualizarGeneral();
+    function initDragAndDropGrid() {
+      document.querySelectorAll('.app-card').forEach(card => {
+        card.addEventListener('dragstart', () => {
+          draggedGridCard = card;
+          setTimeout(() => card.classList.add('dragging'), 10);
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          document.querySelectorAll('.app-card').forEach(c => c.classList.remove('drag-over'));
+        });
+        card.addEventListener('dragover', e => { e.preventDefault(); if (card !== draggedGridCard) card.classList.add('drag-over'); });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+        card.addEventListener('drop', e => {
+          e.preventDefault();
+          if (!draggedGridCard || draggedGridCard === card) return;
+          const fromId = draggedGridCard.dataset.id;
+          const toId = card.dataset.id;
+          const fromIdx = apps.findIndex(a => a.id === fromId);
+          const toIdx = apps.findIndex(a => a.id === toId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = apps.splice(fromIdx, 1);
+            apps.splice(toIdx, 0, moved);
+            renderGrid();
+            if (document.getElementById('modal-overlay').style.display === 'flex') renderAdminList();
+            showToast('📋 Orden actualizado');
+          }
+        });
+      });
+    }
 
-  const sinHacer = cola.length - hechos - fallos;
-  let m = `✅ ${hechos} de ${cola.length} cuestionario(s) creado(s).`;
-  if (fallos) m += ` ❌ ${fallos} con error: pulsa «Reintentar» en cada uno o vuelve a pulsar el botón principal.`;
-  if (sinHacer) m += ` ⏹ ${sinHacer} sin hacer porque se detuvo el proceso.`;
-  estado(m, fallos ? 'err' : 'ok');
-}
+    // Variables para drag & drop en el panel de administración
+    let draggedAdminItem = null;
 
-async function procesarUno(t) {
-  if (!comprobarClave()) return;
-  procesando = true; actualizarGeneral();
-  estado(`Creando: ${t.nombre}...`, 'info');
-  const ok = await procesar(t);
-  procesando = false; detener = false; actualizarGeneral();
-  estado(ok ? `✅ ${t.nombre}: cuestionario creado.` : `❌ ${t.nombre}: ${t.msg}`, ok ? 'ok' : 'err');
-  if (ok) { viendo = t; mostrarPreview(); }
-}
+    function renderAdminList() {
+      const container = document.getElementById('apps-admin-list');
+      container.innerHTML = '';
 
-// ===================== Botones generales =====================
-$('btn-crear').onclick = () => {
-  if (procesando) { detener = true; actualizarGeneral(); return; }
-  crearTodos();
-};
+      apps.forEach(app => {
+        const item = document.createElement('div');
+        item.className = 'admin-item';
+        item.setAttribute('data-id', app.id);
+        item.setAttribute('draggable', 'true');
+        item.innerHTML = `
+          <span class="app-icon" style="font-size:1.6rem;">${app.icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;">${app.name}</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">${app.url}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-edit btn-edit-app" data-id="${app.id}" style="padding:6px 10px;">✏️</button>
+            <button class="btn btn-danger btn-delete-app" data-id="${app.id}" style="padding:6px 10px;">🗑</button>
+          </div>
+          <div class="edit-form" id="edit-form-${app.id}">
+            <div class="form-row">
+              <div><label>Nombre</label><input type="text" class="edit-name" value="${app.name.replace(/"/g, '&quot;')}"></div>
+              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="${app.url.replace(/"/g, '&quot;')}"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
+              <div><label>Icono</label><input type="text" class="edit-icon" value="${app.icon}" maxlength="4"></div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-save-edit" data-id="${app.id}" style="padding:8px 16px;">Guardar cambios</button>
+              <button class="btn btn-edit btn-cancel-edit" data-id="${app.id}" style="padding:8px 16px;">Cancelar</button>
+            </div>
+          </div>
+        `;
 
-$('btn-zip').onclick = async () => {
-  const oks = temas.filter(t => t.estado === 'ok');
-  if (!oks.length) return;
-  if (typeof JSZip === 'undefined') {
-    estado('No se ha podido cargar la librería del ZIP. Comprueba internet y recarga la página; mientras, puedes descargar cada tema por separado.', 'err');
-    return;
-  }
-  const zip = new JSZip();
-  const usados = new Set();
-  for (const t of oks) {
-    const base = nombreCarpeta(t.nombre);
-    let n = base, k = 2;
-    while (usados.has(n)) n = `${base}-${k++}`;
-    usados.add(n);
-    zip.file(`${n}/index.html`, t.html);
-  }
-  descargar(await zip.generateAsync({ type: 'blob' }), 'cuestionarios.zip');
-};
+        // Eventos de arrastre para el admin
+        item.addEventListener('dragstart', (e) => {
+          draggedAdminItem = item;
+          setTimeout(() => item.classList.add('dragging-admin'), 10);
+        });
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging-admin');
+          document.querySelectorAll('.admin-item').forEach(i => i.classList.remove('drag-over-admin'));
+          draggedAdminItem = null;
+        });
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (draggedAdminItem && draggedAdminItem !== item) {
+            item.classList.add('drag-over-admin');
+          }
+        });
+        item.addEventListener('dragleave', () => {
+          item.classList.remove('drag-over-admin');
+        });
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (!draggedAdminItem || draggedAdminItem === item) return;
+          item.classList.remove('drag-over-admin');
+          
+          const fromId = draggedAdminItem.getAttribute('data-id');
+          const toId = item.getAttribute('data-id');
+          const fromIdx = apps.findIndex(a => a.id === fromId);
+          const toIdx = apps.findIndex(a => a.id === toId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = apps.splice(fromIdx, 1);
+            apps.splice(toIdx, 0, moved);
+            renderAdminList();      // refresca el listado del admin
+            renderGrid();           // sincroniza la cuadrícula principal
+            showToast('📋 Orden actualizado (admin)');
+          }
+        });
 
-window.addEventListener('beforeunload', e => {
-  if (procesando || temas.some(t => t.estado === 'ok')) { e.preventDefault(); e.returnValue = ''; }
-});
+        container.appendChild(item);
+      });
+    }
 
-actualizarGeneral();
-</script>
-</body>
-</html>
+    // CRUD
+    function addApp() {
+      const name = document.getElementById('new-name').value.trim();
+      let url = document.getElementById('new-folder').value.trim();
+      const icon = document.getElementById('new-icon').value.trim() || '📦';
+      if (!name) return showToast('⚠️ El nombre es obligatorio');
+      if (!url) return showToast('⚠️ La carpeta/URL es obligatoria');
+      if (!url.endsWith('/')) url += '/';
+      apps.push({ id: uid(), name, url, icon });
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-folder').value = '';
+      document.getElementById('new-icon').value = '';
+      renderGrid();
+      renderAdminList();
+      showToast(`✅ "${name}" añadida`);
+    }
+
+    function deleteApp(id) {
+      const app = apps.find(a => a.id === id);
+      if (!app) return;
+      if (!confirm(`¿Eliminar "${app.name}"?`)) return;
+      apps = apps.filter(a => a.id !== id);
+      renderGrid();
+      renderAdminList();
+      showToast(`🗑 "${app.name}" eliminada`);
+    }
+
+    function saveEdit(id) {
+      const form = document.getElementById(`edit-form-${id}`);
+      if (!form) return;
+      const name = form.querySelector('.edit-name').value.trim();
+      let url = form.querySelector('.edit-url').value.trim();
+      const icon = form.querySelector('.edit-icon').value.trim() || '📦';
+      if (!name || !url) return showToast('⚠️ Nombre y URL son obligatorios');
+      if (!url.endsWith('/')) url += '/';
+      const app = apps.find(a => a.id === id);
+      if (app) {
+        app.name = name;
+        app.url = url;
+        app.icon = icon;
+      }
+      renderGrid();
+      renderAdminList();
+      showToast(`✏️ "${name}" actualizada`);
+    }
+
+    // Manejo de eventos de la ventana modal (incluyendo botones de edición/borrado)
+    document.getElementById('btn-config').addEventListener('click', () => {
+      renderAdminList();
+      document.getElementById('modal-overlay').style.display = 'flex';
+    });
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+      document.getElementById('modal-overlay').style.display = 'none';
+    });
+    document.getElementById('btn-add-app').addEventListener('click', addApp);
+
+    document.getElementById('apps-admin-list').addEventListener('click', e => {
+      const id = e.target.getAttribute('data-id');
+      if (!id) return;
+      if (e.target.classList.contains('btn-delete-app')) deleteApp(id);
+      if (e.target.classList.contains('btn-edit-app')) {
+        document.getElementById(`edit-form-${id}`).classList.toggle('visible');
+      }
+      if (e.target.classList.contains('btn-save-edit')) saveEdit(id);
+      if (e.target.classList.contains('btn-cancel-edit')) {
+        document.getElementById(`edit-form-${id}`).classList.remove('visible');
+      }
+    });
+
+    document.getElementById('btn-download').addEventListener('click', () => {
+      let src = document.documentElement.outerHTML;
+      // Cerrar modal antes de guardar snapshot
+      src = src.replace(/id="modal-overlay"[^>]*style="[^"]*display\s*:\s*flex[^"]*"/, 'id="modal-overlay" style="display:none;"');
+      // Reemplazar el array de apps
+      src = src.replace(
+        /\/\/ __APPS_START__[\s\S]*?\/\/ __APPS_END__/,
+        `// __APPS_START__\n    let apps = ${JSON.stringify(apps, null, 2)};\n    // __APPS_END__`
+      );
+      const blob = new Blob([src], { type: 'text/html;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'index.html';
+      link.click();
+      showToast('⬇️ index.html descargado con todos los cambios (incluye orden)');
+    });
+
+    // Inicializar
+    renderGrid();
+  </script>
+
+</body></html>
