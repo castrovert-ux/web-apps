@@ -97,9 +97,13 @@
   .empty p { color:var(--sub); font-weight:700; max-width:460px; line-height:1.5; }
 
   /* Ajustes */
-  .modal { position:fixed; inset:0; z-index:100; background:rgba(5,10,22,.8); backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center; padding:30px 16px; overflow:auto; }
+  .modal { position:fixed; inset:0; z-index:100; background:rgba(5,10,22,.8); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:24px 16px; }
   .modal[hidden] { display:none; }
-  .mbox { width:100%; max-width:720px; background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:24px 26px; animation:popIn .3s ease; }
+  .mbox { width:100%; max-width:720px; max-height:calc(100vh - 48px); overflow-y:auto; overscroll-behavior:contain; background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:24px 26px; animation:popIn .3s ease; scrollbar-width:auto; scrollbar-color:var(--c6) rgba(255,255,255,.06); }
+  .mbox::-webkit-scrollbar { width:14px; }
+  .mbox::-webkit-scrollbar-track { background:rgba(255,255,255,.05); border-radius:24px; margin:16px 0; }
+  .mbox::-webkit-scrollbar-thumb { background:var(--c6); border-radius:10px; border:3px solid var(--card); }
+  .mbox::-webkit-scrollbar-thumb:hover { background:var(--c3); }
   .mhead { display:flex; align-items:center; margin-bottom:6px; }
   .mhead h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.7rem; flex:1; }
   .mbox h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.2rem; color:var(--c3); margin:18px 0 10px; }
@@ -182,13 +186,11 @@
     <div class="mhead"><h2 id="m-h">⚙️ Ajustes</h2><button class="x" id="b-close" type="button" aria-label="Cerrar">✕</button></div>
 
     <h3>Inteligencia artificial</h3>
-    <p class="hint">Cada simulación es un programa largo (unos 50 KB). Con <b>Claude</b> sale mucho mejor; otros modelos a menudo se cortan a medias o dejan fallos. Groq gratuito suele quedarse corto porque el ejemplo de referencia ya es grande.</p>
+    <p class="hint">Solo hay proveedores con uso <b>gratuito</b>. <b>Gemini</b>: clave gratis en aistudio.google.com; el modelo «gemini-flash-latest» siempre apunta al Flash más reciente. <b>Mistral</b>: clave gratis en console.mistral.ai activando el plan «Experiment» (pide un número de móvil). En los dos casos, lo que envías puede usarse para mejorar sus modelos, y cada simulación es un programa largo (unos 50 KB): si alguna sale cortada o con fallos, prueba con el otro.</p>
     <div class="fld"><label for="p-prov">Proveedor</label>
       <select id="p-prov">
-        <option value="claude">Claude (Anthropic)</option>
-        <option value="gemini">Gemini (Google)</option>
-        <option value="mistral">Mistral</option>
-        <option value="groq">Groq</option>
+        <option value="gemini">Gemini (Google), gratis</option>
+        <option value="mistral">Mistral, gratis con el plan Experiment</option>
       </select>
     </div>
     <div class="fld"><label for="p-key">Clave de la API</label>
@@ -233,10 +235,8 @@ const CFG_KEY = "gensim-config-v1";
 const EXTRA_KEY = "gensim-extra-v1";
 
 const PROV = {
-  claude:  { name:"Claude",  model:"claude-opus-5-5",       max:32000, models:["claude-opus-5-5","claude-sonnet-5-5"] },
-  gemini:  { name:"Gemini",  model:"gemini-2.5-pro",        max:65536, models:["gemini-2.5-pro","gemini-2.5-flash"] },
-  mistral: { name:"Mistral", model:"mistral-large-latest",  max:32000, models:["mistral-large-latest","mistral-medium-latest"] },
-  groq:    { name:"Groq",    model:"openai/gpt-oss-120b",   max:32000, models:["openai/gpt-oss-120b","llama-3.3-70b-versatile"] }
+  gemini:  { name:"Gemini",  model:"gemini-flash-latest",  max:65536, models:["gemini-flash-latest","gemini-2.5-pro","gemini-2.5-flash"] },
+  mistral: { name:"Mistral", model:"mistral-large-latest", max:32000, models:["mistral-large-latest","mistral-medium-latest","codestral-latest"] }
 };
 
 const DEFAULT_PROMPT = `Eres un desarrollador web y profesor de informática para personas mayores en los cursos de Cruz Roja en Valladolid. Creas simulaciones interactivas, de una sola página HTML, para que los alumnos aprendan el tema de un documento del curso.
@@ -279,8 +279,9 @@ const DEFAULT_REF = (() => {
   } catch (e) { return ""; }
 })();
 
-let cfg = { provider:"claude", keys:{}, models:{}, max:{}, prompt:"", refHtml:"", refName:"" };
+let cfg = { provider:"gemini", keys:{}, models:{}, max:{}, prompt:"", refHtml:"", refName:"" };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY)) || {}); } catch (e) {}
+if (!PROV[cfg.provider]) cfg.provider = "gemini";
 const model  = p => cfg.models[p] || PROV[p].model;
 const maxTok = p => +cfg.max[p] || PROV[p].max;
 const prompt = () => cfg.prompt || DEFAULT_PROMPT;
@@ -480,17 +481,6 @@ class AIError extends Error { constructor(msg, fatal){ super(msg); this.fatal = 
 function apiRequest(provider, system, messages){
   const key = cfg.keys[provider], m = model(provider), max = maxTok(provider);
   if (!key) throw new AIError("Falta la clave de la API de " + PROV[provider].name + ". Ábrela en ⚙️ Ajustes.", true);
-  if (provider === "claude") return {
-    url: "https://api.anthropic.com/v1/messages",
-    headers: { "Content-Type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
-    body: { model:m, max_tokens:max, system, messages, stream:true },
-    parse: (o, s) => {
-      if (o.type === "content_block_delta" && o.delta && o.delta.type === "text_delta") s.text += o.delta.text;
-      else if (o.type === "message_delta" && o.delta) s.stop = o.delta.stop_reason;
-      else if (o.type === "error") throw new AIError("Claude: " + ((o.error && o.error.message) || "error durante la respuesta"), false);
-    },
-    cut: s => s.stop === "max_tokens"
-  };
   if (provider === "gemini") return {
     url: "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(m) + ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key),
     headers: { "Content-Type":"application/json" },
@@ -505,9 +495,8 @@ function apiRequest(provider, system, messages){
     },
     cut: s => s.stop === "MAX_TOKENS"
   };
-  const url = provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://api.mistral.ai/v1/chat/completions";
   return {
-    url,
+    url: "https://api.mistral.ai/v1/chat/completions",
     headers: { "Content-Type":"application/json", "Authorization":"Bearer " + key },
     body: { model:m, max_tokens:max, temperature:0.7, stream:true, messages:[{ role:"system", content:system }, ...messages] },
     parse: (o, s) => {
@@ -529,8 +518,11 @@ async function callAI(messages, onProgress, signal){
     let detail = "";
     try { const j = await res.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); } catch (e) {}
     const st = res.status;
-    const why = st === 401 || st === 403 ? "la clave no es válida" : st === 404 ? "no existe el modelo «" + model(cfg.provider) + "»" : st === 429 ? "demasiadas peticiones o sin saldo" : st >= 500 ? "el servicio está saturado" : "petición rechazada";
-    throw new AIError(PROV[cfg.provider].name + " (" + st + "): " + why + (detail ? ". " + String(detail).slice(0, 220) : ""), [400,401,403,404].includes(st));
+    const err429 = st === 429;
+    const why = st === 401 || st === 403 ? "la clave no es válida" : st === 404 ? "no existe el modelo «" + model(cfg.provider) + "»" : st === 429 ? "se ha llegado al límite gratuito por ahora (por minuto o por día)" : st >= 500 ? "el servicio está saturado" : "petición rechazada";
+    const err = new AIError(PROV[cfg.provider].name + " (" + st + "): " + why + (detail ? ". " + String(detail).slice(0, 220) : ""), [400,401,403,404].includes(st));
+    err.wait = err429 ? 40 : 8;
+    throw err;
   }
   const s = { text:"", stop:null }, reader = res.body.getReader(), dec = new TextDecoder();
   let buf = "";
@@ -577,7 +569,7 @@ async function generate(it, change){
     } catch (e) {
       clearInterval(timer);
       if (e.name === "AbortError" || e.fatal || attempt === 1) throw e;
-      for (let s = 8; s > 0; s--) { setMsg(it, "⚠️ " + e.message + " Reintento en " + s + " s…"); await sleep(1000); if (ctrl.signal.aborted) throw new DOMException("", "AbortError"); }
+      for (let s = e.wait || 8; s > 0; s--) { setMsg(it, "⚠️ " + e.message + " Reintento en " + s + " s…"); await sleep(1000); if (ctrl.signal.aborted) throw new DOMException("", "AbortError"); }
     } finally { clearInterval(timer); }
   }
 }

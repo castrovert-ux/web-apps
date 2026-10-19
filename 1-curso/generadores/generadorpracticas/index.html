@@ -96,10 +96,17 @@
   .empty h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.7rem; color:var(--c3); }
   .empty p { color:var(--sub); font-weight:700; max-width:480px; line-height:1.5; }
 
-  .modal { position:fixed; inset:0; z-index:100; background:rgba(5,10,22,.8); backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center; padding:30px 16px; overflow:auto; }
+  .modal { position:fixed; inset:0; z-index:100; background:rgba(5,10,22,.8); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:20px 16px; }
   .modal[hidden] { display:none; }
-  .mbox { width:100%; max-width:720px; background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:24px 26px; animation:popIn .3s ease; }
-  .mhead { display:flex; align-items:center; margin-bottom:6px; }
+  .mbox { width:100%; max-width:720px; max-height:calc(100vh - 40px); display:flex; flex-direction:column; background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:24px; overflow:hidden; animation:popIn .3s ease; }
+  .mhead { display:flex; align-items:center; padding:18px 26px 12px; border-bottom:1px solid rgba(255,255,255,.08); flex-shrink:0; }
+  .mbody { flex:1; min-height:0; overflow-y:auto; padding:6px 26px 18px; scrollbar-width:auto; scrollbar-color:var(--c6) rgba(255,255,255,.06); }
+  .mbody::-webkit-scrollbar { width:14px; }
+  .mbody::-webkit-scrollbar-track { background:rgba(255,255,255,.05); }
+  .mbody::-webkit-scrollbar-thumb { background:var(--c6); border-radius:10px; border:3px solid var(--card); }
+  .mfoot { display:flex; gap:10px; padding:14px 26px; border-top:1px solid rgba(255,255,255,.08); flex-shrink:0; }
+  .mfoot .btn { flex:1; }
+  #p-custom[hidden] { display:none; }
   .mhead h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.7rem; flex:1; }
   .mbox h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.2rem; color:var(--c3); margin:18px 0 10px; }
   .fld { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
@@ -110,7 +117,7 @@
   .hint { color:var(--sub); font-weight:600; font-size:.88rem; line-height:1.45; margin-bottom:8px; }
   .hint b { color:var(--c3); }
   .refinfo { background:rgba(255,255,255,.05); border-radius:12px; padding:10px 14px; font-weight:700; margin-bottom:10px; }
-  #p-prompt { min-height:260px; font-size:.85rem; font-family:ui-monospace,Consolas,monospace; font-weight:400; }
+  #p-prompt { min-height:220px; font-size:.85rem; font-family:ui-monospace,Consolas,monospace; font-weight:400; }
   .keyrow { display:flex; gap:8px; } .keyrow input { flex:1; min-width:0; }
 
   .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:200; background:rgba(10,22,40,.96); color:#fff; padding:12px 20px; border-radius:14px; font-weight:800; border:2px solid var(--c3); opacity:0; transition:opacity .25s; pointer-events:none; max-width:90vw; text-align:center; }
@@ -178,24 +185,28 @@
 <div class="modal" id="modal" hidden>
   <div class="mbox" role="dialog" aria-labelledby="m-h">
     <div class="mhead"><h2 id="m-h">⚙️ Ajustes</h2><button class="x" id="b-close" type="button" aria-label="Cerrar">✕</button></div>
+    <div class="mbody">
 
     <h3>Inteligencia artificial</h3>
-    <p class="hint">Cada práctica es un programa largo (unos 50-60 KB) y además se envía el ejemplo, que también es grande. Con <b>Claude</b> sale mucho mejor; otros modelos a menudo se cortan a medias o dejan fallos. Groq gratuito suele quedarse corto.</p>
+    <p class="hint">Solo están las dos con plan <b>gratuito</b> que admiten un ejemplo tan grande. <b>Gemini</b> (clave en aistudio.google.com) con un modelo <b>Flash</b>: unas 20 prácticas al día. <b>Mistral</b> (clave en console.mistral.ai, plan «Experiment»): muchas más, pero solo 1 o 2 peticiones por minuto, así que entre tema y tema espera un poco. En los dos planes gratuitos el proveedor puede usar lo que envías para mejorar sus modelos.</p>
     <div class="fld"><label for="p-prov">Proveedor</label>
       <select id="p-prov">
-        <option value="claude">Claude (Anthropic)</option>
-        <option value="gemini">Gemini (Google)</option>
-        <option value="mistral">Mistral</option>
-        <option value="groq">Groq</option>
+        <option value="gemini">Gemini (Google) · gratis</option>
+        <option value="mistral">Mistral · gratis</option>
       </select>
     </div>
     <div class="fld"><label for="p-key">Clave de la API</label>
       <div class="keyrow"><input type="password" id="p-key" autocomplete="off" spellcheck="false"><button class="btn sm" id="b-eye" type="button">👁️</button></div>
     </div>
     <div class="grid2">
-      <div class="fld"><label for="p-model">Modelo</label><input id="p-model" list="models" spellcheck="false"><datalist id="models"></datalist></div>
+      <div class="fld"><label for="p-model">Modelo</label>
+        <select id="p-model"></select>
+        <input id="p-custom" spellcheck="false" placeholder="Escribe el nombre exacto del modelo" hidden>
+      </div>
       <div class="fld"><label for="p-max">Máximo de tokens</label><input id="p-max" type="number" min="4000" step="1000"></div>
     </div>
+    <div class="row" style="margin-bottom:4px"><button class="btn sm" id="b-models" type="button">🔄 Cargar los modelos de mi cuenta</button></div>
+    <p class="hint" id="models-info">Pon la clave y pulsa el botón para ver todos los modelos que tienes disponibles.</p>
 
     <h3>Ejemplo de referencia</h3>
     <p class="hint">La IA copia el aspecto y la forma de funcionar de este ejemplo. Viene puesto «Pequeñas destrezas con el móvil». Puedes cambiarlo por otra práctica tuya, por ejemplo una de ordenador, si te gusta más.</p>
@@ -212,7 +223,9 @@
       <button class="btn sm" id="b-prompt-reset" type="button">↩️ Volver a las instrucciones originales</button>
     </div>
 
-    <div class="row" style="margin-top:20px">
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="b-cancel" type="button">Cancelar</button>
       <button class="btn go" id="b-save" type="button">💾 Guardar ajustes</button>
     </div>
   </div>
@@ -232,8 +245,8 @@ const EXTRA_KEY = "genprac-extra-v1";
 
 const PROV = {
   claude:  { name:"Claude",  model:"claude-opus-5-5",      max:32000, models:["claude-opus-5-5","claude-sonnet-5-5"] },
-  gemini:  { name:"Gemini",  model:"gemini-2.5-pro",       max:65536, models:["gemini-2.5-pro","gemini-2.5-flash"] },
-  mistral: { name:"Mistral", model:"mistral-large-latest", max:32000, models:["mistral-large-latest","mistral-medium-latest"] },
+  gemini:  { name:"Gemini",  model:"gemini-3.8-flash",     max:65536, models:["gemini-3.8-flash","gemini-3.6-flash","gemini-3.1-flash-lite"], gap:3000 },
+  mistral: { name:"Mistral", model:"mistral-large-latest", max:32000, models:["mistral-large-latest","mistral-medium-latest"], gap:40000 },
   groq:    { name:"Groq",    model:"openai/gpt-oss-120b",  max:32000, models:["openai/gpt-oss-120b","llama-3.3-70b-versatile"] }
 };
 
@@ -285,8 +298,14 @@ const DEFAULT_REF = (() => {
   } catch (e) { return ""; }
 })();
 
-let cfg = { provider:"claude", keys:{}, models:{}, max:{}, prompt:"", refHtml:"", refName:"" };
+let cfg = { provider:"gemini", keys:{}, models:{}, max:{}, prompt:"", refHtml:"", refName:"" };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY)) || {}); } catch (e) {}
+cfg.lists = cfg.lists || {};
+/* Gemini 2.5 y 2.0 dejaron de funcionar el 16 de octubre de 2026 */
+if (cfg.models.gemini && !/flash/i.test(cfg.models.gemini)) delete cfg.models.gemini;
+/* De momento solo proveedores gratuitos */
+const FREE = ["gemini", "mistral"];
+if (!FREE.includes(cfg.provider)) cfg.provider = "gemini";
 const model  = p => cfg.models[p] || PROV[p].model;
 const maxTok = p => +cfg.max[p] || PROV[p].max;
 const prompt = () => cfg.prompt || DEFAULT_PROMPT;
@@ -541,7 +560,9 @@ async function callAI(messages, onProgress, signal){
     try { const j = await res.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); } catch (e) {}
     const st = res.status;
     const why = st === 401 || st === 403 ? "la clave no es válida" : st === 404 ? "no existe el modelo «" + model(cfg.provider) + "»" : st === 429 ? "demasiadas peticiones o sin saldo" : st >= 500 ? "el servicio está saturado" : "petición rechazada";
-    throw new AIError(PROV[cfg.provider].name + " (" + st + "): " + why + (detail ? ". " + String(detail).slice(0, 220) : ""), [400,401,403,404].includes(st));
+    const err = new AIError(PROV[cfg.provider].name + " (" + st + "): " + why + (detail ? ". " + String(detail).slice(0, 220) : ""), [400,401,403,404].includes(st));
+    err.wait = st === 429 ? 60 : 8;
+    throw err;
   }
   const s = { text:"", stop:null }, reader = res.body.getReader(), dec = new TextDecoder();
   let buf = "";
@@ -588,7 +609,7 @@ async function generate(it, change){
     } catch (e) {
       clearInterval(timer);
       if (e.name === "AbortError" || e.fatal || attempt === 1) throw e;
-      for (let s = 8; s > 0; s--) { setMsg(it, "⚠️ " + e.message + " Reintento en " + s + " s…"); await sleep(1000); if (ctrl.signal.aborted) throw new DOMException("", "AbortError"); }
+      for (let s = e.wait || 8; s > 0; s--) { setMsg(it, "⚠️ " + e.message + " Reintento en " + s + " s…"); await sleep(1000); if (ctrl.signal.aborted) throw new DOMException("", "AbortError"); }
     } finally { clearInterval(timer); }
   }
 }
@@ -614,7 +635,11 @@ async function runQueue(){
   for (;;) {
     const it = items.find(i => i.status === "pending" || i.status === "error");
     if (!it || ctrl.signal.aborted) break;
-    if (!first) { await sleep(2500); if (ctrl.signal.aborted) break; }
+    if (!first) {
+      const gap = PROV[cfg.provider].gap || 3000;
+      for (let w = gap; w > 0 && !ctrl.signal.aborted; w -= 1000) { setMsg(it, "En espera: el plan gratuito pide una pausa entre temas (" + Math.ceil(w / 1000) + " s)…"); await sleep(1000); }
+      if (ctrl.signal.aborted) break;
+    }
     first = false;
     it.status = "working"; it.chgOpen = false; updateCard(it);
     try {
@@ -713,14 +738,61 @@ $("b-full").onclick = () => { if (frame.requestFullscreen) frame.requestFullscre
    Ajustes
    ========================================================= */
 let draftProv = cfg.provider, draftRef = null;
+const OTHER = "__otro__";
+function modelOptions(p, current){
+  const list = [...new Set([...(cfg.lists[p] || PROV[p].models), current].filter(Boolean))];
+  $("p-model").innerHTML = list.map(m => '<option value="' + esc(m) + '">' + esc(m) + (m === PROV[p].model ? "  (recomendado)" : "") + '</option>').join("") +
+    '<option value="' + OTHER + '">✏️ Otro modelo (escribirlo)…</option>';
+  $("p-model").value = current;
+  $("p-custom").hidden = true; $("p-custom").value = "";
+}
+function chosenModel(){
+  const v = $("p-model").value;
+  return v === OTHER ? $("p-custom").value.trim() : v;
+}
 function fillProv(p){
   draftProv = p;
   $("p-prov").value = p;
   $("p-key").value = cfg.keys[p] || "";
-  $("p-model").value = model(p);
+  modelOptions(p, model(p));
   $("p-max").value = maxTok(p);
-  $("models").innerHTML = PROV[p].models.map(m => '<option value="' + m + '">').join("");
+  $("models-info").textContent = cfg.lists[p] ? "Lista cargada de tu cuenta (" + cfg.lists[p].length + " modelos)." : "Pon la clave y pulsa el botón para ver todos los modelos que tienes disponibles.";
 }
+$("p-model").onchange = () => {
+  const o = $("p-model").value === OTHER;
+  $("p-custom").hidden = !o;
+  if (o) $("p-custom").focus();
+};
+
+/* Pide al proveedor la lista de modelos de la cuenta */
+async function listModels(p, key){
+  let url, headers = {};
+  if (p === "claude") { url = "https://api.anthropic.com/v1/models?limit=100"; headers = { "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" }; }
+  else if (p === "gemini") url = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=" + encodeURIComponent(key);
+  else { url = p === "groq" ? "https://api.groq.com/openai/v1/models" : "https://api.mistral.ai/v1/models"; headers = { "Authorization":"Bearer " + key }; }
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(res.status === 401 || res.status === 403 || res.status === 400 ? "la clave no es válida" : "error " + res.status);
+  const j = await res.json();
+  let ids;
+  if (p === "gemini") ids = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+                          .map(m => m.name.replace(/^models\//, "")).filter(n => /^gemini/.test(n) && !/(image|tts|audio|live|embedding|banana|omni|robotics|transcribe)/.test(n));
+  else ids = (j.data || []).map(m => m.id).filter(n => !/(embed|whisper|tts|guard|moderation|ocr|transcri|audio)/i.test(n));
+  return [...new Set(ids)].sort((a, b) => b.localeCompare(a, "en", { numeric:true }));
+}
+$("b-models").onclick = async () => {
+  const p = draftProv, key = $("p-key").value.trim();
+  if (!key) return toast("Primero escribe la clave de la API");
+  const b = $("b-models"); b.disabled = true; $("models-info").textContent = "Consultando a " + PROV[p].name + "…";
+  try {
+    const ids = await listModels(p, key);
+    if (!ids.length) throw new Error("no ha devuelto ningún modelo de texto");
+    const cur = chosenModel() || model(p);
+    cfg.lists[p] = ids;
+    modelOptions(p, cur);
+    $("models-info").textContent = "✅ " + ids.length + " modelos en tu cuenta. Ojo: la lista incluye también los de pago" + (p === "gemini" ? "; gratis solo son los «flash»." : ".") + " Elige uno y guarda.";
+  } catch (e) { $("models-info").textContent = "❌ No se ha podido cargar la lista: " + e.message + ". Puedes elegir «Otro modelo» y escribirlo."; }
+  b.disabled = false;
+};
 function refInfo(){
   const own = draftRef !== null ? draftRef.html : cfg.refHtml;
   const h = own || DEFAULT_REF;
@@ -733,15 +805,16 @@ function openCfg(){
   $("p-prompt").value = prompt();
   refInfo();
   $("modal").hidden = false;
+  document.querySelector(".mbody").scrollTop = 0;
 }
 function keepDraft(){
   const p = draftProv;
   cfg.keys[p] = $("p-key").value.trim();
-  cfg.models[p] = $("p-model").value.trim() || PROV[p].model;
+  cfg.models[p] = chosenModel() || PROV[p].model;
   cfg.max[p] = Math.max(4000, +$("p-max").value || PROV[p].max);
 }
 $("b-cfg").onclick = openCfg;
-$("b-close").onclick = () => { $("modal").hidden = true; };
+$("b-close").onclick = $("b-cancel").onclick = () => { $("modal").hidden = true; };
 $("modal").addEventListener("pointerdown", e => { if (e.target === $("modal")) $("modal").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key === "Escape") $("modal").hidden = true; });
 $("p-prov").onchange = e => { keepDraft(); fillProv(e.target.value); };
