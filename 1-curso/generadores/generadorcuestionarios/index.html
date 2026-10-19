@@ -513,7 +513,7 @@ const PROVIDERS = {
                  {id:'gemini-2.5-flash',         label:'Gemini 2.5 Flash'}]},
   groq:       {label:'Groq · gratis', dynamic:true, models:[
                  {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
-                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B'}]},
+                 {id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
   mistral:    {label:'Mistral (plan Experiment) · gratis', dynamic:true, models:[
                  {id:'mistral-medium-latest',label:'Mistral Medium'},
                  {id:'mistral-small-latest', label:'Mistral Small'},
@@ -622,7 +622,7 @@ const STATUS_LABEL = {wait:'Pendiente', run:'Generando…', ok:'Listo', err:'Err
 function renderFiles(){
   $('files').innerHTML = items.map(it => {
     const d = it.data;
-    const meta = d ? `${d.emoji} Curso de ${d.curso === 'movil' ? 'Móvil' : 'Ordenador'} · ${d.preguntas.length} preguntas` : (it.file.size / 1024).toFixed(0) + ' KB';
+    const meta = d ? `${d.emoji} Curso de ${d.curso === 'movil' ? 'Móvil' : 'Ordenador'} · ${d.preguntas.length} preguntas${it.trimmed ? ' · texto recortado' : ''}` : (it.file.size / 1024).toFixed(0) + ' KB';
     return `<div class="file">
       <div><div class="name">${esc(it.file.name)}<span class="st ${it.status}">${STATUS_LABEL[it.status]}</span></div><div class="meta">${esc(meta)}</div></div>
       <div class="acts">
@@ -696,7 +696,7 @@ async function runAll(){
     if (!items.includes(it)) continue;
     n++; showStatus('', `Generando ${n} de ${todo.length}: ${it.file.name}`);
     await processItem(it);
-    if (n < todo.length) await new Promise(r => setTimeout(r, 4000));   // respiro para los límites por minuto
+    if (n < todo.length) await new Promise(r => setTimeout(r, settings.provider === 'groq' ? 6000 : 3000));   // respiro para los límites por minuto
   }
   busy = false;
   const ok = items.filter(it => it.status === 'ok').length, err = items.filter(it => it.status === 'err').length;
@@ -713,6 +713,14 @@ async function regenerate(id){
   renderFiles();
 }
 
+// Recorte del documento para no superar el contexto / TPM del plan gratuito
+const MAX_DOC_CHARS = { groq: 12000, mistral: 100000, aistudio: 150000, openrouter: 60000 };
+function trimDoc(text, prov){
+  const max = MAX_DOC_CHARS[prov] || 60000;
+  if (text.length <= max) return { text, trimmed:false };
+  return { text: text.slice(0, max) + '\n\n[...documento recortado por longitud...]', trimmed:true };
+}
+
 async function processItem(it){
   it.status = 'run'; it.error = ''; renderFiles();
   try {
@@ -722,7 +730,9 @@ async function processItem(it){
     }
     const nq = settings.nq;
     const system = getPrompt().split('{N}').join(String(nq));
-    const user = `Documento: «${it.file.name}»\n\n<documento>\n${it.text}\n</documento>\n\nCrea el cuestionario de ${nq} preguntas. Responde solo con el JSON.`;
+    const doc = trimDoc(it.text, settings.provider);
+    it.trimmed = doc.trimmed;
+    const user = `Documento: «${it.file.name}»\n\n<documento>\n${doc.text}\n</documento>\n\nCrea el cuestionario de ${nq} preguntas. Responde solo con el JSON.`;
     const raw = await callModel({provider:settings.provider, model:settings.model, system, user});
     it.data = validate(parseJSON(raw));
     it.status = 'ok';
@@ -752,6 +762,9 @@ function validate(d){
   d.preguntas.forEach(p => {
     if (!p || !p.q || !Array.isArray(p.options) || p.options.length < 2) return;
     let correct = parseInt(p.correct, 10);
+    if (isNaN(correct) && typeof p.correct === 'string' && /^[A-Za-z]$/.test(p.correct.trim())){
+      correct = p.correct.trim().toUpperCase().charCodeAt(0) - 65;
+    }
     const isBool = p.type === 'boolean' || (p.options.length === 2 && /^verdadero$/i.test(String(p.options[0]).trim()) && /^falso$/i.test(String(p.options[1]).trim()));
     if (isNaN(correct) || correct < 0 || correct >= p.options.length) return;
     const q = {q:String(p.q).trim(), options:p.options.map(o => String(o).trim()), correct, expl:String(p.expl || '').trim()};
@@ -790,19 +803,21 @@ function callModel(o){
     openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
     mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
     // El plan gratuito de Groq limita los tokens por minuto: se pide una salida más corta
-    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:5000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:4000},
   }[o.provider];
   return callOpenAICompat(o, cfg);
 }
 async function callGemini({model, system, user}){
   const key = needKey('aistudio');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const gen = {maxOutputTokens:32000};
+  if (!/^gemma/i.test(model)) gen.responseMimeType = 'application/json';   // Gemma no soporta modo JSON
   const resp = await fetch(url, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       systemInstruction:{parts:[{text:system}]},
       contents:[{role:'user', parts:[{text:user}]}],
-      generationConfig:{maxOutputTokens:32000, responseMimeType:'application/json'}
+      generationConfig: gen
     })
   });
   if (!resp.ok) throw await httpError(resp, 'AI Studio');
@@ -818,6 +833,8 @@ async function callOpenAICompat({provider, model, system, user}, cfg){
   if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Generador de Cuestionarios'; }
   const body = {model, messages:[{role:'system', content:system}, {role:'user', content:user}]};
   if (cfg.max) body.max_tokens = cfg.max;
+  // Forzar JSON en los proveedores que lo soportan de forma nativa
+  if (provider === 'groq' || provider === 'mistral') body.response_format = {type:'json_object'};
   const resp = await fetch(cfg.url, {method:'POST', headers, body:JSON.stringify(body)});
   if (!resp.ok) throw await httpError(resp, cfg.who);
   const j = await resp.json();
