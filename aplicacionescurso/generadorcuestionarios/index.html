@@ -1,543 +1,912 @@
-<html lang="es"><head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplicaciones del libro</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&amp;family=DM+Sans:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Cuestionarios</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+    --line: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
-  <style>
-    :root {
-      --bg-from: #0f0c29; --bg-mid: #302b63; --bg-to: #24243e;
-      --card-bg: rgba(255,255,255,0.07); --card-border: rgba(255,255,255,0.13);
-      --card-hover: rgba(255,255,255,0.14); --accent: #e8c76b; --accent2: #f07f5a;
-      --text: #f0eef8; --text-muted: rgba(240,238,248,0.55);
-      --radius: 18px; --radius-sm: 10px; --shadow: 0 8px 40px rgba(0,0,0,0.45);
-      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
-    }
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; animation: float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
 
-    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 36px 20px 60px; }
+  .header { text-align: center; margin-bottom: 30px; position: relative; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 14px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.6rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px;
+  }
+  .lead { color: var(--sub); font-weight: 600; }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-mid) 50%, var(--bg-to) 100%);
-      min-height: 100vh; color: var(--text); overflow-x: hidden;
-    }
+  .card { background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sub); margin-bottom: 14px; font-weight: 800; }
 
-    header { text-align:center; padding:56px 24px 32px; }
-    header h1 {
-      font-family: 'Syne', sans-serif; font-weight:800; font-size: clamp(2rem,5vw,3.2rem);
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    header p { margin-top:8px; color:var(--text-muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.78rem; font-weight: 700; color: var(--sub); }
+  select, input[type=number], input[type=text], input[type=password], textarea {
+    background: rgba(255,255,255,0.04); border: 2px solid var(--line); border-radius: 10px;
+    color: var(--text); font-family: inherit; font-size: 0.95rem; font-weight: 600; padding: 9px 12px;
+  }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--c1); }
+  select option { background: var(--card); }
+  input[type=number] { width: 90px; }
 
-    #app-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 20px;
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 0 24px 120px;
-    }
+  .btn {
+    border: 2px solid var(--line); background: rgba(255,255,255,0.05); color: var(--text);
+    font-family: inherit; font-weight: 800; font-size: 0.9rem; padding: 10px 16px; border-radius: 12px; cursor: pointer; transition: 0.2s;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--c1); background: rgba(33,115,70,0.15); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn-main { background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; border: none; }
+  .btn-main:hover:not(:disabled) { background: linear-gradient(135deg, var(--c3), #f59e0b); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+  .btn-green { background: linear-gradient(135deg, var(--c1), var(--c2)); border: none; color: #fff; }
+  .btn-sm { padding: 6px 11px; font-size: 0.8rem; border-radius: 9px; }
+  .top-actions { position: absolute; top: 0; right: 0; display: flex; gap: 8px; }
 
-    .app-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 28px 16px 22px;
-      text-align: center;
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      backdrop-filter: blur(12px);
-      cursor: grab;
-      transition: all var(--transition);
-      animation: cardIn 0.5s ease both;
-      user-select: none;
-      position: relative;
-    }
+  .drop {
+    border: 2px dashed rgba(255,255,255,0.18); border-radius: 16px; padding: 30px 20px; text-align: center;
+    cursor: pointer; transition: 0.2s; color: var(--sub); font-weight: 700;
+  }
+  .drop:hover, .drop.over { border-color: var(--c1); background: rgba(33,115,70,0.08); color: var(--text); }
+  .drop .big { font-size: 2.2rem; display: block; margin-bottom: 6px; }
 
-    .app-card:hover { transform: translateY(-5px) scale(1.03); }
-    .app-card:active { cursor: grabbing; }
+  .files { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .file {
+    border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: rgba(255,255,255,0.02);
+    display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  }
+  .file .name { font-weight: 800; word-break: break-word; }
+  .file .meta { font-size: 0.82rem; color: var(--sub); font-weight: 600; margin-top: 3px; }
+  .file .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .file .edit { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .file .edit input[type=text] { flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.9rem; }
+  .file .edit input.emoji { width: 56px; flex: none; min-width: 0; text-align: center; }
+  .file .edit select { padding: 6px 10px; font-size: 0.9rem; }
+  .st { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; margin-left: 6px; vertical-align: middle; }
+  .st.wait { background: rgba(255,255,255,0.08); color: var(--sub); }
+  .st.run { background: rgba(255,217,61,0.15); color: var(--c3); }
+  .st.ok { background: rgba(33,115,70,0.25); color: #4ade80; }
+  .st.err { background: rgba(255,107,107,0.18); color: var(--c4); }
+  .errtxt { grid-column: 1 / -1; color: var(--c4); font-size: 0.85rem; font-weight: 600; }
 
-    .app-card.dragging {
-      opacity: 0.35;
-      transform: scale(0.92);
-      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
-      z-index: 50;
-    }
+  .bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 18px; }
+  .status { margin-top: 12px; font-weight: 700; font-size: 0.9rem; min-height: 1.2em; }
+  .status.ok { color: var(--c5); } .status.err { color: var(--c4); }
 
-    .app-card.drag-over {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(232,199,107,0.35);
-      transform: scale(1.06);
-    }
+  .overlay { position: fixed; inset: 0; background: rgba(5,10,20,0.75); z-index: 10; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 760px; max-height: 92vh; display: flex; flex-direction: column; }
+  .modal.sm { max-width: 480px; }
+  .modal-head { padding: 18px 22px 0; } .modal-head h3 { font-family: 'Fredoka One'; font-weight: 400; font-size: 1.4rem; }
+  .modal-body { padding: 16px 22px; overflow: auto; flex: 1; }
+  .modal-foot { padding: 0 22px 18px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+  .modal-foot .left { margin-right: auto; display: flex; gap: 8px; align-items: center; }
+  .keyrow { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .keyrow label { font-weight: 700; color: var(--sub); font-size: 0.88rem; }
+  .keynote { color: var(--sub); font-size: 0.85rem; margin-bottom: 14px; }
+  textarea.big { width: 100%; min-height: 55vh; font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; font-weight: 400; line-height: 1.45; resize: vertical; }
+  .ptitle { font-size: 0.8rem; font-weight: 800; color: var(--sub); margin-bottom: 8px; }
 
-    .app-icon { font-size: 2.8rem; transition: transform var(--transition); }
-    .app-card:hover .app-icon { transform: scale(1.2) rotate(-5deg); }
-
-    .app-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.92rem; }
-
-    @keyframes cardIn {
-      from { opacity:0; transform:translateY(25px) scale(0.9); }
-      to { opacity:1; transform:none; }
-    }
-
-    #btn-config {
-      position:fixed; bottom:28px; right:28px; z-index:100;
-      width:56px; height:56px; border-radius:50%;
-      background:rgba(232,199,107,0.2); border:2px solid rgba(232,199,107,0.5);
-      color:var(--accent); font-size:1.6rem; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      box-shadow:0 6px 25px rgba(0,0,0,0.4);
-    }
-
-    #modal-overlay {
-      position:fixed; inset:0; z-index:200;
-      background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
-      display:none; align-items:center; justify-content:center; padding:20px;
-    }
-
-    #modal {
-      background: rgba(18,15,40,0.98);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px;
-      width: 100%; max-width: 540px;
-      max-height: 92vh; overflow-y: auto;
-      padding: 32px; box-shadow: var(--shadow);
-    }
-
-    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
-    .section-title { font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin:20px 0 12px; }
-
-    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-    label { display:block; font-size:0.78rem; color:var(--text-muted); margin-bottom:5px; }
-    input[type="text"] {
-      width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
-      border-radius:var(--radius-sm); padding:10px 12px; color:var(--text);
-    }
-
-    .btn { border:none; border-radius:var(--radius-sm); padding:10px 18px; cursor:pointer; transition:all var(--transition); }
-    .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1530; font-weight:600; }
-
-    .admin-item {
-      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-      border-radius:var(--radius-sm); padding:12px 14px; display:flex; align-items:center; gap:12px;
-      flex-wrap:wrap;
-      cursor: grab;
-      transition: all 0.15s;
-    }
-    .admin-item:active { cursor: grabbing; }
-    .admin-item.dragging-admin {
-      opacity: 0.4;
-      background: rgba(255,255,255,0.1);
-    }
-    .admin-item.drag-over-admin {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(232,199,107,0.5);
-    }
-
-    .edit-form { display:none; flex-direction:column; gap:10px; margin-top:12px; width:100%; }
-    .edit-form.visible { display:flex; }
-
-    #toast {
-      position:fixed; bottom:100px; right:28px; z-index:300;
-      background:rgba(18,15,40,0.95); border:1px solid rgba(255,255,255,0.15);
-      padding:12px 20px; border-radius:12px; font-size:0.9rem;
-      opacity:0; transform:translateY(15px); transition:all 0.3s;
-    }
-    #toast.show { opacity:1; transform:none; }
-  </style>
+  @media (max-width: 600px) {
+    .top-actions { position: static; justify-content: center; margin-bottom: 14px; }
+    .file { grid-template-columns: 1fr; } .file .acts { justify-content: flex-start; }
+  }
+</style>
 </head>
 <body>
 
-  <header>
-    <h1>✦ Aplicaciones del libro</h1>
-    <p>Todas tus aplicaciones, en un solo lugar</p>
-  </header>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
 
-  <main id="app-grid"><div class="app-card" draggable="true" data-id="eqznslp">
-          <span class="app-icon">🥇</span>
-          <span class="app-name">Individuales</span>
-        </div><div class="app-card" draggable="true" data-id="kvvkoer">
-          <span class="app-icon">🚥</span>
-          <span class="app-name">Secuenciales</span>
-        </div><div class="app-card" draggable="true" data-id="kdjhbjg">
-          <span class="app-icon">📋</span>
-          <span class="app-name">Generador de Cuestionarios</span>
-        </div></main>
+<div class="container">
+  <div class="header">
+    <div class="top-actions">
+      <button class="btn btn-sm" onclick="openPrompt()">📝 Prompt</button>
+      <button class="btn btn-sm" onclick="openKeys()">🔑 Claves</button>
+    </div>
+    <div class="badge">🧩 Cruz Roja · Cursos</div>
+    <h1>Generador de Cuestionarios</h1>
+    <p class="lead">Carga los temas en Word o PDF y descarga un cuestionario por cada uno.</p>
+  </div>
 
-  <button id="btn-config" title="Administración">⚙️</button>
-
-  <div id="modal-overlay" style="display:none;">
-    <div id="modal">
-      <div class="modal-header">
-        <h2>⚙️ Administración</h2>
-        <button id="btn-close-modal" style="background:none;border:none;font-size:1.8rem;color:#aaa;cursor:pointer;">✕</button>
-      </div>
-
-      <p class="section-title">➕ Añadir nueva aplicación</p>
-      <div class="form-row">
-        <div>
-          <label for="new-name">Nombre *</label>
-          <input type="text" id="new-name" placeholder="Mi App">
-        </div>
-        <div>
-          <label for="new-folder">Carpeta / URL *</label>
-          <input type="text" id="new-folder" placeholder="mi-app/">
-        </div>
-      </div>
-      <div class="form-row" style="grid-template-columns:80px 1fr;">
-        <div>
-          <label for="new-icon">Icono</label>
-          <input type="text" id="new-icon" placeholder="📦" maxlength="4">
-        </div>
-      </div>
-      <button class="btn btn-primary" id="btn-add-app">➕ Añadir aplicación</button>
-
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
-
-      <p class="section-title">📋 Aplicaciones actuales (arrastra para reordenar)</p>
-      <div id="apps-admin-list"><div class="admin-item" data-id="eqznslp" draggable="true">
-          <span class="app-icon" style="font-size:1.6rem;">🥇</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">Individuales</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">individuales/</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="eqznslp" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="eqznslp" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-eqznslp">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="Individuales"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="individuales/"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="🥇" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="eqznslp" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="eqznslp" style="padding:8px 16px;">Cancelar</button>
-            </div>
-          </div>
-        </div><div class="admin-item" data-id="kvvkoer" draggable="true">
-          <span class="app-icon" style="font-size:1.6rem;">🚥</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">Secuenciales</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">secuenciales/</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="kvvkoer" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="kvvkoer" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-kvvkoer">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="Secuenciales"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="secuenciales/"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="🚥" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="kvvkoer" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="kvvkoer" style="padding:8px 16px;">Cancelar</button>
-            </div>
-          </div>
-        </div><div class="admin-item" data-id="kdjhbjg" draggable="true">
-          <span class="app-icon" style="font-size:1.6rem;">📋</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">Generador de Cuestionarios</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">generador-cuestionarios/</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="kdjhbjg" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="kdjhbjg" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-kdjhbjg">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="Generador de Cuestionarios"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="generador-cuestionarios/"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="📋" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="kdjhbjg" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="kdjhbjg" style="padding:8px 16px;">Cancelar</button>
-            </div>
-          </div>
-        </div></div>
-
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
-
-      <button class="btn btn-primary" id="btn-download" style="width:100%;padding:14px;">⬇️ Descargar index.html actualizado</button>
+  <div class="card">
+    <h2>Modelo y opciones</h2>
+    <div class="row">
+      <div class="field"><label for="prov">Proveedor</label><select id="prov" onchange="changeProvider()"></select></div>
+      <div class="field"><label for="model">Modelo</label><select id="model" onchange="changeModel()"></select></div>
+      <button class="btn btn-sm" style="margin-bottom:4px" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+      <div class="field" style="margin-left:auto"><label for="nq">Nº de preguntas</label><input type="number" id="nq" min="3" max="50" value="10" onchange="saveSettings()"></div>
     </div>
   </div>
 
-  <div id="toast" class="">✅ "Generador de Cuestionarios" añadida</div>
+  <div class="card">
+    <h2>Documentos</h2>
+    <div class="drop" id="drop" onclick="document.getElementById('fileinput').click()">
+      <span class="big">📄</span>
+      Arrastra aquí los ficheros Word (.docx) o PDF, o haz clic para elegirlos
+    </div>
+    <input type="file" id="fileinput" accept=".docx,.pdf" multiple hidden onchange="addFiles(this.files); this.value=''">
+    <div class="files" id="files"></div>
+    <div class="bar">
+      <button class="btn" id="btn-clear" onclick="clearAll()">🗑️ Vaciar lista</button>
+      <button class="btn btn-green" id="btn-dlall" onclick="downloadAll()">⬇️ Descargar todos</button>
+      <button class="btn btn-main" id="btn-run" onclick="runAll()">✨ Generar cuestionarios</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
 
-  <script>
-    // __APPS_START__
-    let apps = [
-  {
-    "id": "eqznslp",
-    "name": "Individuales",
-    "url": "individuales/",
-    "icon": "🥇"
-  },
-  {
-    "id": "kvvkoer",
-    "name": "Secuenciales",
-    "url": "secuenciales/",
-    "icon": "🚥"
-  },
-  {
-    "id": "kdjhbjg",
-    "name": "Generador de Cuestionarios",
-    "url": "generador-cuestionarios/",
-    "icon": "📋"
+<!-- Modal: claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal sm">
+    <div class="modal-head"><h3>Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="left" style="font-weight:700;font-size:0.85rem;color:var(--sub)"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-main" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompt -->
+<div class="overlay" id="ov-prompt">
+  <div class="modal">
+    <div class="modal-head"><h3>Prompt</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="ptitle"></div>
+      <textarea class="big" id="ptext" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-foot">
+      <div class="left"><button class="btn" onclick="restorePrompt()">Restaurar por defecto</button></div>
+      <button class="btn" onclick="closeOv('ov-prompt')">Cancelar</button>
+      <button class="btn btn-main" onclick="savePrompt()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt por defecto. {N} = número de preguntas -->
+<textarea id="default-prompt" hidden>Eres un profesor voluntario que da cursos de informática y de móvil a personas mayores en Cruz Roja. Vas a recibir el texto de un tema del curso y debes crear un cuestionario de repaso sobre ese tema.
+
+1. DECIDE EL CURSO Y EL TÍTULO
+- "curso": "ordenador" si el tema trata del ordenador (Windows, ratón, teclado, programas, navegador en el PC...) o "movil" si trata del teléfono móvil (Android, aplicaciones, WhatsApp, ajustes del móvil...).
+- "titulo": título corto y claro del tema (máximo 6 palabras), por ejemplo "Uso del Ratón en Windows".
+- "emoji": UN solo emoji que represente el contenido del tema (por ejemplo 🖱️ para el ratón, ⌨️ para el teclado, 💬 para WhatsApp, 📷 para la cámara).
+- "mensajePerfecto": frase corta de felicitación para quien acierte todo, relacionada con el tema, por ejemplo "¡Perfecto! Dominas el ratón".
+
+2. CREA EXACTAMENTE {N} PREGUNTAS
+- Basadas SOLO en el contenido del documento. No inventes funciones ni datos que no aparezcan en él, y respeta los matices y excepciones que señale el texto.
+- Repartidas por todos los apartados del tema, sin repetir la misma idea.
+- Aproximadamente el 80 % de opción múltiple con 3 opciones y el 20 % de Verdadero/Falso.
+- Lenguaje sencillo y cercano, pensado para personas mayores que están aprendiendo. Frases cortas. Nada de tecnicismos sin explicar.
+- Incluye algunas preguntas prácticas tipo situación ("Estás leyendo un documento largo y quieres...").
+- Las opciones incorrectas deben ser creíbles pero claramente erróneas para quien ha estudiado el tema.
+- Varía la posición de la respuesta correcta (no la pongas siempre en el mismo lugar).
+- "expl": explicación de 1 o 2 frases que diga por qué es la respuesta correcta. En las de Verdadero/Falso empieza por "Verdadero." o "Falso.".
+
+3. FORMATO DE RESPUESTA
+Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y sin bloques de código, con esta forma:
+{
+  "curso": "ordenador",
+  "titulo": "Uso del Ratón en Windows",
+  "emoji": "🖱️",
+  "mensajePerfecto": "¡Perfecto! Dominas el ratón",
+  "preguntas": [
+    {"q": "¿Para qué sirve la rueda del ratón?", "options": ["Para abrir el menú de inicio", "Para subir y bajar en páginas o documentos", "Para apagar el ordenador"], "correct": 1, "expl": "La rueda sirve para subir y bajar por páginas y documentos largos."},
+    {"q": "El clic derecho abre un menú con opciones.", "type": "boolean", "options": ["Verdadero", "Falso"], "correct": 0, "expl": "Verdadero. El clic derecho muestra un menú con opciones relacionadas con el elemento."}
+  ]
+}
+"correct" es la posición de la opción correcta empezando en 0. Las de Verdadero/Falso llevan "type": "boolean" y siempre las opciones ["Verdadero", "Falso"].</textarea>
+
+<!-- Plantilla del cuestionario (mismo estilo que el modelo) -->
+<textarea id="quiz-template" hidden><!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: {{TITLE}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
   }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+
+  .header { text-align: center; margin-bottom: 40px; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.8rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
+  }
+
+  .progress-wrap { margin-bottom: 30px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .q-type-badge {
+    display: inline-flex; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+    background: rgba(33,115,70,0.2); color: #4ade80;
+  }
+
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px; color: var(--text);
+    font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 14px; transition: 0.2s;
+  }
+  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-btn:disabled { cursor: default; }
+  .option-letter {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+  }
+
+  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+
+  .feedback { display: none; margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 700; line-height: 1.5; animation: fadeIn 0.3s ease; }
+  .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-next {
+    display: none; width: 100%; max-width: 220px; margin: 0 0 0 auto;
+    padding: 14px; border-radius: 14px; border: none; font-weight: 800; font-family: inherit;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+
+  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; }
+  .score-circle {
+    width: 130px; height: 130px; border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 20px auto;
+    font-size: 1.9rem; font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
+  }
+  .score-circle small { font-family: 'Nunito'; font-size: 0.8rem; color: var(--sub); font-weight: 700; }
+  .hidden { display: none !important; }
+
+  .result-sub { color: var(--sub); font-weight: 700; margin-top: 8px; }
+  .btn-restart { margin-top: 30px; cursor: pointer; border: none; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">{{BADGE}}</div>
+    <h1>{{TITLE}}</h1>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de {{COUNT}}</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number">Cargando...</div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+
+  <div class="results" id="results">
+    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
+    <div class="score-circle" id="score-num">0/{{COUNT}}</div>
+    <h2 id="result-msg"></h2>
+    <p class="result-sub" id="result-sub"></p>
+    <button class="badge btn-restart" onclick="restartQuiz()">🔄 Reiniciar Quiz</button>
+  </div>
+</div>
+
+<script>
+const questions = {{QUESTIONS}};
+
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+const TOTAL = questions.length;
+
+function loadQuestion() {
+  answered = false;
+  const qData = questions[currentIdx];
+
+  document.getElementById('q-type').textContent =
+    qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
+  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
+  document.getElementById('q-text').textContent = qData.q;
+  document.getElementById('btn-next').style.display = 'none';
+
+  const fb = document.getElementById('q-feedback');
+  fb.style.display = 'none';
+  fb.className = 'feedback';
+
+  const optionsDiv = document.getElementById('q-options');
+  optionsDiv.innerHTML = '';
+
+  qData.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(i);
+    optionsDiv.appendChild(btn);
+  });
+
+  const pct = (currentIdx / TOTAL) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
+  document.getElementById('btn-next').textContent =
+    currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
+}
+
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  const qData = questions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const fb = document.getElementById('q-feedback');
+
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === qData.correct) {
+    btns[idx].classList.add('correct');
+    score++;
+    fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${qData.expl}`;
+    fb.className = 'feedback correct-fb';
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[qData.correct].classList.add('correct');
+    fb.innerHTML = `<strong>💡 Nota:</strong><br>${qData.expl}`;
+    fb.className = 'feedback wrong-fb';
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  fb.style.display = 'block';
+  document.getElementById('btn-next').style.display = 'block';
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx < TOTAL) {
+    loadQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  document.getElementById('results').style.display = 'block';
+
+  const pct = Math.round((score / TOTAL) * 100);
+  document.getElementById('score-num').innerHTML = `${score}/${TOTAL}<small>${pct}%</small>`;
+
+  let emoji, msg, sub;
+  if (pct === 100)    { emoji = '🏆'; msg = {{PERFECT}};  sub = 'Respondiste todo correctamente.'; }
+  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';       sub = 'Solo te faltaron unos detalles.'; }
+  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';               sub = 'Vas por buen camino, repasa lo fallado.'; }
+  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';           sub = 'Vuelve a leer el material y reinténtalo.'; }
+  else                { emoji = '💪'; msg = '¡No te rindas!';               sub = 'Revisa el tema desde el principio.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-msg').textContent = msg;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('prog-fill').style.width = '100%';
+}
+
+function restartQuiz() {
+  currentIdx = 0;
+  score = 0;
+  answered = false;
+  document.getElementById('prog-score').textContent = '⭐ 0 pts';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-area').classList.remove('hidden');
+  loadQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.onload = loadQuestion;
+</script>
+</body>
+</html>
+</textarea>
+
+<script>
+'use strict';
+// ═════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ═════════════════════════════════════════════
+const LS = {
+  settings:'cuestionarios_settings', prompt:'cuestionarios_prompt',
+  orList:'cuestionarios_or_models', gemList:'cuestionarios_gemini_models'
+};
+// Mismas claves que el resto de la suite, para no volver a introducirlas
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key'},
 ];
-    // __APPS_END__
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id).ls) || ''; } catch(e){ return ''; } };
 
-    function uid() { return Math.random().toString(36).slice(2,9); }
+const PROVIDERS = {
+  claude:     {label:'Claude', models:[
+                 {id:'claude-opus-5-5',  label:'Opus 5.5'},
+                 {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'}]},
+  aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
+                 {id:'gemini-2.5-pro',  label:'Gemini 2.5 Pro'},
+                 {id:'gemini-2.5-flash',label:'Gemini 2.5 Flash'}]},
+  deepseek:   {label:'DeepSeek', models:[{id:'deepseek-v4-pro', label:'DeepSeek V4 Pro'}]},
+  openrouter: {label:'OpenRouter', dynamic:true, models:[
+                 {id:'google/gemini-2.5-pro', label:'google/gemini-2.5-pro'},
+                 {id:'google/gemini-2.5-flash', label:'google/gemini-2.5-flash'}]},
+  mistral:    {label:'Mistral', models:[
+                 {id:'mistral-large-latest', label:'Mistral Large'},
+                 {id:'mistral-medium-latest',label:'Mistral Medium'},
+                 {id:'mistral-small-latest', label:'Mistral Small'}]},
+  groq:       {label:'Groq (Llama)', models:[{id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
+};
 
-    function showToast(msg, duration=2400) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      clearTimeout(toast._timer);
-      toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+const $ = id => document.getElementById(id);
+function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let settings = Object.assign({provider:'claude', model:'claude-sonnet-5-5', nq:10}, loadJSON(LS.settings) || {});
+function saveSettings(){
+  settings.nq = Math.max(3, Math.min(50, parseInt($('nq').value, 10) || 10));
+  $('nq').value = settings.nq;
+  saveJSON(LS.settings, settings);
+}
+function showStatus(type, msg){ const s = $('status'); s.className = 'status ' + (type || ''); s.textContent = msg || ''; }
+
+// ═════════════════════════════════════════════
+//  MODELO
+// ═════════════════════════════════════════════
+function modelList(prov){
+  if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  if (prov === 'openrouter'){ const c = loadJSON(LS.orList); if (c && c.length) return c; }
+  return PROVIDERS[prov].models;
+}
+function renderModel(){
+  $('prov').innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === settings.provider ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
+  let list = modelList(settings.provider);
+  if (!list.some(m => m.id === settings.model)) list = [{id:settings.model, label:settings.model}, ...list];
+  $('model').innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === settings.model ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
+}
+function changeProvider(){
+  settings.provider = $('prov').value;
+  settings.model = modelList(settings.provider)[0].id;
+  saveSettings(); renderModel();
+  const p = settings.provider;
+  if (PROVIDERS[p].dynamic && !loadJSON(p === 'openrouter' ? LS.orList : LS.gemList)) refreshModels(true);
+}
+function changeModel(){ settings.model = $('model').value; saveSettings(); }
+
+async function refreshModels(quiet){
+  const prov = settings.provider;
+  try {
+    if (prov === 'openrouter'){
+      const r = await fetch('https://openrouter.ai/api/v1/models');
+      if (!r.ok) throw new Error('OpenRouter ' + r.status);
+      const data = (await r.json()).data || [];
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai)\//;
+      const list = data.filter(m => keep.test(m.id)).map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      saveJSON(LS.orList, list);
+    } else if (prov === 'aistudio'){
+      const key = getKey('aistudio');
+      if (!key){ if (!quiet) { showStatus('err', 'Falta la clave de AI Studio.'); openKeys('aistudio'); } return; }
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+      if (!r.ok) throw new Error('AI Studio ' + r.status);
+      const data = (await r.json()).models || [];
+      const list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision)/.test(m.name))
+        .map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, ''))}));
+      saveJSON(LS.gemList, list);
+    } else {
+      if (!quiet) showStatus('', 'Este proveedor tiene una lista fija de modelos.');
+      return;
     }
+    renderModel();
+    if (!quiet) showStatus('ok', 'Lista de modelos actualizada.');
+  } catch(e){ if (!quiet) showStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+}
 
-    function renderGrid() {
-      const grid = document.getElementById('app-grid');
-      grid.innerHTML = '';
+// ═════════════════════════════════════════════
+//  FICHEROS
+// ═════════════════════════════════════════════
+let items = [];   // {id, file, status:'wait'|'run'|'ok'|'err', error, data}
+let busy = false;
+let nextId = 1;
 
-      apps.forEach(app => {
-        const card = document.createElement('div');
-        card.className = 'app-card';
-        card.draggable = true;
-        card.dataset.id = app.id;
-        card.innerHTML = `
-          <span class="app-icon">${app.icon}</span>
-          <span class="app-name">${app.name}</span>
-        `;
+function addFiles(fileList){
+  const ok = [...fileList].filter(f => /\.(docx|pdf)$/i.test(f.name));
+  const skipped = fileList.length - ok.length;
+  ok.forEach(f => {
+    if (items.some(it => it.file.name === f.name && it.file.size === f.size)) return;
+    items.push({id:nextId++, file:f, status:'wait'});
+  });
+  renderFiles();
+  showStatus(skipped ? 'err' : '', skipped ? `Se han ignorado ${skipped} fichero(s): solo se admiten .docx y .pdf (los .doc antiguos hay que guardarlos antes como .docx).` : '');
+}
+function removeItem(id){ items = items.filter(it => it.id !== id); renderFiles(); }
+function clearAll(){ if (busy) return; items = []; renderFiles(); showStatus(''); }
 
-        card.addEventListener('click', (e) => {
-          if (!card.classList.contains('dragging')) {
-            window.location.href = app.url;
-          }
-        });
+const STATUS_LABEL = {wait:'Pendiente', run:'Generando…', ok:'Listo', err:'Error'};
+function renderFiles(){
+  $('files').innerHTML = items.map(it => {
+    const d = it.data;
+    const meta = d ? `${d.emoji} Curso de ${d.curso === 'movil' ? 'Móvil' : 'Ordenador'} · ${d.preguntas.length} preguntas` : (it.file.size / 1024).toFixed(0) + ' KB';
+    return `<div class="file">
+      <div><div class="name">${esc(it.file.name)}<span class="st ${it.status}">${STATUS_LABEL[it.status]}</span></div><div class="meta">${esc(meta)}</div></div>
+      <div class="acts">
+        ${it.status === 'ok' ? `<button class="btn btn-sm btn-green" onclick="downloadItem(${it.id})">⬇️ Descargar</button>` : ''}
+        ${(it.status === 'ok' || it.status === 'err') ? `<button class="btn btn-sm" ${busy ? 'disabled' : ''} onclick="regenerate(${it.id})">🔄 Rehacer</button>` : ''}
+        <button class="btn btn-sm" ${busy && it.status === 'run' ? 'disabled' : ''} onclick="removeItem(${it.id})" title="Quitar de la lista">✕</button>
+      </div>
+      ${d ? `<div class="edit">
+        <select onchange="editItem(${it.id},'curso',this.value)">
+          <option value="ordenador" ${d.curso !== 'movil' ? 'selected' : ''}>Curso de Ordenador</option>
+          <option value="movil" ${d.curso === 'movil' ? 'selected' : ''}>Curso de Móvil</option>
+        </select>
+        <input type="text" class="emoji" value="${esc(d.emoji)}" title="Emoji" onchange="editItem(${it.id},'emoji',this.value)">
+        <input type="text" value="${esc(d.titulo)}" title="Título" onchange="editItem(${it.id},'titulo',this.value)">
+      </div>` : ''}
+      ${it.status === 'err' ? `<div class="errtxt">${esc(it.error)}</div>` : ''}
+    </div>`;
+  }).join('');
+  const done = items.filter(it => it.status === 'ok').length;
+  $('btn-run').disabled = busy || !items.some(it => it.status === 'wait' || it.status === 'err');
+  $('btn-dlall').disabled = busy || !done;
+  $('btn-clear').disabled = busy || !items.length;
+}
+function editItem(id, field, value){
+  const it = items.find(x => x.id === id); if (!it || !it.data) return;
+  it.data[field] = value.trim() || it.data[field];
+  renderFiles();
+}
 
-        grid.appendChild(card);
-      });
-
-      initDragAndDropGrid();
-    }
-
-    let draggedGridCard = null;
-
-    function initDragAndDropGrid() {
-      document.querySelectorAll('.app-card').forEach(card => {
-        card.addEventListener('dragstart', () => {
-          draggedGridCard = card;
-          setTimeout(() => card.classList.add('dragging'), 10);
-        });
-        card.addEventListener('dragend', () => {
-          card.classList.remove('dragging');
-          document.querySelectorAll('.app-card').forEach(c => c.classList.remove('drag-over'));
-        });
-        card.addEventListener('dragover', e => { e.preventDefault(); if (card !== draggedGridCard) card.classList.add('drag-over'); });
-        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
-        card.addEventListener('drop', e => {
-          e.preventDefault();
-          if (!draggedGridCard || draggedGridCard === card) return;
-          const fromId = draggedGridCard.dataset.id;
-          const toId = card.dataset.id;
-          const fromIdx = apps.findIndex(a => a.id === fromId);
-          const toIdx = apps.findIndex(a => a.id === toId);
-          if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = apps.splice(fromIdx, 1);
-            apps.splice(toIdx, 0, moved);
-            renderGrid();
-            if (document.getElementById('modal-overlay').style.display === 'flex') renderAdminList();
-            showToast('📋 Orden actualizado');
-          }
-        });
-      });
-    }
-
-    // Variables para drag & drop en el panel de administración
-    let draggedAdminItem = null;
-
-    function renderAdminList() {
-      const container = document.getElementById('apps-admin-list');
-      container.innerHTML = '';
-
-      apps.forEach(app => {
-        const item = document.createElement('div');
-        item.className = 'admin-item';
-        item.setAttribute('data-id', app.id);
-        item.setAttribute('draggable', 'true');
-        item.innerHTML = `
-          <span class="app-icon" style="font-size:1.6rem;">${app.icon}</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">${app.name}</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">${app.url}</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="${app.id}" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="${app.id}" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-${app.id}">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="${app.name.replace(/"/g, '&quot;')}"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="${app.url.replace(/"/g, '&quot;')}"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="${app.icon}" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="${app.id}" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="${app.id}" style="padding:8px 16px;">Cancelar</button>
-            </div>
-          </div>
-        `;
-
-        // Eventos de arrastre para el admin
-        item.addEventListener('dragstart', (e) => {
-          draggedAdminItem = item;
-          setTimeout(() => item.classList.add('dragging-admin'), 10);
-        });
-        item.addEventListener('dragend', () => {
-          item.classList.remove('dragging-admin');
-          document.querySelectorAll('.admin-item').forEach(i => i.classList.remove('drag-over-admin'));
-          draggedAdminItem = null;
-        });
-        item.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          if (draggedAdminItem && draggedAdminItem !== item) {
-            item.classList.add('drag-over-admin');
-          }
-        });
-        item.addEventListener('dragleave', () => {
-          item.classList.remove('drag-over-admin');
-        });
-        item.addEventListener('drop', (e) => {
-          e.preventDefault();
-          if (!draggedAdminItem || draggedAdminItem === item) return;
-          item.classList.remove('drag-over-admin');
-          
-          const fromId = draggedAdminItem.getAttribute('data-id');
-          const toId = item.getAttribute('data-id');
-          const fromIdx = apps.findIndex(a => a.id === fromId);
-          const toIdx = apps.findIndex(a => a.id === toId);
-          if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = apps.splice(fromIdx, 1);
-            apps.splice(toIdx, 0, moved);
-            renderAdminList();      // refresca el listado del admin
-            renderGrid();           // sincroniza la cuadrícula principal
-            showToast('📋 Orden actualizado (admin)');
-          }
-        });
-
-        container.appendChild(item);
-      });
-    }
-
-    // CRUD
-    function addApp() {
-      const name = document.getElementById('new-name').value.trim();
-      let url = document.getElementById('new-folder').value.trim();
-      const icon = document.getElementById('new-icon').value.trim() || '📦';
-      if (!name) return showToast('⚠️ El nombre es obligatorio');
-      if (!url) return showToast('⚠️ La carpeta/URL es obligatoria');
-      if (!url.endsWith('/')) url += '/';
-      apps.push({ id: uid(), name, url, icon });
-      document.getElementById('new-name').value = '';
-      document.getElementById('new-folder').value = '';
-      document.getElementById('new-icon').value = '';
-      renderGrid();
-      renderAdminList();
-      showToast(`✅ "${name}" añadida`);
-    }
-
-    function deleteApp(id) {
-      const app = apps.find(a => a.id === id);
-      if (!app) return;
-      if (!confirm(`¿Eliminar "${app.name}"?`)) return;
-      apps = apps.filter(a => a.id !== id);
-      renderGrid();
-      renderAdminList();
-      showToast(`🗑 "${app.name}" eliminada`);
-    }
-
-    function saveEdit(id) {
-      const form = document.getElementById(`edit-form-${id}`);
-      if (!form) return;
-      const name = form.querySelector('.edit-name').value.trim();
-      let url = form.querySelector('.edit-url').value.trim();
-      const icon = form.querySelector('.edit-icon').value.trim() || '📦';
-      if (!name || !url) return showToast('⚠️ Nombre y URL son obligatorios');
-      if (!url.endsWith('/')) url += '/';
-      const app = apps.find(a => a.id === id);
-      if (app) {
-        app.name = name;
-        app.url = url;
-        app.icon = icon;
-      }
-      renderGrid();
-      renderAdminList();
-      showToast(`✏️ "${name}" actualizada`);
-    }
-
-    // Manejo de eventos de la ventana modal (incluyendo botones de edición/borrado)
-    document.getElementById('btn-config').addEventListener('click', () => {
-      renderAdminList();
-      document.getElementById('modal-overlay').style.display = 'flex';
+// Extraer texto
+async function extractText(file){
+  const buf = await file.arrayBuffer();
+  if (/\.docx$/i.test(file.name)){
+    if (typeof mammoth === 'undefined') throw new Error('No se ha cargado la librería para leer Word (¿sin conexión?).');
+    const res = await mammoth.convertToHtml({arrayBuffer:buf});
+    const doc = new DOMParser().parseFromString(res.value, 'text/html');
+    const out = [];
+    doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,td').forEach(el => {
+      if (el.tagName === 'P' && el.closest('li,td')) return;
+      const t = el.textContent.replace(/\s+/g, ' ').trim(); if (!t) return;
+      if (/^H\d$/.test(el.tagName)) out.push('\n' + '#'.repeat(+el.tagName[1]) + ' ' + t);
+      else if (el.tagName === 'LI') out.push('- ' + t);
+      else out.push(t);
     });
-    document.getElementById('btn-close-modal').addEventListener('click', () => {
-      document.getElementById('modal-overlay').style.display = 'none';
-    });
-    document.getElementById('btn-add-app').addEventListener('click', addApp);
+    return out.join('\n').trim();
+  }
+  if (typeof pdfjsLib === 'undefined') throw new Error('No se ha cargado la librería para leer PDF (¿sin conexión?).');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  const pages = [];
+  for (let p = 1; p <= pdf.numPages; p++){
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    let line = '', text = '';
+    tc.items.forEach(i => { line += i.str; if (i.hasEOL){ text += line + '\n'; line = ''; } });
+    pages.push((text + line).trim());
+  }
+  return pages.join('\n\n').trim();
+}
 
-    document.getElementById('apps-admin-list').addEventListener('click', e => {
-      const id = e.target.getAttribute('data-id');
-      if (!id) return;
-      if (e.target.classList.contains('btn-delete-app')) deleteApp(id);
-      if (e.target.classList.contains('btn-edit-app')) {
-        document.getElementById(`edit-form-${id}`).classList.toggle('visible');
-      }
-      if (e.target.classList.contains('btn-save-edit')) saveEdit(id);
-      if (e.target.classList.contains('btn-cancel-edit')) {
-        document.getElementById(`edit-form-${id}`).classList.remove('visible');
-      }
-    });
+// ═════════════════════════════════════════════
+//  GENERACIÓN
+// ═════════════════════════════════════════════
+async function runAll(){
+  if (busy) return;
+  const todo = items.filter(it => it.status === 'wait' || it.status === 'err');
+  if (!todo.length) return;
+  if (!getKey(settings.provider)){ showStatus('err', 'Falta la clave de ' + KEYS.find(k => k.id === settings.provider).label + '.'); openKeys(settings.provider); return; }
+  busy = true;
+  let n = 0;
+  for (const it of todo){
+    if (!items.includes(it)) continue;
+    n++; showStatus('', `Generando ${n} de ${todo.length}: ${it.file.name}`);
+    await processItem(it);
+  }
+  busy = false;
+  const ok = items.filter(it => it.status === 'ok').length, err = items.filter(it => it.status === 'err').length;
+  showStatus(err ? 'err' : 'ok', `Terminado: ${ok} listo(s)` + (err ? `, ${err} con error (pulsa «Rehacer» o vuelve a «Generar»).` : '.'));
+  renderFiles();
+}
+async function regenerate(id){
+  const it = items.find(x => x.id === id); if (!it || busy) return;
+  if (!getKey(settings.provider)){ openKeys(settings.provider); return; }
+  busy = true; showStatus('', 'Rehaciendo: ' + it.file.name);
+  await processItem(it);
+  busy = false;
+  showStatus(it.status === 'ok' ? 'ok' : 'err', it.status === 'ok' ? 'Cuestionario rehecho.' : 'No se ha podido rehacer.');
+  renderFiles();
+}
 
-    document.getElementById('btn-download').addEventListener('click', () => {
-      let src = document.documentElement.outerHTML;
-      // Cerrar modal antes de guardar snapshot
-      src = src.replace(/id="modal-overlay"[^>]*style="[^"]*display\s*:\s*flex[^"]*"/, 'id="modal-overlay" style="display:none;"');
-      // Reemplazar el array de apps
-      src = src.replace(
-        /\/\/ __APPS_START__[\s\S]*?\/\/ __APPS_END__/,
-        `// __APPS_START__\n    let apps = ${JSON.stringify(apps, null, 2)};\n    // __APPS_END__`
-      );
-      const blob = new Blob([src], { type: 'text/html;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'index.html';
-      link.click();
-      showToast('⬇️ index.html descargado con todos los cambios (incluye orden)');
-    });
+async function processItem(it){
+  it.status = 'run'; it.error = ''; renderFiles();
+  try {
+    if (!it.text){
+      it.text = await extractText(it.file);
+      if (it.text.length < 80) throw new Error('No se ha podido extraer texto del documento (¿es un PDF escaneado?).');
+    }
+    const nq = settings.nq;
+    const system = getPrompt().split('{N}').join(String(nq));
+    const user = `Documento: «${it.file.name}»\n\n<documento>\n${it.text}\n</documento>\n\nCrea el cuestionario de ${nq} preguntas. Responde solo con el JSON.`;
+    const raw = await callModel({provider:settings.provider, model:settings.model, system, user});
+    it.data = validate(parseJSON(raw));
+    it.status = 'ok';
+  } catch(e){
+    it.status = 'err';
+    const m = e.message || String(e);
+    it.error = /Failed to fetch|NetworkError|CORS/i.test(m) ? 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m : m;
+  }
+  renderFiles();
+}
 
-    // Inicializar
-    renderGrid();
-  </script>
+function parseJSON(raw){
+  let s = String(raw || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a < 0 || b < a) throw new Error('El modelo no ha devuelto un JSON. Prueba a «Rehacer» o cambia de modelo.');
+  s = s.slice(a, b + 1);
+  try { return JSON.parse(s); }
+  catch(e){
+    try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); }   // comas sobrantes
+    catch(_){ throw new Error('El JSON devuelto no es válido (' + e.message + '). Prueba a «Rehacer».'); }
+  }
+}
+function validate(d){
+  if (!d || !Array.isArray(d.preguntas) || !d.preguntas.length) throw new Error('La respuesta no contiene preguntas.');
+  const qs = [];
+  d.preguntas.forEach(p => {
+    if (!p || !p.q || !Array.isArray(p.options) || p.options.length < 2) return;
+    let correct = parseInt(p.correct, 10);
+    const isBool = p.type === 'boolean' || (p.options.length === 2 && /^verdadero$/i.test(String(p.options[0]).trim()) && /^falso$/i.test(String(p.options[1]).trim()));
+    if (isNaN(correct) || correct < 0 || correct >= p.options.length) return;
+    const q = {q:String(p.q).trim(), options:p.options.map(o => String(o).trim()), correct, expl:String(p.expl || '').trim()};
+    if (isBool){ q.type = 'boolean'; q.options = ['Verdadero', 'Falso']; }
+    qs.push(q);
+  });
+  if (!qs.length) throw new Error('Ninguna pregunta tenía un formato correcto.');
+  const curso = /m[oó]vil/i.test(d.curso || '') ? 'movil' : 'ordenador';
+  return {
+    curso,
+    titulo: String(d.titulo || 'Cuestionario').trim(),
+    emoji: String(d.emoji || (curso === 'movil' ? '📱' : '🖥️')).trim(),
+    mensajePerfecto: String(d.mensajePerfecto || '¡Perfecto! Lo dominas').trim(),
+    preguntas: qs
+  };
+}
 
-</body></html>
+// ═════════════════════════════════════════════
+//  LLAMADAS A LAS APIS
+// ═════════════════════════════════════════════
+async function httpError(resp, who){
+  let detail = '';
+  try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+  catch(e){ try { detail = await resp.text(); } catch(_){} }
+  if (typeof detail === 'object') detail = JSON.stringify(detail);
+  return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+}
+function needKey(id){
+  const k = getKey(id);
+  if (!k){ openKeys(id); throw new Error('Falta la clave de ' + KEYS.find(x => x.id === id).label + '.'); }
+  return k;
+}
+function callModel(o){
+  if (o.provider === 'claude')   return callClaude(o);
+  if (o.provider === 'aistudio') return callGemini(o);
+  const cfg = {
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:16000},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:8000},
+  }[o.provider];
+  return callOpenAICompat(o, cfg);
+}
+async function callClaude({model, system, user}){
+  const key = needKey('claude');
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:16000, system, messages:[{role:'user', content:user}]})
+  });
+  if (!resp.ok) throw await httpError(resp, 'Claude');
+  const j = await resp.json();
+  if (j.stop_reason === 'max_tokens') throw new Error('Claude: la respuesta se cortó por longitud. Reduce el número de preguntas.');
+  return (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+}
+async function callGemini({model, system, user}){
+  const key = needKey('aistudio');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const resp = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      systemInstruction:{parts:[{text:system}]},
+      contents:[{role:'user', parts:[{text:user}]}],
+      generationConfig:{maxOutputTokens:32000, responseMimeType:'application/json'}
+    })
+  });
+  if (!resp.ok) throw await httpError(resp, 'AI Studio');
+  const j = await resp.json();
+  const c = j.candidates && j.candidates[0];
+  if (!c) throw new Error('AI Studio: respuesta vacía' + (j.promptFeedback ? ' (' + JSON.stringify(j.promptFeedback) + ')' : '.'));
+  if (c.finishReason === 'MAX_TOKENS') throw new Error('AI Studio: la respuesta se cortó por longitud. Reduce el número de preguntas.');
+  return ((c.content && c.content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('');
+}
+async function callOpenAICompat({provider, model, system, user}, cfg){
+  const key = needKey(provider);
+  const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+  if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Generador de Cuestionarios'; }
+  const body = {model, messages:[{role:'system', content:system}, {role:'user', content:user}]};
+  if (cfg.max) body.max_tokens = cfg.max;
+  const resp = await fetch(cfg.url, {method:'POST', headers, body:JSON.stringify(body)});
+  if (!resp.ok) throw await httpError(resp, cfg.who);
+  const j = await resp.json();
+  if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+  const ch = j.choices && j.choices[0];
+  if (!ch) throw new Error(cfg.who + ': respuesta vacía.');
+  if (ch.finish_reason === 'length') throw new Error(cfg.who + ': la respuesta se cortó por longitud. Reduce el número de preguntas.');
+  return (ch.message && ch.message.content) || '';
+}
+
+// ═════════════════════════════════════════════
+//  CONSTRUIR Y DESCARGAR EL CUESTIONARIO
+// ═════════════════════════════════════════════
+function buildQuiz(d){
+  const qs = d.preguntas.map(p => {
+    const o = {q:p.q, options:p.options.map(esc), correct:p.correct};   // opciones y explicación se pintan con innerHTML
+    if (p.type) o.type = p.type;
+    o.expl = esc(p.expl);
+    return o;
+  });
+  const js = s => JSON.stringify(s, null, 2).replace(/<\//g, '<\\/');
+  const badge = `${d.emoji} Curso de ${d.curso === 'movil' ? 'Móvil' : 'Ordenador'}`;
+  return $('quiz-template').value
+    .split('{{TITLE}}').join(esc(d.titulo))
+    .split('{{BADGE}}').join(esc(badge))
+    .split('{{COUNT}}').join(String(qs.length))
+    .split('{{PERFECT}}').join(js(d.mensajePerfecto))
+    .split('{{QUESTIONS}}').join(js(qs));
+}
+function slug(name){
+  return name.replace(/\.[^.]+$/, '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cuestionario';
+}
+function downloadItem(id){
+  const it = items.find(x => x.id === id); if (!it || !it.data) return;
+  const blob = new Blob([buildQuiz(it.data)], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'quiz-' + slug(it.file.name) + '.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function downloadAll(){
+  const ready = items.filter(it => it.status === 'ok');
+  for (const it of ready){ downloadItem(it.id); await new Promise(r => setTimeout(r, 400)); }
+  if (ready.length > 1) showStatus('ok', 'Si Chrome pregunta, permite «descargar varios archivos».');
+}
+
+// ═════════════════════════════════════════════
+//  CLAVES
+// ═════════════════════════════════════════════
+function openOv(id){ $(id).classList.add('open'); }
+function closeOv(id){ $(id).classList.remove('open'); }
+function openKeys(focusId){
+  $('keys-body').innerHTML = '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones.</p>' +
+    KEYS.map(k => `<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"></div>`).join('');
+  $('showkeys').checked = false;
+  openOv('ov-keys');
+  setTimeout(() => { const el = $('key-' + (typeof focusId === 'string' ? focusId : settings.provider)); if (el) el.focus(); }, 60);
+}
+function toggleShowKeys(){ const t = $('showkeys').checked ? 'text' : 'password'; KEYS.forEach(k => $('key-' + k.id).type = t); }
+function saveKeys(){
+  KEYS.forEach(k => { const v = $('key-' + k.id).value.trim(); try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){} });
+  closeOv('ov-keys'); showStatus('ok', 'Claves guardadas.');
+}
+
+// ═════════════════════════════════════════════
+//  PROMPT
+// ═════════════════════════════════════════════
+const defaultPrompt = () => $('default-prompt').value;
+function getPrompt(){ try { return localStorage.getItem(LS.prompt) || defaultPrompt(); } catch(e){ return defaultPrompt(); } }
+function setPtitle(){ $('ptitle').textContent = ($('ptext').value.trim() === defaultPrompt().trim() ? 'Versión por defecto' : 'Versión modificada') + ' · {N} se sustituye por el número de preguntas'; }
+function openPrompt(){ $('ptext').value = getPrompt(); setPtitle(); openOv('ov-prompt'); }
+function restorePrompt(){ $('ptext').value = defaultPrompt(); setPtitle(); }
+function savePrompt(){
+  const v = $('ptext').value;
+  try { (v.trim() === defaultPrompt().trim()) ? localStorage.removeItem(LS.prompt) : localStorage.setItem(LS.prompt, v); } catch(e){}
+  closeOv('ov-prompt'); showStatus('ok', 'Prompt guardado.');
+}
+$('ptext').addEventListener('input', setPtitle);
+
+// ═════════════════════════════════════════════
+//  INICIO
+// ═════════════════════════════════════════════
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('mousedown', e => { if (e.target === ov) ov.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); });
+
+$('nq').value = settings.nq;
+renderModel();
+renderFiles();
+</script>
+</body>
+</html>
