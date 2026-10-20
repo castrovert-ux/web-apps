@@ -1,511 +1,1502 @@
-<html lang="es"><head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplicaciones del libro</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de prompts · Imágenes del libro</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&amp;family=DM+Sans:wght@300;400;500&amp;display=swap" rel="stylesheet">
+   <link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-1.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-2.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2">
+  <link rel="manifest" href="manifest.json?v=2">
+  <meta name="theme-color" content="#0f0c29">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <style>
-    :root {
-      --bg-from: #0f0c29; --bg-mid: #302b63; --bg-to: #24243e;
-      --card-bg: rgba(255,255,255,0.07); --card-border: rgba(255,255,255,0.13);
-      --card-hover: rgba(255,255,255,0.14); --accent: #e8c76b; --accent2: #f07f5a;
-      --text: #f0eef8; --text-muted: rgba(240,238,248,0.55);
-      --radius: 18px; --radius-sm: 10px; --shadow: 0 8px 40px rgba(0,0,0,0.45);
-      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
-    }
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: #faf8f4;
+    color: #1a1814;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
 
-    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e8e2d8;
+    padding: 2.5rem 2.25rem 2.5rem;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+  }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-mid) 50%, var(--bg-to) 100%);
-      min-height: 100vh; color: var(--text); overflow-x: hidden;
-    }
+  .app-header {
+    border-bottom: 1px solid #e8e2d8;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
 
-    header { text-align:center; padding:56px 24px 32px; }
-    header h1 {
-      font-family: 'Syne', sans-serif; font-weight:800; font-size: clamp(2rem,5vw,3.2rem);
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    header p { margin-top:8px; color:var(--text-muted); }
+  .app-header-left h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+    color: #1a1814;
+    margin-bottom: 4px;
+  }
 
-    #app-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 20px;
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 0 24px 120px;
-    }
+  .app-header-left p {
+    font-size: 15px;
+    color: #777060;
+    font-style: italic;
+  }
 
-    .app-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 28px 16px 22px;
-      text-align: center;
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      backdrop-filter: blur(12px);
-      cursor: grab;
-      transition: all var(--transition);
-      animation: cardIn 0.5s ease both;
-      user-select: none;
-      position: relative;
-    }
+  .btn-historial-toggle {
+    font-family: 'EB Garamond', serif;
+    font-size: 13px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd8ce;
+    background: #faf7f2;
+    color: #6a6258;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .btn-historial-toggle:hover { border-color: #B89A5A; color: #B89A5A; background: #fff; }
+  .btn-historial-toggle.active { border-color: #B89A5A; color: #B89A5A; background: rgba(184,154,90,0.06); }
 
-    .app-card:hover { transform: translateY(-5px) scale(1.03); }
-    .app-card:active { cursor: grabbing; }
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #999080;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'EB Garamond', serif;
+  }
 
-    .app-card.dragging {
-      opacity: 0.35;
-      transform: scale(0.92);
-      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
-      z-index: 50;
-    }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 1px;
+    background: #B89A5A;
+  }
 
-    .app-card.drag-over {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(232,199,107,0.35);
-      transform: scale(1.06);
-    }
+  textarea {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 13px 15px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #1a1814;
+    background: #fff;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
 
-    .app-icon { font-size: 2.8rem; transition: transform var(--transition); }
-    .app-card:hover .app-icon { transform: scale(1.2) rotate(-5deg); }
+  textarea:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
 
-    .app-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.92rem; }
+  textarea::placeholder { color: #bbb5a8; font-style: italic; }
 
-    @keyframes cardIn {
-      from { opacity:0; transform:translateY(25px) scale(0.9); }
-      to { opacity:1; transform:none; }
-    }
+  .note-tip {
+    font-size: 12.5px;
+    color: #aaa496;
+    font-style: italic;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
 
-    #btn-config {
-      position:fixed; bottom:28px; right:28px; z-index:100;
-      width:56px; height:56px; border-radius:50%;
-      background:rgba(232,199,107,0.2); border:2px solid rgba(232,199,107,0.5);
-      color:var(--accent); font-size:1.6rem; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      box-shadow:0 6px 25px rgba(0,0,0,0.4);
-    }
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
 
-    #modal-overlay {
-      position:fixed; inset:0; z-index:200;
-      background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
-      display:none; align-items:center; justify-content:center; padding:20px;
-    }
+  @media (max-width: 600px) {
+    .fields-grid { grid-template-columns: 1fr; }
+    .app-header { flex-direction: column; }
+  }
 
-    #modal {
-      background: rgba(18,15,40,0.98);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px;
-      width: 100%; max-width: 540px;
-      max-height: 92vh; overflow-y: auto;
-      padding: 32px; box-shadow: var(--shadow);
-    }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
 
-    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
-    .section-title { font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin:20px 0 12px; }
+  select {
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 32px 9px 12px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14.5px;
+    color: #1a1814;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23999' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
 
-    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-    label { display:block; font-size:0.78rem; color:var(--text-muted); margin-bottom:5px; }
-    input[type="text"] {
-      width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
-      border-radius:var(--radius-sm); padding:10px 12px; color:var(--text);
-    }
+  select:focus { outline: none; border-color: #B89A5A; }
 
-    .btn { border:none; border-radius:var(--radius-sm); padding:10px 18px; cursor:pointer; transition:all var(--transition); }
-    .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1530; font-weight:600; }
+  .divider {
+    border: none;
+    border-top: 1px solid #eee8df;
+    margin: 1.5rem 0;
+  }
 
-    .admin-item {
-      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-      border-radius:var(--radius-sm); padding:12px 14px; display:flex; align-items:center; gap:12px;
-      flex-wrap:wrap;
-      cursor: grab;
-      transition: all 0.15s;
-    }
-    .admin-item:active { cursor: grabbing; }
-    .admin-item.dragging-admin {
-      opacity: 0.4;
-      background: rgba(255,255,255,0.1);
-    }
-    .admin-item.drag-over-admin {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(232,199,107,0.5);
-    }
+  .fixed-block {
+    background: #faf7f2;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 7px 7px 0;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: #6a6258;
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
 
-    .edit-form { display:none; flex-direction:column; gap:10px; margin-top:12px; width:100%; }
-    .edit-form.visible { display:flex; }
+  .fixed-block .fixed-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #B89A5A;
+    font-style: normal;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-family: 'EB Garamond', serif;
+  }
 
-    #toast {
-      position:fixed; bottom:100px; right:28px; z-index:300;
-      background:rgba(18,15,40,0.95); border:1px solid rgba(255,255,255,0.15);
-      padding:12px 20px; border-radius:12px; font-size:0.9rem;
-      opacity:0; transform:translateY(15px); transition:all 0.3s;
-    }
-    #toast.show { opacity:1; transform:none; }
-  </style>
+  .btn-generate {
+    width: 100%;
+    padding: 13px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.07);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-generate:hover { background: rgba(184,154,90,0.14); }
+  .btn-generate:active { transform: scale(0.99); }
+
+  .ornament {
+    text-align: center;
+    color: #B89A5A;
+    font-size: 20px;
+    opacity: 0.4;
+    letter-spacing: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .output-area {
+    border: 1px solid #ddd8ce;
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+  }
+  .output-area.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #f7f4ef;
+    border-bottom: 1px solid #e8e2d8;
+  }
+
+  .output-title {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999080;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-copy {
+    font-family: 'EB Garamond', serif;
+    font-size: 13.5px;
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: transparent;
+    color: #B89A5A;
+    cursor: pointer;
+    transition: background 0.12s;
+    letter-spacing: 0.02em;
+  }
+  .btn-copy:hover { background: rgba(184,154,90,0.1); }
+  .btn-copy.copied { background: rgba(184,154,90,0.18); color: #8a6e2f; border-color: #8a6e2f; }
+
+  .output-text {
+    padding: 16px 18px;
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: #1a1814;
+    font-family: 'EB Garamond', Georgia, serif;
+    white-space: pre-wrap;
+    background: #fff;
+    word-break: break-word;
+  }
+
+  /* HISTORIAL */
+  .historial-panel { margin-top: 2rem; display: none; }
+  .historial-panel.visible { display: block; }
+
+  .historial-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border-top: 1px solid #eee8df;
+    padding-top: 1.5rem;
+  }
+
+  .historial-header-left { display: flex; align-items: center; gap: 10px; }
+
+  .historial-count {
+    font-size: 11px;
+    background: rgba(184,154,90,0.12);
+    color: #8a6e2f;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-clear-all {
+    font-family: 'EB Garamond', serif;
+    font-size: 12.5px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #e0cfc0;
+    background: transparent;
+    color: #b09070;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-clear-all:hover { background: #fff0e8; color: #c0603a; border-color: #c0603a; }
+
+  .historial-empty {
+    text-align: center;
+    font-style: italic;
+    color: #bbb5a8;
+    font-size: 14px;
+    padding: 2rem 0;
+  }
+
+  .historial-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .hist-item {
+    border: 1px solid #e8e2d8;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .hist-item:hover { border-color: #c8b898; }
+
+  .hist-item-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #faf7f2;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .hist-item-header:hover { background: #f5f0e8; }
+
+  .hist-meta { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+
+  .hist-scene-preview {
+    font-size: 14px;
+    color: #3a3530;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hist-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  .hist-tag {
+    font-size: 10.5px;
+    background: rgba(184,154,90,0.1);
+    color: #8a6e2f;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-family: 'EB Garamond', serif;
+    white-space: nowrap;
+  }
+
+  .hist-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+
+  .hist-date { font-size: 11px; color: #b0a898; font-style: italic; white-space: nowrap; }
+
+  .hist-actions { display: flex; gap: 5px; }
+
+  .btn-hist-action {
+    font-family: 'EB Garamond', serif;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd8ce;
+    background: #fff;
+    color: #6a6258;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-hist-action:hover { border-color: #B89A5A; color: #B89A5A; }
+  .btn-hist-action.danger:hover { border-color: #c0603a; color: #c0603a; }
+
+  .hist-item-body {
+    display: none;
+    padding: 14px 16px;
+    background: #fff;
+    border-top: 1px solid #eee8df;
+  }
+  .hist-item-body.open { display: block; }
+
+  .hist-body-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px 24px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 540px) { .hist-body-fields { grid-template-columns: 1fr; } }
+
+  .hist-field { display: flex; flex-direction: column; gap: 2px; }
+  .hist-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; color: #B89A5A; }
+  .hist-field-val { font-size: 13.5px; color: #3a3530; line-height: 1.45; }
+
+  .hist-scene-full {
+    font-size: 13.5px;
+    color: #3a3530;
+    line-height: 1.65;
+    margin-bottom: 10px;
+    padding: 10px 13px;
+    background: #faf8f4;
+    border-radius: 6px;
+    border: 1px solid #e8e2d8;
+  }
+
+  .hist-prompt-full {
+    background: #faf8f4;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 13px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #5a5248;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-style: italic;
+    margin-top: 10px;
+  }
+
+  .hist-body-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .scene-header { margin-bottom: 8px; }
+
+  /* === AI ASSIST BLOCK === */
+  .ai-assist-block {
+    background: linear-gradient(135deg, #fdf9f2 0%, #f9f5ec 100%);
+    border: 1px solid #ddd0b0;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 8px 8px 0;
+    padding: 16px 18px;
+    margin-bottom: 1.5rem;
+  }
+  .ai-assist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .ai-badge {
+    display: inline-block;
+    background: rgba(184,154,90,0.15);
+    color: #8a6e2f;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    border: 1px solid rgba(184,154,90,0.3);
+    font-style: normal;
+    letter-spacing: 0.05em;
+    text-transform: none;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-family: 'EB Garamond', serif;
+  }
+  .btn-collapse {
+    font-size: 11px;
+    color: #b0a080;
+    background: none;
+    border: 1px solid #ddd0b0;
+    border-radius: 5px;
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .btn-collapse:hover { color: #B89A5A; border-color: #B89A5A; }
+  .assist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  @media (max-width: 580px) { .assist-grid { grid-template-columns: 1fr; } }
+  .assist-input {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14.5px;
+    color: #1a1814;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .assist-input::placeholder { color: #bbb5a8; font-style: italic; }
+  .assist-input:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+  .btn-expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px;
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.08);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.15s;
+    letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
+  .btn-expand:hover { background: rgba(184,154,90,0.16); }
+  .btn-expand:disabled { opacity: 0.6; cursor: not-allowed; }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(184,154,90,0.3);
+    border-top-color: #B89A5A;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .expand-result {
+    margin-top: 14px;
+    background: #fff;
+    border: 1px solid #e0d8c8;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .expand-result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: #f7f4ef;
+    border-bottom: 1px solid #e8e2d8;
+    gap: 10px;
+  }
+  .expand-result-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999080;
+    font-family: 'EB Garamond', serif;
+  }
+  .btn-use-expanded {
+    font-family: 'EB Garamond', serif;
+    font-size: 12.5px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.08);
+    color: #8a6e2f;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .btn-use-expanded:hover { background: rgba(184,154,90,0.18); }
+  .expand-result-text {
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #3a3530;
+    font-family: 'EB Garamond', Georgia, serif;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  /* === MODAL DE CLAVES === */
+  .ia-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,24,20,0.55);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .ia-modal {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0d8c8;
+    padding: 24px 26px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  }
+  .ia-modal h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-style: italic;
+    font-weight: 500;
+    color: #1a1814;
+    margin-bottom: 8px;
+  }
+  .ia-modal p {
+    font-size: 13.5px;
+    color: #6a6258;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .ia-modal-input {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 13px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14px;
+    color: #1a1814;
+    margin-bottom: 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ia-modal-input:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+  .ia-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-modal-save {
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    padding: 7px 20px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.09);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .btn-modal-save:hover { background: rgba(184,154,90,0.18); }
+  .btn-modal-cancel {
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd8ce;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+  }
+  .btn-modal-cancel:hover { border-color: #aaa; color: #555; }
+  .ia-modal { max-height: 90vh; overflow-y: auto; }
+  .keyrow { display: grid; grid-template-columns: 95px 1fr; gap: 2px 10px; align-items: center; margin-bottom: 10px; }
+  .keyrow label { font-size: 14px; color: #6a6258; }
+  .keyrow .ia-modal-input { margin-bottom: 0; }
+  .keyrow a { grid-column: 2; font-size: 12px; color: #B89A5A; font-style: italic; text-decoration: none; }
+  .keyrow a:hover { text-decoration: underline; }
+  .ia-modal-actions .left { margin-right: auto; font-size: 13px; color: #888; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .ia-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
+  .ia-row .field-group { flex: 1 1 200px; min-width: 0; }
+  .ia-row select { width: 100%; font-size: 13.5px; padding: 7px 30px 7px 10px; }
+  .btn-ia-small {
+    font-family: 'EB Garamond', serif; font-size: 13.5px;
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd8ce;
+    background: #fff; color: #6a6258; cursor: pointer; white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-ia-small:hover { border-color: #B89A5A; color: #B89A5A; }
+  .ia-status { font-size: 12.5px; font-style: italic; margin-top: 6px; min-height: 0; }
+  .ia-status.ok { color: #7a9a60; } .ia-status.err { color: #c0603a; }
+
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <header>
-    <h1>✦ Aplicaciones del libro</h1>
-    <p>Todas tus aplicaciones, en un solo lugar</p>
-  </header>
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar" style="background:#1a1814;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 20px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:0;">
+  <span id="sync-user-text" style="display:none;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px;font-family:monospace"></span>
+  <button id="btn-signout" onclick="fbSignOut()" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;text-transform:uppercase;font-family:monospace">Cerrar sesión</button>
+  <button id="btn-sync" onclick="handleSync()" style="background:none;border:1px solid rgba(184,154,90,0.5);color:#c9a96e;padding:4px 11px;border-radius:20px;cursor:pointer;font-size:10px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:5px;font-family:monospace;transition:all .2s">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar historial</span>
+  </button>
+</div>
+<div id="sync-status" style="display:none;padding:5px 20px;font-size:10px;letter-spacing:1px;text-transform:uppercase;align-items:center;justify-content:space-between;gap:10px;">
+  <span id="sync-status-msg"></span>
+  <button onclick="closeSyncStatus()" style="background:none;border:none;cursor:pointer;opacity:.6;font-size:12px;padding:0 3px">✕</button>
+</div>
 
-  <main id="app-grid"><div class="app-card" draggable="true" data-id="cxln7ps">
-          <span class="app-icon">🪄</span>
-          <span class="app-name">Ilustrador Groq</span>
-        </div><div class="app-card" draggable="true" data-id="na1enmd">
-          <span class="app-icon">🖌️</span>
-          <span class="app-name">Ilusrador Claude</span>
-        </div></main>
+<div class="container">
 
-  <button id="btn-config" title="Administración">⚙️</button>
+  <div class="app-header">
+    <div class="app-header-left">
+      <h1>Generador de prompts · Ilustraciones del libro</h1>
+      <p>Describe la escena. El estilo pictórico historicista se aplicará automáticamente.</p>
+    </div>
+    <button class="btn-historial-toggle" id="btnToggleHistorial" onclick="toggleHistorial()">
+      Historial (<span id="histCount">0</span>)
+    </button>
+  </div>
 
-  <div id="modal-overlay" style="display:none;">
-    <div id="modal">
-      <div class="modal-header">
-        <h2>⚙️ Administración</h2>
-        <button id="btn-close-modal" style="background:none;border:none;font-size:1.8rem;color:#aaa;cursor:pointer;">✕</button>
+  <!-- NUEVO: Descripción asistida por IA -->
+  <div class="ai-assist-block" id="aiAssistBlock">
+    <div class="ai-assist-header">
+      <div class="section-label" style="margin-bottom:0;">Descripción rápida en español <span class="ai-badge">✦ IA</span></div>
+      <button class="btn-collapse" id="btnCollapse" onclick="toggleAssist()" title="Contraer">▲</button>
+    </div>
+    <p class="note-tip" style="margin-bottom:6px;">Describe brevemente la escena en español. La IA la expandirá con todo el detalle necesario y la traducirá al inglés lista para usar.</p>
+    <div class="ia-row">
+      <div class="field-group">
+        <div class="section-label">Proveedor</div>
+        <select id="prov" onchange="changeProvider()"></select>
       </div>
+      <div class="field-group">
+        <div class="section-label">Modelo</div>
+        <select id="model" onchange="changeModel()"></select>
+      </div>
+      <button class="btn-ia-small" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+      <button class="btn-ia-small" onclick="openKeys()">🔑 Claves</button>
+    </div>
+    <div class="ia-status" id="iaStatus"></div>
 
-      <p class="section-title">➕ Añadir nueva aplicación</p>
-      <div class="form-row">
-        <div>
-          <label for="new-name">Nombre *</label>
-          <input type="text" id="new-name" placeholder="Mi App">
-        </div>
-        <div>
-          <label for="new-folder">Carpeta / URL *</label>
-          <input type="text" id="new-folder" placeholder="mi-app/">
+    <textarea id="sceneRaw" rows="3" placeholder="Ej: Un monje copista trabajando a la luz de una vela en un scriptorium medieval, rodeado de manuscritos..." style="margin-top:10px;"></textarea>
+
+    <div class="assist-grid">
+      <div class="field-group">
+        <div class="section-label">Año aproximado</div>
+        <input type="text" id="anio" placeholder="Ej: 1150, siglo X, hacia 1380…" class="assist-input">
+      </div>
+      <div class="field-group">
+        <div class="section-label">Personajes principales</div>
+        <input type="text" id="personajes" placeholder="Ej: Un abad, dos monjes jóvenes…" class="assist-input">
+      </div>
+      <div class="field-group">
+        <div class="section-label">Lugar concreto</div>
+        <input type="text" id="lugar" placeholder="Ej: Scriptorium de un monasterio castellano…" class="assist-input">
+      </div>
+      <div class="field-group">
+        <div class="section-label">Elementos destacados</div>
+        <input type="text" id="elementos" placeholder="Ej: Velas, pergaminos, plumas de ave, tinteros…" class="assist-input">
+      </div>
+    </div>
+
+    <button class="btn-expand" id="btnExpand" onclick="expandWithAI()">
+      <span id="expandBtnText">✦ Expandir descripción con IA</span>
+      <span id="expandSpinner" class="spinner" style="display:none;"></span>
+    </button>
+
+    <div class="expand-result" id="expandResult" style="display:none;">
+      <div class="expand-result-header">
+        <span class="expand-result-label">Descripción expandida (en inglés)</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-use-expanded" onclick="useExpanded()">Usar como descripción de escena ↓</button>
+          <button class="btn-hist-action" onclick="clearExpanded()" title="Limpiar">✕</button>
         </div>
       </div>
-      <div class="form-row" style="grid-template-columns:80px 1fr;">
-        <div>
-          <label for="new-icon">Icono</label>
-          <input type="text" id="new-icon" placeholder="📦" maxlength="4">
-        </div>
-      </div>
-      <button class="btn btn-primary" id="btn-add-app">➕ Añadir aplicación</button>
-
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
-
-      <p class="section-title">📋 Aplicaciones actuales (arrastra para reordenar)</p>
-      <div id="apps-admin-list"><div class="admin-item" data-id="cxln7ps" draggable="true">
-          <span class="app-icon" style="font-size:1.6rem;">🪄</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">Ilustrador Groq</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">ilustradorgroq/</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="cxln7ps" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="cxln7ps" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-cxln7ps">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="Ilustrador Groq"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="ilustradorgroq/"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="🪄" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="cxln7ps" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="cxln7ps" style="padding:8px 16px;">Cancelar</button>
-            </div>
-          </div>
-        </div><div class="admin-item" data-id="na1enmd" draggable="true">
-          <span class="app-icon" style="font-size:1.6rem;">🖌️</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">Ilusrador Claude</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">ilustradorclaude/</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="na1enmd" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="na1enmd" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-na1enmd">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="Ilusrador Claude"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="ilustradorclaude/"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="🖌️" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="na1enmd" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="na1enmd" style="padding:8px 16px;">Cancelar</button>
-            </div>
-          </div>
-        </div></div>
-
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:28px 0;">
-
-      <button class="btn btn-primary" id="btn-download" style="width:100%;padding:14px;">⬇️ Descargar index.html actualizado</button>
+      <div class="expand-result-text" id="expandResultText"></div>
     </div>
   </div>
 
-  <div id="toast" class="">✏️ "Ilusrador Claude" actualizada</div>
+  <!-- Escena -->
+  <div class="scene-header">
+    <div class="section-label">Descripción de la escena <span style="color:#aaa496;font-style:italic;font-size:11px;text-transform:none;letter-spacing:0;">(en inglés · se incluirá en el prompt final)</span></div>
+  </div>
+  <textarea id="scene" rows="6" placeholder="Aquí aparecerá la descripción expandida en inglés, o escribe directamente tu descripción en inglés."></textarea>
+  <p class="note-tip">Puedes usar el asistente de arriba para generar esta descripción automáticamente, o escribirla tú directamente.</p>
 
-  <script>
-    // __APPS_START__
-    let apps = [
-  {
-    "id": "cxln7ps",
-    "name": "Ilustrador Groq",
-    "url": "ilustradorgroq/",
-    "icon": "🪄"
-  },
-  {
-    "id": "na1enmd",
-    "name": "Ilusrador Claude",
-    "url": "ilustradorclaude/",
-    "icon": "🖌️"
+  <!-- Tres selectores pictóricos -->
+  <div class="fields-grid">
+
+    <div class="field-group">
+      <div class="section-label">Tono dramático</div>
+      <select id="tono">
+        <option value="epic">Épico y monumental</option>
+        <option value="intimate">Íntimo y contenido</option>
+        <option value="solemn">Solemne y ceremonial</option>
+        <option value="tense">Tenso y sombrío</option>
+        <option value="serene">Sereno y contemplativo</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <div class="section-label">Luz y atmósfera</div>
+      <select id="luz">
+        <option value="golden">Luz dorada de mediodía</option>
+        <option value="dusk">Crepúsculo encendido</option>
+        <option value="torch">Noche con antorchas</option>
+        <option value="overcast">Día nublado y frío</option>
+        <option value="dawn">Alba, primera claridad</option>
+        <option value="storm">Luz de tormenta</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <div class="section-label">Punto de vista</div>
+      <select id="pov">
+        <option value="general">Plano general — escena completa</option>
+        <option value="medio">Plano medio — grupo de figuras</option>
+        <option value="detalle">Primer plano — rostros u objetos</option>
+        <option value="contrapicado">Contrapicado — arquitectura imponente</option>
+        <option value="aereo">Vista elevada — cortejo o multitud</option>
+        <option value="subjetivo">Perspectiva del testigo</option>
+      </select>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Estilo base fijo -->
+  <div class="section-label">Estilo pictórico base (aplicado a todas las ilustraciones)</div>
+  <div class="fixed-block">
+    <div class="fixed-label">Fijo · Romántico historicista · Gérôme / Alma-Tadema</div>
+    Pintura al óleo de estilo romántico historicista del siglo XIX, en la tradición de Jean-Léon Gérôme y Lawrence Alma-Tadema. Rigor histórico en arquitectura, indumentaria y objetos. Composición académica equilibrada y narrativa. Pincelada precisa con acabado suave, detalle fotográfico en texturas de piedra, telas y metales. Paleta rica en ocres, siennas, azules profundos y blancos luminosos.
+  </div>
+
+  <!-- Botón generar -->
+  <button class="btn-generate" onclick="buildPrompt()">✦ Generar prompt completo</button>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- Output -->
+  <div class="output-area" id="outputArea">
+    <div class="output-header">
+      <span class="output-title">Prompt generado</span>
+      <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
+    </div>
+    <div class="output-text" id="outputText"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="historial-panel" id="historialPanel">
+    <div class="historial-header">
+      <div class="historial-header-left">
+        <div class="section-label" style="margin-bottom:0;">Historial de prompts</div>
+        <span class="historial-count" id="historialCount">0 entradas</span>
+      </div>
+      <button class="btn-clear-all" onclick="clearAll()">Borrar todo</button>
+    </div>
+    <div id="historialList"></div>
+  </div>
+
+</div>
+
+<script>
+
+  const TONO = {
+    epic:     { label: "Épico y monumental",       text: "Mood: epic and monumental, heroic figures, grandiose scale, powerful sense of historical significance." },
+    intimate: { label: "Íntimo y contenido",       text: "Mood: intimate and restrained, human-scale figures, quiet emotional intensity, personal and close." },
+    solemn:   { label: "Solemne y ceremonial",     text: "Mood: solemn and ceremonial, formal composition, dignified stillness, weight of ritual and tradition." },
+    tense:    { label: "Tenso y sombrío",          text: "Mood: tense and somber, heavy atmosphere, sense of foreboding or unresolved conflict, dark emotional charge." },
+    serene:   { label: "Sereno y contemplativo",   text: "Mood: serene and contemplative, peaceful atmosphere, figures in quiet repose, timeless and meditative." }
+  };
+
+  const LUZ = {
+    golden:   { label: "Luz dorada de mediodía",  text: "Warm golden midday light, sun from a high angle, rich ochre and amber tones bathing the scene, deep but soft shadows." },
+    dusk:     { label: "Crepúsculo encendido",     text: "Dusk light, sky ablaze with ochres and carmines, long shadows stretching across the ground, figures silhouetted against the luminous horizon." },
+    torch:    { label: "Noche con antorchas",      text: "Nocturnal torchlight, deep surrounding darkness, warm amber and orange flickering highlights on faces and stone, rich blacks and burnt shadows." },
+    overcast: { label: "Día nublado y frío",       text: "Diffuse overcast daylight, cold and even, no harsh shadows, muted tones, grey-blue atmosphere that emphasizes texture over drama." },
+    dawn:     { label: "Alba, primera claridad",   text: "Early morning light, pale blue-grey cold silence, first golden light barely touching the horizon, deep cool shadows still dominant." },
+    storm:    { label: "Luz de tormenta",          text: "Storm light, dark turbulent clouds overhead, dramatic shafts of pale cold light breaking through, charged and foreboding atmosphere." }
+  };
+
+  const POV = {
+    general:      { label: "Plano general",            text: "Wide establishing view, full scene visible, figures set within their architectural and landscape context, sense of place and scale." },
+    medio:        { label: "Plano medio",              text: "Medium view focused on a group of figures, actions and gestures clearly visible, architectural surroundings present but secondary." },
+    detalle:      { label: "Primer plano",             text: "Close-up view, faces and expressions dominant, or a significant object in sharp focus, fine material detail visible — fabric, metal, stone." },
+    contrapicado: { label: "Contrapicado",             text: "Low-angle view looking upward, architecture and figures appear imposing and towering, sky visible above, sense of power and height." },
+    aereo:        { label: "Vista elevada",            text: "Elevated viewpoint looking down, spatial layout of the scene clearly readable, processions or crowds visible in their full extent." },
+    subjetivo:    { label: "Perspectiva del testigo",  text: "Point-of-view of a witness within the scene, the viewer feels present, other figures partially frame the main event." }
+  };
+
+  const ESTILO_BASE = `Oil painting in the 19th-century Romantic historicist tradition of Jean-Léon Gérôme and Lawrence Alma-Tadema. Strict historical accuracy in architecture, costume and objects. Balanced academic composition with clear narrative focus. Precise smooth brushwork with photographic detail in stone textures, fabrics and metals. Rich palette of ochres, siennas, deep blues and luminous whites. No fantasy elements. No modern anachronisms.
+
+GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a scene set in Castile, Spain (the Cerrato Vallisoletano region). All visual elements must reflect the specific material culture of Castilian Spain for the depicted period. Clothing must follow Castilian and broader Iberian dress conventions — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, monastic habits of Castilian orders, military dress of Castilian nobles or frontier soldiers as appropriate. No English, French, Flemish or Northern European dress. No Anglo-Saxon, Tudor, Victorian or American colonial aesthetic in any detail. Architecture must be Romanesque, Mozarabic, Gothic or Mudéjar as appropriate to the period — stone construction typical of the Castilian meseta. Landscape when visible must suggest the dry plateau of the Castilian interior: ochre earth, limestone outcrops, holm oak, sparse scrubland. Faces and physical types should reflect the Mediterranean and Iberian world. No Northern European physiognomy.`;
+
+  const STORAGE_KEY = 'prompt_historial_v2';
+
+  function loadHistorial() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch(e) { return []; }
   }
-];
-    // __APPS_END__
 
-    function uid() { return Math.random().toString(36).slice(2,9); }
+  function saveHistorial(list) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
 
-    function showToast(msg, duration=2400) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      clearTimeout(toast._timer);
-      toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+  function updateCount() {
+    const n = loadHistorial().length;
+    document.getElementById('histCount').textContent = n;
+    document.getElementById('historialCount').textContent = n + (n === 1 ? ' entrada' : ' entradas');
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+           + ' · ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildPrompt() {
+    const scene = document.getElementById('scene').value.trim();
+    if (!scene) {
+      const ta = document.getElementById('scene');
+      ta.focus();
+      ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+      return;
     }
 
-    function renderGrid() {
-      const grid = document.getElementById('app-grid');
-      grid.innerHTML = '';
+    const tonoKey = document.getElementById('tono').value;
+    const luzKey  = document.getElementById('luz').value;
+    const povKey  = document.getElementById('pov').value;
 
-      apps.forEach(app => {
-        const card = document.createElement('div');
-        card.className = 'app-card';
-        card.draggable = true;
-        card.dataset.id = app.id;
-        card.innerHTML = `
-          <span class="app-icon">${app.icon}</span>
-          <span class="app-name">${app.name}</span>
-        `;
+    const prompt =
+      scene + '\n\n' +
+      ESTILO_BASE + '\n\n' +
+      LUZ[luzKey].text + '\n' +
+      POV[povKey].text + '\n' +
+      TONO[tonoKey].text;
 
-        card.addEventListener('click', (e) => {
-          if (!card.classList.contains('dragging')) {
-            window.location.href = app.url;
-          }
-        });
+    document.getElementById('outputText').textContent = prompt;
+    const area = document.getElementById('outputArea');
+    area.classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
 
-        grid.appendChild(card);
-      });
+    const sceneRawVal = document.getElementById('sceneRaw') ? document.getElementById('sceneRaw').value.trim() : '';
+    const entry = { id: Date.now(), date: new Date().toISOString(), scene, sceneRaw: sceneRawVal, tonoKey, luzKey, povKey, prompt };
+    const list = loadHistorial();
+    list.unshift(entry);
+    saveHistorial(list);
+    updateCount();
+    if (document.getElementById('historialPanel').classList.contains('visible')) renderHistorial();
+    setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+  }
 
-      initDragAndDropGrid();
+  function copyPrompt() {
+    const text = document.getElementById('outputText').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2200);
+    });
+  }
+
+  function toggleHistorial() {
+    const panel = document.getElementById('historialPanel');
+    const btn   = document.getElementById('btnToggleHistorial');
+    const open  = panel.classList.toggle('visible');
+    btn.classList.toggle('active', open);
+    if (open) {
+      renderHistorial();
+      setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    }
+  }
+
+  function renderHistorial() {
+    const list = loadHistorial();
+    const container = document.getElementById('historialList');
+    updateCount();
+
+    if (!list.length) {
+      container.innerHTML = '<p class="historial-empty">Todavía no hay prompts guardados.<br>Genera el primero arriba.</p>';
+      return;
     }
 
-    let draggedGridCard = null;
-
-    function initDragAndDropGrid() {
-      document.querySelectorAll('.app-card').forEach(card => {
-        card.addEventListener('dragstart', () => {
-          draggedGridCard = card;
-          setTimeout(() => card.classList.add('dragging'), 10);
-        });
-        card.addEventListener('dragend', () => {
-          card.classList.remove('dragging');
-          document.querySelectorAll('.app-card').forEach(c => c.classList.remove('drag-over'));
-        });
-        card.addEventListener('dragover', e => { e.preventDefault(); if (card !== draggedGridCard) card.classList.add('drag-over'); });
-        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
-        card.addEventListener('drop', e => {
-          e.preventDefault();
-          if (!draggedGridCard || draggedGridCard === card) return;
-          const fromId = draggedGridCard.dataset.id;
-          const toId = card.dataset.id;
-          const fromIdx = apps.findIndex(a => a.id === fromId);
-          const toIdx = apps.findIndex(a => a.id === toId);
-          if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = apps.splice(fromIdx, 1);
-            apps.splice(toIdx, 0, moved);
-            renderGrid();
-            if (document.getElementById('modal-overlay').style.display === 'flex') renderAdminList();
-            showToast('📋 Orden actualizado');
-          }
-        });
-      });
-    }
-
-    // Variables para drag & drop en el panel de administración
-    let draggedAdminItem = null;
-
-    function renderAdminList() {
-      const container = document.getElementById('apps-admin-list');
-      container.innerHTML = '';
-
-      apps.forEach(app => {
-        const item = document.createElement('div');
-        item.className = 'admin-item';
-        item.setAttribute('data-id', app.id);
-        item.setAttribute('draggable', 'true');
-        item.innerHTML = `
-          <span class="app-icon" style="font-size:1.6rem;">${app.icon}</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">${app.name}</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">${app.url}</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-edit btn-edit-app" data-id="${app.id}" style="padding:6px 10px;">✏️</button>
-            <button class="btn btn-danger btn-delete-app" data-id="${app.id}" style="padding:6px 10px;">🗑</button>
-          </div>
-          <div class="edit-form" id="edit-form-${app.id}">
-            <div class="form-row">
-              <div><label>Nombre</label><input type="text" class="edit-name" value="${app.name.replace(/"/g, '&quot;')}"></div>
-              <div><label>Carpeta / URL</label><input type="text" class="edit-url" value="${app.url.replace(/"/g, '&quot;')}"></div>
+    container.innerHTML = '<div class="historial-list">' + list.map(e => {
+      const preview   = e.scene.length > 95 ? e.scene.slice(0, 95) + '…' : e.scene;
+      const tonoLabel = e.tonoKey && TONO[e.tonoKey] ? TONO[e.tonoKey].label : '—';
+      const luzLabel  = e.luzKey  && LUZ[e.luzKey]   ? LUZ[e.luzKey].label  : '—';
+      const povLabel  = e.povKey  && POV[e.povKey]    ? POV[e.povKey].label  : '—';
+      return `
+      <div class="hist-item" id="hitem-${e.id}">
+        <div class="hist-item-header" onclick="toggleItem(${e.id})">
+          <div class="hist-meta">
+            <div class="hist-scene-preview">${esc(preview)}</div>
+            <div class="hist-tags">
+              <span class="hist-tag">${esc(tonoLabel)}</span>
+              <span class="hist-tag">${esc(luzLabel)}</span>
+              <span class="hist-tag">${esc(povLabel)}</span>
             </div>
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:12px;">
-              <div><label>Icono</label><input type="text" class="edit-icon" value="${app.icon}" maxlength="4"></div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn btn-primary btn-save-edit" data-id="${app.id}" style="padding:8px 16px;">Guardar cambios</button>
-              <button class="btn btn-edit btn-cancel-edit" data-id="${app.id}" style="padding:8px 16px;">Cancelar</button>
+          </div>
+          <div class="hist-right">
+            <span class="hist-date">${formatDate(e.date)}</span>
+            <div class="hist-actions" onclick="event.stopPropagation()">
+              <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar</button>
+              <button class="btn-hist-action danger" onclick="deleteEntry(${e.id})">Borrar</button>
             </div>
           </div>
-        `;
+        </div>
+        <div class="hist-item-body" id="hbody-${e.id}">
+          <div class="hist-body-fields">
+            <div class="hist-field">
+              <span class="hist-field-label">Tono dramático</span>
+              <span class="hist-field-val">${esc(tonoLabel)}</span>
+            </div>
+            <div class="hist-field">
+              <span class="hist-field-label">Luz y atmósfera</span>
+              <span class="hist-field-val">${esc(luzLabel)}</span>
+            </div>
+            <div class="hist-field">
+              <span class="hist-field-label">Punto de vista</span>
+              <span class="hist-field-val">${esc(povLabel)}</span>
+            </div>
+          </div>
+          <div class="hist-field" style="margin-bottom:6px;">
+            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Escena descrita</span>
+            <div class="hist-scene-full">${esc(e.scene)}</div>
+          </div>
+          ${e.sceneRaw ? `<div class="hist-field" style="margin-bottom:6px;">
+            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Descripción original en español</span>
+            <div class="hist-scene-full" style="font-style:italic;color:#6a6258;">${esc(e.sceneRaw)}</div>
+          </div>` : ''}
+          <div class="hist-prompt-full">${esc(e.prompt)}</div>
+          <div class="hist-body-actions">
+            <button class="btn-hist-action" onclick="copyEntry(${e.id}, this)">Copiar prompt</button>
+            <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar en el formulario ↑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
 
-        // Eventos de arrastre para el admin
-        item.addEventListener('dragstart', (e) => {
-          draggedAdminItem = item;
-          setTimeout(() => item.classList.add('dragging-admin'), 10);
-        });
-        item.addEventListener('dragend', () => {
-          item.classList.remove('dragging-admin');
-          document.querySelectorAll('.admin-item').forEach(i => i.classList.remove('drag-over-admin'));
-          draggedAdminItem = null;
-        });
-        item.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          if (draggedAdminItem && draggedAdminItem !== item) {
-            item.classList.add('drag-over-admin');
-          }
-        });
-        item.addEventListener('dragleave', () => {
-          item.classList.remove('drag-over-admin');
-        });
-        item.addEventListener('drop', (e) => {
-          e.preventDefault();
-          if (!draggedAdminItem || draggedAdminItem === item) return;
-          item.classList.remove('drag-over-admin');
-          
-          const fromId = draggedAdminItem.getAttribute('data-id');
-          const toId = item.getAttribute('data-id');
-          const fromIdx = apps.findIndex(a => a.id === fromId);
-          const toIdx = apps.findIndex(a => a.id === toId);
-          if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = apps.splice(fromIdx, 1);
-            apps.splice(toIdx, 0, moved);
-            renderAdminList();      // refresca el listado del admin
-            renderGrid();           // sincroniza la cuadrícula principal
-            showToast('📋 Orden actualizado (admin)');
-          }
-        });
+  function toggleItem(id) {
+    const body = document.getElementById('hbody-' + id);
+    if (body) body.classList.toggle('open');
+  }
 
-        container.appendChild(item);
-      });
+  function restoreEntry(id) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    document.getElementById('scene').value = entry.scene;
+    if (entry.sceneRaw && document.getElementById('sceneRaw')) {
+      document.getElementById('sceneRaw').value = entry.sceneRaw;
     }
+    setSelectValue('tono', entry.tonoKey);
+    setSelectValue('luz',  entry.luzKey);
+    setSelectValue('pov',  entry.povKey);
+    document.getElementById('outputText').textContent = entry.prompt;
+    document.getElementById('outputArea').classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
-    // CRUD
-    function addApp() {
-      const name = document.getElementById('new-name').value.trim();
-      let url = document.getElementById('new-folder').value.trim();
-      const icon = document.getElementById('new-icon').value.trim() || '📦';
-      if (!name) return showToast('⚠️ El nombre es obligatorio');
-      if (!url) return showToast('⚠️ La carpeta/URL es obligatoria');
-      if (!url.endsWith('/')) url += '/';
-      apps.push({ id: uid(), name, url, icon });
-      document.getElementById('new-name').value = '';
-      document.getElementById('new-folder').value = '';
-      document.getElementById('new-icon').value = '';
-      renderGrid();
-      renderAdminList();
-      showToast(`✅ "${name}" añadida`);
+  function setSelectValue(id, value) {
+    if (!value) return;
+    const sel = document.getElementById(id);
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === value) { sel.selectedIndex = i; return; }
     }
+  }
 
-    function deleteApp(id) {
-      const app = apps.find(a => a.id === id);
-      if (!app) return;
-      if (!confirm(`¿Eliminar "${app.name}"?`)) return;
-      apps = apps.filter(a => a.id !== id);
-      renderGrid();
-      renderAdminList();
-      showToast(`🗑 "${app.name}" eliminada`);
+  function copyEntry(id, btn) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    navigator.clipboard.writeText(entry.prompt).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+  }
+
+  function deleteEntry(id) {
+    saveHistorial(loadHistorial().filter(e => e.id !== id));
+    renderHistorial();
+  }
+
+  function clearAll() {
+    if (!confirm('¿Borrar todo el historial? Esta acción no se puede deshacer.')) return;
+    saveHistorial([]);
+    renderHistorial();
+  }
+
+  /* === AI EXPAND === */
+  let expandedText = '';
+
+  function toggleAssist() {
+    const block = document.getElementById('aiAssistBlock');
+    const btn = document.getElementById('btnCollapse');
+    const isCollapsed = block.dataset.collapsed === '1';
+    if (isCollapsed) {
+      block.dataset.collapsed = '0';
+      btn.textContent = '▲';
+      [...block.children].forEach((c,i) => { if(i>0) c.style.display = ''; });
+    } else {
+      block.dataset.collapsed = '1';
+      btn.textContent = '▼';
+      [...block.children].forEach((c,i) => { if(i>0) c.style.display = 'none'; });
     }
+  }
 
-    function saveEdit(id) {
-      const form = document.getElementById(`edit-form-${id}`);
-      if (!form) return;
-      const name = form.querySelector('.edit-name').value.trim();
-      let url = form.querySelector('.edit-url').value.trim();
-      const icon = form.querySelector('.edit-icon').value.trim() || '📦';
-      if (!name || !url) return showToast('⚠️ Nombre y URL son obligatorios');
-      if (!url.endsWith('/')) url += '/';
-      const app = apps.find(a => a.id === id);
-      if (app) {
-        app.name = name;
-        app.url = url;
-        app.icon = icon;
+  async function expandWithAI() {
+    const raw = document.getElementById('sceneRaw').value.trim();
+    if (!raw) {
+      const ta = document.getElementById('sceneRaw');
+      ta.focus(); ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+      return;
+    }
+    if (!getKey(settings.provider)) { iaStatus('err', 'Falta la clave de ' + keyLabel(settings.provider) + '.'); openKeys(settings.provider); return; }
+
+    const anio       = document.getElementById('anio').value.trim();
+    const personajes = document.getElementById('personajes').value.trim();
+    const lugar      = document.getElementById('lugar').value.trim();
+    const elementos  = document.getElementById('elementos').value.trim();
+
+    const btn = document.getElementById('btnExpand');
+    btn.disabled = true;
+    document.getElementById('expandBtnText').textContent = 'Expandiendo…';
+    document.getElementById('expandSpinner').style.display = 'inline-block';
+    document.getElementById('expandResult').style.display = 'none';
+
+    const contextLines = [];
+    if (anio)       contextLines.push('Approximate period: ' + anio);
+    if (lugar)      contextLines.push('Specific location: ' + lugar);
+    if (personajes) contextLines.push('Main characters: ' + personajes);
+    if (elementos)  contextLines.push('Key elements/objects: ' + elementos);
+    const context = contextLines.length ? '\n\nAdditional context provided by the author:\n' + contextLines.join('\n') : '';
+
+    const systemPrompt = 'You are an expert art director specializing in 19th-century Romantic historicist illustration, working on a Spanish local history book about the Cerrato Vallisoletano region (Castile, Spain). Your task is to take a brief scene description written in Spanish and expand it into a rich, detailed scene description in English, suitable as the scene-setting portion of an image generation prompt for a painting in the style of Gerôme and Alma-Tadema.\n\nCRITICAL GEOGRAPHIC AND CULTURAL CONSTRAINT: Every scene takes place in Castile, Spain. All details you describe must reflect the specific material culture of Castilian Iberian Spain for the period given. This means:\n- Clothing: Castilian and Iberian dress only — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, Castilian monastic habits, frontier soldiers in Castilian military dress. NEVER describe English, French, Flemish, Tudor, Victorian, Anglo-Saxon or American colonial clothing.\n- Architecture: Romanesque, Mozarabic, Gothic or Mudéjar as appropriate — stone construction of the Castilian meseta. NO half-timbered English buildings, NO Norman French castles, NO Northern European church styles.\n- Landscape: the dry Castilian interior plateau — ochre earth, limestone outcrops, holm oak, sparse scrubland, wide skies. NOT green English countryside, NOT Northern European forests.\n- Faces and physical types: Mediterranean and Iberian — NOT Northern European physiognomy.\n- Objects and tools: consistent with Iberian craft traditions of the period.\n\nRULES:\n- Write ONLY in English.\n- Output ONLY the expanded scene description — no preamble, no commentary, no title.\n- Be specific about: architectural details (Romanesque, Mozarabic, Gothic as appropriate to the period), clothing and materials consistent with Castilian Spain, body language and spatial arrangement of figures, light sources, atmospheric conditions, foreground and background elements, textures of stone / wood / fabric / metal.\n- Keep strict historical accuracy for Castilian medieval and early modern contexts.\n- Length: 80-140 words. Dense, vivid, concrete. No vague adjectives.\n- Do not include style instructions (those are added separately). Only describe the scene itself.';
+
+    const userPrompt = 'Scene description in Spanish (brief, to be expanded):\n"' + raw + '"' + context + '\n\nWrite the expanded scene description in English.';
+
+    try {
+      const text = (await callModel({ provider: settings.provider, model: settings.model, system: systemPrompt, user: userPrompt })).trim();
+      if (!text) throw new Error('El modelo ha devuelto una respuesta vacía.');
+      expandedText = text;
+      document.getElementById('expandResultText').textContent = text;
+      document.getElementById('expandResult').style.display = 'block';
+      setTimeout(() => document.getElementById('expandResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    } catch(e) {
+      expandedText = '';
+      const m = e.message || String(e);
+      document.getElementById('expandResultText').textContent =
+        /Failed to fetch|NetworkError|CORS/i.test(m) ? 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m
+        : /\((429|413)\)/.test(m) ? 'Se ha superado el límite del plan gratuito. Espera un minuto e inténtalo de nuevo, o cambia de proveedor. ' + m
+        : 'Error: ' + m;
+      document.getElementById('expandResult').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      document.getElementById('expandBtnText').textContent = '✦ Expandir descripción con IA';
+      document.getElementById('expandSpinner').style.display = 'none';
+    }
+  }
+
+  function useExpanded() {
+    if (!expandedText) return;
+    document.getElementById('scene').value = expandedText;
+    const ta = document.getElementById('scene');
+    ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ta.style.borderColor = '#B89A5A';
+    ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+    setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1400);
+  }
+
+  function clearExpanded() {
+    expandedText = '';
+    document.getElementById('expandResult').style.display = 'none';
+    document.getElementById('expandResultText').textContent = '';
+  }
+
+  /* ═══ PROVEEDORES Y MODELOS DE IA ═══
+     Solo proveedores con plan gratuito. Mismas claves que el resto de la suite. */
+  const KEYS = [
+    {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key',  url:'https://aistudio.google.com/apikey'},
+    {id:'groq',       label:'Groq',       ls:'castroverde_groq_key',        url:'https://console.groq.com/keys'},
+    {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key', url:'https://console.mistral.ai/api-keys'},
+    {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key',          url:'https://openrouter.ai/settings/keys'},
+  ];
+  const getKey   = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id).ls) || ''; } catch(e){ return ''; } };
+  const keyLabel = id => KEYS.find(k => k.id === id).label;
+
+  const PROVIDERS = {
+    aistudio:   {label:'Google AI Studio (Gemini) · gratis', models:[
+                   {id:'gemini-flash-latest',      label:'Gemini Flash (última)'},
+                   {id:'gemini-flash-lite-latest', label:'Gemini Flash-Lite (última)'},
+                   {id:'gemini-2.5-flash',         label:'Gemini 2.5 Flash'}]},
+    groq:       {label:'Groq · gratis', models:[
+                   {id:'openai/gpt-oss-120b',     label:'GPT-OSS 120B'},
+                   {id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
+    mistral:    {label:'Mistral (plan Experiment) · gratis', models:[
+                   {id:'mistral-medium-latest', label:'Mistral Medium'},
+                   {id:'mistral-small-latest',  label:'Mistral Small'},
+                   {id:'mistral-large-latest',  label:'Mistral Large'}]},
+    openrouter: {label:'OpenRouter (modelos :free) · gratis', models:[
+                   {id:'meta-llama/llama-3.3-70b-instruct:free', label:'meta-llama/llama-3.3-70b-instruct:free'}]},
+  };
+  const LIST_KEY = {aistudio:'ilustraciones_gemini_models', groq:'ilustraciones_groq_models', mistral:'ilustraciones_mistral_models', openrouter:'ilustraciones_or_free_models'};
+  const SETTINGS_KEY = 'ilustraciones_settings';
+
+  function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+  function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+  let settings = Object.assign({provider:'aistudio', model:'gemini-flash-latest'}, loadJSON(SETTINGS_KEY) || {});
+  if (!PROVIDERS[settings.provider]) { settings.provider = 'aistudio'; settings.model = 'gemini-flash-latest'; }
+  function saveSettings(){ saveJSON(SETTINGS_KEY, settings); }
+
+  function iaStatus(type, msg){
+    const el = document.getElementById('iaStatus');
+    el.className = 'ia-status ' + (type || '');
+    el.textContent = msg || '';
+    if (type === 'ok') setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  }
+
+  function modelList(prov){
+    const c = loadJSON(LIST_KEY[prov]);
+    return (c && c.length) ? c : PROVIDERS[prov].models;
+  }
+  function renderModel(){
+    document.getElementById('prov').innerHTML = Object.entries(PROVIDERS)
+      .map(([k, p]) => `<option value="${k}" ${k === settings.provider ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
+    let list = modelList(settings.provider);
+    if (!list.some(m => m.id === settings.model)) list = [{id:settings.model, label:settings.model}, ...list];
+    document.getElementById('model').innerHTML = list
+      .map(m => `<option value="${esc(m.id)}" ${m.id === settings.model ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
+  }
+  function changeProvider(){
+    settings.provider = document.getElementById('prov').value;
+    settings.model = modelList(settings.provider)[0].id;
+    saveSettings(); renderModel(); iaStatus('', '');
+    const p = settings.provider;
+    if (!loadJSON(LIST_KEY[p]) && (p === 'openrouter' || getKey(p))) refreshModels(true);
+  }
+  function changeModel(){ settings.model = document.getElementById('model').value; saveSettings(); }
+
+  async function refreshModels(quiet){
+    const prov = settings.provider;
+    try {
+      let list = [];
+      if (prov === 'openrouter'){
+        // Solo los modelos gratuitos (terminan en «:free» o tienen precio 0)
+        const r = await fetch('https://openrouter.ai/api/v1/models');
+        if (!r.ok) throw new Error('OpenRouter ' + r.status);
+        const data = (await r.json()).data || [];
+        list = data.filter(m => /:free$/.test(m.id) || (m.pricing && +m.pricing.prompt === 0 && +m.pricing.completion === 0 && !/^openrouter\/auto/.test(m.id)))
+          .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      } else {
+        const key = getKey(prov);
+        if (!key){ if (!quiet){ iaStatus('err', 'Falta la clave de ' + keyLabel(prov) + '.'); openKeys(prov); } return; }
+        if (prov === 'aistudio'){
+          const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+          if (!r.ok) throw new Error('AI Studio ' + r.status);
+          const data = (await r.json()).models || [];
+          list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini|gemma/.test(m.name) && !/(embed|tts|image|live|audio|vision|robotics|computer)/.test(m.name))
+            .map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, ''))}));
+        } else {
+          const url = prov === 'groq' ? 'https://api.groq.com/openai/v1/models' : 'https://api.mistral.ai/v1/models';
+          const r = await fetch(url, {headers:{'Authorization':'Bearer ' + key}});
+          if (!r.ok) throw new Error(keyLabel(prov) + ' ' + r.status);
+          const data = (await r.json()).data || [];
+          list = data.filter(m => m.active !== false && !/(whisper|tts|guard|embed|ocr|moderation|orpheus|playai|voxtral|transcri|safeguard)/i.test(m.id)
+                                && !(m.capabilities && m.capabilities.completion_chat === false))
+            .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+          // Mistral repite modelos con alias: nos quedamos sin duplicados
+          list = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
+        }
       }
-      renderGrid();
-      renderAdminList();
-      showToast(`✏️ "${name}" actualizada`);
+      if (!list.length) throw new Error('la lista ha llegado vacía');
+      saveJSON(LIST_KEY[prov], list);
+      renderModel();
+      if (!quiet) iaStatus('ok', 'Lista de modelos actualizada.');
+    } catch(e){ if (!quiet) iaStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+  }
+
+  /* ═══ LLAMADAS A LAS APIS ═══ */
+  async function httpError(resp, who){
+    let detail = '';
+    try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+    catch(e){ try { detail = await resp.text(); } catch(_){} }
+    if (typeof detail === 'object') detail = JSON.stringify(detail);
+    return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+  }
+  function needKey(id){
+    const k = getKey(id);
+    if (!k){ openKeys(id); throw new Error('Falta la clave de ' + keyLabel(id) + '.'); }
+    return k;
+  }
+  function callModel(o){
+    if (o.provider === 'aistudio') return callGemini(o);
+    const cfg = {
+      openrouter:{url:'https://openrouter.ai/api/v1/chat/completions',      who:'OpenRouter', max:null},
+      mistral:   {url:'https://api.mistral.ai/v1/chat/completions',         who:'Mistral',    max:4000},
+      // El plan gratuito de Groq limita los tokens por minuto: se pide una salida corta
+      groq:      {url:'https://api.groq.com/openai/v1/chat/completions',    who:'Groq',       max:4000},
+    }[o.provider];
+    return callOpenAICompat(o, cfg);
+  }
+  async function callGemini({model, system, user}){
+    const key = needKey('aistudio');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    // Margen amplio: los modelos que «piensan» gastan tokens antes de responder
+    const resp = await fetch(url, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        systemInstruction:{parts:[{text:system}]},
+        contents:[{role:'user', parts:[{text:user}]}],
+        generationConfig:{maxOutputTokens:8000}
+      })
+    });
+    if (!resp.ok) throw await httpError(resp, 'AI Studio');
+    const j = await resp.json();
+    const c = j.candidates && j.candidates[0];
+    if (!c) throw new Error('AI Studio: respuesta vacía' + (j.promptFeedback ? ' (' + JSON.stringify(j.promptFeedback) + ')' : '.'));
+    if (c.finishReason === 'MAX_TOKENS') throw new Error('AI Studio: la respuesta se cortó por longitud. Prueba otro modelo.');
+    return ((c.content && c.content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('');
+  }
+  async function callOpenAICompat({provider, model, system, user}, cfg){
+    const key = needKey(provider);
+    const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+    if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Generador de prompts · Ilustraciones'; }
+    const body = {model, messages:[{role:'system', content:system}, {role:'user', content:user}]};
+    if (cfg.max) body.max_tokens = cfg.max;
+    const resp = await fetch(cfg.url, {method:'POST', headers, body:JSON.stringify(body)});
+    if (!resp.ok) throw await httpError(resp, cfg.who);
+    const j = await resp.json();
+    if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+    const ch = j.choices && j.choices[0];
+    if (!ch) throw new Error(cfg.who + ': respuesta vacía.');
+    if (ch.finish_reason === 'length') throw new Error(cfg.who + ': la respuesta se cortó por longitud. Prueba otro modelo.');
+    return (ch.message && ch.message.content) || '';
+  }
+
+  /* ═══ CLAVES ═══ */
+  function openKeys(focusId){
+    document.getElementById('keysBody').innerHTML = KEYS.map(k =>
+      `<div class="keyrow"><label for="key-${k.id}">${k.label}</label>` +
+      `<input class="ia-modal-input" id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}">` +
+      `<a href="${k.url}" target="_blank" rel="noopener">Conseguir clave gratuita ↗</a></div>`).join('');
+    document.getElementById('showkeys').checked = false;
+    document.getElementById('keysModal').style.display = 'flex';
+    setTimeout(() => { const el = document.getElementById('key-' + (typeof focusId === 'string' ? focusId : settings.provider)); if (el) el.focus(); }, 60);
+  }
+  function closeKeys(){ document.getElementById('keysModal').style.display = 'none'; }
+  function toggleShowKeys(){
+    const t = document.getElementById('showkeys').checked ? 'text' : 'password';
+    KEYS.forEach(k => document.getElementById('key-' + k.id).type = t);
+  }
+  function saveKeys(){
+    KEYS.forEach(k => {
+      const v = document.getElementById('key-' + k.id).value.trim();
+      try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){}
+    });
+    closeKeys(); iaStatus('ok', 'Claves guardadas.');
+  }
+  renderModel();
+  updateCount();
+</script>
+
+<!-- Modal: claves de API -->
+<div class="ia-modal-overlay" id="keysModal" style="display:none;">
+  <div class="ia-modal">
+    <h3>Claves de API</h3>
+    <p>Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones. Todas tienen plan gratuito (sin tarjeta).</p>
+    <div id="keysBody"></div>
+    <div class="ia-modal-actions">
+      <label class="left"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn-modal-cancel" onclick="closeKeys()">Cancelar</button>
+      <button class="btn-modal-save" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+<script>
+  // ══════════════════════════════════════════════════════
+  //  FIREBASE · Sincronización bidireccional
+  //  (debe ir después del modal para que el DOM esté listo)
+  // ══════════════════════════════════════════════════════
+
+  // El addEventListener del modal también va aquí por la misma razón
+  document.getElementById('keysModal').addEventListener('mousedown', function(e) {
+    if (e.target === this) closeKeys();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeKeys();
+  });
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyCxWOvUeB7P1u8URxYL_cMhj5fuXP7qfCs",
+    authDomain: "castroverde-apps.firebaseapp.com",
+    projectId: "castroverde-apps",
+    storageBucket: "castroverde-apps.firebasestorage.app",
+    messagingSenderId: "371026533141",
+    appId: "1:371026533141:web:315767f60cbf8d6f47671c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var fbAuth      = firebase.auth();
+  var fbDb        = firebase.firestore();
+  var fbProvider  = new firebase.auth.GoogleAuthProvider();
+  var fbUser      = null;
+  var fbPopupOpen = false;
+
+  fbAuth.onAuthStateChanged(function(user) {
+    fbUser = user;
+    updateSyncUI();
+    if (user) sincronizarBidireccional();
+  });
+
+  function updateSyncUI() {
+    var userEl  = document.getElementById('sync-user-text');
+    var signout = document.getElementById('btn-signout');
+    var btn     = document.getElementById('btn-sync');
+    var icon    = document.getElementById('sync-icon');
+    var label   = document.getElementById('sync-label');
+    if (fbUser) {
+      btn.style.borderColor = 'rgba(184,154,90,0.8)';
+      icon.textContent      = '✓';
+      label.textContent     = 'Sincronizar historial';
+      userEl.textContent    = fbUser.email;
+      userEl.style.display  = 'inline';
+      signout.style.display = 'inline';
+    } else {
+      btn.style.borderColor = 'rgba(184,154,90,0.5)';
+      icon.textContent      = '☁';
+      label.textContent     = 'Sincronizar historial';
+      userEl.style.display  = 'none';
+      signout.style.display = 'none';
     }
+  }
 
-    // Manejo de eventos de la ventana modal (incluyendo botones de edición/borrado)
-    document.getElementById('btn-config').addEventListener('click', () => {
-      renderAdminList();
-      document.getElementById('modal-overlay').style.display = 'flex';
+  function handleSync() {
+    if (fbPopupOpen) return;
+    if (!fbUser) {
+      fbPopupOpen = true;
+      setSyncStatus('info', 'Iniciando sesión con Google…');
+      fbAuth.signInWithPopup(fbProvider)
+        .then(function() { fbPopupOpen = false; sincronizarBidireccional(); })
+        .catch(function(err) { fbPopupOpen = false; setSyncStatus('err', 'Error al iniciar sesión: ' + err.message); });
+    } else {
+      sincronizarBidireccional();
+    }
+  }
+
+  function sincronizarBidireccional() {
+    if (!fbUser) return;
+    var btnSync = document.getElementById('btn-sync');
+    if (btnSync) btnSync.disabled = true;
+    setSyncStatus('info', 'Sincronizando historial…');
+    var docRef = fbDb.collection('promptsIlustraciones').doc(fbUser.uid);
+
+    docRef.get()
+      .then(function(snap) {
+        if (!snap.exists || !(snap.data().historial || []).length) {
+          return subirANube(docRef);
+        }
+        var tsNube         = snap.data().lastUpdate || 0;
+        var tsUltimaSubida = parseInt(localStorage.getItem('promptsUltimaSubida')) || 0;
+
+        if (tsNube > tsUltimaSubida) {
+          var historialNube = snap.data().historial || [];
+          saveHistorial(historialNube);
+          localStorage.setItem('promptsUltimaSubida', tsNube);
+          updateCount();
+          if (document.getElementById('historialPanel').classList.contains('visible')) renderHistorial();
+          setSyncStatus('ok', '📲 ' + historialNube.length + ' prompt' + (historialNube.length !== 1 ? 's actualizados' : ' actualizado') + ' desde la nube');
+        } else {
+          return subirANube(docRef);
+        }
+      })
+      .catch(function(err) { setSyncStatus('err', 'Error: ' + err.message); })
+      .finally(function() { if (btnSync) btnSync.disabled = false; });
+  }
+
+  function subirANube(docRef) {
+    var historial = loadHistorial();
+    var ts = new Date().getTime();
+    return docRef.set({
+      historial: historial,
+      lastUpdate: ts,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      localStorage.setItem('promptsUltimaSubida', ts);
+      var n = historial.length;
+      setSyncStatus('ok', '✓ Sincronizado — ' + n + ' prompt' + (n !== 1 ? 's' : ''));
     });
-    document.getElementById('btn-close-modal').addEventListener('click', () => {
-      document.getElementById('modal-overlay').style.display = 'none';
-    });
-    document.getElementById('btn-add-app').addEventListener('click', addApp);
+  }
 
-    document.getElementById('apps-admin-list').addEventListener('click', e => {
-      const id = e.target.getAttribute('data-id');
-      if (!id) return;
-      if (e.target.classList.contains('btn-delete-app')) deleteApp(id);
-      if (e.target.classList.contains('btn-edit-app')) {
-        document.getElementById(`edit-form-${id}`).classList.toggle('visible');
-      }
-      if (e.target.classList.contains('btn-save-edit')) saveEdit(id);
-      if (e.target.classList.contains('btn-cancel-edit')) {
-        document.getElementById(`edit-form-${id}`).classList.remove('visible');
-      }
-    });
+  function setSyncStatus(type, msg) {
+    var el         = document.getElementById('sync-status');
+    var colors     = { ok: 'rgba(184,154,90,.1)', err: 'rgba(192,57,43,.1)', info: 'rgba(184,154,90,.07)' };
+    var textColors = { ok: '#8a6e2f', err: '#c0392b', info: '#999080' };
+    el.style.display    = 'flex';
+    el.style.background = colors[type]     || colors.info;
+    el.style.color      = textColors[type] || textColors.info;
+    document.getElementById('sync-status-msg').textContent = msg;
+    if (type === 'ok') setTimeout(closeSyncStatus, 4000);
+  }
 
-    document.getElementById('btn-download').addEventListener('click', () => {
-      let src = document.documentElement.outerHTML;
-      // Cerrar modal antes de guardar snapshot
-      src = src.replace(/id="modal-overlay"[^>]*style="[^"]*display\s*:\s*flex[^"]*"/, 'id="modal-overlay" style="display:none;"');
-      // Reemplazar el array de apps
-      src = src.replace(
-        /\/\/ __APPS_START__[\s\S]*?\/\/ __APPS_END__/,
-        `// __APPS_START__\n    let apps = ${JSON.stringify(apps, null, 2)};\n    // __APPS_END__`
-      );
-      const blob = new Blob([src], { type: 'text/html;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'index.html';
-      link.click();
-      showToast('⬇️ index.html descargado con todos los cambios (incluye orden)');
-    });
+  function closeSyncStatus() {
+    document.getElementById('sync-status').style.display = 'none';
+  }
 
-    // Inicializar
-    renderGrid();
-  </script>
-
-</body></html>
+  function fbSignOut() {
+    fbAuth.signOut().then(function() { fbUser = null; updateSyncUI(); });
+  }
+</script>
+</body>
+</html>
