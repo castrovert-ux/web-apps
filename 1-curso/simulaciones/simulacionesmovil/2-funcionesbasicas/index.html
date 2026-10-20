@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funciones básicas del móvil</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43; --c9:#FF8FD8;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --ink:#1b2433; --muted:#6b7587; --line:#e3e7ee; --acc:#2563eb;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+  svg.i { width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; vertical-align:-.12em; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c1); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c7); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:45%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.95) translateY(10px);} to{opacity:1; transform:none;} }
+
+  /* ---------- Estructura de la página ---------- */
+  .container { position:relative; z-index:1; max-width:1700px; margin:0 auto; padding:14px 22px 16px; display:flex; flex-direction:column; gap:10px; min-height:100%; }
+  .top { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .badge { background:linear-gradient(135deg,var(--c1),#159a49); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.5rem,2.6vw,2.4rem); line-height:1.1; background:linear-gradient(135deg,var(--c1),var(--c3),var(--c8)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(37,211,102,.16); border-color:var(--c1); color:var(--text); }
+  .mode:hover { color:var(--text); }
+  .prog { display:flex; align-items:center; gap:14px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c1),var(--c3),var(--c8)); border-radius:10px; transition:width .5s; }
+  .reset { padding:6px 14px; border-radius:12px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:.9rem; cursor:pointer; white-space:nowrap; }
+  .reset:hover { color:var(--text); border-color:var(--c4); }
+
+  .layout { display:flex; gap:22px; align-items:flex-start; }
+  .left { flex:0 0 auto; display:flex; gap:16px; align-items:flex-start; justify-content:center; }
+  .stage[hidden] { display:none; }
+  .stage { display:flex; gap:16px; align-items:flex-start; }
+  .panel { flex:1; min-width:320px; align-self:stretch; background:var(--card); border:1px solid rgba(255,255,255,.08); border-left:6px solid var(--ic,var(--c1)); border-radius:22px; padding:18px 20px; overflow-y:auto; transition:border-color .3s;
+    scrollbar-width:auto; scrollbar-color:#4a5b80 rgba(255,255,255,.05); }
+  .panel::-webkit-scrollbar { width:12px; }
+  .panel::-webkit-scrollbar-thumb { background:#4a5b80; border-radius:10px; border:2px solid var(--card); }
+  @media (min-width:1000px) and (min-height:560px) {
+    body { overflow:hidden; }
+    .container { height:100vh; }
+    .layout { flex:1; min-height:0; align-items:stretch; }
+  }
+  @media (max-width:999px) {
+    .layout { flex-direction:column; align-items:center; }
+    .panel { width:100%; min-width:0; }
+    .phone { --ph:min(78vh, 170vw) !important; }
+  }
+
+  /* ---------- El móvil ---------- */
+  .phone { --ph:clamp(430px, calc(100vh - 175px), 900px); container-type:size; position:relative; flex-shrink:0; height:var(--ph); width:calc(var(--ph) * .47); border-radius:calc(var(--ph) * .06);
+    background:linear-gradient(145deg,#1d2433,#0b0e14); padding:calc(var(--ph) * .013); box-shadow:0 0 0 2px #2b3448, 0 24px 60px rgba(0,0,0,.55); transition:width .35s, height .35s; }
+  .phone.land { width:min(var(--ph), calc(100vw - 720px)); height:calc(min(var(--ph), calc(100vw - 720px)) * .47); }
+  .sb { position:absolute; right:calc(var(--ph) * -.008); width:calc(var(--ph) * .011); border-radius:3px; background:#2e3850; border:0; padding:0; cursor:pointer; }
+  .sb:hover { background:#4a5b80; } .sb.down { background:var(--c3); }
+  .sb.vup { top:17%; height:6.5%; } .sb.vdn { top:24%; height:6.5%; } .sb.pwr { top:35%; height:7%; }
+  .phone.land .sb { right:auto; top:calc(var(--ph) * -.008) !important; height:calc(var(--ph) * .011); width:auto; }
+  .phone.land .sb.vup { right:17%; width:6.5%; } .phone.land .sb.vdn { right:24%; width:6.5%; } .phone.land .sb.pwr { right:35%; width:7%; }
+  .ph-scr { position:absolute; inset:calc(var(--ph) * .013); border-radius:calc(var(--ph) * .048); overflow:hidden; background:#000; font-size:4.3cqmin; color:var(--ink); user-select:none; -webkit-user-select:none; touch-action:none; }
+  .phone.land .ph-scr { inset:calc(var(--ph) * .0062); }
+  .ui { position:absolute; inset:0; display:flex; flex-direction:column; background:#f5f6f8; }
+  .ui.wall { background:radial-gradient(ellipse at 20% 0%, #5b8def, transparent 60%), radial-gradient(ellipse at 90% 100%, #22c55e, transparent 55%), linear-gradient(170deg,#1e3a8a,#1d4ed8 45%,#0f766e); color:#fff; }
+  .ui.dark { background:#000; color:#fff; }
+  .sbar { position:relative; height:2.1em; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 1.3em; font-weight:800; font-size:.82em; }
+  .sb-r { display:flex; align-items:center; gap:.45em; }
+  .bat { display:inline-flex; align-items:center; gap:.15em; }
+  .bat .bb { position:relative; width:1.9em; height:.95em; border:.13em solid currentColor; border-radius:.25em; padding:.08em; }
+  .bat .bb::after { content:""; position:absolute; right:-.3em; top:.22em; width:.15em; height:.35em; background:currentColor; border-radius:0 .1em .1em 0; }
+  .bat .bf { height:100%; background:currentColor; border-radius:.1em; }
+  .bat .bz { position:absolute; inset:0; display:grid; place-items:center; font-size:.85em; color:#facc15; text-shadow:0 0 2px #000; }
+  .app { position:relative; flex:1; min-height:0; overflow:hidden; }
+  .nav { height:2.7em; flex-shrink:0; display:flex; justify-content:space-around; align-items:center; }
+  .nav button { width:3.2em; height:2.2em; border:0; background:transparent; color:inherit; font-size:1.05em; border-radius:1em; cursor:pointer; opacity:.85; }
+  .nav button:hover { background:rgba(127,127,127,.18); }
+
+  /* Pantalla de inicio */
+  .home { position:absolute; inset:0; display:flex; flex-direction:column; }
+  .pages { flex:1; display:flex; transition:transform .3s ease; }
+  .pg { flex:0 0 100%; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(5,1fr); padding:.8em .5em .2em; }
+  .slot { display:flex; align-items:center; justify-content:center; border-radius:1em; }
+  .slot.tgt { background:rgba(255,255,255,.22); }
+  .hic { display:flex; flex-direction:column; align-items:center; gap:.3em; width:100%; cursor:pointer; touch-action:none; }
+  .hic.lift { opacity:.25; }
+  .hic.merge .ai { box-shadow:0 0 0 .25em rgba(255,255,255,.85); transform:scale(1.12); }
+  .ai { width:3.1em; height:3.1em; border-radius:.95em; display:grid; place-items:center; font-size:1.55em; box-shadow:0 .15em .4em rgba(0,0,0,.28); transition:transform .15s; }
+  .ai.fold { background:rgba(255,255,255,.3); backdrop-filter:blur(6px); display:grid; grid-template-columns:1fr 1fr; gap:.08em; padding:.3em; font-size:.75em; width:4.15em; height:4.15em; }
+  .ai.fold i { font-style:normal; display:grid; place-items:center; }
+  .al { font-size:.72em; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,.6); text-align:center; line-height:1.15; max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 .1em; }
+  .al.dark { color:var(--ink); text-shadow:none; }
+  .dots { display:flex; justify-content:center; gap:.45em; padding:.4em 0; }
+  .dots i { width:.5em; height:.5em; border-radius:50%; background:rgba(255,255,255,.45); }
+  .dots i.on { background:#fff; }
+  .dock { display:grid; grid-template-columns:repeat(4,1fr); margin:0 .7em .3em; padding:.7em .2em; border-radius:1.6em; background:rgba(255,255,255,.18); }
+  .dock .al { display:none; }
+  .ghost-ic { position:absolute; z-index:70; pointer-events:none; transform:translate(-50%,-60%) scale(1.15); }
+  .edge { position:absolute; top:10%; bottom:20%; width:8%; z-index:60; pointer-events:none; background:linear-gradient(90deg,rgba(255,255,255,.35),transparent); display:none; }
+  .edge.r { right:0; transform:scaleX(-1); }
+  .edge.on { display:block; }
+  .fov { position:absolute; inset:0; z-index:20; background:rgba(15,23,42,.45); backdrop-filter:blur(4px); display:grid; place-items:center; }
+  .fbox { width:82%; background:rgba(255,255,255,.95); border-radius:1.6em; padding:1.1em; color:var(--ink); }
+  .fname { text-align:center; font-weight:800; font-size:1.15em; padding:.45em; border-radius:.7em; margin-bottom:.7em; background:#eef1f6; cursor:text; }
+  .fname.foc { box-shadow:inset 0 0 0 .14em var(--acc); }
+  .fgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:.8em .3em; }
+
+  /* Pantalla de bloqueo */
+  .lock { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.4); }
+  .lk-time { font-size:4.4em; font-weight:300; margin-top:1.2em; letter-spacing:-.02em; font-family:system-ui, sans-serif; }
+  .lk-date { font-weight:700; font-size:1.05em; }
+  .lk-note { margin-top:1.5em; width:84%; background:rgba(255,255,255,.18); border-radius:1em; padding:.7em .9em; font-size:.85em; font-weight:700; text-shadow:none; }
+  .lk-bottom { margin-top:auto; width:100%; display:flex; flex-direction:column; align-items:center; gap:.8em; padding-bottom:1.2em; }
+  .lk-hint { text-align:center; font-weight:700; font-size:.9em; cursor:pointer; padding:.4em 1em; border-radius:1em; }
+  .lk-hint .up { display:block; font-size:1.6em; line-height:.8; animation:upd 1.4s ease-in-out infinite; }
+  @keyframes upd { 50% { transform:translateY(-.25em); } }
+  .lk-emerg { border:0; background:rgba(255,255,255,.2); color:#fff; font-weight:800; font-size:.95em; padding:.55em 1.3em; border-radius:2em; cursor:pointer; }
+  .lk-emerg:hover { background:rgba(255,255,255,.32); }
+  .fp { width:4em; height:4em; border-radius:50%; display:grid; place-items:center; font-size:2.2em; background:rgba(255,255,255,.12); border:.08em solid rgba(255,255,255,.5); cursor:pointer; touch-action:none; }
+  .fp.hold { background:rgba(37,211,102,.45); transform:scale(.95); }
+  .pinpad { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; color:#fff; padding-top:2em; }
+  .pinpad h3, .scr-title { font-weight:800; font-size:1.2em; }
+  .pdots { display:flex; gap:.7em; margin:1em 0 1.4em; min-height:1em; }
+  .pdots i { width:.8em; height:.8em; border-radius:50%; border:.12em solid currentColor; }
+  .pdots i.f { background:currentColor; }
+  .pdots.bad { animation:shake .4s; }
+  @keyframes shake { 25%{transform:translateX(-.5em);} 75%{transform:translateX(.5em);} }
+  .keypad { display:grid; grid-template-columns:repeat(3,4.1em); gap:.7em 1.1em; }
+  .kp { width:4.1em; height:4.1em; border-radius:50%; border:0; background:rgba(127,127,127,.2); color:inherit; font-size:1.35em; font-weight:700; cursor:pointer; }
+  .kp:hover { background:rgba(127,127,127,.32); }
+  .kp small { display:block; font-size:.45em; font-weight:700; opacity:.7; }
+  .kp.call { background:#22c55e; color:#fff; }
+  .kp.blank { background:transparent; cursor:default; }
+  .linkbtn { border:0; background:transparent; color:inherit; font-weight:800; font-size:.95em; padding:.6em 1em; cursor:pointer; opacity:.9; }
+
+  /* Aplicaciones (aspecto común) */
+  .ap { position:absolute; inset:0; display:flex; flex-direction:column; background:#f5f6f8; color:var(--ink); }
+  .ap-h { flex-shrink:0; display:flex; align-items:center; gap:.6em; padding:.6em 1em .5em; }
+  .ap-h h2 { font-size:1.45em; font-weight:800; flex:1; }
+  .ap-h .ttl { font-size:1.12em; font-weight:800; flex:1; }
+  .ap-h .hb { border:0; background:transparent; font-size:1.05em; font-weight:800; color:var(--acc); cursor:pointer; padding:.3em .5em; border-radius:.6em; }
+  .ap-h .hb:disabled { color:#a6aebb; cursor:default; }
+  .ap-h .bk { border:0; background:transparent; font-size:1.3em; cursor:pointer; color:var(--ink); padding:0 .2em; }
+  .ap-b { flex:1; min-height:0; overflow-y:auto; padding:0 .8em .8em; scrollbar-width:thin; }
+  .grp { background:#fff; border-radius:1em; margin-bottom:.7em; overflow:hidden; }
+  .row { display:flex; align-items:center; gap:.75em; padding:.75em .9em; border-bottom:1px solid var(--line); cursor:pointer; min-height:3.1em; }
+  .row:last-child { border-bottom:0; }
+  .row:hover { background:#f3f6fb; }
+  .row .ri { width:1.9em; height:1.9em; border-radius:.55em; display:grid; place-items:center; font-size:1.05em; flex-shrink:0; color:#fff; }
+  .row .rt { flex:1; min-width:0; font-weight:700; line-height:1.2; }
+  .row .rt small { display:block; color:var(--muted); font-weight:600; font-size:.78em; margin-top:.1em; }
+  .row .rv { color:var(--muted); font-weight:700; font-size:.85em; }
+  .row .chev { color:#a6aebb; font-size:1.2em; }
+  .row.dis { opacity:.45; }
+  .sw { width:2.6em; height:1.45em; border-radius:1em; background:#c4cad6; position:relative; flex-shrink:0; transition:.2s; }
+  .sw::after { content:""; position:absolute; top:.17em; left:.17em; width:1.11em; height:1.11em; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .sw.on { background:var(--acc); } .sw.on::after { left:1.32em; }
+  .hint-box { background:#eaf1fe; color:#1e3a8a; border-radius:1em; padding:.7em .9em; font-weight:700; font-size:.85em; line-height:1.4; margin-bottom:.7em; }
+  .warn-box { background:#fff4e5; color:#8a4b00; border-radius:1em; padding:.7em .9em; font-weight:700; font-size:.85em; line-height:1.4; margin-bottom:.7em; }
+  .fab { position:absolute; right:1em; bottom:1em; width:3.3em; height:3.3em; border-radius:1.1em; border:0; background:var(--acc); color:#fff; font-size:1.6em; font-weight:800; cursor:pointer; box-shadow:0 .3em .8em rgba(37,99,235,.45); line-height:1; }
+  .fab.sm { font-size:1.4em; }
+  .btnp { display:block; width:100%; border:0; border-radius:2em; padding:.75em; background:var(--acc); color:#fff; font-weight:800; font-size:1em; cursor:pointer; margin-top:.5em; }
+  .btnp.sec { background:#e3e8f1; color:var(--ink); }
+  .btnp.red { background:#ef4444; }
+  .btnp:disabled { opacity:.45; cursor:default; }
+  .fld { background:#fff; border:.11em solid #d3d9e3; border-radius:.8em; padding:.7em .8em; font-weight:700; min-height:2.9em; cursor:text; margin-bottom:.15em; word-break:break-all; }
+  .fld.foc { border-color:var(--acc); box-shadow:0 0 0 .15em rgba(37,99,235,.18); }
+  .fld .ph { color:#9aa3b2; font-weight:600; }
+  .flab { font-size:.8em; font-weight:800; color:var(--muted); margin:.7em 0 .3em .3em; }
+  .caret { display:inline-block; width:.08em; height:1.05em; background:var(--acc); vertical-align:-.15em; animation:blink 1s step-end infinite; margin-left:.05em; }
+  @keyframes blink { 50% { opacity:0; } }
+  .seg { display:flex; background:#e6eaf1; border-radius:2em; padding:.25em; margin-bottom:.7em; }
+  .seg button { flex:1; border:0; background:transparent; border-radius:2em; padding:.55em .2em; font-weight:800; font-size:.85em; color:var(--muted); cursor:pointer; }
+  .seg button.on { background:#fff; color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.12); }
+  .sl { padding:.7em .9em; border-bottom:1px solid var(--line); }
+  .sl:last-child { border-bottom:0; }
+  .sl .slt { display:flex; justify-content:space-between; font-weight:800; }
+  .sl small { display:block; color:var(--muted); font-weight:600; font-size:.78em; margin:.1em 0 .3em; }
+  input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:1.6em; background:transparent; cursor:pointer; touch-action:pan-y; }
+  input[type=range]::-webkit-slider-runnable-track { height:.45em; border-radius:1em; background:#cfd6e2; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:1.3em; height:1.3em; border-radius:50%; background:var(--acc); margin-top:-.43em; border:.15em solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  input[type=range]::-moz-range-track { height:.45em; border-radius:1em; background:#cfd6e2; }
+  input[type=range]::-moz-range-thumb { width:1.1em; height:1.1em; border-radius:50%; background:var(--acc); border:.15em solid #fff; }
+  .empty { text-align:center; color:var(--muted); font-weight:700; padding:2em 1em; line-height:1.4; }
+  .bigic { font-size:3em; text-align:center; margin:1em 0 .3em; }
+  .center-msg { text-align:center; font-weight:700; line-height:1.45; padding:0 1.2em; color:var(--muted); }
+  .center-msg b { color:var(--ink); }
+  .av { width:2.3em; height:2.3em; border-radius:50%; display:grid; place-items:center; font-weight:800; color:#fff; flex-shrink:0; }
+
+  /* Mensajes */
+  .bub { max-width:84%; background:#fff; border-radius:1.1em 1.1em 1.1em .3em; padding:.7em .9em; font-weight:600; line-height:1.4; margin:.6em 0; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .bub .lk { color:var(--acc); text-decoration:underline; word-break:break-all; cursor:pointer; font-weight:700; }
+  .bub small { display:block; color:var(--muted); font-size:.75em; margin-top:.3em; }
+  .unread { width:.6em; height:.6em; border-radius:50%; background:var(--acc); }
+  .fraud { position:absolute; inset:0; background:#b91c1c; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1.5em; gap:.8em; }
+  .fraud .bigic { margin:0; }
+  .fraud p { font-weight:700; line-height:1.45; }
+  .fraud .btnp { background:#fff; color:#b91c1c; }
+
+  /* Llamada */
+  .call { position:absolute; inset:0; background:linear-gradient(170deg,#0f172a,#1e3a8a); color:#fff; display:flex; flex-direction:column; align-items:center; padding:3em 1em 2em; }
+  .call.em { background:linear-gradient(170deg,#450a0a,#b91c1c); }
+  .call .who { font-size:1.9em; font-weight:800; margin-top:.4em; }
+  .call .st { opacity:.85; font-weight:700; margin-top:.3em; }
+  .call .sim { margin-top:1.5em; background:rgba(255,255,255,.15); border-radius:1em; padding:.6em 1em; font-size:.82em; font-weight:700; text-align:center; }
+  .hang { margin-top:auto; width:4.3em; height:4.3em; border-radius:50%; border:0; background:#ef4444; color:#fff; font-size:1.6em; cursor:pointer; }
+  .dial { font-size:2em; font-weight:700; text-align:center; min-height:1.4em; margin:.6em 0 .4em; letter-spacing:.05em; }
+
+  /* Calculadora */
+  .calc { position:absolute; inset:0; display:flex; flex-direction:column; background:#fff; }
+  .c-disp { flex:1; min-height:0; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-end; padding:.6em 1.1em; }
+  .c-exp { font-size:1.15em; color:var(--muted); font-weight:700; min-height:1.4em; word-break:break-all; text-align:right; }
+  .c-res { font-size:2.6em; font-weight:700; word-break:break-all; text-align:right; line-height:1.15; }
+  .c-keys { display:grid; grid-template-columns:repeat(4,1fr); gap:.5em; padding:.6em .8em 1em; }
+  .calc.land .c-keys { grid-template-columns:repeat(6,1fr); gap:.35em; padding:.4em .8em .6em; }
+  .calc.land .c-disp { padding:.2em 1em; } .calc.land .c-res { font-size:2em; }
+  .ck { height:3.6em; border:0; border-radius:1.2em; background:#f1f3f7; font-size:1.25em; font-weight:700; color:var(--ink); cursor:pointer; }
+  .calc.land .ck { height:2.2em; font-size:1em; }
+  .ck:hover { filter:brightness(.95); }
+  .ck.op { color:#f97316; background:#fff2e6; }
+  .ck.eq { background:#f97316; color:#fff; }
+  .ck.sci { color:var(--acc); background:#eaf1fe; font-size:1em; }
+  .ck.cl { color:#ef4444; }
+  .ck.nada { visibility:hidden; }
+
+  /* Reloj */
+  .rtabs { flex-shrink:0; display:flex; border-top:1px solid var(--line); background:#fff; }
+  .rtabs button { flex:1; border:0; background:transparent; padding:.55em 0 .5em; font-weight:800; font-size:.7em; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:.15em; }
+  .rtabs button span { font-size:1.6em; }
+  .rtabs button.on { color:var(--acc); }
+  .alrow { display:flex; align-items:center; padding:.8em 1em; background:#fff; border-radius:1em; margin-bottom:.6em; }
+  .alrow .t { flex:1; font-size:1.9em; font-weight:600; }
+  .alrow .t small { display:block; font-size:.42em; color:var(--muted); font-weight:700; }
+  .alrow.off .t { color:#a6aebb; }
+  .wheels { display:flex; justify-content:center; align-items:center; gap:.6em; margin:1.2em 0; }
+  .wh { display:flex; flex-direction:column; align-items:center; gap:.3em; }
+  .wh button { width:3em; height:2.2em; border:0; border-radius:.8em; background:#e6eaf1; font-size:1.2em; font-weight:800; cursor:pointer; color:var(--ink); }
+  .wh .v { font-size:3em; font-weight:700; width:1.6em; text-align:center; background:#fff; border-radius:.3em; }
+  .wsep { font-size:2.6em; font-weight:700; }
+  .bigt { text-align:center; font-size:3.2em; font-weight:600; margin:1.2em 0 .5em; font-variant-numeric:tabular-nums; }
+  .btns2 { display:flex; gap:.6em; padding:0 1em; }
+  .btns2 .btnp { margin-top:0; }
+  .chips { display:flex; flex-wrap:wrap; gap:.5em; justify-content:center; margin:.6em 0 1em; }
+  .chip { border:0; background:#e6eaf1; border-radius:2em; padding:.5em 1em; font-weight:800; cursor:pointer; color:var(--ink); font-size:.9em; }
+  .chip.on { background:var(--acc); color:#fff; }
+
+  /* Cámara */
+  .cam { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; color:#fff; }
+  .cam-top { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:.5em 1.1em; }
+  .cam-top button { border:0; background:transparent; color:#fff; font-size:1.3em; cursor:pointer; padding:.2em .4em; border-radius:.6em; }
+  .cam-top .fl.on { color:#facc15; }
+  .vf { position:relative; flex:1; min-height:0; overflow:hidden; cursor:crosshair; }
+  .scene { position:absolute; inset:0; background:linear-gradient(#7cc4ff,#cfe8ff 55%, #7ac76a 55%, #3f9a45); transition:filter .4s; }
+  .scene .sun { position:absolute; top:12%; right:16%; width:3.4em; height:3.4em; border-radius:50%; background:#ffd84d; box-shadow:0 0 2em #ffe58a; }
+  .scene .e { position:absolute; line-height:1; }
+  .vf.dirty .scene { filter:blur(.28em) saturate(.8); }
+  .smudge { position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle at 35% 40%, rgba(255,255,255,.35), transparent 30%), radial-gradient(circle at 65% 60%, rgba(220,220,200,.3), transparent 35%); }
+  .focus-sq { position:absolute; width:4.5em; height:4.5em; border:.13em solid #facc15; border-radius:.4em; transform:translate(-50%,-50%); animation:focusIn .6s ease forwards; pointer-events:none; }
+  @keyframes focusIn { from{ transform:translate(-50%,-50%) scale(1.5); opacity:0; } 30%{ opacity:1; } to{ transform:translate(-50%,-50%) scale(1); opacity:.9; } }
+  .rec { position:absolute; top:.6em; left:50%; transform:translateX(-50%); background:#ef4444; border-radius:1em; padding:.15em .7em; font-weight:800; font-size:.85em; }
+  .cam-modes { flex-shrink:0; display:flex; justify-content:center; gap:1.6em; padding:.6em 0 .2em; font-weight:800; font-size:.85em; }
+  .cam-modes button { border:0; background:transparent; color:rgba(255,255,255,.6); font-weight:800; cursor:pointer; font-size:1em; padding:.2em .3em; }
+  .cam-modes button.on { color:#facc15; }
+  .cam-bot { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:.6em 1.6em 1.1em; }
+  .shut { width:4.6em; height:4.6em; border-radius:50%; border:.3em solid #fff; background:#fff; background-clip:content-box; padding:.2em; cursor:pointer; }
+  .shut.vid { background-color:#ef4444; }
+  .shut.recing { background:#ef4444; border-radius:50%; padding:1.1em; background-clip:content-box; }
+  .cthumb { width:2.9em; height:2.9em; border-radius:.6em; overflow:hidden; border:.12em solid #fff; cursor:pointer; background:#222; }
+  .cflip { width:2.9em; height:2.9em; border-radius:50%; border:0; background:rgba(255,255,255,.18); color:#fff; font-size:1.3em; cursor:pointer; }
+  .fx { position:absolute; inset:0; background:#fff; z-index:80; pointer-events:none; opacity:0; }
+  .fx.go { animation:fxf .45s ease; }
+  @keyframes fxf { 0%{opacity:.95;} 100%{opacity:0;} }
+
+  /* Galería */
+  .ggrid { display:grid; grid-template-columns:repeat(3,1fr); gap:.25em; }
+  .gt { position:relative; aspect-ratio:1; border-radius:.3em; overflow:hidden; cursor:pointer; touch-action:none; }
+  .gt.sel::after { content:"✓"; position:absolute; top:.25em; right:.25em; width:1.4em; height:1.4em; border-radius:50%; background:var(--acc); color:#fff; display:grid; place-items:center; font-weight:900; font-size:.85em; }
+  .gt.sel .pic { transform:scale(.86); border-radius:.5em; }
+  .gselmode .gt:not(.sel)::after { content:""; position:absolute; top:.25em; right:.25em; width:1.4em; height:1.4em; border-radius:50%; border:.12em solid #fff; background:rgba(0,0,0,.2); }
+  .pic { position:absolute; inset:0; display:grid; place-items:center; font-size:2.2em; transition:transform .15s; }
+  .pic.blur { filter:blur(.12em); }
+  .pic.bright { filter:brightness(1.3); }
+  .pic .vb { position:absolute; bottom:.2em; left:.25em; font-size:.42em; background:rgba(0,0,0,.55); color:#fff; border-radius:.5em; padding:.1em .45em; font-weight:800; }
+  .gview { position:absolute; inset:0; background:#000; display:flex; flex-direction:column; color:#fff; }
+  .gview .big { position:relative; flex:1; margin:.5em 0; }
+  .gview .big .pic { font-size:6em; border-radius:0; }
+  .gbar { flex-shrink:0; display:flex; justify-content:space-around; padding:.5em 0 .9em; }
+  .gbar button { border:0; background:transparent; color:#fff; display:flex; flex-direction:column; align-items:center; gap:.2em; font-weight:700; font-size:.8em; cursor:pointer; padding:.3em .8em; border-radius:.8em; }
+  .gbar button span { font-size:1.7em; }
+  .gbar button:hover { background:rgba(255,255,255,.12); }
+  .gselbar { flex-shrink:0; display:flex; justify-content:center; padding:.6em; background:#fff; border-top:1px solid var(--line); }
+  .gselbar button { border:0; background:transparent; font-weight:800; color:#ef4444; font-size:1em; display:flex; align-items:center; gap:.4em; cursor:pointer; padding:.4em 1em; border-radius:1em; }
+  .gselbar button:disabled { color:#a6aebb; }
+
+  /* Superposiciones del móvil */
+  .qs-bg { position:absolute; inset:0; z-index:40; background:rgba(0,0,0,.35); }
+  .qs { position:absolute; left:0; right:0; top:0; z-index:41; background:rgba(28,33,45,.97); color:#fff; border-radius:0 0 1.6em 1.6em; padding:2.4em 1.1em 1em; }
+  .qs.in { animation:qsIn .22s ease; }
+  @keyframes qsIn { from{ transform:translateY(-100%); } to{ transform:none; } }
+  .qs-date { font-weight:700; opacity:.85; margin-bottom:.8em; }
+  .qs-tiles { display:grid; grid-template-columns:1fr 1fr; gap:.6em; }
+  .tile { border:0; border-radius:1.2em; background:rgba(255,255,255,.12); color:#fff; display:flex; align-items:center; gap:.6em; padding:.8em .9em; font-weight:800; font-size:.9em; cursor:pointer; text-align:left; }
+  .tile span { font-size:1.4em; }
+  .tile small { display:block; font-weight:600; opacity:.75; font-size:.82em; }
+  .tile.on { background:#8ab4ff; color:#0b1d40; }
+  .qs-handle { width:3em; height:.3em; border-radius:1em; background:rgba(255,255,255,.4); margin:.9em auto 0; cursor:pointer; }
+  .vol { position:absolute; z-index:45; right:.8em; top:16%; background:rgba(255,255,255,.96); color:var(--ink); border-radius:1.6em; box-shadow:0 .4em 1.4em rgba(0,0,0,.35); padding:.6em .5em; display:flex; flex-direction:column; align-items:center; gap:.5em; }
+  .vol.in { animation:popIn .15s ease; }
+  .vol .vb { width:2.7em; height:2.7em; border-radius:50%; border:0; background:#e6eaf1; font-size:1.2em; cursor:pointer; }
+  .vol .vb.on { background:var(--acc); color:#fff; }
+  .vbar { position:relative; width:2.7em; height:9em; border-radius:1.4em; background:#e6eaf1; overflow:hidden; }
+  .vbar i { position:absolute; left:0; right:0; bottom:0; background:var(--acc); transition:height .15s; }
+  .vbar b { position:absolute; left:0; right:0; bottom:.4em; text-align:center; font-size:1em; z-index:1; }
+  .volx { position:absolute; z-index:46; left:6%; right:6%; top:14%; background:#fff; color:var(--ink); border-radius:1.4em; box-shadow:0 .4em 1.6em rgba(0,0,0,.4); padding:.8em .9em; animation:popIn .15s ease; }
+  .volx h4 { font-size:1em; margin-bottom:.3em; display:flex; justify-content:space-between; align-items:center; }
+  .volx .sl { padding:.5em .2em; }
+  .dlg-bg { position:absolute; inset:0; z-index:55; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; padding:1em; }
+  .dlg { width:100%; background:#fff; color:var(--ink); border-radius:1.4em; padding:1.1em 1.1em .9em; animation:popIn .18s ease; }
+  .dlg h4 { font-size:1.1em; margin-bottom:.4em; }
+  .dlg p { color:var(--muted); font-weight:600; line-height:1.4; margin-bottom:.8em; }
+  .dlg .btns2 { padding:0; }
+  .sheet { width:100%; background:#fff; color:var(--ink); border-radius:1.4em; padding:1em; animation:popIn .18s ease; }
+  .sheet h4 { margin-bottom:.8em; }
+  .sh-apps { display:grid; grid-template-columns:repeat(4,1fr); gap:.6em; }
+  .sh-apps button { border:0; background:transparent; display:flex; flex-direction:column; align-items:center; gap:.3em; font-weight:700; font-size:.75em; cursor:pointer; color:var(--ink); }
+  .sh-apps button span { width:2.6em; height:2.6em; border-radius:50%; display:grid; place-items:center; font-size:1.6em; background:#eef1f6; }
+  .kbd { position:absolute; left:0; right:0; bottom:0; z-index:50; background:#d7dce4; padding:.4em .25em .6em; display:flex; flex-direction:column; gap:.35em; }
+  .kbd.in { animation:qsIn2 .15s ease; }
+  @keyframes qsIn2 { from{ transform:translateY(100%); } to{ transform:none; } }
+  .kr { display:flex; gap:.25em; justify-content:center; }
+  .kk { flex:1; max-width:2.4em; height:2.6em; border:0; border-radius:.45em; background:#fff; font-weight:700; font-size:.95em; color:var(--ink); cursor:pointer; box-shadow:0 .1em 0 rgba(0,0,0,.18); }
+  .kk.sp { max-width:none; flex:4; }
+  .kk.ok { background:var(--acc); color:#fff; max-width:3.2em; flex:1.4; }
+  .kk.w { max-width:3.2em; flex:1.4; background:#bfc6d2; }
+  .kbd.num .kk { max-width:none; height:2.9em; font-size:1.15em; }
+  .toast { position:absolute; left:50%; bottom:4.2em; z-index:90; transform:translate(-50%,.5em); width:86%; background:rgba(20,26,40,.94); color:#fff; padding:.65em 1em; border-radius:1em; font-weight:700; font-size:.88em; line-height:1.35; text-align:center; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; }
+  .toast.on { opacity:1; transform:translate(-50%,0); }
+  .off { position:absolute; inset:0; z-index:95; background:#000; }
+  .frz { position:absolute; inset:0; z-index:94; }
+  .boot { position:absolute; inset:0; z-index:96; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6em; font-weight:800; }
+  .boot .logo { font-size:1.8em; letter-spacing:.06em; animation:pulseL 1.2s ease-in-out infinite; }
+  @keyframes pulseL { 50% { opacity:.4; } }
+  .pmenu { position:absolute; inset:0; z-index:58; background:rgba(0,0,0,.55); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.8em; }
+  .pmenu button { width:70%; border:0; border-radius:1.4em; padding:.9em; background:#fff; color:var(--ink); font-weight:800; font-size:1em; display:flex; align-items:center; gap:.7em; cursor:pointer; }
+  .pmenu button span { font-size:1.3em; }
+  .alarmfire { position:absolute; inset:0; z-index:57; background:linear-gradient(#1e3a8a,#0f172a); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6em; text-align:center; }
+  .alarmfire .bigic { margin:0; animation:ring .3s ease-in-out infinite alternate; }
+  @keyframes ring { from{ transform:rotate(-12deg); } to{ transform:rotate(12deg); } }
+
+  /* ---------- Controles del lado del móvil ---------- */
+  .tools { display:flex; flex-direction:column; gap:8px; width:205px; }
+  .tools h4 { color:var(--sub); font-weight:800; font-size:.82rem; margin:6px 0 0; }
+  .kb { padding:9px 12px; border-radius:12px; border:2px solid rgba(255,255,255,.16); background:rgba(255,255,255,.05); color:var(--text); font-weight:800; font-size:.92rem; cursor:pointer; text-align:left; touch-action:none; }
+  .kb:hover { border-color:var(--c1); }
+  .kb.on { background:rgba(255,217,61,.18); border-color:var(--c3); }
+  .kb small { display:block; color:var(--sub); font-weight:700; font-size:.78rem; }
+  .holdinfo { min-height:1.2em; color:var(--c3); font-weight:800; font-size:.9rem; }
+
+  /* ---------- Zonas para Descubrir y Practicar ---------- */
+  .part { position:relative; cursor:pointer; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .2s, box-shadow .2s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 28%, transparent); }
+  .part.psel::after { box-shadow:inset 0 0 0 .22em var(--pc), 0 0 1.2em var(--pc); background:color-mix(in srgb,var(--pc) 20%, transparent); }
+  .part.ok::after { box-shadow:inset 0 0 0 .22em var(--c1); background:rgba(37,211,102,.25); }
+  .part.bad { animation:shake .45s; }
+  .part.bad::after { box-shadow:inset 0 0 0 .22em var(--c4); }
+  .pin { position:absolute; z-index:8; width:1.9em; height:1.9em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:900; display:grid; place-items:center; font-size:.9em; box-shadow:0 2px 8px rgba(0,0,0,.5); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; top:-.5em; right:-.4em; text-shadow:none; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin { animation:none; }
+  .mode-practica .pin { display:none; }
+  .sb.part { position:absolute; display:block; width:calc(var(--ph) * .016); right:calc(var(--ph) * -.012); }
+  #st-parts { padding-right:34px; }
+  .sb.part::after { inset:-6px; border-radius:6px; }
+  .sb .pin { font-size:15px; width:28px; height:28px; top:50%; right:-38px; margin-top:-14px; }
+
+  /* ---------- Panel ---------- */
+  .hello { text-align:center; padding:2vh 0; animation:popIn .4s ease; }
+  .hello .big { font-size:3.2rem; }
+  .hello h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.8rem; margin:8px 0 10px; }
+  .hello p { color:var(--sub); font-weight:700; line-height:1.5; font-size:1.05rem; }
+  .hello p b { color:var(--c3); }
+  .pnum { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .panel h2.pn { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.7rem; line-height:1.15; margin-bottom:6px; }
+  .sitio { color:var(--sub); font-weight:700; margin-bottom:12px; }
+  .panel p.tx { font-size:1.1rem; line-height:1.55; font-weight:600; margin-bottom:14px; }
+  .panel p.tx b, .last b, .guia b { color:var(--c3); }
+  .pchips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .pchip { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:100px; padding:6px 13px; font-weight:800; font-size:.95rem; }
+  .tip { background:rgba(255,217,61,.09); border:1px solid rgba(255,217,61,.3); border-radius:14px; padding:12px 14px; font-weight:700; line-height:1.5; }
+  .win-all { background:rgba(37,211,102,.14); border:2px solid var(--c1); border-radius:14px; padding:10px 14px; font-weight:800; margin-bottom:12px; text-align:center; }
+  .ph3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.15rem; color:var(--c3); margin:4px 0 8px; }
+  .ph3 small { font-family:'Nunito',sans-serif; color:var(--sub); font-weight:700; font-size:.82rem; }
+  .last { background:rgba(255,255,255,.05); border-radius:14px; padding:12px 14px; font-weight:600; line-height:1.5; font-size:1.02rem; margin-bottom:14px; }
+  .last .gotit { display:block; color:#9cffc4; font-weight:800; margin-bottom:4px; }
+  .st { border:1px solid rgba(255,255,255,.09); border-radius:14px; margin-bottom:7px; overflow:hidden; background:rgba(255,255,255,.03); }
+  .st.open { border-color:rgba(37,211,102,.45); background:rgba(37,211,102,.05); }
+  .sth { width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border:0; background:transparent; color:var(--text); cursor:pointer; text-align:left; font-size:1rem; }
+  .sth .ic { font-size:1.35rem; width:1.6em; text-align:center; }
+  .sth b { flex:1; font-weight:800; }
+  .sth .cnt { font-weight:800; color:var(--sub); font-size:.88rem; background:rgba(255,255,255,.07); border-radius:20px; padding:2px 9px; }
+  .st.done .cnt { background:var(--c1); color:#0a1628; }
+  .stb { padding:0 12px 12px; }
+  .guia { color:#cfd8ea; font-weight:600; line-height:1.5; font-size:.95rem; margin-bottom:10px; padding:8px 11px; border-left:3px solid var(--c6); background:rgba(77,163,255,.06); border-radius:0 10px 10px 0; }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px 11px; }
+  .retos .rb { width:24px; height:24px; flex-shrink:0; border-radius:7px; background:rgba(255,255,255,.08); display:grid; place-items:center; font-weight:900; color:#0a1628; }
+  .retos li.on { border-color:rgba(37,211,102,.55); background:rgba(37,211,102,.08); }
+  .retos li.on .rb { background:var(--c1); }
+  .retos .rtx { font-weight:800; line-height:1.3; }
+  .retos .rtx small { display:block; color:var(--sub); font-weight:700; font-size:.86rem; margin-top:2px; }
+  .retos li.on .rtx { color:var(--sub); }
+  .qn { color:var(--sub); font-weight:800; margin-bottom:6px; }
+  .qt { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.5rem; line-height:1.25; margin-bottom:12px; }
+  .qvis { display:flex; justify-content:center; align-items:center; margin:4px 0 14px; }
+  .qvis .sym { width:96px; height:96px; border-radius:22px; background:#1f2a44; display:grid; place-items:center; font-size:56px; color:#fff; }
+  .qvis .msg { background:#fff; color:var(--ink); border-radius:16px 16px 16px 4px; padding:12px 14px; font-weight:700; line-height:1.4; max-width:92%; }
+  .qvis .msg u { color:var(--acc); }
+  .qhint { color:var(--c3); font-weight:800; margin-bottom:12px; font-size:1.05rem; }
+  .opts { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .qo { text-align:left; padding:12px 16px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; }
+  .qo:hover:not(:disabled) { border-color:var(--c6); }
+  .qo.ok { border-color:var(--c1); background:rgba(37,211,102,.15); }
+  .qo.bad { border-color:var(--c4); background:rgba(255,107,107,.12); }
+  .qo:disabled { cursor:default; }
+  .feedback.good { background:rgba(37,211,102,.14); color:#9cffc4; padding:12px 14px; border-radius:14px; font-weight:800; line-height:1.45; }
+  .feedback.no { background:rgba(255,107,107,.13); color:#ffb3b3; padding:12px 14px; border-radius:14px; font-weight:800; line-height:1.45; }
+  .pbtn { margin-top:12px; padding:11px 20px; border-radius:14px; border:0; background:linear-gradient(135deg,var(--c1),#1aa851); color:#0a1628; font-weight:800; font-size:1.05rem; cursor:pointer; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-10px) rotate(5deg);} }
+  .symrow { display:grid; grid-template-columns:auto 1fr; gap:8px 12px; align-items:center; margin-bottom:14px; }
+  .symrow .s { width:40px; height:40px; border-radius:10px; background:#1f2a44; display:grid; place-items:center; font-size:22px; color:#fff; }
+  .symrow div:nth-child(even) { font-weight:700; line-height:1.35; }
+
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+  <div class="top">
+    <span class="badge">📱 Móvil</span>
+    <h1>Funciones básicas del móvil</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+  <div class="prog">
+    <span id="prog-txt"></span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <button class="reset" id="reset" type="button">🔄 Empezar de nuevo</button>
+  </div>
+
+  <div class="layout">
+    <div class="left">
+      <!-- Móvil fijo para Descubrir y Practicar -->
+      <div class="stage" id="st-parts">
+        <div class="phone" id="ph1">
+          <span class="sb vup part" data-part="volumen" style="height:13.5%"><span class="pin">?</span></span>
+          <span class="sb pwr part" data-part="encendido"><span class="pin">?</span></span>
+          <div class="ph-scr" id="sc1"><div class="ui wall">
+            <div class="sbar part" data-part="barra"><span class="pin" style="top:.2em;right:45%">?</span><span>10:30</span><span class="sb-r" id="sc1-icons"></span></div>
+            <div class="app"><div class="home">
+              <div class="pages"><div class="pg" id="sc1-grid"></div></div>
+              <div class="dots part" data-part="puntos" style="margin:0 35%;border-radius:1em"><span class="pin" style="top:-.4em;right:-1.6em">?</span><i class="on"></i><i></i></div>
+              <div class="dock part" data-part="dock" id="sc1-dock"><span class="pin" style="top:-.7em;right:-.3em">?</span></div>
+            </div></div>
+            <div class="nav part" data-part="nav"><span class="pin" style="top:-.2em;right:.4em">?</span><button type="button" tabindex="-1">◁</button><button type="button" tabindex="-1">○</button><button type="button" tabindex="-1">▢</button></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- Móvil que funciona -->
+      <div class="stage" id="st-live" hidden>
+        <div class="phone" id="ph2">
+          <button class="sb vup" id="hw-up" type="button" title="Subir volumen" aria-label="Subir volumen"></button>
+          <button class="sb vdn" id="hw-dn" type="button" title="Bajar volumen" aria-label="Bajar volumen"></button>
+          <button class="sb pwr" id="hw-pw" type="button" title="Botón de encendido" aria-label="Botón de encendido"></button>
+          <div class="ph-scr" id="scr">
+            <div class="ui" id="ui">
+              <div class="sbar" id="sbar"></div>
+              <div class="app" id="app"></div>
+              <div class="nav" id="nav"><button type="button" data-a="back" title="Atrás">◁</button><button type="button" data-a="home" title="Inicio">○</button><button type="button" data-a="recents" title="Aplicaciones abiertas">▢</button></div>
+            </div>
+            <div id="ovl"></div>
+            <div class="fx" id="fx"></div>
+            <div class="toast" id="toast"></div>
+          </div>
+        </div>
+        <div class="tools">
+          <h4>Botones del lateral</h4>
+          <button class="kb" id="t-up" type="button">🔊 Subir volumen</button>
+          <button class="kb" id="t-dn" type="button">🔉 Bajar volumen</button>
+          <button class="kb" id="t-pw" type="button">⏻ Botón de encendido<small>Un toque: bloquear o encender. Mantener: más opciones</small></button>
+          <div class="holdinfo" id="holdinfo"></div>
+          <h4>Situaciones</h4>
+          <button class="kb" id="t-chg" type="button">🔌 Enchufar el cargador</button>
+          <button class="kb" id="t-rot" type="button">🔄 Girar el móvil</button>
+          <button class="kb" id="t-lens" type="button">🧽 Limpiar el objetivo</button>
+          <button class="kb" id="t-frz" type="button">🥶 Simular un cuelgue</button>
+        </div>
+      </div>
+    </div>
+    <aside class="panel" id="info"></aside>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const info = $('info');
+const pad2 = n => String(n).padStart(2, '0');
+function restart(e){ e.style.animation = 'none'; e.offsetHeight; e.style.animation = ''; }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* Iconos dibujados */
+const IC = {
+  bt:'<svg class="i" viewBox="0 0 24 24"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>',
+  wifi:'<svg class="i" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16.3a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg>',
+  sig:'<svg class="i" viewBox="0 0 24 24" style="stroke:none"><rect x="2" y="15" width="4" height="6" rx="1" fill="currentColor"/><rect x="8" y="11" width="4" height="10" rx="1" fill="currentColor"/><rect x="14" y="7" width="4" height="14" rx="1" fill="currentColor"/><rect x="20" y="3" width="3" height="18" rx="1" fill="currentColor" opacity=".4"/></svg>',
+  share:'<svg class="i" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>'
+};
+function batHTML(pct, charging){
+  return '<span class="bat">' + pct + '%<span class="bb"><span class="bf" style="width:' + pct + '%"></span>' + (charging ? '<span class="bz">⚡</span>' : '') + '</span></span>';
+}
+
+/* Progreso guardado */
+const KEY = 'funciones-basicas-movil-2026';
+let found = {}, retos = {};
+try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; found = s.found || {}; retos = s.retos || {}; } catch(e){}
+function guardar(){ try { localStorage.setItem(KEY, JSON.stringify({found, retos})); } catch(e){} }
+let modo = 'desc';
+
+/* =========================================================
+   Aplicaciones
+   ========================================================= */
+const APPS = {
+  ajustes:{n:'Ajustes', ic:'⚙️', bg:'#64748b'}, contactos:{n:'Contactos', ic:'👤', bg:'#f59e0b'}, calc:{n:'Calculadora', ic:'🧮', bg:'#334155'},
+  reloj:{n:'Reloj', ic:'⏰', bg:'#111827'}, galeria:{n:'Galería', ic:'🖼️', bg:'#ec4899'}, play:{n:'Play Store', ic:'🛍️', bg:'#ffffff'},
+  gmail:{n:'Gmail', ic:'✉️', bg:'#ffffff'}, youtube:{n:'YouTube', ic:'▶️', bg:'#ffffff'}, drive:{n:'Drive', ic:'☁️', bg:'#e0f2fe'},
+  calendario:{n:'Calendario', ic:'📅', bg:'#ffffff'}, notas:{n:'Notas', ic:'📝', bg:'#fde68a'}, tiempo:{n:'El tiempo', ic:'⛅', bg:'#38bdf8'},
+  mapas:{n:'Mapas', ic:'🗺️', bg:'#ffffff'}, radio:{n:'Radio', ic:'📻', bg:'#a78bfa'},
+  telefono:{n:'Teléfono', ic:'📞', bg:'#22c55e'}, mensajes:{n:'Mensajes', ic:'💬', bg:'#3b82f6'}, internet:{n:'Internet', ic:'🌐', bg:'#ffffff'}, camara:{n:'Cámara', ic:'📷', bg:'#1f2937'}
+};
+const CITIES = [
+  {n:'Madrid', tz:'Europe/Madrid'}, {n:'Londres', tz:'Europe/London'}, {n:'París', tz:'Europe/Paris'}, {n:'Nueva York', tz:'America/New_York'},
+  {n:'Ciudad de México', tz:'America/Mexico_City'}, {n:'Bogotá', tz:'America/Bogota'}, {n:'Lima', tz:'America/Lima'},
+  {n:'Buenos Aires', tz:'America/Argentina/Buenos_Aires'}, {n:'Tokio', tz:'Asia/Tokyo'}
+];
+const FOTOS0 = [
+  {em:'🎄', bg:'linear-gradient(160deg,#1e3a8a,#3b82f6)', n:'Navidad'}, {em:'👨‍👩‍👧', bg:'linear-gradient(160deg,#f59e0b,#fde68a)', n:'La familia'},
+  {em:'🏖️', bg:'linear-gradient(#38bdf8,#fef3c7)', n:'La playa'}, {em:'🥘', bg:'linear-gradient(160deg,#ea580c,#fcd34d)', n:'La paella'},
+  {em:'🐈', bg:'linear-gradient(160deg,#a8a29e,#f5f5f4)', n:'El gato'}, {em:'⛪', bg:'linear-gradient(#93c5fd,#d6d3d1)', n:'La iglesia del pueblo'}
+];
+
+/* =========================================================
+   Estado del móvil
+   ========================================================= */
+let X, fid = 0, pid = 0;
+function nuevoEstado(){
+  fid = 0; pid = 0;
+  X = {
+    view:{v:'home'}, stack:[], locked:false, off:false, frozen:false, booting:false, resume:null,
+    lockType:'ninguno', pin:'', pinTry:'', page:0,
+    pages:[['ajustes','contactos','calc','reloj','galeria','play','gmail','youtube','drive',null,null,null,null,null,null,null,null,null,null,null],
+           ['calendario','notas','tiempo','mapas','radio',null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]],
+    dock:['telefono','mensajes','internet','camara'], folders:{}, folderOpen:null,
+    bt:false, avion:false, wifi:true, charging:false, battery:64,
+    vols:{llamadas:6, medios:5, notificaciones:6, alarma:7}, ring:'sonido',
+    qs:false, vol:null, kb:null, form:{}, dlg:null, sheet:null, pmenu:false, alarmFire:null,
+    contacts:[{n:'Ana', t:'611 234 567'}, {n:'Carmen', t:'622 345 678'}, {n:'Farmacia del barrio', t:'983 111 222'}, {n:'Luis', t:'633 456 789'}],
+    msgs:[
+      {id:1, from:'Carmen', text:'¿Vienes mañana a la clase de móvil? Empieza a las diez.', sus:false, read:false},
+      {id:2, from:'+34 744 01 23 45', text:'¡ENHORABUENA! Has ganado un móvil nuevo. Recógelo GRATIS aquí antes de 24 horas:', link:'http://premio-gratis-ya.top/recoger', sus:true, why:'promete un premio', read:false},
+      {id:3, from:'Banco Seguro', text:'Su cuenta ha sido bloqueada. Para desbloquearla, introduzca su número de tarjeta y su clave aquí:', link:'http://banco-seguro-verifica.xyz', sus:true, why:'pide información personal', read:false},
+      {id:4, from:'Farmacia', text:'Su pedido ya está listo para recoger. Gracias.', sus:false, read:true},
+      {id:5, from:'OfertasHoy', text:'Zapatillas de marca al 95 % de descuento, ¡solo hoy!', link:'http://chollos-increibles.biz', sus:true, why:'es una oferta demasiado buena para ser verdad', read:false}
+    ],
+    pulsados:{}, account:null,
+    calc:{exp:'', res:'', done:false}, rot:false,
+    alarms:[{h:8, m:0, on:true}], world:['Madrid'], sw:{run:false, t0:0, acc:0}, tmr:{run:false, end:0, left:600000, set:10},
+    na:{h:7, m:30}, ctab:'alarma',
+    photos:FOTOS0.map(f => Object.assign({id:++pid, k:'foto'}, f)), lensClean:false, flash:false, camMode:'foto', rec:null, focus:null,
+    gsel:null, gview:null, call:null, dial:'', edial:'', pin1:'', pin2:'', huellaPend:false, enroll:0,
+    station:'dock', ultima:null, gotit:null
+  };
+}
+nuevoEstado();
+
+const ESTACIONES = [
+  {id:'dock', ic:'🏠', t:'Iconos de abajo', guia:'En la parte de abajo, además de los botones de navegación, están los iconos de las aplicaciones más usadas: <b>Teléfono</b>, <b>Mensajes</b>, <b>Internet</b> y <b>Cámara</b>. Se ven desde <b>cualquier pantalla</b>.', retos:[
+    {id:'dockCam', t:'Abre la Cámara desde los iconos de abajo', h:'Tócala en la fila de abajo'},
+    {id:'pagina2', t:'Pasa a la otra pantalla de inicio', h:'Desliza el dedo hacia la izquierda: los iconos de abajo se repiten'}]},
+  {id:'carpetas', ic:'📁', t:'Carpetas y mover iconos', guia:'<b>Carpeta:</b> mantén pulsado un icono hasta que se destaque y, sin soltar, arrástralo sobre otro. Para nombrarla, toca «Nueva carpeta».<br><b>Mover a otra pantalla:</b> mantén pulsado, desliza hacia el borde derecho o izquierdo y suelta en la pantalla que quieras.', retos:[
+    {id:'carpeta', t:'Crea una carpeta', h:'Mantén pulsado un icono y arrástralo sobre otro'},
+    {id:'nombre', t:'Ponle nombre a la carpeta', h:'Abre la carpeta y toca «Nueva carpeta»'},
+    {id:'moverPant', t:'Lleva un icono a la otra pantalla', h:'Mantén pulsado y llévalo hasta el borde; suéltalo en la otra pantalla'}]},
+  {id:'barra', ic:'📶', t:'Símbolos de la barra superior', guia:'<b>Bluetooth:</b> una «B» estilizada. <b>Modo avión:</b> un avión; desactiva Wi-Fi, Bluetooth y datos móviles. <b>Cobertura:</b> barras verticales. <b>Batería:</b> el nivel de carga; con un rayo, está cargando.<br>Para ver los ajustes rápidos, <b>desliza hacia abajo</b> desde la barra de arriba.', retos:[
+    {id:'bt', t:'Enciende el Bluetooth', h:'Desliza hacia abajo desde la barra superior, o entra en Ajustes'},
+    {id:'avion', t:'Activa el modo avión', h:'Fíjate en qué símbolos desaparecen de la barra'},
+    {id:'cargar', t:'Pon el móvil a cargar', h:'Botón «🔌 Enchufar el cargador»: sale un rayo en la batería'}]},
+  {id:'volumen', ic:'🔊', t:'Volumen y sonido', guia:'Con los <b>botones del lateral</b> aparece una barra de volumen. La <b>campanilla</b> silencia o activa el sonido, y los <b>tres puntos</b> separan el volumen de la música y de las alarmas.<br>En <b>Ajustes › Sonido y vibración</b> están los volúmenes de llamadas, medios, notificaciones y alarma.', retos:[
+    {id:'volBtn', t:'Cambia el volumen con los botones del lateral', h:'Los dos botones de arriba del lado derecho del móvil'},
+    {id:'campana', t:'Silencia el móvil o ponlo en vibración', h:'Toca la campanilla de la barra de volumen'},
+    {id:'volAlarma', t:'Cambia por separado el volumen de las alarmas', h:'Los tres puntos de la barra de volumen, o Ajustes'},
+    {id:'ajSonido', t:'Entra en Ajustes › Sonido y vibración', h:'El engranaje de Ajustes'}]},
+  {id:'emerg', ic:'🆘', t:'Llamada de emergencia', guia:'Con el teléfono bloqueado, en la pantalla de bloqueo hay un botón <b>«Emergencia»</b>. Desde ahí puedes marcar el <b>112</b> sin desbloquear el móvil.', retos:[
+    {id:'e112', t:'Llama al 112 con el móvil bloqueado', h:'Bloquéalo con el botón de encendido, enciéndelo, toca «Emergencia» y marca 112'}]},
+  {id:'contactos', ic:'👤', t:'Contactos', guia:'Abre <b>Contactos</b>, toca el <b>+</b>, escribe el nombre y el teléfono y toca <b>Guardar</b>.<br>Para un <b>contacto de emergencia</b>, igual, pero con un nombre que lo identifique como «Contacto de emergencia».', retos:[
+    {id:'contacto', t:'Crea un contacto nuevo', h:'Contactos › + › nombre y teléfono › Guardar'},
+    {id:'contactoE', t:'Crea un contacto de emergencia', h:'Con un nombre como «Contacto de emergencia Ana»'}]},
+  {id:'seguridad', ic:'🔐', t:'Clave y seguridad', guia:'<b>Clave:</b> Ajustes › Seguridad › Bloqueo de pantalla, eliges PIN, patrón, contraseña o huella, la escribes y la confirmas.<br><b>Enlaces:</b> no pulses enlaces desconocidos: premios, ofertas demasiado buenas o mensajes que piden tus datos.<br><b>Si no responde:</b> mantén pulsado el botón de encendido varios segundos hasta que se reinicie.', retos:[
+    {id:'clave', t:'Pon un PIN o tu huella', h:'Ajustes › Seguridad › Bloqueo de pantalla'},
+    {id:'desbloq', t:'Desbloquea con tu PIN o tu huella', h:'Bloquea con el botón de encendido y vuelve a entrar'},
+    {id:'sospecha', t:'Borra un mensaje sospechoso sin pulsar su enlace', h:'En Mensajes: premios, chollos o que piden tus datos'},
+    {id:'reinicio', t:'Reinicia el móvil cuando se quede colgado', h:'«🥶 Simular un cuelgue» y mantén pulsado el botón de encendido'}]},
+  {id:'calc', ic:'🧮', t:'Calculadora', guia:'Toca un número, la operación (<b>+ − × ÷</b>), el segundo número y <b>=</b> para ver el resultado.<br>Para más funciones (raíces, potencias…), <b>gira el móvil</b> a posición horizontal.', retos:[
+    {id:'suma', t:'Haz una suma', h:'Número, +, número y ='},
+    {id:'multdiv', t:'Multiplica o divide', h:'Con × o ÷'},
+    {id:'cient', t:'Gira el móvil para ver la calculadora científica', h:'«🔄 Girar el móvil» con la calculadora abierta'}]},
+  {id:'reloj', ic:'⏰', t:'Reloj', guia:'<b>Alarma:</b> toca «+», ajusta hora y minutos y «Guardar».<br><b>Reloj mundial:</b> añade ciudades para ver su hora.<br><b>Cronómetro:</b> inicio para empezar, pausa para detenerlo.<br><b>Temporizador:</b> pon el tiempo (por ejemplo, 10 minutos) y toca «Iniciar».', retos:[
+    {id:'alarma', t:'Pon una alarma', h:'Reloj › Alarma › + › hora y minutos › Guardar'},
+    {id:'mundo', t:'Añade una ciudad al reloj mundial', h:'Reloj › Mundo › +'},
+    {id:'crono', t:'Mide un tiempo con el cronómetro', h:'Toca «Iniciar» y después «Pausa»'},
+    {id:'temp', t:'Pon un temporizador', h:'Por ejemplo, 10 minutos, y toca «Iniciar»'}]},
+  {id:'google', ic:'☁️', t:'Cuenta de Google', guia:'Una sola cuenta de Google sirve para <b>Gmail, Drive, YouTube y Google Play</b>. Sincroniza contactos y calendario, hace copias de seguridad y es <b>necesaria para descargar aplicaciones</b>.<br>Se crea en <b>Ajustes › Cuentas › Agregar cuenta › Google</b>.', retos:[
+    {id:'cuenta', t:'Añade una cuenta de Google', h:'Ajustes › Cuentas › Agregar cuenta › Google'},
+    {id:'play', t:'Entra en Play Store con tu cuenta', h:'Sin cuenta de Google no se pueden descargar aplicaciones'}]},
+  {id:'camara', ic:'📷', t:'Cámara y galería', guia:'<b>Cámara:</b> objetivo limpio, el <b>rayo</b> para el flash, toca la pantalla para <b>enfocar</b> y el <b>círculo blanco</b> para la foto. En modo vídeo, el mismo botón empieza y para.<br><b>Galería:</b> toca una foto para verla. Para borrarla, la <b>papelera</b> y confirmar. Para varias, mantén pulsada una y toca las demás. Para compartir, el símbolo de <b>tres puntos conectados</b>.', retos:[
+    {id:'foto', t:'Limpia el objetivo y haz una foto', h:'«🧽 Limpiar el objetivo» y el círculo blanco de abajo'},
+    {id:'flash', t:'Enciende el flash', h:'El rayo de arriba de la cámara'},
+    {id:'enfoque', t:'Enfoca tocando la pantalla', h:'Toca donde quieras enfocar'},
+    {id:'video', t:'Graba un vídeo', h:'Cambia a «Vídeo»: el mismo botón empieza y para'},
+    {id:'borrar1', t:'Borra una foto', h:'Galería › abre la foto › papelera › confirmar'},
+    {id:'borrarN', t:'Borra varias fotos a la vez', h:'Mantén pulsada una foto y toca las demás'},
+    {id:'compartir', t:'Comparte una foto', h:'Abre la foto y toca el símbolo de compartir'}]}
+];
+const TODOS = ESTACIONES.flatMap(s => s.retos.map(r => Object.assign({st:s.id}, r)));
+function tick(id){
+  if (retos[id]) return;
+  retos[id] = true; guardar();
+  const r = TODOS.find(x => x.id === id);
+  if (r){ X.gotit = r.t; X.station = r.st; X.verSt = true; }
+  progreso();
+}
+function explicar(html, color){ X.ultima = {html, color:color || '--c1'}; }
+
+/* =========================================================
+   Utilidades del móvil
+   ========================================================= */
+function hhmm(d){ d = d || new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function fechaLarga(){ return new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'}).replace(/^./, c => c.toUpperCase()); }
+function toast(msg){ const t = $('toast'); t.innerHTML = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3000); }
+function flashFx(){ const f = $('fx'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+function go(view, push){ if (push !== false) X.stack.push(X.view); salirDe(X.view, view); X.view = view; X.kb = null; render(); }
+function salirDe(oldV, newV){
+  if (oldV.v === 'calc' && newV.v !== 'calc') X.rot = false;
+  if (oldV.v === 'camara' && newV.v !== 'camara' && X.rec) pararVideo();
+  if (oldV.v === 'galeria' && newV.v !== 'galeria') X.gsel = null;
+}
+function irInicio(){
+  if (X.locked || X.frozen) return;
+  salirDe(X.view, {v:'home'});
+  X.stack = []; X.view = {v:'home'}; X.folderOpen = null; X.kb = null; X.qs = false; X.dlg = null; X.sheet = null; X.vol = null;
+  render();
+}
+function atras(){
+  if (X.frozen) return;
+  if (X.kb){ cerrarTeclado(); return; }
+  if (X.sheet){ X.sheet = null; render(); return; }
+  if (X.dlg){ X.dlg = null; render(); return; }
+  if (X.qs){ X.qs = false; render(); return; }
+  if (X.vol){ X.vol = null; render(); return; }
+  if (X.pmenu){ X.pmenu = false; render(); return; }
+  if (X.folderOpen){ cerrarCarpeta(); return; }
+  if (X.locked){ if (['pinpad', 'emerg'].includes(X.view.v)){ X.view = {v:'lock'}; X.edial = ''; render(); } return; }
+  if (X.view.v === 'galeria' && X.gsel){ X.gsel = null; render(); return; }
+  if (X.view.v === 'galeria' && X.gview){ X.gview = null; render(); return; }
+  if (X.stack.length){ const v = X.stack.pop(); salirDe(X.view, v); X.view = v; render(); }
+  else if (X.view.v !== 'home'){ salirDe(X.view, {v:'home'}); X.view = {v:'home'}; render(); }
+}
+function abrirApp(k, desdeDock){
+  if (k.startsWith('f:')){ X.folderOpen = k; render(); return; }
+  if (desdeDock && k === 'camara') tick('dockCam');
+  if (desdeDock) explicar('Has abierto <b>' + APPS[k].n + '</b> desde los iconos de abajo. Esos iconos están en <b>todas las pantallas de inicio</b>.', '--c1');
+  const V = {ajustes:{v:'ajustes', s:'main'}, contactos:{v:'contactos', s:'list'}, calc:{v:'calc'}, reloj:{v:'reloj'}, galeria:{v:'galeria'},
+    telefono:{v:'telefono'}, mensajes:{v:'mensajes', s:'list'}, internet:{v:'internet'}, camara:{v:'camara'},
+    play:{v:'gapp', app:'play'}, gmail:{v:'gapp', app:'gmail'}, youtube:{v:'gapp', app:'youtube'}, drive:{v:'gapp', app:'drive'}}[k] || {v:'otra', app:k};
+  X.folderOpen = null;
+  if (k === 'play' && X.account && !X.avion){ tick('play'); explicar('Has entrado en <b>Play Store</b> con tu cuenta de Google. Sin cuenta no se pueden descargar aplicaciones.', '--c1'); }
+  go(V);
+}
+
+/* =========================================================
+   Pintar el móvil
+   ========================================================= */
+function sbarHTML(){
+  return '<span>' + hhmm() + '</span><span class="sb-r">' +
+    (X.avion ? '<b style="font-size:1.05em">✈</b>' : '') + (X.bt ? IC.bt : '') +
+    (X.ring === 'vibracion' ? '<span>📳</span>' : X.ring === 'silencio' ? '<span>🔕</span>' : '') +
+    (!X.avion && X.wifi ? IC.wifi : '') + (!X.avion ? IC.sig : '') + batHTML(X.battery, X.charging) + '</span>';
+}
+function iconHTML(k, attrs, dock){
+  if (!k) return '<div class="slot" ' + attrs + '></div>';
+  if (k.startsWith('f:')){
+    const f = X.folders[k];
+    return '<div class="slot" ' + attrs + '><div class="hic" data-k="' + k + '"><span class="ai fold">' + f.apps.slice(0, 4).map(a => '<i>' + APPS[a].ic + '</i>').join('') + '</span><span class="al">' + esc(f.name) + '</span></div></div>';
+  }
+  const a = APPS[k];
+  return '<div class="slot" ' + attrs + '><div class="hic' + (dock ? ' dk' : '') + '" data-k="' + k + '"><span class="ai" style="background:' + a.bg + '">' + a.ic + '</span><span class="al">' + a.n + '</span></div></div>';
+}
+function vHome(){
+  return '<div class="home" id="home"><div class="pages" style="transform:translateX(' + (-X.page * 100) + '%)">' +
+    X.pages.map((p, pi) => '<div class="pg">' + p.map((k, i) => iconHTML(k, 'data-slot="' + pi + ':' + i + '"')).join('') + '</div>').join('') + '</div>' +
+    '<div class="dots">' + X.pages.map((_, i) => '<i class="' + (i === X.page ? 'on' : '') + '"></i>').join('') + '</div>' +
+    '<div class="dock">' + X.dock.map(k => iconHTML(k, 'data-dock="1"', true)).join('') + '</div>' +
+    '<div class="edge" id="edge-l"></div><div class="edge r" id="edge-r"></div>' +
+    (X.folderOpen ? vCarpeta() : '') + '</div>';
+}
+function vCarpeta(){
+  const f = X.folders[X.folderOpen], editing = X.kb && X.kb.f === 'fName';
+  return '<div class="fov" data-a="closeFolder"><div class="fbox" data-a="noop"><div class="fname' + (editing ? ' foc' : '') + '" data-a="focus" data-v="fName">' +
+    (editing ? esc(X.form.fName || '') + '<span class="caret"></span>' : esc(f.name)) + '</div><div class="fgrid">' +
+    f.apps.map(k => '<div class="hic" data-a="open" data-v="' + k + '"><span class="ai" style="background:' + APPS[k].bg + '">' + APPS[k].ic + '</span><span class="al dark">' + APPS[k].n + '</span></div>').join('') +
+    '</div></div></div>';
+}
+function vLock(){
+  const nNoLeidos = X.msgs.filter(m => !m.read).length;
+  return '<div class="lock" id="lockarea"><div class="lk-time">' + hhmm() + '</div><div class="lk-date">' + fechaLarga() + '</div>' +
+    (nNoLeidos ? '<div class="lk-note">💬 ' + nNoLeidos + ' mensaje' + (nNoLeidos === 1 ? '' : 's') + ' sin leer</div>' : '') +
+    (X.alarms.some(a => a.on) ? '<div class="lk-note">⏰ Alarma: ' + X.alarms.filter(a => a.on).map(a => pad2(a.h) + ':' + pad2(a.m)).join(', ') + '</div>' : '') +
+    '<div class="lk-bottom">' +
+    (X.lockType === 'huella' ? '<div class="fp" id="fp">👆</div><div class="lk-hint" data-a="unlockTry">Pon el dedo en el sensor<br><small>o desliza hacia arriba para usar el PIN</small></div>'
+                             : '<div class="lk-hint" data-a="unlockTry"><span class="up">⌃</span>Desliza hacia arriba para desbloquear</div>') +
+    '<button class="lk-emerg" data-a="emerg" type="button">🆘 Emergencia</button></div></div>';
+}
+function keypad(act, extra){
+  const k = [['1',''],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ']];
+  return '<div class="keypad">' + k.map(([d, l]) => '<button class="kp" data-a="' + act + '" data-v="' + d + '" type="button">' + d + (l ? '<small>' + l + '</small>' : '') + '</button>').join('') +
+    (extra || '<button class="kp blank" type="button" tabindex="-1"></button>') + '<button class="kp" data-a="' + act + '" data-v="0" type="button">0<small>+</small></button>' +
+    '<button class="kp" data-a="' + act + '" data-v="⌫" type="button">⌫</button></div>';
+}
+function vPinpad(){
+  const n = X.pin.length;
+  return '<div class="pinpad"><h3>Introduce el PIN</h3><div class="pdots" id="pdots">' + Array.from({length:n}, (_, i) => '<i class="' + (i < X.pinTry.length ? 'f' : '') + '"></i>').join('') + '</div>' +
+    keypad('pinkey') + '<button class="linkbtn" data-a="emerg" type="button" style="margin-top:1em">🆘 Emergencia</button></div>';
+}
+function vEmerg(){
+  return '<div class="ap" style="background:#fff"><div class="ap-h"><span class="ttl" style="color:#b91c1c">🆘 Llamada de emergencia</span></div>' +
+    '<div class="ap-b" style="display:flex;flex-direction:column;align-items:center"><div class="dial">' + (X.edial || '<span style="color:#c4cad6">112</span>') + '</div>' +
+    keypad('edig', '<button class="kp blank" type="button" tabindex="-1"></button>') +
+    '<button class="kp call" data-a="ecall" type="button" style="margin-top:.8em">📞</button><p class="center-msg" style="margin-top:.8em">Sin desbloquear el móvil solo se pueden marcar números de emergencia, como el <b>112</b>.</p></div></div>';
+}
+function vCall(){
+  const c = X.call, t = Math.floor((Date.now() - c.t0) / 1000);
+  return '<div class="call' + (c.em ? ' em' : '') + '"><div style="font-size:3em">' + (c.em ? '🆘' : '📞') + '</div><div class="who">' + esc(c.who) + '</div>' +
+    '<div class="st" id="calltime">' + (c.em ? 'Llamada de emergencia · ' : '') + pad2(Math.floor(t / 60)) + ':' + pad2(t % 60) + '</div>' +
+    '<div class="sim">Es una simulación: no se está llamando de verdad.</div><button class="hang" data-a="hang" type="button">📞</button></div>';
+}
+
+/* ---- Ajustes ---- */
+function apHead(title, extra){ return '<div class="ap-h"><button class="bk" data-a="back" type="button">←</button><span class="ttl">' + title + '</span>' + (extra || '') + '</div>'; }
+function swRow(ic, bg, t, sub, on, act){ return '<div class="row" data-a="tgl" data-v="' + act + '"><span class="ri" style="background:' + bg + '">' + ic + '</span><span class="rt">' + t + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="sw' + (on ? ' on' : '') + '"></span></div>'; }
+function navRow(ic, bg, t, sub, act, v, right){ return '<div class="row" data-a="' + act + '" data-v="' + v + '"><span class="ri" style="background:' + bg + '">' + ic + '</span><span class="rt">' + t + (sub ? '<small>' + sub + '</small>' : '') + '</span>' + (right ? '<span class="rv">' + right + '</span>' : '') + '<span class="chev">›</span></div>'; }
+const LOCKN = {ninguno:'Ninguno (deslizar)', pin:'PIN', huella:'Huella digital y PIN'};
+function sliderBlock(k, t, sub){ return '<div class="sl"><div class="slt"><span>' + t + '</span><span id="vv-' + k + '">' + X.vols[k] + '</span></div>' + (sub ? '<small>' + sub + '</small>' : '') + '<input type="range" min="0" max="10" value="' + X.vols[k] + '" data-vol="' + k + '"></div>'; }
+function segRing(){ return '<div class="seg">' + [['sonido', '🔔 Sonido'], ['vibracion', '📳 Vibración'], ['silencio', '🔕 Silencio']].map(([k, t]) => '<button data-a="ring" data-v="' + k + '" class="' + (X.ring === k ? 'on' : '') + '" type="button">' + t + '</button>').join('') + '</div>'; }
+function vAjustes(){
+  const s = X.view.s;
+  if (s === 'main') return '<div class="ap"><div class="ap-h"><h2>Ajustes</h2></div><div class="ap-b">' +
+    '<div class="grp">' + swRow('✈', '#f97316', 'Modo avión', 'Desactiva Wi-Fi, Bluetooth y datos móviles', X.avion, 'avion') + swRow(IC.wifi, '#3b82f6', 'Wi-Fi', X.wifi && !X.avion ? 'MiCasa_WiFi' : 'Desactivado', X.wifi && !X.avion, 'wifi') +
+      swRow(IC.bt, '#2563eb', 'Bluetooth', X.bt ? 'Activado' : 'Desactivado', X.bt, 'bt') + '</div>' +
+    '<div class="grp">' + navRow('🔊', '#10b981', 'Sonido y vibración', 'Volumen, silencio y vibración', 'aj', 'sonido') +
+      navRow('🔒', '#ef4444', 'Seguridad', 'Pantalla de bloqueo, PIN, huella', 'aj', 'seg') + navRow('👤', '#8b5cf6', 'Cuentas', X.account ? 'Google' : 'Agregar cuenta', 'aj', 'cuentas') + '</div>' +
+    '<div class="grp"><div class="row" style="cursor:default"><span class="ri" style="background:#22c55e">🔋</span><span class="rt">Batería<small>' + (X.charging ? 'Cargando' : 'Sin cargar') + '</small></span><span class="rv">' + X.battery + ' %</span></div></div></div></div>';
+  if (s === 'sonido') return '<div class="ap">' + apHead('Sonido y vibración') + '<div class="ap-b">' + segRing() +
+    '<div class="grp">' + sliderBlock('llamadas', '📞 Volumen de llamadas', 'El sonido de las llamadas entrantes') + sliderBlock('medios', '🎵 Volumen de medios', 'Música, vídeos y juegos') +
+    sliderBlock('notificaciones', '💬 Volumen de notificaciones', 'Alertas y notificaciones') + sliderBlock('alarma', '⏰ Volumen de alarma', 'El sonido de las alarmas') + '</div></div></div>';
+  if (s === 'seg') return '<div class="ap">' + apHead('Seguridad') + '<div class="ap-b"><div class="grp">' + navRow('🔒', '#ef4444', 'Bloqueo de pantalla', 'PIN, patrón, contraseña o huella', 'aj', 'bloqueo', LOCKN[X.lockType]) + '</div>' +
+    '<div class="hint-box">💡 Con una clave, si pierdes el móvil nadie podrá ver tus fotos, mensajes ni contactos.</div>' +
+    '<div class="warn-box">⚠️ No pulses enlaces desconocidos: premios, ofertas demasiado buenas o mensajes que piden información personal.</div></div></div>';
+  if (s === 'bloqueo') return '<div class="ap">' + apHead('Bloqueo de pantalla') + '<div class="ap-b"><div class="grp">' +
+    [['ninguno', '👉', 'Ninguno', 'Solo deslizar'], ['patron', '⠿', 'Patrón', 'Un dibujo uniendo puntos'], ['pin', '🔢', 'PIN', 'De 4 o más números'], ['contrasena', '🔤', 'Contraseña', 'Letras y números'], ['huella', '👆', 'Huella digital', 'Con un PIN de respaldo']]
+      .map(([k, ic, t, sub]) => '<div class="row" data-a="lockopt" data-v="' + k + '"><span class="ri" style="background:#475569">' + ic + '</span><span class="rt">' + t + '<small>' + sub + '</small></span>' + ((X.lockType === k || (k === 'pin' && X.lockType === 'pin')) ? '<span class="rv">✓</span>' : '') + '</div>').join('') +
+    '</div></div></div>';
+  if (s === 'pin1' || s === 'pin2'){
+    const v = s === 'pin1' ? X.pin1 : X.pin2;
+    return '<div class="ap" style="background:#fff">' + apHead(s === 'pin1' ? 'Elige un PIN' : 'Confirma el PIN') + '<div class="ap-b" style="display:flex;flex-direction:column;align-items:center">' +
+      '<p class="center-msg" style="margin-top:.6em">' + (s === 'pin1' ? (X.huellaPend ? 'La huella necesita un PIN de respaldo. ' : '') + 'Escribe al menos 4 números.' : 'Vuelve a escribir el mismo PIN.') + '</p>' +
+      '<div class="pdots" id="pdots" style="color:var(--ink)">' + (v.length ? Array.from({length:v.length}, () => '<i class="f"></i>').join('') : '<i></i><i></i><i></i><i></i>') + '</div>' +
+      keypad('pind') + '<div style="width:100%;padding:0 1em"><button class="btnp" data-a="pinNext" type="button"' + (v.length < 4 ? ' disabled' : '') + '>' + (s === 'pin1' ? 'Siguiente' : 'Confirmar') + '</button></div></div></div>';
+  }
+  if (s === 'huella') return '<div class="ap" style="background:#fff">' + apHead('Huella digital') + '<div class="ap-b" style="display:flex;flex-direction:column;align-items:center;gap:1em;padding-top:1.5em">' +
+    '<p class="center-msg">Mantén el dedo en el sensor unos instantes y levántalo. Repite hasta llegar al 100 %.</p>' +
+    '<div class="fp" id="fpe" style="color:var(--ink);background:#eef1f6;border-color:#cbd5e1;width:5em;height:5em">👆</div>' +
+    '<div style="font-weight:800;font-size:1.4em">' + Math.round(X.enroll / 3 * 100) + ' %</div></div></div>';
+  if (s === 'cuentas') return '<div class="ap">' + apHead('Cuentas') + '<div class="ap-b">' +
+    (X.account ? '<div class="grp"><div class="row" style="cursor:default"><span class="av" style="background:#4285f4">G</span><span class="rt">' + esc(X.account.mail) + '<small>Google · sincronizando contactos, calendario y notas</small></span></div></div>' : '<div class="empty">No hay ninguna cuenta en este móvil.</div>') +
+    '<div class="grp">' + navRow('➕', '#2563eb', 'Agregar cuenta', '', 'aj', 'tipos') + '</div>' +
+    '<div class="hint-box">💡 Con una cuenta de Google tienes Gmail, Drive, YouTube y Google Play, y si cambias de teléfono recuperas tu información.</div></div></div>';
+  if (s === 'tipos') return '<div class="ap">' + apHead('Agregar cuenta') + '<div class="ap-b"><div class="grp">' +
+    '<div class="row" data-a="aj" data-v="google"><span class="av" style="background:#4285f4">G</span><span class="rt">Google</span><span class="chev">›</span></div>' +
+    '<div class="row" data-a="otraCuenta"><span class="av" style="background:#0078d4">M</span><span class="rt">Microsoft Exchange</span><span class="chev">›</span></div>' +
+    '<div class="row" data-a="otraCuenta"><span class="av" style="background:#64748b">@</span><span class="rt">Correo personal</span><span class="chev">›</span></div></div></div></div>';
+  if (s === 'google'){
+    const ok = (X.form.gName || '').trim() && (X.form.gMail || '').trim() && (X.form.gPass || '').length >= 4;
+    return '<div class="ap" style="background:#fff">' + apHead('Cuenta de Google') + '<div class="ap-b"><div style="text-align:center;font-size:2em;font-weight:900;margin:.3em 0;letter-spacing:-.02em"><span style="color:#4285f4">G</span><span style="color:#ea4335">o</span><span style="color:#fbbc05">o</span><span style="color:#4285f4">g</span><span style="color:#34a853">l</span><span style="color:#ea4335">e</span></div>' +
+      fieldHTML('gName', 'Nombre y apellidos', 'Por ejemplo: Rosa García') + fieldHTML('gMail', 'Correo electrónico', 'rosa.garcia', '@gmail.com') + fieldHTML('gPass', 'Contraseña', 'Al menos 4 letras o números', '', true) +
+      '<button class="btnp" data-a="saveAccount" type="button"' + (ok ? '' : ' disabled') + '>Siguiente</button><p class="center-msg" style="margin-top:.6em;font-size:.82em">En esta práctica la cuenta es de mentira.</p></div></div>';
+  }
+}
+function fieldHTML(k, label, ph, suf, pass){
+  const v = X.form[k] || '', f = X.kb && X.kb.f === k;
+  const shown = pass ? '•'.repeat(v.length) : esc(v);
+  return '<div class="flab">' + label + '</div><div class="fld' + (f ? ' foc' : '') + '" data-a="focus" data-v="' + k + '">' + (v ? shown : (f ? '' : '<span class="ph">' + ph + '</span>')) + (f ? '<span class="caret"></span>' : '') + (suf && v && !v.includes('@') ? '<span class="ph">' + suf + '</span>' : '') + '</div>';
+}
+
+/* ---- Contactos, teléfono, mensajes, internet ---- */
+const AVC = ['#f97316', '#8b5cf6', '#10b981', '#3b82f6', '#ec4899', '#eab308'];
+function vContactos(){
+  const s = X.view.s;
+  if (s === 'list'){
+    const l = X.contacts.slice().sort((a, b) => a.n.localeCompare(b.n, 'es'));
+    return '<div class="ap"><div class="ap-h"><h2>Contactos</h2></div><div class="ap-b"><div class="grp">' +
+      l.map(c => { const i = X.contacts.indexOf(c); return '<div class="row" data-a="cdet" data-v="' + i + '"><span class="av" style="background:' + AVC[i % AVC.length] + '">' + esc(c.n[0].toUpperCase()) + '</span><span class="rt">' + esc(c.n) + (/emergencia/i.test(c.n) ? '<small>🆘 Contacto de emergencia</small>' : '') + '</span></div>'; }).join('') +
+      '</div></div><button class="fab" data-a="cnew" type="button" title="Agregar">+</button></div>';
+  }
+  if (s === 'new'){
+    const ok = (X.form.cName || '').trim();
+    return '<div class="ap" style="background:#fff"><div class="ap-h"><button class="bk" data-a="back" type="button">✕</button><span class="ttl">Nuevo contacto</span><button class="hb" data-a="saveContact" type="button"' + (ok ? '' : ' disabled') + '>Guardar</button></div><div class="ap-b">' +
+      '<div style="display:flex;justify-content:center;margin:.4em 0"><span class="av" style="width:3.6em;height:3.6em;font-size:1.4em;background:#cbd5e1">👤</span></div>' +
+      fieldHTML('cName', 'Nombre', 'Por ejemplo: Contacto de emergencia Ana') + fieldHTML('cTel', 'Teléfono', 'Por ejemplo: 600 000 000') +
+      '<div class="hint-box" style="margin-top:.8em">💡 Para un contacto de emergencia, pon en el nombre «Contacto de emergencia» y quién es.</div></div></div>';
+  }
+  if (s === 'det'){
+    const c = X.contacts[X.view.i];
+    return '<div class="ap" style="background:#fff">' + apHead('') + '<div class="ap-b" style="text-align:center"><span class="av" style="width:4em;height:4em;font-size:1.7em;margin:0 auto;background:' + AVC[X.view.i % AVC.length] + '">' + esc(c.n[0].toUpperCase()) + '</span>' +
+      '<div style="font-size:1.4em;font-weight:800;margin:.5em 0 .2em">' + esc(c.n) + '</div><div style="color:var(--muted);font-weight:700">' + esc(c.t || 'Sin teléfono') + '</div>' +
+      '<div class="btns2" style="margin-top:1.2em"><button class="btnp" data-a="callc" data-v="' + X.view.i + '" type="button"' + (c.t ? '' : ' disabled') + '>📞 Llamar</button><button class="btnp sec" data-a="smsc" type="button">💬 Mensaje</button></div></div></div>';
+  }
+}
+function vTelefono(){
+  return '<div class="ap" style="background:#fff"><div class="ap-h"><h2>Teléfono</h2></div><div class="ap-b" style="display:flex;flex-direction:column;align-items:center">' +
+    '<div class="dial">' + (esc(X.dial) || '<span style="color:#c4cad6">Marca un número</span>') + '</div>' + keypad('tdig') +
+    '<button class="kp call" data-a="tcall" type="button" style="margin-top:.8em">📞</button></div></div>';
+}
+function vMensajes(){
+  const s = X.view.s;
+  if (s === 'list') return '<div class="ap"><div class="ap-h"><h2>Mensajes</h2></div><div class="ap-b"><div class="grp">' +
+    (X.msgs.length ? X.msgs.map((m, i) => '<div class="row" data-a="mopen" data-v="' + m.id + '"><span class="av" style="background:' + AVC[i % AVC.length] + '">' + esc(m.from[0] === '+' ? '#' : m.from[0]) + '</span><span class="rt">' + esc(m.from) + '<small>' + esc(m.text.slice(0, 42)) + '…</small></span>' + (m.read ? '' : '<span class="unread"></span>') + '</div>').join('')
+      : '<div class="empty">No hay mensajes.</div>') + '</div></div></div>';
+  if (s === 'conv'){
+    const m = X.msgs.find(x => x.id === X.view.id);
+    if (!m) return '<div class="ap">' + apHead('Mensajes') + '<div class="empty">Este mensaje ya no está.</div></div>';
+    return '<div class="ap">' + apHead(esc(m.from), '<button class="hb" data-a="mdel" data-v="' + m.id + '" type="button" style="color:#ef4444">🗑️ Borrar</button>') + '<div class="ap-b">' +
+      '<div class="bub">' + esc(m.text) + (m.link ? ' <span class="lk" data-a="mlink" data-v="' + m.id + '">' + esc(m.link) + '</span>' : '') + '<small>Hoy · ' + hhmm() + '</small></div>' +
+      (m.sus && !m.read2 ? '' : '') + '</div></div>';
+  }
+  if (s === 'aviso'){
+    const m = X.msgs.find(x => x.id === X.view.id);
+    return '<div class="fraud"><div class="bigic">⚠️</div><h2>¡Cuidado!</h2><p>Has pulsado un enlace de un mensaje desconocido. Este ' + (m ? esc(m.why) : 'parece sospechoso') + '. Así intentan robar datos y dinero.</p>' +
+      '<p>En la vida real, <b>no pulses</b> estos enlaces: borra el mensaje.</p><button class="btnp" data-a="back" type="button">Volver al mensaje</button></div>';
+  }
+}
+function vInternet(){
+  if (X.avion) return '<div class="ap" style="background:#fff">' + apHead('Internet') + '<div class="bigic">✈️</div><p class="center-msg"><b>Sin conexión.</b> El modo avión está activado: desactívalo para navegar.</p></div>';
+  return '<div class="ap" style="background:#fff"><div class="ap-h"><span class="ttl">🌐 Internet</span></div><div class="ap-b">' +
+    '<div class="fld" style="border-radius:2em;margin:.3em 0 1em" data-a="web">🔍 <span class="ph">Busca o escribe una dirección</span></div>' +
+    ['📰 Noticias del día', '🌦️ El tiempo para mañana', '🍲 Recetas fáciles de cuchara', '⚽ Resultados de fútbol'].map(t => '<div class="grp"><div class="row" data-a="web"><span class="rt">' + t + '<small>Toca para leer</small></span><span class="chev">›</span></div></div>').join('') + '</div></div>';
+}
+function vOtra(){
+  const a = APPS[X.view.app];
+  return '<div class="ap" style="background:#fff">' + apHead(a.n) + '<div class="bigic">' + a.ic + '</div><p class="center-msg">Esta aplicación no hace falta en esta práctica.<br>Toca <b>○</b> para volver al inicio.</p></div>';
+}
+function vGapp(){
+  const k = X.view.app, a = APPS[k];
+  if (X.avion) return '<div class="ap" style="background:#fff">' + apHead(a.n) + '<div class="bigic">✈️</div><p class="center-msg"><b>Sin conexión.</b> Con el modo avión no hay internet.</p></div>';
+  if (!X.account) return '<div class="ap" style="background:#fff">' + apHead(a.n) + '<div class="bigic">' + a.ic + '</div><p class="center-msg">Para usar <b>' + a.n + '</b> necesitas una <b>cuenta de Google</b>.' +
+    (k === 'play' ? '<br>Sin ella no se pueden descargar aplicaciones.' : '') + '</p><div style="padding:1em 1.4em"><button class="btnp" data-a="toAccounts" type="button">Añadir cuenta de Google</button></div></div>';
+  if (k === 'play') return '<div class="ap" style="background:#fff">' + apHead('Play Store') + '<div class="ap-b"><div class="hint-box">Hola, ' + esc(X.account.name.split(' ')[0]) + '. Con tu cuenta ya puedes descargar aplicaciones.</div><div class="grp">' +
+    [['💬', 'WhatsApp', 'inst'], ['📻', 'Radio España', ''], ['🌦️', 'El Tiempo', ''], ['🃏', 'Solitario', '']].map(([ic, n, st], i) =>
+      '<div class="row" style="cursor:default"><span class="ri" style="background:#eef1f6;color:#000">' + ic + '</span><span class="rt">' + n + '<small>' + (st || X.view['i' + i] ? 'Instalada' : 'Gratis') + '</small></span>' +
+      (st || X.view['i' + i] ? '<span class="rv">Abrir</span>' : '<button class="chip on" data-a="install" data-v="' + i + '" type="button">Instalar</button>') + '</div>').join('') + '</div></div></div>';
+  if (k === 'gmail') return '<div class="ap" style="background:#fff">' + apHead('Gmail') + '<div class="ap-b"><div class="grp"><div class="row" style="cursor:default"><span class="av" style="background:#4285f4">G</span><span class="rt">Equipo de Google<small>Te damos la bienvenida a tu nueva cuenta, ' + esc(X.account.mail) + '</small></span></div></div></div></div>';
+  if (k === 'drive') return '<div class="ap" style="background:#fff">' + apHead('Drive') + '<div class="ap-b"><div class="hint-box">☁️ <b>Copia de seguridad activada.</b> Tus fotos y documentos están protegidos aunque pierdas el teléfono.</div><div class="grp"><div class="row" style="cursor:default"><span class="ri" style="background:#ec4899">🖼️</span><span class="rt">Fotos<small>' + X.photos.length + ' elementos guardados</small></span></div></div></div></div>';
+  return '<div class="ap" style="background:#fff">' + apHead('YouTube') + '<div class="ap-b">' + ['Cómo hacer croquetas caseras', 'Paseo por la Plaza Mayor', 'Gimnasia suave para mayores'].map(t => '<div class="grp"><div class="row" data-a="web"><span class="ri" style="background:#ef4444">▶</span><span class="rt">' + t + '</span></div></div>').join('') + '</div></div>';
+}
+
+/* ---- Calculadora ---- */
+function vCalc(){
+  const L = X.rot, c = X.calc;
+  const base = [['C', 'cl'], ['⌫', 'cl'], ['%', 'op'], ['÷', 'op'], ['7'], ['8'], ['9'], ['×', 'op'], ['4'], ['5'], ['6'], ['−', 'op'], ['1'], ['2'], ['3'], ['+', 'op'], ['00'], ['0'], [','], ['=', 'eq']];
+  const sci = [['√', 'sci'], ['x²', 'sci'], ['π', 'sci'], ['(', 'sci'], [')', 'sci'], ['xʸ', 'sci'], ['1/x', 'sci'], ['!', 'sci']];
+  let keys;
+  if (L){
+    keys = [];
+    for (let r = 0; r < 5; r++){ keys.push(...(sci.slice(r * 2, r * 2 + 2).length ? sci.slice(r * 2, r * 2 + 2) : [['', 'sci'], ['', 'sci']]).slice(0, 2)); keys.push(...[...base.slice(r * 4, r * 4 + 4)]); }
+    keys = keys.map(k => k[0] === '' ? ['·', 'nada'] : k);
+  } else keys = base;
+  return '<div class="calc' + (L ? ' land' : '') + '"><div class="c-disp"><div class="c-exp" id="cexp">' + esc(fmt(c.exp)) + '</div><div class="c-res" id="cres">' + esc(c.res !== '' ? c.res : (fmt(c.exp) || '0')) + '</div></div>' +
+    '<div class="c-keys">' + keys.map(([k, cl]) => '<button class="ck ' + (cl || '') + '" data-a="ck" data-v="' + k + '" type="button">' + k + '</button>').join('') + '</div></div>';
+}
+const fmt = s => s.replace(/\./g, ',');
+function calcKey(k){
+  const c = X.calc;
+  if (k === '·') return;
+  if (k === 'C'){ c.exp = ''; c.res = ''; c.done = false; }
+  else if (k === '⌫'){ if (c.done){ c.done = false; c.res = ''; } c.exp = c.exp.slice(0, -1); }
+  else if (k === '='){
+    if (!c.exp) return;
+    try {
+      const r = evaluar(c.exp);
+      if (!isFinite(r)) throw new Error();
+      c.res = '= ' + fmt(String(+r.toPrecision(12)));
+      const hasSum = /\+/.test(c.exp), hasMD = /[×÷]/.test(c.exp);
+      if (hasSum) tick('suma');
+      if (hasMD) tick('multdiv');
+      explicar('Has calculado <b>' + esc(fmt(c.exp)) + ' ' + esc(c.res) + '</b>.' + (X.rot ? '' : ' Para raíces y potencias, gira el móvil con «🔄 Girar el móvil».'), '--c6');
+      c.done = true;
+    } catch(e){ c.res = 'Error'; c.done = true; }
+  } else {
+    let add = {',':'.', 'x²':'²', 'xʸ':'^', '1/x':'1÷', '00':'00'}[k] || k;
+    if (c.done){ c.exp = /[+−×÷^%²!]/.test(add[0]) && c.res && c.res !== 'Error' ? c.res.replace('= ', '').replace(/,/g, '.') : ''; c.res = ''; c.done = false; }
+    if (/^[+×÷^%²!]$/.test(add) && (!c.exp || /[+−×÷^(]$/.test(c.exp))) return;
+    if (/^[+−×÷^]$/.test(add) && /[+−×÷^]$/.test(c.exp)) c.exp = c.exp.slice(0, -1);
+    c.exp += add;
+  }
+  renderCalcDisp();
+}
+function renderCalcDisp(){ const e = $('cexp'), r = $('cres'); if (!e) return render(); e.textContent = fmt(X.calc.exp); r.textContent = X.calc.res !== '' ? X.calc.res : (fmt(X.calc.exp) || '0'); }
+function evaluar(s){
+  let i = 0;
+  const peek = () => s[i];
+  function num(){ let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; if (j === i) throw new Error('n'); return parseFloat(s.slice(j, i)); }
+  function primario(){
+    if (peek() === '('){ i++; const v = suma(); if (peek() === ')') i++; return v; }
+    if (peek() === 'π'){ i++; return Math.PI; }
+    return num();
+  }
+  function postfijo(){
+    let v = primario();
+    for (;;){
+      if (peek() === '²'){ i++; v = v * v; }
+      else if (peek() === '%'){ i++; v = v / 100; }
+      else if (peek() === '!'){ i++; if (v < 0 || v > 170 || v % 1) throw new Error('f'); let f = 1; for (let k = 2; k <= v; k++) f *= k; v = f; }
+      else break;
+    }
+    return v;
+  }
+  function unario(){
+    if (peek() === '−'){ i++; return -unario(); }
+    if (peek() === '√'){ i++; const v = unario(); if (v < 0) throw new Error('r'); return Math.sqrt(v); }
+    const b = postfijo();
+    if (peek() === '^'){ i++; return Math.pow(b, unario()); }
+    return b;
+  }
+  function producto(){ let v = unario(); for (;;){ if (peek() === '×'){ i++; v *= unario(); } else if (peek() === '÷'){ i++; const d = unario(); v /= d; } else if (peek() === '(' || peek() === '√' || peek() === 'π'){ v *= unario(); } else break; } return v; }
+  function suma(){ let v = producto(); for (;;){ if (peek() === '+'){ i++; v += producto(); } else if (peek() === '−'){ i++; v -= producto(); } else break; } return v; }
+  const v = suma();
+  if (i < s.length) throw new Error('x');
+  return v;
+}
+
+/* ---- Reloj ---- */
+function cronoTxt(){ const ms = X.sw.acc + (X.sw.run ? Date.now() - X.sw.t0 : 0); const cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000); return pad2(m) + ':' + pad2(s) + ',' + pad2(cs); }
+function tmrLeft(){ return X.tmr.run ? Math.max(0, X.tmr.end - Date.now()) : X.tmr.left; }
+function tmrTxt(){ const t = Math.ceil(tmrLeft() / 1000); return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t / 60) % 60) + ':' + pad2(t % 60); }
+function horaEn(tz){ try { return new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', timeZone:tz}); } catch(e){ return hhmm(); } }
+function vReloj(){
+  const t = X.ctab, s = X.view.s;
+  let body;
+  if (s === 'nueva') return '<div class="ap" style="background:#fff"><div class="ap-h"><button class="bk" data-a="back" type="button">✕</button><span class="ttl">Nueva alarma</span><button class="hb" data-a="alSave" type="button">Guardar</button></div><div class="ap-b">' +
+    '<div class="wheels">' + whHTML('h', X.na.h) + '<span class="wsep">:</span>' + whHTML('m', X.na.m) + '</div><p class="center-msg">Ajusta la hora y los minutos con las flechas y toca <b>Guardar</b>.</p></div></div>';
+  if (s === 'ciudades') return '<div class="ap">' + apHead('Añadir ciudad') + '<div class="ap-b"><div class="grp">' + CITIES.filter(c => !X.world.includes(c.n)).map(c => '<div class="row" data-a="addCity" data-v="' + c.n + '"><span class="rt">' + c.n + '</span><span class="rv">' + horaEn(c.tz) + '</span></div>').join('') + '</div></div></div>';
+  if (t === 'alarma') body = '<div class="ap-b">' + (X.alarms.length ? X.alarms.map((a, i) => '<div class="alrow' + (a.on ? '' : ' off') + '"><span class="t">' + pad2(a.h) + ':' + pad2(a.m) + '<small>' + (a.on ? 'Activada' : 'Desactivada') + '</small></span><span class="sw' + (a.on ? ' on' : '') + '" data-a="alTgl" data-v="' + i + '" style="cursor:pointer"></span></div>').join('') : '<div class="empty">No hay alarmas.</div>') + '</div><button class="fab" data-a="alNew" type="button" style="bottom:4.4em">+</button>';
+  else if (t === 'mundo') body = '<div class="ap-b">' + X.world.map(n => { const c = CITIES.find(x => x.n === n); return '<div class="alrow"><span class="t" style="font-size:1.2em;font-weight:800">' + n + '<small>' + (n === 'Madrid' ? 'Hora local' : 'Otra zona horaria') + '</small></span><span style="font-size:1.8em;font-weight:600">' + horaEn(c.tz) + '</span></div>'; }).join('') + '</div><button class="fab" data-a="cityNew" type="button" style="bottom:4.4em">+</button>';
+  else if (t === 'crono') body = '<div class="ap-b"><div class="bigt" id="crono">' + cronoTxt() + '</div><div class="btns2">' +
+    (X.sw.run ? '<button class="btnp red" data-a="swPause" type="button">⏸ Pausa</button>' : (X.sw.acc ? '<button class="btnp sec" data-a="swReset" type="button">↺ Reiniciar</button><button class="btnp" data-a="swStart" type="button">▶ Reanudar</button>' : '<button class="btnp" data-a="swStart" type="button">▶ Iniciar</button>')) + '</div></div>';
+  else body = '<div class="ap-b">' + (X.tmr.run || X.tmr.left !== X.tmr.set * 60000 ?
+      '<div class="bigt" id="tmr">' + tmrTxt() + '</div><div class="btns2"><button class="btnp sec" data-a="tmCancel" type="button">Cancelar</button>' + (X.tmr.run ? '<button class="btnp red" data-a="tmPause" type="button">⏸ Pausa</button>' : '<button class="btnp" data-a="tmStart" type="button">▶ Seguir</button>') + '</div>'
+      : '<div class="wheels" style="margin-bottom:.4em">' + whHTML('t', X.tmr.set, 'min') + '</div><div class="chips">' + [1, 5, 10, 15, 30].map(n => '<button class="chip' + (X.tmr.set === n ? ' on' : '') + '" data-a="tmSet" data-v="' + n + '" type="button">' + n + ' min</button>').join('') + '</div>' +
+        '<div style="padding:0 1em"><button class="btnp" data-a="tmStart" type="button">▶ Iniciar</button></div>') + '</div>';
+  return '<div class="ap"><div class="ap-h"><h2>Reloj</h2></div>' + body + '<div class="rtabs">' +
+    [['alarma', '🔔', 'Alarma'], ['mundo', '🌍', 'Mundo'], ['crono', '⏱️', 'Cronómetro'], ['temp', '⏳', 'Temporizador']].map(([k, ic, n]) => '<button class="' + (t === k ? 'on' : '') + '" data-a="rtab" data-v="' + k + '" type="button"><span>' + ic + '</span>' + n + '</button>').join('') + '</div></div>';
+}
+function whHTML(k, v, suf){ return '<div class="wh"><button data-a="whUp" data-v="' + k + '" type="button">▲</button><span class="v">' + pad2(v) + '</span><button data-a="whDn" data-v="' + k + '" type="button">▼</button>' + (suf ? '<small style="font-weight:800;color:var(--muted)">' + suf + '</small>' : '') + '</div>'; }
+
+/* ---- Cámara y galería ---- */
+function picHTML(p){
+  if (p.cam) return '<div class="pic' + (p.blur ? ' blur' : '') + (p.flash ? ' bright' : '') + '" style="background:linear-gradient(#7cc4ff,#cfe8ff 55%,#7ac76a 55%,#3f9a45)">🏡' + (p.k === 'video' ? '<span class="vb">▶ ' + p.dur + ' s</span>' : '') + '</div>';
+  return '<div class="pic" style="background:' + p.bg + '">' + p.em + '</div>';
+}
+function vCamara(){
+  const last = X.photos[X.photos.length - 1];
+  const recS = X.rec ? Math.floor((Date.now() - X.rec.t0) / 1000) : 0;
+  return '<div class="cam"><div class="cam-top"><button class="fl' + (X.flash ? ' on' : '') + '" data-a="flash" type="button" title="Flash">' + (X.flash ? '⚡' : '<span style="opacity:.75">⚡̸</span>') + '</button><span style="font-weight:800;font-size:.8em">' + (X.flash ? 'Flash activado' : 'Flash desactivado') + '</span><button data-a="camInfo" type="button">⚙️</button></div>' +
+    '<div class="vf' + (X.lensClean ? '' : ' dirty') + '" id="vf"><div class="scene"><div class="sun"></div><span class="e" style="left:12%;bottom:30%;font-size:4em">🌳</span><span class="e" style="left:42%;bottom:33%;font-size:4.5em">🏡</span><span class="e" style="right:10%;bottom:36%;font-size:2.4em">🐕</span><span class="e" style="left:24%;bottom:8%;font-size:2.4em">🌷</span><span class="e" style="right:28%;bottom:10%;font-size:2.2em">🌼</span><span class="e" style="left:60%;top:14%;font-size:2.2em">☁️</span></div>' +
+    (X.lensClean ? '' : '<div class="smudge"></div>') + (X.focus ? '<div class="focus-sq" style="left:' + X.focus.x + '%;top:' + X.focus.y + '%"></div>' : '') +
+    (X.rec ? '<div class="rec" id="rect">● ' + pad2(Math.floor(recS / 60)) + ':' + pad2(recS % 60) + '</div>' : '') + '</div>' +
+    '<div class="cam-modes"><button class="' + (X.camMode === 'video' ? 'on' : '') + '" data-a="cmode" data-v="video" type="button">VÍDEO</button><button class="' + (X.camMode === 'foto' ? 'on' : '') + '" data-a="cmode" data-v="foto" type="button">FOTO</button></div>' +
+    '<div class="cam-bot"><div class="cthumb" data-a="toGal">' + (last ? '<div style="position:relative;width:100%;height:100%;font-size:.55em">' + picHTML(last) + '</div>' : '') + '</div>' +
+    '<button class="shut' + (X.camMode === 'video' ? ' vid' : '') + (X.rec ? ' recing' : '') + '" data-a="shot" type="button" title="Hacer la foto"></button><button class="cflip" data-a="flip" type="button">⟲</button></div></div>';
+}
+function vGaleria(){
+  if (X.gview){
+    const p = X.photos.find(x => x.id === X.gview);
+    if (!p){ X.gview = null; return vGaleria(); }
+    return '<div class="gview"><div class="ap-h" style="color:#fff"><button class="bk" data-a="back" type="button" style="color:#fff">←</button><span class="ttl">' + (p.n || (p.k === 'video' ? 'Vídeo' : 'Foto de la cámara')) + '</span></div>' +
+      '<div class="big">' + picHTML(p) + '</div><div class="gbar"><button data-a="share" type="button"><span>' + IC.share + '</span>Compartir</button><button data-a="gEdit" type="button"><span>✏️</span>Editar</button><button data-a="gDel" type="button"><span>🗑️</span>Eliminar</button></div></div>';
+  }
+  const sel = X.gsel;
+  return '<div class="ap"><div class="ap-h">' + (sel ? '<button class="bk" data-a="gCancel" type="button">✕</button><span class="ttl">' + sel.size + ' seleccionada' + (sel.size === 1 ? '' : 's') + '</span>' : '<h2>Galería</h2>') + '</div>' +
+    '<div class="ap-b"><div class="ggrid' + (sel ? ' gselmode' : '') + '" id="ggrid">' + X.photos.slice().reverse().map(p => '<div class="gt' + (sel && sel.has(p.id) ? ' sel' : '') + '" data-pid="' + p.id + '">' + picHTML(p) + '</div>').join('') + '</div>' +
+    (X.photos.length ? '' : '<div class="empty">No hay fotos. Haz alguna con la Cámara.</div>') +
+    (sel ? '' : '<p class="center-msg" style="margin-top:.8em;font-size:.8em">Toca una foto para verla. Mantén pulsada una para seleccionar varias.</p>') + '</div>' +
+    (sel ? '<div class="gselbar"><button data-a="gDelSel" type="button"' + (sel.size ? '' : ' disabled') + '>🗑️ Eliminar</button></div>' : '') + '</div>';
+}
+
+/* ---- Superposiciones ---- */
+let wasOpen = {qs:false, vol:false, kb:false}, anim = {};
+function ovlHTML(){
+  anim = {qs:X.qs && !wasOpen.qs, vol:!!X.vol && !wasOpen.vol, kb:!!X.kb && !wasOpen.kb};
+  wasOpen = {qs:!!X.qs, vol:!!X.vol, kb:!!X.kb};
+  let h = '';
+  if (X.qs) h += '<div class="qs-bg" data-a="qsClose"></div><div class="qs' + (anim.qs ? ' in' : '') + '"><div class="qs-date">' + hhmm() + ' · ' + fechaLarga() + '</div><div class="qs-tiles">' +
+    tileHTML('qwifi', IC.wifi, 'Wi-Fi', X.wifi && !X.avion, X.wifi && !X.avion ? 'MiCasa_WiFi' : 'Desactivado') + tileHTML('qbt', IC.bt, 'Bluetooth', X.bt, X.bt ? 'Activado' : 'Desactivado') +
+    tileHTML('qavion', '✈', 'Modo avión', X.avion, X.avion ? 'Activado' : 'Desactivado') + tileHTML('qring', X.ring === 'sonido' ? '🔔' : X.ring === 'vibracion' ? '📳' : '🔕', 'Sonido', X.ring !== 'sonido', {sonido:'Con sonido', vibracion:'Vibración', silencio:'Silencio'}[X.ring]) +
+    '</div><div class="qs-handle" data-a="qsClose"></div></div>';
+  if (X.vol){
+    if (X.vol.exp) h += '<div class="volx" data-a="volKeep"><h4>Volumen <button class="vb" data-a="volLess" type="button" style="border:0;background:#e6eaf1;border-radius:50%;width:2em;height:2em;cursor:pointer">✕</button></h4>' + segRing() +
+      sliderBlock('medios', '🎵 Música y vídeos') + sliderBlock('llamadas', '📞 Llamadas') + sliderBlock('alarma', '⏰ Alarmas') + '</div>';
+    else h += '<div class="vol' + (anim.vol ? ' in' : '') + '" data-a="volKeep"><button class="vb' + (X.ring !== 'sonido' ? ' on' : '') + '" data-a="bell" type="button" title="Campanilla">' + (X.ring === 'sonido' ? '🔔' : X.ring === 'vibracion' ? '📳' : '🔕') + '</button>' +
+      '<div class="vbar"><i style="height:' + X.vols.medios * 10 + '%"></i><b>🎵</b></div><button class="vb" data-a="volMore" type="button" title="Más opciones">⋯</button></div>';
+  }
+  if (X.dlg) h += '<div class="dlg-bg"><div class="dlg"><h4>' + X.dlg.t + '</h4><p>' + X.dlg.p + '</p><div class="btns2"><button class="btnp sec" data-a="dlgNo" type="button">Cancelar</button><button class="btnp red" data-a="dlgYes" type="button">' + X.dlg.ok + '</button></div></div></div>';
+  if (X.sheet) h += '<div class="dlg-bg" data-a="sheetClose"><div class="sheet" data-a="noop"><h4>Compartir con…</h4><div class="sh-apps">' +
+    [['💬', 'Mensajes'], ['🟢', 'WhatsApp'], ['✉️', 'Gmail'], [IC.bt, 'Bluetooth']].map(([ic, n]) => '<button data-a="shareTo" data-v="' + n + '" type="button"><span>' + ic + '</span>' + n + '</button>').join('') + '</div></div></div>';
+  if (X.pmenu) h += '<div class="pmenu" data-a="pmClose"><button data-a="pmOff" type="button"><span>⏻</span>Apagar</button><button data-a="pmReboot" type="button"><span>🔄</span>Reiniciar</button><button data-a="pmEmerg" type="button" style="color:#b91c1c"><span>🆘</span>Emergencia</button></div>';
+  if (X.alarmFire) h += '<div class="alarmfire"><div class="bigic">⏰</div><h2>' + X.alarmFire + '</h2><div style="width:70%"><button class="btnp" data-a="afStop" type="button">Detener</button></div></div>';
+  if (X.kb) h += kbHTML();
+  if (X.frozen) h += '<div class="frz" id="frz"></div>';
+  if (X.booting) h += '<div class="boot"><div class="logo">android</div><small>Reiniciando…</small></div>';
+  if (X.off && !X.booting) h += '<div class="off"></div>';
+  return h;
+}
+function tileHTML(a, ic, t, on, sub){ return '<button class="tile' + (on ? ' on' : '') + '" data-a="' + a + '" type="button"><span>' + ic + '</span><div>' + t + '<small>' + sub + '</small></div></button>'; }
+function kbHTML(){
+  const num = X.kb.num, up = X.kb.up;
+  const rows = num ? [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['⌫', '0', '✓']]
+    : [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'], ['⇧', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '⌫'], ['@', '.', 'espacio', '✓']];
+  return '<div class="kbd' + (num ? ' num' : '') + (anim.kb ? ' in' : '') + '">' + rows.map(r => '<div class="kr">' + r.map(k =>
+    '<button class="kk' + (k === 'espacio' ? ' sp' : '') + (k === '✓' ? ' ok' : '') + (k === '⇧' || k === '⌫' ? ' w' : '') + '" data-a="key" data-v="' + k + '" type="button">' + (k === '⇧' ? (up ? '⬆' : '⇧') : (up && k.length === 1 ? k.toUpperCase() : k)) + '</button>').join('') + '</div>').join('') + '</div>';
+}
+
+function render(){
+  if (modo !== 'live') return;
+  const v = X.view.v;
+  const wall = v === 'home' || v === 'lock' || v === 'pinpad';
+  const dark = v === 'camara' || v === 'call' || (v === 'galeria' && X.gview);
+  $('ui').className = 'ui' + (wall ? ' wall' : '') + (dark ? ' dark' : '');
+  $('sbar').innerHTML = sbarHTML();
+  $('sbar').style.color = wall || dark ? '#fff' : 'var(--ink)';
+  let html = '';
+  if (v === 'home') html = vHome();
+  else if (v === 'lock') html = vLock();
+  else if (v === 'pinpad') html = vPinpad();
+  else if (v === 'emerg') html = vEmerg();
+  else if (v === 'call') html = vCall();
+  else if (v === 'ajustes') html = vAjustes();
+  else if (v === 'contactos') html = vContactos();
+  else if (v === 'telefono') html = vTelefono();
+  else if (v === 'mensajes') html = vMensajes();
+  else if (v === 'internet') html = vInternet();
+  else if (v === 'calc') html = vCalc();
+  else if (v === 'reloj') html = vReloj();
+  else if (v === 'camara') html = vCamara();
+  else if (v === 'galeria') html = vGaleria();
+  else if (v === 'gapp') html = vGapp();
+  else html = vOtra();
+  $('app').innerHTML = html;
+  $('nav').style.visibility = (X.locked || v === 'call') ? 'hidden' : 'visible';
+  $('nav').style.color = wall || dark ? '#fff' : 'var(--ink)';
+  $('ovl').innerHTML = ovlHTML();
+  $('ph2').classList.toggle('land', X.rot && v === 'calc');
+  $('t-chg').textContent = X.charging ? '🔌 Desenchufar el cargador' : '🔌 Enchufar el cargador';
+  $('t-chg').classList.toggle('on', X.charging);
+  $('t-rot').classList.toggle('on', X.rot);
+  $('t-lens').classList.toggle('on', X.lensClean);
+  $('t-lens').textContent = X.lensClean ? '✨ Objetivo limpio' : '🧽 Limpiar el objetivo';
+  $('t-frz').classList.toggle('on', X.frozen);
+  renderPanel();
+}
+
+/* =========================================================
+   Acciones (toques en el móvil)
+   ========================================================= */
+function popTo(s){ while (X.stack.length && !(X.stack[X.stack.length - 1].v === 'ajustes' && X.stack[X.stack.length - 1].s === s)) X.stack.pop(); }
+function cerrarCarpeta(){ if (X.kb && X.kb.f === 'fName') confirmarCampo(); X.folderOpen = null; X.kb = null; render(); }
+function enfocar(k){
+  const num = ['cTel'].includes(k);
+  if (k === 'fName'){ const f = X.folders[X.folderOpen]; X.form.fName = f.name === 'Nueva carpeta' ? '' : f.name; }
+  X.kb = {f:k, num, up:!num && !(X.form[k] || '').length && !['gMail', 'gPass'].includes(k)};
+  render();
+}
+function cerrarTeclado(){ confirmarCampo(); X.kb = null; render(); }
+function confirmarCampo(){
+  if (!X.kb) return;
+  if (X.kb.f === 'fName' && X.folderOpen){
+    const f = X.folders[X.folderOpen], v = (X.form.fName || '').trim();
+    if (v && v !== f.name){ f.name = v; tick('nombre'); explicar('Has llamado a la carpeta <b>«' + esc(v) + '»</b>. El nombre aparece debajo del icono en la pantalla de inicio.', '--c8'); }
+  }
+}
+function tecla(k){
+  const kb = X.kb; if (!kb) return;
+  const f = kb.f, max = {cTel:15, gPass:20}[f] || 32;
+  let v = X.form[f] || '';
+  if (k === '✓'){ cerrarTeclado(); return; }
+  if (k === '⌫') v = v.slice(0, -1);
+  else if (k === '⇧'){ kb.up = !kb.up; render(); return; }
+  else if (v.length < max){
+    let ch = k === 'espacio' ? ' ' : k;
+    if (kb.up && ch.length === 1){ ch = ch.toUpperCase(); kb.up = false; }
+    if (f === 'cTel' && !/[0-9 +]/.test(ch)) return;
+    v += ch;
+  }
+  X.form[f] = v;
+  render();
+}
+
+function tglWifi(){ if (X.avion){ toast('Con el modo avión no hay Wi-Fi. Desactívalo primero.'); return; } X.wifi = !X.wifi; explicar(X.wifi ? 'Wi-Fi activado: aparece su símbolo en la barra superior.' : 'Wi-Fi desactivado: su símbolo desaparece de la barra superior.', '--c6'); render(); }
+function tglBt(){
+  X.bt = !X.bt;
+  if (X.bt){ tick('bt'); explicar('Has encendido el <b>Bluetooth</b>. Mira la barra de arriba: aparece una <b>«B» estilizada</b>. Sirve para conectar, por ejemplo, unos auriculares.', '--c6'); }
+  else explicar('Has apagado el Bluetooth: la «B» desaparece de la barra superior.', '--c6');
+  render();
+}
+function tglAvion(){
+  X.avion = !X.avion;
+  if (X.avion){ X.bt = false; tick('avion'); explicar('Has activado el <b>modo avión</b>: aparece un <b>avión</b> en la barra y desaparecen el Wi-Fi, el Bluetooth y las <b>barras de cobertura</b>. Ahora no hay llamadas normales ni internet.', '--c8'); }
+  else explicar('Has quitado el modo avión: vuelven la cobertura y el Wi-Fi.', '--c8');
+  render();
+}
+function cicloRing(){
+  X.ring = {sonido:'vibracion', vibracion:'silencio', silencio:'sonido'}[X.ring];
+  if (X.ring !== 'sonido') tick('campana');
+  explicar({sonido:'La campanilla vuelve a estar activada: el móvil <b>suena</b>.', vibracion:'Con la campanilla has puesto el móvil en <b>vibración</b>: no suena, solo vibra. Mira el símbolo 📳 en la barra.', silencio:'Has <b>silenciado</b> el móvil: ni suena ni vibra. Mira el símbolo 🔕 en la barra.'}[X.ring], '--c3');
+  if (X.vol) X.vol.until = Date.now() + 6000;
+  render();
+}
+function setRing(k){ X.ring = k; if (k !== 'sonido') tick('campana'); explicar('Modo de sonido: <b>' + {sonido:'sonido', vibracion:'vibración', silencio:'silencio'}[k] + '</b>.', '--c3'); render(); }
+
+function volumen(d){
+  if (X.off || X.frozen || X.booting) return;
+  X.vols.medios = Math.max(0, Math.min(10, X.vols.medios + d));
+  X.vol = X.vol || {exp:false};
+  X.vol.until = Date.now() + 5000;
+  tick('volBtn');
+  explicar('Con los <b>botones del lateral</b> aparece la barra de volumen (ahora en <b>' + X.vols.medios + '</b>). La <b>campanilla</b> silencia el móvil y los <b>tres puntos</b> separan el volumen de la música y el de las alarmas.', '--c3');
+  render();
+}
+
+function lockNow(){
+  X.locked = true; X.off = true; X.qs = false; X.vol = null; X.kb = null; X.dlg = null; X.sheet = null; X.folderOpen = null; X.pmenu = false;
+  if (!['lock', 'pinpad', 'emerg', 'call'].includes(X.view.v)) X.resume = {view:X.view, stack:X.stack};
+  salirDe(X.view, {v:'lock'});
+  X.view = {v:'lock'}; X.pinTry = ''; X.edial = '';
+  explicar('Has <b>bloqueado</b> el móvil con el botón de encendido: la pantalla se apaga. Púlsalo otra vez para encenderla y ver la <b>pantalla de bloqueo</b>.', '--c7');
+  render();
+}
+function encendido(){
+  if (X.booting || X.frozen) return;
+  if (X.off){ X.off = false; X.view = {v:'lock'}; render(); return; }
+  lockNow();
+}
+function desbloquear(conClave){
+  X.locked = false; X.pinTry = '';
+  if (X.resume){ X.view = X.resume.view; X.stack = X.resume.stack; X.resume = null; } else { X.view = {v:'home'}; X.stack = []; }
+  if (conClave){ tick('desbloq'); explicar('Has <b>desbloqueado</b> el móvil con tu ' + (conClave === 'huella' ? '<b>huella</b>: basta con poner el dedo en el sensor.' : '<b>PIN</b>. Sin él, nadie puede entrar en tu móvil.'), '--c1'); }
+  else explicar('Has desbloqueado el móvil deslizando. Como <b>no tiene clave</b>, cualquiera podría entrar. Ponle un PIN en Ajustes › Seguridad.', '--c3');
+  render();
+}
+function intentoDesbloqueo(){
+  if (X.lockType === 'ninguno') desbloquear(false);
+  else { X.view = {v:'pinpad'}; X.pinTry = ''; render(); }
+}
+function reiniciar(porCuelgue){
+  X.booting = true; X.off = false; X.qs = false; X.vol = null; X.kb = null; X.dlg = null; X.sheet = null; X.pmenu = false; X.folderOpen = null; X.alarmFire = null;
+  if (X.rec) pararVideo();
+  X.rot = false;
+  render();
+  setTimeout(() => {
+    X.booting = false; X.frozen = false; X.locked = true; X.view = {v:'lock'}; X.stack = []; X.resume = null;
+    if (porCuelgue){ tick('reinicio'); explicar('El móvil se ha <b>reiniciado</b> y vuelve a responder. Cuando se quede colgado, <b>mantén pulsado el botón de encendido</b> varios segundos.', '--c1'); }
+    else explicar('El móvil se ha reiniciado.', '--c6');
+    render();
+  }, 2600);
+}
+
+const ACT = {
+  noop(){}, back:atras, home:irInicio,
+  recents(){ toast('Aquí verías las aplicaciones abiertas. Para volver al inicio, toca <b>○</b>.'); },
+  open(v){ abrirApp(v); },
+  closeFolder:cerrarCarpeta,
+  focus(v){ enfocar(v); },
+  key(v){ tecla(v); },
+  unlockTry:intentoDesbloqueo,
+  emerg(){ X.view = {v:'emerg'}; X.edial = ''; X.pmenu = false; render(); },
+  pinkey(v){
+    if (v === '⌫'){ X.pinTry = X.pinTry.slice(0, -1); render(); return; }
+    if (X.pinTry.length >= X.pin.length) return;
+    X.pinTry += v;
+    if (X.pinTry.length === X.pin.length){
+      if (X.pinTry === X.pin) desbloquear('pin');
+      else { X.pinTry = ''; render(); const d = $('pdots'); if (d){ d.classList.add('bad'); } toast('PIN incorrecto. Inténtalo otra vez.'); }
+    } else render();
+  },
+  edig(v){ if (v === '⌫') X.edial = X.edial.slice(0, -1); else if (X.edial.length < 6) X.edial += v; render(); },
+  ecall(){
+    if (X.edial === '112'){
+      if (X.locked) tick('e112');
+      explicar('Has llamado al <b>112</b> desde la <b>pantalla de bloqueo</b>, sin desbloquear el móvil. Así se puede pedir ayuda aunque no sepas la clave del teléfono.', '--c4');
+      X.call = {who:'112', em:true, t0:Date.now(), back:X.locked ? {v:'lock'} : X.view};
+      X.view = {v:'call'}; render();
+    } else toast(X.edial ? 'Desde aquí solo se pueden marcar números de emergencia, como el <b>112</b>.' : 'Marca el <b>112</b> y toca el botón verde.');
+  },
+  hang(){ const b = X.call && X.call.back; X.call = null; X.view = b || {v:'home'}; if (X.locked && !['lock', 'pinpad'].includes(X.view.v)) X.view = {v:'lock'}; X.edial = ''; render(); },
+  tdig(v){ if (v === '⌫') X.dial = X.dial.slice(0, -1); else if (X.dial.length < 12) X.dial += v; render(); },
+  tcall(){
+    if (!X.dial) return toast('Marca un número primero.');
+    if (X.avion && X.dial !== '112') return toast('Con el <b>modo avión</b> no se puede llamar. Desactívalo en los ajustes rápidos.');
+    X.call = {who:X.dial, em:X.dial === '112', t0:Date.now(), back:X.view}; X.dial = ''; X.view = {v:'call'}; render();
+  },
+  callc(v){
+    const c = X.contacts[+v];
+    if (X.avion) return toast('Con el <b>modo avión</b> no se puede llamar.');
+    X.call = {who:c.n, em:false, t0:Date.now(), back:X.view}; X.view = {v:'call'}; render();
+  },
+  smsc(){ toast('Para escribir un mensaje se usa la aplicación Mensajes.'); },
+  tgl(v){ ({avion:tglAvion, wifi:tglWifi, bt:tglBt})[v](); },
+  qwifi:tglWifi, qbt:tglBt, qavion:tglAvion, qring:cicloRing,
+  qsClose(){ X.qs = false; render(); },
+  aj(v){
+    if (v === 'sonido'){ tick('ajSonido'); explicar('Estás en <b>Ajustes › Sonido y vibración</b>. Aquí se ajustan por separado los volúmenes de <b>llamadas</b>, <b>medios</b>, <b>notificaciones</b> y <b>alarma</b>.', '--c3'); }
+    if (v === 'google'){ X.form.gName = X.form.gName || ''; }
+    go({v:'ajustes', s:v});
+  },
+  ring(v){ setRing(v); },
+  lockopt(v){
+    if (v === 'ninguno'){ X.lockType = 'ninguno'; X.pin = ''; explicar('Has quitado la clave: el móvil se desbloquea solo deslizando. Así <b>cualquiera</b> puede entrar.', '--c4'); atras(); return; }
+    if (v === 'patron' || v === 'contrasena') return toast('En esta práctica usamos el <b>PIN</b> o la <b>huella</b>. El patrón y la contraseña se configuran igual: la eliges, la introduces y la confirmas.');
+    X.huellaPend = v === 'huella'; X.pin1 = ''; X.pin2 = '';
+    go({v:'ajustes', s:'pin1'});
+  },
+  pind(v){
+    const k = X.view.s === 'pin1' ? 'pin1' : 'pin2';
+    if (v === '⌫') X[k] = X[k].slice(0, -1); else if (X[k].length < 8) X[k] += v;
+    render();
+  },
+  pinNext(){
+    if (X.view.s === 'pin1'){ if (X.pin1.length < 4) return; X.pin2 = ''; go({v:'ajustes', s:'pin2'}, false); return; }
+    if (X.pin2 !== X.pin1){ X.pin2 = ''; toast('Los PIN no coinciden. Escríbelo otra vez.'); render(); return; }
+    X.pin = X.pin1;
+    if (X.huellaPend){ X.enroll = 0; go({v:'ajustes', s:'huella'}, false); return; }
+    X.lockType = 'pin'; tick('clave');
+    explicar('Has puesto un <b>PIN</b> de ' + X.pin.length + ' números. Ahora, para entrar en el móvil, habrá que escribirlo. Pruébalo: bloquea con el botón de encendido.', '--c1');
+    popTo('main'); X.view = {v:'ajustes', s:'seg'}; render();
+  },
+  otraCuenta(){ toast('En esta práctica añadimos una cuenta de <b>Google</b>.'); },
+  saveAccount(){
+    const n = (X.form.gName || '').trim(); let m = (X.form.gMail || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!n || !m || (X.form.gPass || '').length < 4) return;
+    if (!m.includes('@')) m += '@gmail.com';
+    X.account = {name:n, mail:m}; X.kb = null; tick('cuenta');
+    explicar('Has añadido la cuenta de Google <b>' + esc(m) + '</b>. Con ella ya funcionan <b>Gmail, Drive, YouTube y Play Store</b>, y se sincronizan tus contactos y tu calendario.', '--c6');
+    popTo('main'); X.view = {v:'ajustes', s:'cuentas'};
+    render();
+  },
+  toAccounts(){ go({v:'ajustes', s:'cuentas'}); },
+  install(v){ X.view['i' + v] = true; toast('Descargando e instalando… (en la práctica no se instala de verdad)'); render(); },
+  cnew(){ X.form.cName = ''; X.form.cTel = ''; go({v:'contactos', s:'new'}); setTimeout(() => enfocar('cName'), 0); },
+  cdet(v){ go({v:'contactos', s:'det', i:+v}); },
+  saveContact(){
+    const n = (X.form.cName || '').trim(); if (!n) return;
+    X.contacts.push({n, t:(X.form.cTel || '').trim()}); X.kb = null;
+    tick('contacto');
+    if (/emergencia/i.test(n)){ tick('contactoE'); explicar('Has creado el <b>contacto de emergencia «' + esc(n) + '»</b>. Con ese nombre, cualquiera que te ayude sabrá a quién avisar.', '--c4'); }
+    else explicar('Has guardado el contacto <b>«' + esc(n) + '»</b>. Para uno de emergencia, ponle en el nombre «Contacto de emergencia».', '--c1');
+    X.view = {v:'contactos', s:'list'}; if (X.stack.length) X.stack.pop(); render();
+  },
+  mopen(v){ const m = X.msgs.find(x => x.id === +v); if (m) m.read = true; go({v:'mensajes', s:'conv', id:+v}); },
+  mlink(v){
+    const m = X.msgs.find(x => x.id === +v); if (!m) return;
+    X.pulsados[m.id] = true;
+    if (m.sus){ explicar('Has pulsado un enlace sospechoso: ' + esc(m.why) + '. En la vida real, <b>no lo pulses</b>. Borra el mensaje con 🗑️.', '--c4'); go({v:'mensajes', s:'aviso', id:m.id}); }
+  },
+  mdel(v){
+    const m = X.msgs.find(x => x.id === +v); if (!m) return;
+    X.dlg = {t:'¿Borrar la conversación?', p:'Se borrará el mensaje de «' + esc(m.from) + '».', ok:'Borrar', yes:() => {
+      X.msgs = X.msgs.filter(x => x !== m);
+      if (m.sus && !X.pulsados[m.id]){ tick('sospecha'); explicar('¡Muy bien! Has <b>borrado un mensaje sospechoso sin pulsar el enlace</b>: ' + esc(m.why) + '. Eso es justo lo que hay que hacer.', '--c1'); }
+      else if (m.sus) explicar('Has borrado el mensaje sospechoso, pero antes <b>pulsaste el enlace</b>. Prueba con otro sin tocar el enlace.', '--c3');
+      else explicar('Has borrado el mensaje de ' + esc(m.from) + '. Ese era de alguien conocido; los sospechosos prometen premios, chollos o piden datos.', '--c3');
+      X.view = {v:'mensajes', s:'list'}; if (X.stack.length) X.stack.pop();
+    }};
+    render();
+  },
+  dlgNo(){ X.dlg = null; render(); },
+  dlgYes(){ const f = X.dlg && X.dlg.yes; X.dlg = null; if (f) f(); render(); },
+  web(){ toast(X.avion ? 'Sin conexión: el modo avión está activado.' : 'En esta práctica no se navega de verdad.'); },
+  ck(v){ calcKey(v); },
+  rtab(v){ X.ctab = v; X.view = {v:'reloj'}; render(); },
+  alNew(){ X.na = {h:7, m:30}; go({v:'reloj', s:'nueva'}); },
+  whUp(k){ if (k === 'h') X.na.h = (X.na.h + 1) % 24; else if (k === 'm') X.na.m = (X.na.m + 5) % 60; else X.tmr.set = Math.min(99, X.tmr.set + 1), X.tmr.left = X.tmr.set * 60000; render(); },
+  whDn(k){ if (k === 'h') X.na.h = (X.na.h + 23) % 24; else if (k === 'm') X.na.m = (X.na.m + 55) % 60; else X.tmr.set = Math.max(1, X.tmr.set - 1), X.tmr.left = X.tmr.set * 60000; render(); },
+  alSave(){
+    X.alarms.push({h:X.na.h, m:X.na.m, on:true}); X.alarms.sort((a, b) => a.h * 60 + a.m - b.h * 60 - b.m);
+    tick('alarma'); explicar('Has puesto una <b>alarma a las ' + pad2(X.na.h) + ':' + pad2(X.na.m) + '</b>. Aparece en la lista con el interruptor encendido.', '--c8');
+    atras();
+  },
+  alTgl(v){ const a = X.alarms[+v]; a.on = !a.on; render(); },
+  cityNew(){ go({v:'reloj', s:'ciudades'}); },
+  addCity(v){ X.world.push(v); tick('mundo'); const c = CITIES.find(x => x.n === v); explicar('Has añadido <b>' + esc(v) + '</b> al reloj mundial: allí son las <b>' + horaEn(c.tz) + '</b>.', '--c6'); atras(); },
+  swStart(){ X.sw.run = true; X.sw.t0 = Date.now(); render(); },
+  swPause(){ X.sw.acc += Date.now() - X.sw.t0; X.sw.run = false; tick('crono'); explicar('Has medido <b>' + cronoTxt() + '</b> con el cronómetro: inicio para empezar y pausa para detenerlo.', '--c6'); render(); },
+  swReset(){ X.sw = {run:false, t0:0, acc:0}; render(); },
+  tmSet(v){ X.tmr.set = +v; X.tmr.left = X.tmr.set * 60000; render(); },
+  tmStart(){
+    X.tmr.end = Date.now() + X.tmr.left; X.tmr.run = true; tick('temp');
+    explicar('Temporizador en marcha: cuenta hacia atrás desde <b>' + Math.round(X.tmr.left / 60000) + ' minuto' + (Math.round(X.tmr.left / 60000) === 1 ? '' : 's') + '</b>. Cuando llegue a cero, sonará un aviso.', '--c8');
+    render();
+  },
+  tmPause(){ X.tmr.left = tmrLeft(); X.tmr.run = false; render(); },
+  tmCancel(){ X.tmr.run = false; X.tmr.left = X.tmr.set * 60000; render(); },
+  afStop(){ X.alarmFire = null; X.tmr.run = false; X.tmr.left = X.tmr.set * 60000; render(); },
+  flash(){ X.flash = !X.flash; if (X.flash){ tick('flash'); explicar('Has encendido el <b>flash</b> tocando el rayo. Úsalo cuando haya poca luz.', '--c3'); } render(); },
+  cmode(v){ if (X.rec) return toast('Primero para la grabación.'); X.camMode = v; render(); },
+  shot(){
+    if (X.camMode === 'video'){
+      if (!X.rec){ X.rec = {t0:Date.now()}; explicar('Estás <b>grabando un vídeo</b>. Toca el mismo botón para pararlo.', '--c4'); render(); }
+      else pararVideo();
+      return;
+    }
+    flashFx();
+    X.photos.push({id:++pid, k:'foto', cam:true, blur:!X.lensClean, flash:X.flash});
+    if (X.lensClean){ tick('foto'); explicar('¡Foto hecha! Está en la <b>Galería</b>: toca la miniatura de abajo a la izquierda para verla.', '--c1'); }
+    else explicar('La foto ha salido <b>borrosa</b>: el objetivo está sucio. Límpialo con «🧽 Limpiar el objetivo» y vuelve a probar.', '--c3');
+    render();
+  },
+  camInfo(){ toast('Ajustes de la cámara: no hacen falta en esta práctica.'); },
+  flip(){ toast('Este botón cambia a la cámara de delante, para hacerte una foto a ti.'); },
+  toGal(){ X.gview = X.photos.length ? X.photos[X.photos.length - 1].id : null; go({v:'galeria'}); },
+  share(){ X.sheet = true; render(); },
+  sheetClose(){ X.sheet = null; render(); },
+  shareTo(v){ X.sheet = null; tick('compartir'); explicar('Has compartido la foto por <b>' + esc(v) + '</b> tocando el símbolo de los <b>tres puntos conectados</b>. (En la práctica no se envía de verdad.)', '--c6'); toast('Enviada por ' + esc(v) + '.'); render(); },
+  gEdit(){ toast('Editar no hace falta en esta práctica.'); },
+  gDel(){
+    const id = X.gview;
+    X.dlg = {t:'¿Eliminar esta foto?', p:'Se borrará de la galería.', ok:'Eliminar', yes:() => {
+      X.photos = X.photos.filter(p => p.id !== id); X.gview = null; tick('borrar1');
+      explicar('Has <b>borrado una foto</b>: abrirla, tocar la <b>papelera</b> y confirmar.', '--c4');
+    }};
+    render();
+  },
+  gCancel(){ X.gsel = null; render(); },
+  gDelSel(){
+    const s = X.gsel; if (!s || !s.size) return;
+    X.dlg = {t:'¿Eliminar ' + s.size + ' elemento' + (s.size === 1 ? '' : 's') + '?', p:'Se borrarán de la galería.', ok:'Eliminar', yes:() => {
+      X.photos = X.photos.filter(p => !s.has(p.id));
+      if (s.size >= 2){ tick('borrarN'); explicar('Has <b>borrado ' + s.size + ' fotos a la vez</b>: mantener pulsada una, tocar las demás y la papelera.', '--c4'); }
+      else { tick('borrar1'); explicar('Has borrado una foto.', '--c4'); }
+      X.gsel = null;
+    }};
+    render();
+  },
+  bell:cicloRing,
+  volMore(){ X.vol = {exp:true, until:Date.now() + 8000}; render(); },
+  volLess(){ X.vol = null; render(); },
+  volKeep(){ if (X.vol) X.vol.until = Date.now() + 6000; },
+  pmClose(){ X.pmenu = false; render(); },
+  pmOff(){ X.pmenu = false; lockNow(); toast('En la práctica el móvil no se apaga del todo: se bloquea.'); },
+  pmReboot(){ X.pmenu = false; reiniciar(false); },
+  pmEmerg(){ X.pmenu = false; if (!X.locked) lockNow(), X.off = false; X.view = {v:'emerg'}; render(); },
+  afNone(){}
+};
+
+/* =========================================================
+   Gestos: pulsaciones, arrastres y deslizamientos
+   ========================================================= */
+const scr = $('scr');
+let G = null, gTimer = null, edgeTimer = null;
+function scrRect(){ return scr.getBoundingClientRect(); }
+function capt(e){ try { scr.setPointerCapture(e.pointerId); } catch(_){} }
+
+scr.addEventListener('click', e => {
+  if (X.frozen || X.off || X.booting) return;
+  if (G && G.used) return;
+  const t = e.target.closest('[data-a]');
+  if (t && ACT[t.dataset.a]){ e.preventDefault(); ACT[t.dataset.a](t.dataset.v, t, e); return; }
+  const vf = e.target.closest('#vf');
+  if (vf){
+    const r = vf.getBoundingClientRect();
+    X.focus = {x:(e.clientX - r.left) / r.width * 100, y:(e.clientY - r.top) / r.height * 100};
+    tick('enfoque'); explicar('Has <b>enfocado</b> tocando la pantalla: el recuadro amarillo marca el punto que saldrá nítido.', '--c3');
+    render();
+  }
+});
+scr.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.vol; if (!k) return;
+  X.vols[k] = +e.target.value;
+  const lab = $('vv-' + k); if (lab) lab.textContent = X.vols[k];
+  if (X.vol) X.vol.until = Date.now() + 8000;
+  if (k === 'alarma'){ tick('volAlarma'); explicar('Has cambiado el <b>volumen de la alarma</b> (' + X.vols.alarma + ') sin tocar el de la música. Cada tipo de sonido tiene su propio volumen.', '--c3'); renderPanel(); }
+});
+
+scr.addEventListener('pointerdown', e => {
+  if (X.frozen || X.off || X.booting || e.button !== 0) return;
+  const t = e.target;
+  G = {x:e.clientX, y:e.clientY, t0:Date.now(), mov:false, used:false, tgt:t};
+  // Barra superior: ajustes rápidos
+  if (t.closest('#sbar')){ G.kind = 'sbar'; capt(e); return; }
+  // Pantalla de bloqueo
+  if (X.view.v === 'lock' && !X.qs){
+    const fp = t.closest('#fp');
+    if (fp){ G.kind = 'fp'; fp.classList.add('hold'); gTimer = setTimeout(() => { G.used = true; desbloquear('huella'); }, 650); return; }
+    if (t.closest('#lockarea') && !t.closest('[data-a="emerg"]')){ G.kind = 'lockswipe'; capt(e); return; }
+  }
+  // Registrar la huella
+  const fpe = t.closest('#fpe');
+  if (fpe){ G.kind = 'fpe'; fpe.classList.add('hold'); gTimer = setTimeout(() => {
+      G.used = true; X.enroll++;
+      if (X.enroll >= 3){ X.lockType = 'huella'; X.huellaPend = false; tick('clave'); explicar('Has registrado tu <b>huella</b>. Ahora el móvil se desbloquea poniendo el dedo en el sensor (y, si falla, con el PIN).', '--c1'); popTo('main'); X.view = {v:'ajustes', s:'seg'}; }
+      render();
+    }, 500); return; }
+  // Galería: pulsación larga
+  const gt = t.closest('.gt');
+  if (gt && X.view.v === 'galeria'){ G.kind = 'gt'; G.pid = +gt.dataset.pid; gTimer = setTimeout(() => { G.used = true; if (!X.gsel){ X.gsel = new Set([G.pid]); explicar('Modo selección: <b>toca las demás fotos</b> que quieras borrar y luego la papelera.', '--c4'); render(); } }, 500); return; }
+  // Pantalla de inicio
+  if (X.view.v === 'home' && !X.folderOpen && !X.qs && !X.kb && t.closest('#home')){
+    const hic = t.closest('.hic');
+    G.kind = 'home'; capt(e);
+    if (hic){
+      const slot = hic.closest('.slot');
+      G.k = hic.dataset.k; G.dock = !!slot.dataset.dock; G.slot = slot.dataset.slot;
+      gTimer = setTimeout(() => { if (!G || G.mov) return; G.used = true; if (G.dock){ toast('Los iconos de abajo se quedan fijos: así están en todas las pantallas.'); return; } empezarArrastre(e); }, 480);
+    }
+  }
+});
+scr.addEventListener('pointermove', e => {
+  if (!G) return;
+  const dx = e.clientX - G.x, dy = e.clientY - G.y;
+  if (!G.mov && Math.hypot(dx, dy) > 10){ G.mov = true; if (!G.drag) clearTimeout(gTimer); }
+  if (G.kind === 'home' && G.drag) moverArrastre(e);
+});
+scr.addEventListener('pointerup', e => {
+  clearTimeout(gTimer);
+  if (!G) return;
+  const g = G, dx = e.clientX - g.x, dy = e.clientY - g.y;
+  document.querySelectorAll('.fp.hold').forEach(f => f.classList.remove('hold'));
+  setTimeout(() => { if (G === g) G = null; }, 0);
+  if (g.kind === 'sbar'){ if (!X.qs && (dy > 15 || !g.mov)){ X.qs = true; X.vol = null; render(); } return; }
+  if (g.kind === 'lockswipe'){ if ((dy < -50 && Math.abs(dy) > Math.abs(dx)) || (!g.mov && g.tgt.closest('[data-a="unlockTry"]'))){ g.used = true; intentoDesbloqueo(); } return; }
+  if (g.kind === 'gt'){
+    if (g.used || g.mov) return;
+    g.used = true;
+    if (X.gsel){ X.gsel.has(g.pid) ? X.gsel.delete(g.pid) : X.gsel.add(g.pid); render(); }
+    else { X.gview = g.pid; render(); }
+    return;
+  }
+  if (g.kind === 'home'){
+    if (g.drag){ g.used = true; soltarArrastre(e); return; }
+    if (g.used) return;
+    if (g.mov && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)){ g.used = true; cambiarPagina(dx < 0 ? 1 : -1); return; }
+    if (g.mov && dy > 50 && g.y - scrRect().top < scrRect().height * .35){ g.used = true; X.qs = true; render(); return; }
+    if (!g.mov && g.k){ g.used = true; abrirApp(g.k, g.dock); }
+  }
+});
+scr.addEventListener('pointercancel', () => { clearTimeout(gTimer); if (G && G.drag) cancelarArrastre(); G = null; });
+
+function cambiarPagina(d){
+  const n = Math.max(0, Math.min(X.pages.length - 1, X.page + d));
+  if (n === X.page) return;
+  X.page = n;
+  if (n === 1){ tick('pagina2'); explicar('Estás en la <b>segunda pantalla</b> de inicio. Fíjate: los iconos de abajo (<b>Teléfono, Mensajes, Internet y Cámara</b>) siguen ahí. Desliza a la derecha para volver.', '--c1'); }
+  render();
+}
+
+/* Arrastrar iconos */
+function empezarArrastre(e){
+  const [p, i] = G.slot.split(':').map(Number);
+  G.drag = {p, i, k:G.k};
+  const el = document.querySelector('#home .slot[data-slot="' + G.slot + '"] .hic');
+  if (el) el.classList.add('lift');
+  const gh = document.createElement('div'); gh.className = 'ghost-ic'; gh.id = 'ghost';
+  gh.innerHTML = el ? el.innerHTML : '';
+  scr.appendChild(gh);
+  if (navigator.vibrate) try { navigator.vibrate(30); } catch(_){}
+  explicar('El icono está <b>destacado</b>. Sin soltar, llévalo <b>sobre otro icono</b> para crear una carpeta, a un <b>hueco</b> para moverlo, o hasta el <b>borde</b> para cambiar de pantalla.', '--c8');
+  renderPanel();
+  moverArrastre(e);
+}
+function moverArrastre(e){
+  const r = scrRect(), gh = $('ghost');
+  if (gh){ gh.style.left = (e.clientX - r.left) + 'px'; gh.style.top = (e.clientY - r.top) + 'px'; }
+  document.querySelectorAll('#home .merge, #home .tgt').forEach(x => x.classList.remove('merge', 'tgt'));
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const slot = el && el.closest('#home .slot[data-slot]');
+  G.target = null;
+  if (slot && slot.dataset.slot !== G.drag.p + ':' + G.drag.i){
+    const [p, i] = slot.dataset.slot.split(':').map(Number);
+    if (p === X.page){ G.target = {p, i}; const h = slot.querySelector('.hic'); if (h) h.classList.add('merge'); else slot.classList.add('tgt'); }
+  }
+  const x = (e.clientX - r.left) / r.width;
+  const dir = x < .09 ? -1 : x > .91 ? 1 : 0;
+  $('edge-l') && $('edge-l').classList.toggle('on', dir === -1 && X.page > 0);
+  $('edge-r') && $('edge-r').classList.toggle('on', dir === 1 && X.page < X.pages.length - 1);
+  if (dir !== (G.edgeDir || 0)){
+    clearTimeout(edgeTimer); G.edgeDir = dir;
+    if (dir) edgeTimer = setTimeout(() => {
+      const n = X.page + dir;
+      if (n < 0 || n >= X.pages.length) return;
+      X.page = n; G.edgeDir = 0;
+      const gh = $('ghost'); const keep = gh ? gh.outerHTML : '';
+      render(); if (keep && !$('ghost')) scr.insertAdjacentHTML('beforeend', keep);
+      const src = document.querySelector('#home .slot[data-slot="' + G.drag.p + ':' + G.drag.i + '"] .hic'); if (src) src.classList.add('lift');
+    }, 650);
+  }
+}
+function quitarFantasma(){ const gh = $('ghost'); if (gh) gh.remove(); clearTimeout(edgeTimer); }
+function cancelarArrastre(){ quitarFantasma(); render(); }
+function soltarArrastre(){
+  quitarFantasma();
+  const s = G.drag, t = G.target;
+  if (!t){ render(); return; }
+  const tk = X.pages[t.p][t.i];
+  if (!tk){
+    X.pages[s.p][s.i] = null; X.pages[t.p][t.i] = s.k;
+    if (t.p !== s.p){ tick('moverPant'); explicar('Has llevado <b>' + nombreK(s.k) + '</b> a la <b>pantalla ' + (t.p + 1) + '</b>: mantener pulsado, deslizar hasta el borde y soltar en la pantalla que quieres.', '--c8'); }
+    else explicar('Has movido <b>' + nombreK(s.k) + '</b> a otro hueco de la misma pantalla.', '--c8');
+  } else if (tk.startsWith('f:')){
+    if (s.k.startsWith('f:')){ toast('No se puede meter una carpeta dentro de otra.'); render(); return; }
+    X.folders[tk].apps.push(s.k); X.pages[s.p][s.i] = null;
+    explicar('Has metido <b>' + APPS[s.k].n + '</b> en la carpeta «' + esc(X.folders[tk].name) + '».', '--c8');
+  } else {
+    if (s.k.startsWith('f:')){ toast('Suelta la carpeta en un hueco libre.'); render(); return; }
+    const id = 'f:' + (++fid);
+    X.folders[id] = {name:'Nueva carpeta', apps:[tk, s.k]};
+    X.pages[t.p][t.i] = id; X.pages[s.p][s.i] = null;
+    tick('carpeta'); explicar('Has creado una <b>carpeta</b> con <b>' + APPS[tk].n + '</b> y <b>' + APPS[s.k].n + '</b>. Ábrela y toca <b>«Nueva carpeta»</b> para ponerle nombre.', '--c8');
+  }
+  render();
+}
+const nombreK = k => k.startsWith('f:') ? 'la carpeta «' + esc(X.folders[k].name) + '»' : APPS[k].n;
+
+/* Vídeo */
+function pararVideo(){
+  const d = Math.max(1, Math.round((Date.now() - X.rec.t0) / 1000));
+  X.rec = null;
+  X.photos.push({id:++pid, k:'video', cam:true, dur:d, blur:!X.lensClean, flash:false});
+  tick('video'); explicar('Has grabado un <b>vídeo de ' + d + ' segundo' + (d === 1 ? '' : 's') + '</b>. Está en la Galería con el símbolo ▶.', '--c4');
+  if (modo === 'live') render();
+}
+
+/* =========================================================
+   Botones del lateral y herramientas
+   ========================================================= */
+let pwT0 = 0, pwTimer = null, pwInt = null, pwLong = false;
+function pwDown(btn){
+  if (X.booting) return;
+  pwT0 = Date.now(); pwLong = false;
+  if (btn) btn.classList.add('down');
+  $('hw-pw').classList.add('down');
+  clearInterval(pwInt);
+  pwInt = setInterval(() => {
+    const s = (Date.now() - pwT0) / 1000;
+    $('holdinfo').textContent = s >= .6 ? '⏳ Manteniendo pulsado… ' + s.toFixed(1).replace('.', ',') + ' s' : '';
+    if (!pwLong && s >= 1.2 && !X.frozen && !X.off){ pwLong = true; X.pmenu = true; render(); }
+    if (X.frozen && s >= 3){ pwLong = true; pwUp(); reiniciar(true); }
+  }, 100);
+}
+function pwUp(){
+  if (!pwT0) return;
+  const d = Date.now() - pwT0; pwT0 = 0;
+  clearInterval(pwInt); $('holdinfo').textContent = '';
+  document.querySelectorAll('.down').forEach(b => b.classList.remove('down'));
+  if (pwLong) return;
+  if (X.frozen){ if (d < 3000) toast('El móvil no responde. <b>Mantén pulsado</b> el botón de encendido varios segundos.'); return; }
+  if (d < 1200) encendido();
+}
+[['hw-pw', null], ['t-pw', 't-pw']].forEach(([id]) => {
+  const b = $(id);
+  b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch(_){} pwDown(b); });
+  b.addEventListener('pointerup', pwUp);
+  b.addEventListener('pointercancel', pwUp);
+  b.addEventListener('contextmenu', e => e.preventDefault());
+});
+$('hw-up').onclick = () => volumen(1); $('hw-dn').onclick = () => volumen(-1);
+$('t-up').onclick = () => volumen(1); $('t-dn').onclick = () => volumen(-1);
+$('t-chg').onclick = () => {
+  X.charging = !X.charging;
+  if (X.charging){ tick('cargar'); explicar('Has enchufado el cargador: en la barra superior la <b>batería muestra un rayo ⚡</b>, que indica que <b>está cargando</b>.', '--c1'); }
+  else explicar('Has desenchufado el cargador: el rayo desaparece de la batería.', '--c1');
+  render();
+};
+$('t-rot').onclick = () => {
+  if (X.view.v !== 'calc' || X.locked){ toast('Abre la <b>Calculadora</b> y gira el móvil allí para ver las funciones científicas.'); return; }
+  X.rot = !X.rot;
+  if (X.rot){ tick('cient'); explicar('Al girar el móvil en horizontal, la calculadora muestra <b>más funciones</b>: raíz cuadrada (√), potencias (x², xʸ), π, paréntesis…', '--c6'); }
+  render();
+};
+$('t-lens').onclick = () => {
+  X.lensClean = !X.lensClean;
+  explicar(X.lensClean ? 'Objetivo <b>limpio</b>. Antes de hacer fotos, comprueba siempre que la lente de la cámara no tenga huellas ni polvo.' : 'El objetivo vuelve a estar sucio: las fotos saldrán borrosas.', '--c3');
+  render();
+};
+$('t-frz').onclick = () => {
+  if (X.frozen) return;
+  if (X.off || X.booting) return toast('Enciende el móvil primero.');
+  X.frozen = true; X.qs = false; X.vol = null; X.kb = null; X.pmenu = false;
+  explicar('El móvil se ha quedado <b>colgado</b>: no responde a nada. Mantén pulsado el <b>botón de encendido</b> (en el lateral, o el botón «⏻» de aquí al lado) durante <b>varios segundos</b>.', '--c4');
+  render();
+};
+
+/* Teclado de verdad */
+document.addEventListener('keydown', e => {
+  if (modo !== 'live' || X.frozen || X.off || X.booting) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key;
+  if (X.kb){
+    if (k === 'Enter'){ e.preventDefault(); tecla('✓'); return; }
+    if (k === 'Backspace'){ e.preventDefault(); tecla('⌫'); return; }
+    if (k === ' '){ e.preventDefault(); tecla('espacio'); return; }
+    if (k.length === 1){ e.preventDefault(); const up = X.kb.up; X.kb.up = false; tecla(up ? k.toUpperCase() : k); return; }
+    return;
+  }
+  const v = X.view.v, dig = /^[0-9]$/.test(k);
+  const map = {pinpad:'pinkey', emerg:'edig', telefono:'tdig'};
+  if (map[v] && (dig || k === 'Backspace')){ e.preventDefault(); ACT[map[v]](dig ? k : '⌫'); return; }
+  if (v === 'ajustes' && (X.view.s === 'pin1' || X.view.s === 'pin2') && (dig || k === 'Backspace' || k === 'Enter')){ e.preventDefault(); if (k === 'Enter') ACT.pinNext(); else ACT.pind(dig ? k : '⌫'); return; }
+  if (v === 'calc'){
+    const m = {'+':'+', '-':'−', '*':'×', '/':'÷', 'Enter':'=', '=':'=', 'Backspace':'⌫', 'Escape':'C', ',':',', '.':',', '%':'%', '(':'(', ')':')'}[k] || (dig ? k : null);
+    if (m){ e.preventDefault(); calcKey(m); }
+    return;
+  }
+  if (k === 'Escape'){ atras(); }
+});
+
+/* Reloj interno */
+let ultMin = '';
+setInterval(() => {
+  if (modo !== 'live') return;
+  const m = hhmm();
+  if (m !== ultMin){ ultMin = m; if (!G || !G.drag) { const sb = $('sbar'); if (sb) sb.innerHTML = sbarHTML(); } }
+  const cr = $('crono'); if (cr && X.sw.run) cr.textContent = cronoTxt();
+  if (X.tmr.run){
+    const tm = $('tmr'); if (tm) tm.textContent = tmrTxt();
+    if (tmrLeft() <= 0){ X.tmr.run = false; X.tmr.left = 0; X.alarmFire = '¡Se acabó el tiempo del temporizador!'; if (!X.off) render(); }
+  }
+  if (X.call){ const ct = $('calltime'); if (ct){ const t = Math.floor((Date.now() - X.call.t0) / 1000); ct.textContent = (X.call.em ? 'Llamada de emergencia · ' : '') + pad2(Math.floor(t / 60)) + ':' + pad2(t % 60); } }
+  if (X.rec){ const rt = $('rect'); if (rt){ const s = Math.floor((Date.now() - X.rec.t0) / 1000); rt.textContent = '● ' + pad2(Math.floor(s / 60)) + ':' + pad2(s % 60); } }
+  if (X.vol && X.vol.until && Date.now() > X.vol.until && !(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.vol)){ X.vol = null; render(); }
+}, 200);
+setInterval(() => {
+  if (!X.charging || X.battery >= 100) return;
+  X.battery++;
+  if (modo === 'live' && (!G || !G.drag)){ const sb = $('sbar'); if (sb) sb.innerHTML = sbarHTML(); }
+}, 5000);
+
+/* =========================================================
+   DESCUBRIR
+   ========================================================= */
+const PARTES = {
+  barra:{n:1, color:'--c6', nombre:'Barra superior', det:'la barra superior', sitio:'La franja de arriba del todo, con la hora y los símbolos.',
+    texto:'Sus símbolos indican el <b>estado del móvil</b>. Deslizando el dedo hacia abajo desde aquí se abren los <b>ajustes rápidos</b>.',
+    sym:[[IC.bt, 'Bluetooth: una «B» estilizada. Está encendido y permite conectar, por ejemplo, auriculares.'], ['✈', 'Modo avión: desactiva todas las conexiones (Wi-Fi, Bluetooth y datos móviles).'], [IC.sig, 'Cobertura: las barras indican la fuerza de la señal de la red móvil.'], ['🔋⚡', 'Batería: el nivel de carga. Con un rayo, está cargando.']],
+    tip:'En este móvil, el Bluetooth está encendido y la batería se está cargando: mira la «B» y el rayo.'},
+  dock:{n:2, color:'--c1', nombre:'Iconos de abajo', det:'los iconos de abajo', sitio:'La fila de iconos de la parte inferior.',
+    texto:'Son accesos directos a las aplicaciones más usadas: <b>Teléfono</b> (llamadas), <b>Mensajes</b> (mensajes de texto), <b>Internet</b> (navegar) y <b>Cámara</b> (fotos).',
+    chips:['📞 Teléfono', '💬 Mensajes', '🌐 Internet', '📷 Cámara'], tip:'Se repiten en todas las pantallas de inicio: están accesibles desde cualquiera.'},
+  nav:{n:3, color:'--c7', nombre:'Botones de navegación', det:'los botones de navegación', sitio:'Abajo del todo, debajo de los iconos.',
+    texto:'<b>◁</b> vuelve atrás, <b>○</b> lleva a la pantalla de inicio y <b>▢</b> muestra las aplicaciones abiertas.',
+    chips:['◁ Atrás', '○ Inicio', '▢ Abiertas'], tip:'Si te pierdes dentro de una aplicación, toca ○ para volver al inicio.'},
+  puntos:{n:4, color:'--c3', nombre:'Indicador de pantallas', det:'el indicador de pantallas', sitio:'Los puntitos encima de los iconos de abajo.',
+    texto:'Cada punto es una <b>pantalla de inicio</b>; el blanco es la que estás viendo. Desliza el dedo a izquierda o derecha para cambiar.',
+    chips:['● Pantalla actual', '👉 Desliza para cambiar'], tip:'Para llevar un icono a otra pantalla: mantenlo pulsado, desliza hasta el borde y suéltalo en la pantalla que quieras.'},
+  carpeta:{n:5, color:'--c8', nombre:'Una carpeta', det:'una carpeta', sitio:'El icono con varias aplicaciones pequeñas dentro.',
+    texto:'Agrupa varias aplicaciones. Se crea <b>manteniendo pulsado un icono</b> hasta que se destaque y, sin soltar, <b>arrastrándolo sobre otro</b>.',
+    chips:['👆 Mantener pulsado', '🫳 Arrastrar sobre otro', '✏️ Tocar «Nueva carpeta»'], tip:'Para ponerle nombre, ábrela y toca donde dice «Nueva carpeta».'},
+  ajustes:{n:6, color:'--c9', nombre:'Ajustes', det:'Ajustes', sitio:'El icono del engranaje.',
+    texto:'Desde aquí se configura el móvil: <b>Sonido y vibración</b>, <b>Seguridad</b> (la clave de acceso) y <b>Cuentas</b> (la cuenta de Google).',
+    chips:['🔊 Sonido', '🔒 Seguridad', '👤 Cuentas'], tip:'A veces se llama «Configuración». Su icono suele ser un engranaje.'},
+  volumen:{n:7, color:'--c5', nombre:'Botones de volumen', det:'los botones de volumen', sitio:'En el lateral derecho, los dos de arriba.',
+    texto:'Suben y bajan el volumen. Al pulsarlos aparece una <b>barra</b> en la pantalla con una <b>campanilla</b> para silenciar y <b>tres puntos</b> para separar el volumen de la música y el de las alarmas.',
+    chips:['🔊 Subir', '🔉 Bajar', '🔔 Silenciar', '⋯ Más opciones'], tip:'En Ajustes › Sonido y vibración se ajustan los volúmenes de llamadas, medios, notificaciones y alarma.'},
+  encendido:{n:8, color:'--c4', nombre:'Botón de encendido', det:'el botón de encendido', sitio:'En el lateral derecho, debajo de los de volumen.',
+    texto:'Un toque <b>bloquea</b> el móvil y apaga la pantalla; otro la vuelve a encender. Si el móvil <b>no responde</b>, mantenlo pulsado <b>varios segundos</b> hasta que se reinicie.',
+    chips:['👆 Un toque: bloquear', '⏳ Mantener: reiniciar'], tip:'En la pantalla de bloqueo, el botón «Emergencia» permite llamar al 112 sin desbloquear.'}
+};
+const ORDEN = Object.keys(PARTES);
+(function construirSc1(){
+  $('sc1-icons').innerHTML = IC.bt + IC.wifi + IC.sig + batHTML(78, true);
+  const apps = ['contactos', 'calc', 'reloj', 'galeria', 'play', 'gmail', 'youtube', 'drive'];
+  let g = '<div class="slot part" data-part="ajustes" style="border-radius:1em"><span class="pin">?</span><div class="hic"><span class="ai" style="background:' + APPS.ajustes.bg + '">⚙️</span><span class="al">Ajustes</span></div></div>';
+  g += apps.map(k => '<div class="slot"><div class="hic"><span class="ai" style="background:' + APPS[k].bg + '">' + APPS[k].ic + '</span><span class="al">' + APPS[k].n + '</span></div></div>').join('');
+  g += '<div class="slot part" data-part="carpeta" style="border-radius:1em"><span class="pin">?</span><div class="hic"><span class="ai fold"><i>📝</i><i>📅</i><i>⛅</i><i>🗺️</i></span><span class="al">Utilidades</span></div></div>';
+  for (let i = 0; i < 10; i++) g += '<div class="slot"></div>';
+  $('sc1-grid').innerHTML = g;
+  $('sc1-dock').insertAdjacentHTML('beforeend', ['telefono', 'mensajes', 'internet', 'camara'].map(k => '<div class="slot"><div class="hic"><span class="ai" style="background:' + APPS[k].bg + '">' + APPS[k].ic + '</span></div></div>').join(''));
+})();
+const parts = k => document.querySelectorAll('#ph1 .part[data-part="' + k + '"]');
+document.querySelectorAll('#ph1 .part').forEach(p => p.style.setProperty('--pc', 'var(' + PARTES[p.dataset.part].color + ')'));
+function limpiar(){ document.querySelectorAll('#ph1 .part').forEach(p => p.classList.remove('psel', 'ok', 'bad')); }
+function pintarPins(){
+  document.querySelectorAll('#ph1 .part').forEach(p => {
+    const k = p.dataset.part, pin = p.querySelector(':scope > .pin');
+    p.classList.toggle('found', !!found[k]);
+    if (pin) pin.textContent = found[k] ? PARTES[k].n : '?';
+  });
+}
+function bienvenida(){
+  info.style.setProperty('--ic', 'var(--c1)');
+  const n = ORDEN.filter(k => found[k]).length;
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte del móvil</h2><p>Hay <b>' + ORDEN.length + ' partes</b> con un <b>?</b>, también en el <b>lateral</b> del móvil.' +
+    (n ? '<br>Ya has descubierto <b>' + n + '</b>.' : '<br>Vamos a descubrirlas juntos.') + '</p></div>';
+  restart(info);
+}
+function mostrar(k){
+  found[k] = true; guardar(); limpiar();
+  parts(k).forEach(p => p.classList.add('psel'));
+  const P = PARTES[k], todas = ORDEN.every(x => found[x]);
+  info.style.setProperty('--ic', 'var(' + P.color + ')');
+  info.innerHTML = (todas ? '<div class="win-all">🏆 ¡Has descubierto las ' + ORDEN.length + ' partes! Ahora pasa a «🛠️ Probar».</div>' : '') +
+    '<div class="pnum" style="background:var(' + P.color + ')">' + P.n + '</div><h2 class="pn">' + P.nombre + '</h2><div class="sitio">📍 ' + P.sitio + '</div><p class="tx">' + P.texto + '</p>' +
+    (P.sym ? '<div class="symrow">' + P.sym.map(([s, t]) => '<div class="s">' + s + '</div><div>' + t + '</div>').join('') + '</div>' : '') +
+    (P.chips ? '<div class="pchips">' + P.chips.map(c => '<span class="pchip">' + c + '</span>').join('') + '</div>' : '') +
+    '<div class="tip">💡 ' + P.tip + '</div>';
+  restart(info); pintarPins(); progreso();
+}
+
+/* =========================================================
+   PRACTICAR
+   ========================================================= */
+const BIGSYM = {
+  bt:'<div class="sym">' + IC.bt + '</div>', avion:'<div class="sym">✈</div>', sig:'<div class="sym">' + IC.sig + '</div>',
+  bat:'<div class="sym" style="font-size:40px">' + batHTML(40, true) + '</div>', share:'<div class="sym">' + IC.share + '</div>',
+  msg:'<div class="msg">¡Enhorabuena! Has ganado un premio. <u>Pulsa aquí para recogerlo</u>.</div>'
+};
+const TOCA = [
+  {k:'toca', part:'volumen', q:'¿Con qué botones subes y bajas el volumen?', e:'Al pulsarlos aparece la barra de volumen.'},
+  {k:'toca', part:'encendido', q:'El móvil se ha quedado colgado. ¿Qué botón mantienes pulsado varios segundos?', e:'Así se reinicia.'},
+  {k:'toca', part:'dock', q:'¿Dónde están los iconos que se repiten en todas las pantallas?', e:'Teléfono, Mensajes, Internet y Cámara.'},
+  {k:'toca', part:'barra', q:'¿Dónde miras si el móvil se está cargando?', e:'La batería de la barra superior tiene un rayo.'},
+  {k:'toca', part:'carpeta', q:'¿Cuál de estos iconos es una carpeta?', e:'Lleva dentro varias aplicaciones pequeñas.'},
+  {k:'toca', part:'ajustes', q:'Quieres ponerle un PIN al móvil. ¿Dónde entras?', e:'Ajustes › Seguridad › Bloqueo de pantalla.'},
+  {k:'toca', part:'puntos', q:'¿Dónde ves en qué pantalla de inicio estás?', e:'El punto blanco es la pantalla actual.'}
+];
+const ELIGE = [
+  {k:'elige', vis:'bt', q:'¿Qué indica este símbolo en la barra superior?', o:['El Bluetooth está encendido', 'La batería está baja', 'Hay un mensaje nuevo'], c:0, e:'Es la «B» estilizada del Bluetooth.'},
+  {k:'elige', vis:'avion', q:'¿Qué pasa cuando aparece este símbolo?', o:['Se desactivan Wi-Fi, Bluetooth y datos móviles', 'El móvil está cargando', 'Hay una alarma puesta'], c:0, e:'Es el modo avión.'},
+  {k:'elige', vis:'sig', q:'¿Qué indican estas barras?', o:['La fuerza de la señal de la red móvil', 'El volumen', 'La batería'], c:0, e:'Es la cobertura.'},
+  {k:'elige', vis:'bat', q:'¿Qué significa el rayo en la batería?', o:['Que está cargando', 'Que hay tormenta', 'Que se va a apagar'], c:0, e:'Con el rayo, la batería se está cargando.'},
+  {k:'elige', vis:'msg', q:'Te llega este mensaje. ¿Qué haces?', o:['No pulso el enlace y lo borro', 'Pulso el enlace para ver el premio', 'Respondo con mis datos'], c:0, e:'Los mensajes que prometen premios suelen ser intentos de fraude.'},
+  {k:'elige', vis:'share', q:'En la Galería, ¿para qué sirve este símbolo?', o:['Para compartir la foto', 'Para borrarla', 'Para editarla'], c:0, e:'Los tres puntos conectados son «Compartir».'},
+  {k:'elige', q:'El móvil está bloqueado y necesitas llamar al 112. ¿Qué haces?', o:['Toco «Emergencia» en la pantalla de bloqueo y marco 112', 'Primero tengo que desbloquearlo', 'Desde un móvil bloqueado no se puede'], c:0, e:'Se puede marcar el 112 sin desbloquear.'},
+  {k:'elige', q:'Quieres que la alarma suene más fuerte sin subir la música. ¿Qué cambias?', o:['El volumen de alarma', 'El volumen de medios', 'El volumen de notificaciones'], c:0, e:'Cada tipo de sonido tiene su propio volumen.'},
+  {k:'elige', q:'¿Para qué es imprescindible una cuenta de Google?', o:['Para descargar aplicaciones de Google Play Store', 'Para hacer llamadas', 'Para usar la calculadora'], c:0, e:'Además sirve para Gmail, Drive, YouTube y copias de seguridad.'},
+  {k:'elige', q:'¿Cómo ves la calculadora científica, con raíces y potencias?', o:['Girando el móvil a posición horizontal', 'Tocando dos veces el =', 'Desde Ajustes'], c:0, e:'En horizontal aparecen más funciones.'},
+  {k:'elige', q:'En la cámara, ¿para qué tocas la pantalla?', o:['Para enfocar ese punto', 'Para hacer la foto', 'Para encender el flash'], c:0, e:'La foto se hace con el círculo blanco de abajo.'},
+  {k:'elige', q:'¿Cómo se crea una carpeta en la pantalla de inicio?', o:['Manteniendo pulsado un icono y arrastrándolo sobre otro', 'Tocando dos veces un icono', 'Desde la Calculadora'], c:0, e:'Luego se le pone nombre tocando «Nueva carpeta».'},
+  {k:'elige', q:'¿Cómo creas un contacto de emergencia?', o:['Como un contacto normal, con un nombre que diga «Contacto de emergencia»', 'Llamando al 112', 'Desde la Cámara'], c:0, e:'Así cualquiera sabrá a quién avisar.'},
+  {k:'elige', q:'Antes de hacer una foto, ¿qué conviene comprobar?', o:['Que el objetivo esté limpio', 'Que el Bluetooth esté encendido', 'Que el volumen esté alto'], c:0, e:'Con el objetivo sucio, las fotos salen borrosas.'}
+];
+let pq = [], pi = 0, aciertos = 0, primera = true, respondida = false;
+function empezarPractica(){
+  const toca = shuffle(TOCA.slice()).slice(0, 4), elige = shuffle(ELIGE.slice()).slice(0, 8).map(q => {
+    const idx = shuffle(q.o.map((_, i) => i));
+    return Object.assign({}, q, {o:idx.map(i => q.o[i]), c:idx.indexOf(q.c)});
+  });
+  pq = shuffle(toca.concat(elige)); pi = 0; aciertos = 0; siguiente();
+}
+function siguiente(){
+  limpiar();
+  if (pi >= pq.length) return finPractica();
+  const q = pq[pi]; primera = true; respondida = false;
+  info.style.setProperty('--ic', 'var(--c3)');
+  info.innerHTML = '<div class="qn">Pregunta ' + (pi + 1) + ' de ' + pq.length + '</div><h2 class="qt">' + q.q + '</h2>' + (q.vis ? '<div class="qvis">' + BIGSYM[q.vis] + '</div>' : '') +
+    (q.k === 'toca' ? '<p class="qhint">👆 Tócalo en el móvil (también en sus laterales).</p>' : '<div class="opts">' + q.o.map((o, i) => '<button class="qo" data-i="' + i + '" type="button">' + o + '</button>').join('') + '</div>') +
+    '<div class="feedback" id="fb"></div><div id="qnext"></div>';
+  info.querySelectorAll('.qo').forEach(b => b.onclick = () => elegir(+b.dataset.i, b));
+  restart(info); progreso();
+}
+function acierto(txt){
+  respondida = true; if (primera) aciertos++;
+  const fb = $('fb'); fb.className = 'feedback good'; fb.textContent = '✅ ¡Correcto! ' + txt;
+  $('qnext').innerHTML = '<button class="pbtn" id="sig" type="button">' + (pi + 1 === pq.length ? '🏆 Terminar' : 'Siguiente ➜') + '</button>';
+  $('sig').onclick = () => { pi++; siguiente(); };
+  progreso();
+}
+function fallo(txt){ primera = false; const fb = $('fb'); fb.className = 'feedback no'; fb.textContent = '❌ ' + txt; }
+function elegir(i, b){
+  const q = pq[pi]; if (respondida || q.k !== 'elige') return;
+  if (i === q.c){ b.classList.add('ok'); info.querySelectorAll('.qo').forEach(x => x.disabled = true); acierto(q.e); }
+  else { b.classList.add('bad'); b.disabled = true; fallo('No es eso. ¡Prueba otra vez!'); }
+}
+function tocarParte(k){
+  const q = pq[pi]; if (!q || respondida || q.k !== 'toca') return;
+  if (k === q.part){ parts(k).forEach(p => p.classList.add('ok')); acierto(PARTES[k].nombre + '. ' + q.e); }
+  else { parts(k).forEach(p => { p.classList.remove('bad'); p.offsetHeight; p.classList.add('bad'); }); setTimeout(() => parts(k).forEach(p => p.classList.remove('bad')), 700); fallo('Eso es ' + PARTES[k].det + '. ¡Inténtalo otra vez!'); }
+}
+function finPractica(){
+  info.style.setProperty('--ic', 'var(--c3)');
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Has acertado a la primera <b>' + aciertos + ' de ' + pq.length + '</b> preguntas.</p><button class="pbtn" id="otra" type="button">🔄 Practicar otra vez</button></div>';
+  $('otra').onclick = empezarPractica; progreso();
+}
+document.querySelectorAll('#ph1 .part').forEach(p => p.addEventListener('click', e => {
+  if (e.target.closest('.part') !== p) return;
+  e.stopPropagation();
+  modo === 'desc' ? mostrar(p.dataset.part) : (modo === 'prac' ? tocarParte(p.dataset.part) : null);
+}));
+
+/* =========================================================
+   Panel de Probar, modos y progreso
+   ========================================================= */
+function renderPanel(){
+  if (modo !== 'live') return;
+  const hechos = TODOS.filter(r => retos[r.id]).length;
+  info.style.setProperty('--ic', 'var(' + (X.ultima ? X.ultima.color : '--c1') + ')');
+  let h = (hechos === TODOS.length ? '<div class="win-all">🏆 ¡Has superado los ' + TODOS.length + ' retos!</div>' : '') +
+    '<h3 class="ph3">Lo que acaba de pasar</h3><div class="last">' + (X.gotit ? '<span class="gotit">✅ Reto conseguido: ' + X.gotit + '</span>' : '') +
+    (X.ultima ? X.ultima.html : 'Este móvil funciona de verdad. Elige una <b>estación</b> aquí abajo y ve haciendo sus retos. Los botones de la izquierda son los del <b>lateral</b> del móvil.') + '</div>' +
+    '<h3 class="ph3">Estaciones <small>(toca una para ver cómo se hace y sus retos)</small></h3>';
+  ESTACIONES.forEach(s => {
+    const n = s.retos.filter(r => retos[r.id]).length, open = X.station === s.id;
+    h += '<div class="st' + (open ? ' open' : '') + (n === s.retos.length ? ' done' : '') + '"><button class="sth" data-st="' + s.id + '" type="button"><span class="ic">' + s.ic + '</span><b>' + s.t + '</b><span class="cnt">' + n + '/' + s.retos.length + '</span></button>' +
+      (open ? '<div class="stb"><div class="guia">' + s.guia + '</div><ul class="retos">' + s.retos.map(r => '<li class="' + (retos[r.id] ? 'on' : '') + '"><span class="rb">' + (retos[r.id] ? '✓' : '') + '</span><span class="rtx">' + r.t + '<small>' + r.h + '</small></span></li>').join('') + '</ul></div>' : '') + '</div>';
+  });
+  const top = info.scrollTop;
+  info.innerHTML = h;
+  info.scrollTop = top;
+  if (X.verSt){ X.verSt = false; const o = info.querySelector('.st.open'); if (o) o.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+  info.querySelectorAll('.sth').forEach(b => b.onclick = () => { X.station = X.station === b.dataset.st ? null : b.dataset.st; X.gotit = null; renderPanel(); });
+}
+function progreso(){
+  let n, tot, txt;
+  if (modo === 'desc'){ n = ORDEN.filter(k => found[k]).length; tot = ORDEN.length; txt = '⭐ ' + n + ' de ' + tot + ' partes descubiertas'; }
+  else if (modo === 'prac'){ tot = pq.length || 12; n = Math.min(tot, pi + (respondida ? 1 : 0)); txt = '🎯 ' + n + ' de ' + tot + ' preguntas'; }
+  else { n = TODOS.filter(r => retos[r.id]).length; tot = TODOS.length; txt = '🛠️ ' + n + ' de ' + tot + ' retos superados'; }
+  $('prog-txt').textContent = txt;
+  $('prog-fill').style.width = (n / tot * 100) + '%';
+  if (modo === 'live') renderPanel();
+}
+function setModo(m){
+  modo = m;
+  ['desc', 'live', 'prac'].forEach(x => $('m-' + x).classList.toggle('on', x === m));
+  $('st-parts').hidden = m === 'live';
+  $('st-live').hidden = m !== 'live';
+  $('sc1').classList.toggle('mode-practica', m === 'prac');
+  $('ph1').classList.toggle('mode-practica', m === 'prac');
+  limpiar();
+  if (m === 'desc') bienvenida();
+  else if (m === 'prac') empezarPractica();
+  else render();
+  progreso();
+}
+$('m-desc').onclick = () => setModo('desc');
+$('m-live').onclick = () => setModo('live');
+$('m-prac').onclick = () => setModo('prac');
+$('reset').onclick = () => {
+  if (modo === 'desc') found = {};
+  else if (modo === 'live'){ if (!confirm('¿Empezar de nuevo? Se borrarán los retos conseguidos y el móvil volverá a como estaba.')) return; retos = {}; nuevoEstado(); }
+  guardar(); pintarPins(); setModo(modo);
+};
+pintarPins();
+setModo('desc');
+</script>
+</body>
+</html>
