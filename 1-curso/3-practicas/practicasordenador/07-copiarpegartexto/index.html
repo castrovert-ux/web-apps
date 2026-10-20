@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Copiar texto dentro de un documento · Práctica de informática</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366; --c3: #FFD93D; --c4: #FF6B6B; --c5: #6BCB77; --c6: #4DA3FF; --c7: #C77DFF;
+    --bg: #0c1527; --card: #131f38; --text: #FFFFFE; --sub: #92a4c9;
+    --win-bg: #eef2f7; --win-ink: #1e293b;
+    --word-blue: #185abd; --edge-blue: #0078d4;
+    --accent: var(--c6);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font-family: inherit; }
+  button:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+
+  /* Fondos animados suaves */
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.16; animation: float 16s ease-in-out infinite alternate; }
+  .blob:nth-child(1) { width: 45vw; height: 45vw; background: var(--c6); top: -10vw; left: -10vw; }
+  .blob:nth-child(2) { width: 38vw; height: 38vw; background: var(--c7); bottom: -12vw; right: -8vw; animation-delay: -6s; }
+  .blob:nth-child(3) { width: 30vw; height: 30vw; background: var(--c3); top: 40%; left: 60%; animation-delay: -10s; }
+  @keyframes float { from { transform: translate(0,0) scale(1); } to { transform: translate(25px,20px) scale(1.06); } }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.97) translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* Estructura principal */
+  .app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 2vh 2.2vw 1.2vh; gap: 1.2vh; }
+  .top { display: flex; align-items: center; gap: 1.2vw; flex-shrink: 0; }
+  .badge {
+    background: linear-gradient(135deg, #185abd, #3b82f6); color: #fff; font-weight: 800;
+    font-size: clamp(0.72rem, 1vw, 1.05rem); letter-spacing: 2px; text-transform: uppercase;
+    padding: 0.5em 1.3em; border-radius: 100px; white-space: nowrap; display: flex; align-items: center; gap: 0.4em;
+  }
+  .top-title { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1.15rem, 2vw, 2.2rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-actions { margin-left: auto; display: flex; align-items: center; gap: 0.6vw; flex-shrink: 0; }
+  .count { font-weight: 800; color: var(--c1); font-size: clamp(0.85rem, 1.2vw, 1.35rem); white-space: nowrap; margin-right: 0.6vw; }
+  .tbtn {
+    border: 2px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: var(--sub);
+    font-weight: 800; font-size: clamp(0.8rem, 1vw, 1.1rem); padding: 0.45em 0.95em; border-radius: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .tbtn:hover { color: var(--text); border-color: var(--c6); }
+  .tbtn.on { color: #0c1527; background: var(--c3); border-color: var(--c3); }
+
+  /* Lista de tareas */
+  .stage { flex: 1; min-height: 0; overflow-y: auto; padding: 0.2vh 0.4vw 2vh 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent; }
+  .intro { color: var(--sub); font-weight: 700; font-size: clamp(0.95rem, 1.35vw, 1.55rem); line-height: 1.35; margin: 0 0 1.2vh; }
+  .intro b { color: var(--text); }
+  .tasks { list-style: none; display: flex; flex-direction: column; gap: 1.1vh; }
+
+  .task {
+    --ac: var(--c6); background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-left: 0.5vw solid var(--ac);
+    border-radius: 20px; overflow: hidden; transition: opacity 0.2s, box-shadow 0.2s;
+  }
+  .task.st-locked { opacity: 0.5; border-left-color: rgba(255,255,255,0.15); }
+  .task.st-open { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 70%, transparent), 0 1.2em 3em rgba(0,0,0,0.5); }
+  .t-head {
+    width: 100%; display: flex; align-items: center; gap: 1.1vw; padding: 1.2vh 1.4vw; background: none; border: 0;
+    color: var(--text); text-align: left; cursor: pointer; font-size: clamp(0.95rem, 1.35vw, 1.6rem);
+  }
+  .st-locked .t-head { cursor: not-allowed; }
+  .st-open .t-head { border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .t-num {
+    width: 2.2em; height: 2.2em; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-weight: 800;
+    background: color-mix(in srgb, var(--ac) 22%, transparent); color: var(--ac);
+  }
+  .st-done .t-num { background: var(--c1); color: #0c1527; }
+  .st-skip .t-num { background: rgba(255,255,255,0.12); color: var(--text); }
+  .st-locked .t-num { background: rgba(255,255,255,0.08); color: var(--sub); }
+  .t-ic { font-size: 1.7em; line-height: 1; flex-shrink: 0; }
+  .t-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15em; }
+  .t-txt b { font-family: 'Fredoka One', 'Nunito', sans-serif; font-weight: 400; font-size: 1.22em; line-height: 1.1; }
+  .t-txt small { color: var(--sub); font-weight: 700; font-size: 0.8em; }
+  .t-state {
+    flex-shrink: 0; font-weight: 800; font-size: 0.84em; padding: 0.35em 0.9em; border-radius: 100px; white-space: nowrap;
+    border: 2px solid rgba(255,255,255,0.15); color: var(--sub);
+  }
+  .st-avail .t-state { border: 0; background: linear-gradient(135deg, var(--c1), #1aa851); color: #0c1527; }
+  .st-open .t-state { border-color: var(--c3); color: var(--c3); }
+  .stars { color: var(--c3); letter-spacing: 2px; font-size: 0.95em; }
+  .stars i { color: rgba(255,255,255,0.22); font-style: normal; }
+
+  /* Zona abierta: Monitor ancho + instrucciones compactas arriba */
+  .t-body { padding: 1.4vh 1.4vw; animation: popIn 0.35s cubic-bezier(.34,1.56,.64,1); display: flex; flex-direction: column; gap: 1.2vh; }
+  
+  .compact-guide {
+    display: flex; flex-direction: column; gap: 0.8vh; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1vh 1.2vw;
+  }
+  .guide-row { display: flex; align-items: center; justify-content: space-between; gap: 1vw; flex-wrap: wrap; }
+  .now {
+    flex: 1; min-width: 320px; background: rgba(255,217,61,0.09); border: 2.5px solid var(--c3);
+    border-radius: 14px; padding: 0.8vh 1.1vw; box-shadow: 0 0 0 4px rgba(255,217,61,0.06);
+  }
+  .now-n { color: var(--c3); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(0.72rem, 0.9vw, 1.05rem); }
+  .now-t { font-weight: 700; line-height: 1.3; font-size: clamp(1.05rem, 1.4vw, 1.7rem); margin-top: 0.25vh; }
+  .now-t b { color: var(--c3); font-weight: 800; }
+  .now-t kbd { background: rgba(255,255,255,0.18); border-radius: 6px; padding: 0.1em 0.45em; border-bottom: 2px solid rgba(0,0,0,0.4); font-family: inherit; }
+
+  .acts { display: flex; align-items: center; gap: 0.6vw; flex-wrap: wrap; }
+  .abtn {
+    border: 2px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: var(--text); font-weight: 800;
+    border-radius: 12px; padding: 0.45em 0.95em; cursor: pointer; font-size: clamp(0.85rem, 1.1vw, 1.35rem);
+  }
+  .abtn:hover { border-color: var(--c3); }
+  .abtn.go { border: 0; background: linear-gradient(135deg, var(--c1), #1aa851); color: #0c1527; }
+  .abtn.quiet { border-color: transparent; background: none; color: var(--sub); }
+  .abtn[hidden] { display: none; }
+
+  .guide-bottom { display: flex; align-items: center; justify-content: space-between; gap: 1vw; flex-wrap: wrap; }
+  .pips { display: flex; gap: 0.4vw; flex: 1; max-width: 380px; }
+  .pip { flex: 1; height: 7px; border-radius: 6px; background: rgba(255,255,255,0.12); transition: background 0.3s; }
+  .pip.past { background: var(--c1); }
+  .pip.cur { background: var(--c3); }
+  .ex-note {
+    font-weight: 700; color: var(--sub); font-size: clamp(0.8rem, 1vw, 1.25rem);
+    background: rgba(77,163,255,0.1); border-radius: 10px; padding: 0.35em 0.85em;
+  }
+  .ex-note b { color: var(--text); }
+
+  .fb { display: none; font-weight: 800; line-height: 1.3; border-radius: 12px; padding: 0.5em 0.9em; font-size: clamp(0.9rem, 1.2vw, 1.45rem); }
+  .fb.ok { display: block; background: rgba(37,211,102,0.16); color: #86ffb0; border: 1.5px solid rgba(37,211,102,0.4); }
+  .fb.bad { display: block; background: rgba(255,107,107,0.16); color: #ffa3a3; border: 1.5px solid rgba(255,107,107,0.4); }
+  .fb.soft { display: block; background: rgba(77,163,255,0.16); color: #b0d6ff; border: 1.5px solid rgba(77,163,255,0.4); }
+
+  /* -------------------------------------------------------------
+     MONITOR WINDOWS 11 SIMULADO (Grande, ancho y bien visible)
+     ------------------------------------------------------------- */
+  .monitor-box {
+    width: 100%; border-radius: 18px; background: #162035; padding: 0.55vw;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.08), 0 1.5em 3.5em rgba(0,0,0,0.6);
+  }
+  .win11-screen {
+    width: 100%; aspect-ratio: 16 / 9.6; min-height: 480px; max-height: 68vh;
+    background: #0f172a; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+    position: relative; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .desktop-area {
+    flex: 1; position: relative; background: radial-gradient(circle at 50% 30%, #1e293b, #090d16 85%);
+    overflow: hidden; padding: 0.8vw; display: flex;
+  }
+
+  /* Ventana de aplicación Windows 11 */
+  .win-app {
+    width: 100%; height: 100%; background: #ffffff; color: var(--win-ink); border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.1);
+    display: flex; flex-direction: column; overflow: hidden; position: relative;
+  }
+  .win-titlebar {
+    height: 38px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center;
+    padding: 0 0.8em; justify-content: space-between; font-weight: 700; font-size: 0.9em; flex-shrink: 0;
+  }
+  .win-app-name { display: flex; align-items: center; gap: 0.6em; color: #374151; }
+  .win-btns { display: flex; align-items: center; gap: 0.4em; }
+  .wbtn { width: 14px; height: 14px; border-radius: 50%; border: 0; background: #d1d5db; display: inline-block; }
+  .wbtn.close { background: #f87171; }
+  .wbtn.max { background: #fbbf24; }
+  .wbtn.min { background: #34d399; }
+
+  /* Cintas de Word */
+  .word-ribbon { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 0.35em 0.8em; display: flex; flex-direction: column; gap: 0.2em; flex-shrink: 0; }
+  .ribbon-tabs { display: flex; gap: 1.2em; font-size: 0.82em; font-weight: 800; color: #4b5563; padding-bottom: 0.2em; border-bottom: 1px solid #f3f4f6; }
+  .rtab.active { color: var(--word-blue); border-bottom: 2px solid var(--word-blue); }
+  .ribbon-tools { display: flex; align-items: center; gap: 0.8em; padding-top: 0.25em; }
+  .rib-group { display: flex; align-items: center; gap: 0.35em; border-right: 1px solid #e5e7eb; padding-right: 0.8em; }
+  .tool-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff;
+    border: 1.5px solid #d1d5db; border-radius: 7px; padding: 0.35em 0.65em; font-weight: 800; font-size: 0.8em;
+    cursor: pointer; gap: 0.2em; color: #1f2937; transition: all 0.15s;
+  }
+  .tool-btn:hover { background: #eff6ff; border-color: var(--word-blue); color: var(--word-blue); }
+  .tool-btn.big { min-width: 54px; height: 50px; }
+  .tool-btn.small { flex-direction: row; height: 24px; padding: 0 0.5em; font-size: 0.78em; gap: 0.3em; }
+
+  /* Hoja de papel de Word */
+  .doc-scroll { flex: 1; background: #e5e7eb; overflow-y: auto; padding: 1.2vw; display: flex; justify-content: center; }
+  .word-page {
+    width: 100%; max-width: 820px; min-height: 100%; background: #ffffff; padding: 2vw 2.5vw;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1); border-radius: 4px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: clamp(1rem, 1.25vw, 1.5rem); line-height: 1.6; color: #1e293b; position: relative;
+  }
+  .doc-title { font-size: 1.5em; font-weight: 800; color: #0f172a; margin-bottom: 0.8em; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.3em; }
+  .doc-p { margin-bottom: 0.9em; }
+
+  /* Navegador Web (Edge Wikipedia) */
+  .edge-bar { background: #f3f4f6; border-bottom: 1px solid #e5e7eb; padding: 0.4em 0.8em; display: flex; align-items: center; gap: 0.8em; flex-shrink: 0; }
+  .nav-btns { display: flex; gap: 0.4em; color: #6b7280; font-size: 1.1em; }
+  .address-box {
+    flex: 1; background: #ffffff; border: 1.5px solid #d1d5db; border-radius: 20px; padding: 0.35em 1em;
+    font-size: 0.85em; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 0.5em; cursor: pointer;
+  }
+  .address-box.selected { background: #bfdbfe; border-color: #2563eb; color: #1e3a8a; }
+  .web-page { flex: 1; overflow-y: auto; background: #ffffff; padding: 1.8vw 2.2vw; color: #202122; font-family: sans-serif; font-size: clamp(0.95rem, 1.2vw, 1.4rem); line-height: 1.55; }
+  .wiki-header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid #a2a9b1; margin-bottom: 1em; padding-bottom: 0.4em; }
+  .wiki-h1 { font-size: 1.6em; font-family: serif; font-weight: normal; }
+  .wiki-sidebox { float: right; margin: 0 0 1em 1.5em; width: 220px; background: #f8f9fa; border: 1px solid #a2a9b1; padding: 0.6em; border-radius: 4px; text-align: center; }
+  .wiki-img { width: 100%; height: 130px; background: #93c5fd; border-radius: 4px; display: grid; place-items: center; cursor: pointer; position: relative; overflow: hidden; }
+
+  /* Elementos interactivos / selección de texto */
+  .sel-target { cursor: pointer; border-radius: 3px; padding: 0.05em 0.15em; transition: background 0.15s; }
+  .sel-target:hover { background: rgba(59, 130, 246, 0.15); }
+  .sel-target.selected { background: #3b82f6 !important; color: #ffffff !important; }
+  .sel-target.selected * { color: #ffffff !important; }
+  .cur-line {
+    display: inline-block; width: 2.5px; height: 1.2em; background: #2563eb; vertical-align: middle;
+    animation: blink 1s infinite; margin-left: 2px;
+  }
+  @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+  .paste-target-box {
+    border: 2px dashed #94a3b8; border-radius: 6px; padding: 0.5em 0.8em; margin: 0.6em 0;
+    background: #f8fafc; color: #64748b; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .paste-target-box:hover { border-color: #2563eb; background: #eff6ff; color: #1e40af; }
+  .paste-target-box.active-cursor { border-color: #2563eb; background: #eff6ff; color: #0f172a; }
+
+  /* Menú contextual simulado (clic derecho) */
+  .context-menu {
+    position: absolute; z-index: 100; background: #ffffff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08);
+    padding: 0.4em 0; min-width: 190px; color: #1e293b; font-size: 0.9em; font-weight: 700;
+  }
+  .ctx-item { padding: 0.5em 1em; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .ctx-item:hover { background: #eff6ff; color: #1d4ed8; }
+  .ctx-item.disabled { opacity: 0.4; cursor: not-allowed; }
+  .ctx-item small { color: #64748b; font-size: 0.85em; font-weight: normal; }
+
+  /* Icono flotante opciones de pegado */
+  .paste-options-bubble {
+    position: absolute; background: #ffffff; border: 1.5px solid #3b82f6; border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2); padding: 0.35em 0.6em; display: flex; align-items: center; gap: 0.5em;
+    font-size: 0.85em; font-weight: 800; color: #1e40af; z-index: 50; animation: popIn 0.25s;
+  }
+  .p-opt-btn {
+    border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 4px; padding: 0.25em 0.5em;
+    cursor: pointer; font-weight: 800; display: flex; align-items: center; gap: 0.3em;
+  }
+  .p-opt-btn:hover { background: #dbeafe; border-color: #3b82f6; }
+
+  /* Barra de tareas Windows 11 (abajo) */
+  .win11-taskbar {
+    height: 48px; background: rgba(243, 244, 246, 0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1vw; flex-shrink: 0; z-index: 20;
+  }
+  .tb-center { display: flex; align-items: center; gap: 0.5vw; margin: 0 auto; }
+  .tb-icon {
+    width: 38px; height: 38px; border-radius: 8px; display: grid; place-items: center; cursor: pointer;
+    background: transparent; border: 0; position: relative; transition: background 0.15s;
+  }
+  .tb-icon:hover { background: rgba(0,0,0,0.06); }
+  .tb-icon.active { background: rgba(0,0,0,0.08); }
+  .tb-icon.active::after {
+    content: ''; position: absolute; bottom: 2px; width: 14px; height: 3px; border-radius: 2px; background: var(--word-blue);
+  }
+  .tb-tray { display: flex; align-items: center; gap: 0.6em; font-size: 0.78em; font-weight: 800; color: #374151; }
+
+  /* Barra de atajos de teclado asistidos (imprescindible para pizarra o alumnos sin teclado) */
+  .kb-shortcuts-bar {
+    background: #0f172a; border-top: 1px solid rgba(255,255,255,0.08); padding: 0.5em 0.8vw;
+    display: flex; align-items: center; justify-content: center; gap: 0.6vw; flex-wrap: wrap; flex-shrink: 0;
+  }
+  .kb-label { font-weight: 800; font-size: 0.8em; color: var(--sub); margin-right: 0.4em; }
+  .key-chip {
+    background: #1e293b; border: 1.5px solid #334155; color: #f8fafc; font-weight: 800;
+    font-size: clamp(0.75rem, 0.95vw, 1.1rem); padding: 0.35em 0.8em; border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; gap: 0.35em; box-shadow: 0 2px 0 #090d16; transition: all 0.1s;
+  }
+  .key-chip:hover { border-color: var(--c3); transform: translateY(-1px); }
+  .key-chip:active { transform: translateY(1px); box-shadow: none; }
+  .key-chip kbd { font-family: inherit; font-size: 1.05em; color: var(--c3); }
+
+  /* Indicaciones y ayudas visuales */
+  .hint-glow { outline: 3px solid var(--c3) !important; outline-offset: 2px; animation: pulseGlow 1s infinite alternate; }
+  @keyframes pulseGlow { from { box-shadow: 0 0 6px var(--c3); } to { box-shadow: 0 0 16px var(--c3); } }
+  .shake { animation: shake 0.35s; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  /* Pantalla final con trofeo */
+  .final { display: flex; align-items: center; gap: 1.6vw; flex-wrap: wrap; padding: 1.6vh 1.6vw; border-left-color: var(--c3); }
+  .final.wait { color: var(--sub); font-weight: 700; font-size: clamp(0.9rem, 1.3vw, 1.5rem); }
+  .trophy { font-size: clamp(3rem, 5.5vw, 6rem); animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-8px) rotate(4deg); } }
+  .final h2 { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1.8rem, 3.2vw, 3.6rem); color: var(--c3); }
+  .final p { color: var(--sub); font-weight: 700; font-size: clamp(1rem, 1.4vw, 1.7rem); line-height: 1.4; }
+  .final p b { color: var(--text); }
+  .final .fin-txt { flex: 1; min-width: 260px; }
+  .sumlist { display: flex; flex-wrap: wrap; gap: 0.8vw; margin-top: 1vh; }
+  .sumlist span { background: rgba(255,255,255,0.06); border-radius: 100px; padding: 0.35em 0.9em; font-weight: 800; font-size: clamp(0.85rem, 1.2vw, 1.4rem); }
+
+  .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,0.08); z-index: 2; }
+  .prog-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--c6), var(--c1), var(--c3)); transition: width 0.4s; }
+  .help { color: var(--sub); font-weight: 700; font-size: clamp(0.75rem, 0.95vw, 1.05rem); text-align: center; flex-shrink: 0; opacity: 0.8; }
+
+  @media (max-width: 950px) {
+    body { overflow: auto; }
+    html, body { height: auto; }
+    .app { min-height: 100vh; height: auto; }
+    .stage { overflow: visible; }
+    .win11-screen { aspect-ratio: auto; min-height: 520px; }
+    .top { flex-wrap: wrap; }
+    .badge, .count { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="app">
+  <div class="top">
+    <div class="badge">💻 Informática Cruz Roja</div>
+    <div class="top-title">Copiar texto dentro de un documento</div>
+    <div class="top-actions">
+      <span class="count" id="count"></span>
+      <button class="tbtn" id="btn-free" type="button" title="Para el profesor: abre todas las tareas">🔓 Abrir todas</button>
+      <button class="tbtn" id="btn-full" type="button" title="Pantalla completa">⛶ Pantalla completa</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="help">Haz clic en los programas como en tu ordenador · Puedes usar los atajos de tu teclado real o los botones de la pantalla</div>
+</div>
+<div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const qs = s => document.querySelector(s);
+const qsa = s => document.querySelectorAll(s);
+
+/* =========================================================
+   Iconos y gráficos SVG en línea (Windows 11 / Word / Edge)
+   ========================================================= */
+const ICONS = {
+  win: `<svg width="18" height="18" viewBox="0 0 24 24" fill="#0078d4"><path d="M2 3h9v9H2V3zm11 0h9v9h-9V3zM2 13h9v9H2v-9zm11 0h9v9h-9v-9z"/></svg>`,
+  word: `<svg width="22" height="22" viewBox="0 0 24 24" fill="#185abd"><rect width="24" height="24" rx="4" fill="#185abd"/><path d="M6 7l2.5 10h2.5l2-7 2 7h2.5L20 7h-2.5l-1.8 7-2-7h-2.4l-2 7-1.8-7H6z" fill="#ffffff"/></svg>`,
+  edge: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#0078d4"/><path d="M12 4a8 8 0 0 1 8 8c0 4.4-3.6 8-8 8a8 8 0 0 1-8-8c0-2.5 1.1-4.7 3-6.2" stroke="#fff" stroke-width="2" fill="none"/></svg>`,
+  copy: `📋`, cut: `✂️`, paste: `📋`, selectAll: `🔲`, undo: `↩️`
+};
+
+/* =========================================================
+   Definición de las 6 Tareas del Tema
+   ========================================================= */
+const EX = [
+  {
+    icon: '🎯', accent: 'var(--c6)',
+    title: 'Aprender a seleccionar texto con el ratón',
+    objective: 'Seleccionar una palabra, un párrafo y todo el documento.',
+    note: '<b>Doble clic:</b> selecciona una palabra. <b>Arrastrar:</b> selecciona un fragmento. <b>Ctrl + E:</b> selecciona todo.',
+    steps: [
+      {
+        text: 'Haz <b>doble clic</b> sobre la palabra <b>"Valladolid"</b> en el texto para seleccionarla.',
+        hint: 'Haz dos clics rápidos sobre la palabra "Valladolid" (en azul tenue).',
+        ok: 'word_valla',
+        setup: c => { c.app = 'word'; c.sel = ''; },
+        done: '¡Bien! El doble clic selecciona la palabra entera de una sola vez.'
+      },
+      {
+        text: 'Ahora <b>arrastra el ratón</b> (o haz un clic) sobre las palabras <b>"río Pisuerga"</b> para seleccionarlas.',
+        hint: 'Haz clic sobre el texto "río Pisuerga" para seleccionarlo.',
+        ok: 'frag_pisuerga',
+        setup: c => { c.sel = ''; },
+        done: '¡Exacto! Así se eligen varias palabras seguidas.'
+      },
+      {
+        text: 'Selecciona <b>todo el documento a la vez</b> pulsando el atajo <kbd>Ctrl + E</kbd> (o el botón de abajo).',
+        hint: 'Pulsa Ctrl + E en tu teclado o haz clic en el botón "[ Ctrl + E ] Seleccionar todo".',
+        ok: 'key_ctrle',
+        setup: c => { c.sel = ''; },
+        done: '¡Perfecto! Ctrl + E selecciona todo el contenido en un segundo.'
+      },
+      {
+        text: 'Haz un <b>clic en un espacio en blanco</b> del folio para desmarcar el texto.',
+        hint: 'Haz clic en el fondo blanco de la hoja para quitar la selección.',
+        ok: 'doc_blank',
+        done: '¡Muy bien! Un clic fuera quita la selección y vuelve a dejar el cursor.'
+      }
+    ]
+  },
+
+  {
+    icon: '📋', accent: 'var(--c1)',
+    title: 'Copiar y duplicar texto con la cinta de Word',
+    objective: 'Copiar un título y pegarlo en otra parte usando los botones de Word.',
+    note: 'El botón <b>Copiar</b> guarda una copia en el portapapeles sin borrar el original.',
+    steps: [
+      {
+        text: 'Haz doble clic sobre el título <b>"Fiestas patronales"</b> para seleccionarlo.',
+        hint: 'Haz doble clic sobre el texto "Fiestas patronales".',
+        ok: 'title_fiestas',
+        setup: c => { c.app = 'word'; c.sel = ''; c.copied = ''; c.pasted = false; },
+        done: '¡Título seleccionado!'
+      },
+      {
+        text: 'En la esquina superior izquierda de Word, pulsa el botón <b>Copiar</b> 📋.',
+        hint: 'Busca el botón Copiar en la barra superior (en la pestaña Inicio).',
+        ok: 'btn_ribbon_copy',
+        after: c => { c.copied = 'Fiestas patronales'; c.sel = ''; },
+        wrong: { btn_ribbon_cut: 'Has pulsado Cortar (✂️). Para duplicar sin borrar, usa <b>Copiar</b> 📋.' },
+        done: '¡Copiado! El texto ya está guardado en la memoria del ordenador.'
+      },
+      {
+        text: 'Haz <b>clic en el recuadro punteado</b> de abajo donde parpadea la rayita.',
+        hint: 'Haz clic en la línea vacía indicada con el recuadro punteado.',
+        ok: 'target_slot_1',
+        after: c => { c.cursorAtSlot = true; },
+        done: '¡Cursor colocado! La rayita parpadeante indica dónde aparecerá el texto.'
+      },
+      {
+        text: 'Pulsa el botón grande <b>Pegar</b> 📋 en la cinta de opciones de Word.',
+        hint: 'Haz clic en el botón Pegar en la parte superior izquierda.',
+        ok: 'btn_ribbon_paste',
+        after: c => { c.pasted = true; },
+        done: '¡Conseguido! El texto se ha duplicado exactamente en el lugar elegido.'
+      }
+    ]
+  },
+
+  {
+    icon: '✂️', accent: 'var(--c4)',
+    title: 'Cortar y mover texto desordenado (Ctrl + X y Ctrl + V)',
+    objective: 'Trasladar una frase descolocada a su sitio correcto con el teclado.',
+    note: '<b>Cortar (Ctrl + X):</b> quita el texto de su sitio para moverlo a otro. <b>Pegar: Ctrl + V</b>.',
+    steps: [
+      {
+        text: 'La frase <i>"¡Buen provecho a todos!"</i> está al principio y debería estar al final. <b>Selecciónala</b> con un clic.',
+        hint: 'Haz clic sobre la frase "¡Buen provecho a todos!".',
+        ok: 'sel_descolocado',
+        setup: c => { c.app = 'word'; c.moved = false; },
+        done: '¡Frase seleccionada!'
+      },
+      {
+        text: 'Pulsa el atajo <kbd>Ctrl + X</kbd> en tu teclado (o el botón de abajo) para <b>Cortar</b>.',
+        hint: 'Pulsa Ctrl + X para hacer desaparecer la frase y dejarla lista para mover.',
+        ok: 'key_ctrlx',
+        after: c => { c.cutDone = true; },
+        wrong: { key_ctrlc: 'Eso es Copiar (Ctrl + C). Para quitarla de aquí usa <b>Cortar (Ctrl + X)</b>.' },
+        done: '¡Cortado! Ha desaparecido de ahí para trasladarse.'
+      },
+      {
+        text: 'Haz <b>clic en la última línea</b> del documento (el recuadro marcado al final).',
+        hint: 'Haz clic en el hueco final después de la receta.',
+        ok: 'target_slot_end',
+        after: c => { c.slotEndActive = true; },
+        done: '¡Sitio marcado!'
+      },
+      {
+        text: 'Pulsa <kbd>Ctrl + V</kbd> (o el botón Pegar) para soltar la frase en su lugar.',
+        hint: 'Pulsa Ctrl + V para pegar la frase al final.',
+        ok: 'key_ctrlv',
+        after: c => { c.moved = true; },
+        done: '¡Fantástico! Has ordenado el texto trasladándolo sin tener que volver a escribirlo.'
+      }
+    ]
+  },
+
+  {
+    icon: '🌐', accent: 'var(--c7)',
+    title: 'Copiar texto de internet a Word y limpiar el formato',
+    objective: 'Copiar un párrafo desde Wikipedia y pegarlo conservando solo el texto.',
+    note: 'En la web pulsa <b>Ctrl + C</b>. En Word pulsa <b>Ctrl + V</b> y elige <b>Mantener solo texto</b>.',
+    steps: [
+      {
+        text: 'Estás en el navegador viendo Wikipedia. <b>Selecciona el párrafo</b> sobre la historia de la ciudad.',
+        hint: 'Haz clic sobre el párrafo que empieza por "Valladolid es una ciudad española..." para seleccionarlo.',
+        ok: 'wiki_paragraph',
+        setup: c => { c.app = 'edge'; c.webCopied = false; c.pastedInWord = false; c.cleaned = false; },
+        done: '¡Párrafo web seleccionado!'
+      },
+      {
+        text: 'Pulsa <kbd>Ctrl + C</kbd> para <b>Copiar</b> el texto de la página web.',
+        hint: 'Pulsa Ctrl + C en tu teclado o en el botón auxiliar de abajo.',
+        ok: 'key_ctrlc',
+        after: c => { c.webCopied = true; },
+        done: '¡Copiado al portapapeles!'
+      },
+      {
+        text: 'Cambia a Word: <b>haz clic en el icono azul de Word</b> (W) en la barra de tareas inferior.',
+        hint: 'Mira abajo, en la barra gris claro: haz clic en el icono azul con la W.',
+        ok: 'tb_word',
+        after: c => { c.app = 'word'; },
+        done: '¡Ya estás en Word!'
+      },
+      {
+        text: 'Haz clic en el folio en blanco y pulsa <kbd>Ctrl + V</kbd> para pegar el texto.',
+        hint: 'Haz clic en el documento de Word y pulsa Ctrl + V.',
+        ok: 'key_ctrlv',
+        after: c => { c.pastedInWord = true; },
+        done: '¡Pegado! Fíjate que ha venido con enlaces azules y letra extraña de la web.'
+      },
+      {
+        text: 'Haz clic en el botón flotante <b>(Ctrl)</b> y elige <b>"Mantener solo texto"</b> (la letra A).',
+        hint: 'Toca la etiqueta de pegado y pulsa en "Mantener solo texto (A)" para quitar el formato web.',
+        ok: 'btn_paste_textonly',
+        after: c => { c.cleaned = true; },
+        done: '¡Excelente! Ahora el texto tiene la letra limpia y normal de tu documento.'
+      }
+    ]
+  },
+
+  {
+    icon: '🖼️', accent: 'var(--c3)',
+    title: 'Copiar una imagen de internet y pegarla en el documento',
+    objective: 'Hacer clic derecho sobre una fotografía para copiarla en Word.',
+    note: '<b>Clic derecho sobre la imagen → Copiar imagen</b>. Luego en Word: <b>Pegar</b>.',
+    steps: [
+      {
+        text: 'Estás en el navegador. Haz <b>clic derecho</b> sobre la fotografía de la Plaza Mayor.',
+        hint: 'Pulsa con el botón derecho del ratón sobre la foto (o mantén pulsado con el dedo).',
+        ok: 'wiki_photo',
+        do: 'rightclick',
+        setup: c => { c.app = 'edge'; c.menuOpen = false; c.imgCopied = false; c.imgPasted = false; },
+        after: c => { c.menuOpen = true; },
+        done: '¡Menú contextual abierto!'
+      },
+      {
+        text: 'En el menú desplegable, haz clic en <b>"Copiar imagen"</b>.',
+        hint: 'Busca y pulsa la opción "Copiar imagen". No elijas guardar ni copiar dirección.',
+        ok: 'ctx_copy_img',
+        after: c => { c.imgCopied = true; c.menuOpen = false; },
+        wrong: { ctx_save_img: 'Esa opción es para guardar el archivo en el disco. Para pegarla directamente elige <b>Copiar imagen</b>.' },
+        done: '¡Imagen copiada!'
+      },
+      {
+        text: 'Pasa a Word haciendo clic en su icono de la <b>barra de tareas</b> (abajo).',
+        hint: 'Haz clic en el icono azul con la W en la barra de tareas inferior.',
+        ok: 'tb_word',
+        after: c => { c.app = 'word'; },
+        done: '¡De vuelta a Word!'
+      },
+      {
+        text: 'Haz <b>clic en el documento</b> y pulsa <kbd>Ctrl + V</kbd> (o el botón Pegar).',
+        hint: 'Pulsa Ctrl + V o el botón Pegar de la cinta para insertar la foto.',
+        ok: 'key_ctrlv',
+        after: c => { c.imgPasted = true; },
+        done: '¡Genial! La fotografía ya ilustra tu documento.'
+      }
+    ]
+  },
+
+  {
+    icon: '↩️', accent: 'var(--c5)',
+    title: 'Copiar la dirección web y el atajo salvador (Ctrl + Z)',
+    objective: 'Copiar el enlace de la barra de direcciones y aprender a deshacer un error.',
+    note: '<b>Ctrl + Z (Deshacer)</b> es el atajo más útil: arregla cualquier borrado por error.',
+    steps: [
+      {
+        text: 'Haz un <b>clic en la barra de direcciones</b> de arriba (donde pone https://...).',
+        hint: 'Haz clic sobre el texto de la dirección web en el navegador para seleccionarla entera.',
+        ok: 'address_input',
+        setup: c => { c.app = 'edge'; c.urlSelected = false; c.urlCopied = false; c.deletedAccident = false; },
+        after: c => { c.urlSelected = true; },
+        done: '¡Toda la dirección web queda seleccionada de un solo toque!'
+      },
+      {
+        text: 'Pulsa <kbd>Ctrl + C</kbd> para copiar la dirección web.',
+        hint: 'Usa Ctrl + C en tu teclado o el botón de abajo.',
+        ok: 'key_ctrlc',
+        after: c => { c.urlCopied = true; },
+        done: '¡Dirección web copiada!'
+      },
+      {
+        text: 'Cambia a Word pulsando en su icono en la <b>barra de tareas</b>.',
+        hint: 'Haz clic en el icono azul de Word abajo.',
+        ok: 'tb_word',
+        after: c => { c.app = 'word'; },
+        done: '¡Estamos en Word!'
+      },
+      {
+        text: 'Haz clic en la línea de "Fuente:" y pulsa <kbd>Ctrl + V</kbd> para pegar el enlace.',
+        hint: 'Pulsa Ctrl + V para pegar la dirección web que copiaste.',
+        ok: 'key_ctrlv',
+        after: c => { c.urlPasted = true; c.deletedAccident = true; },
+        done: '¡Enlace pegado!'
+      },
+      {
+        text: '¡Atención! Un roce en el teclado <b>ha borrado por accidente</b> todo el párrafo. Pulsa <kbd>Ctrl + Z</kbd> para <b>Deshacer</b>.',
+        hint: 'No te asustes: pulsa Ctrl + Z (o el botón Deshacer ↩️) para que vuelva a aparecer.',
+        ok: 'key_ctrlz',
+        after: c => { c.deletedAccident = false; },
+        done: '¡Salvado! Ctrl + Z siempre deshace la última acción y devuelve la tranquilidad.'
+      }
+    ]
+  }
+];
+
+/* =========================================================
+   Estado global y almacenamiento
+   ========================================================= */
+const KEY = 'practica-copiar-texto-win11-valladolid';
+let S = { open: 0, stars: {}, skip: {}, free: false };
+try {
+  const p = JSON.parse(localStorage.getItem(KEY));
+  if (p) {
+    S.stars = p.stars || {}; S.skip = p.skip || {}; S.free = !!p.free;
+    if (Number.isInteger(p.open) && p.open >= -1 && p.open < EX.length) S.open = p.open;
+  }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const isDone = i => !!S.stars[i] || !!S.skip[i];
+const unlocked = i => S.free || i === 0 || isDone(i) || isDone(i - 1);
+const doneCount = () => EX.filter((_, i) => isDone(i)).length;
+const starCount = () => EX.filter((_, i) => S.stars[i]).length;
+const starsHTML = n => `<span class="stars">${'★'.repeat(n)}<i>${'★'.repeat(3 - n)}</i></span>`;
+
+/* =========================================================
+   Ejecución y renderizado de la tarea activa
+   ========================================================= */
+let run = null;
+
+function startRun(i) {
+  run = { i, s: 0, ctx: {}, err: 0, hints: 0, busy: false, done: false, hint: false, steps: EX[i].steps };
+  enterStep();
+}
+function enterStep() {
+  const step = run.steps[run.s];
+  if (step && step.setup) step.setup(run.ctx);
+}
+const curStep = () => (run && !run.done) ? run.steps[run.s] : null;
+
+function fb(kind, html) {
+  const e = $('fb'); if (!e) return;
+  e.className = 'fb' + (kind ? ' ' + kind : '');
+  e.innerHTML = html || '';
+}
+
+/* =========================================================
+   Dibujo del Monitor (Pantalla Windows 11)
+   ========================================================= */
+function renderMonitor() {
+  const box = $('monitor-container');
+  if (!box || !run) return;
+  const ctx = run.ctx;
+  const step = curStep();
+
+  // App actual (Word o Edge)
+  const isWord = (ctx.app || 'word') === 'word';
+
+  let appHtml = '';
+  if (isWord) {
+    // Interfaz de Word simulada
+    appHtml = `
+      <div class="win-app">
+        <div class="win-titlebar">
+          <div class="win-app-name">${ICONS.word} <span>Documento1 - Microsoft Word</span></div>
+          <div class="win-btns"><span class="wbtn min"></span><span class="wbtn max"></span><span class="wbtn close"></span></div>
+        </div>
+        <div class="word-ribbon">
+          <div class="ribbon-tabs">
+            <span class="rtab active">Inicio</span>
+            <span class="rtab">Insertar</span>
+            <span class="rtab">Disposición</span>
+            <span class="rtab">Revisar</span>
+          </div>
+          <div class="ribbon-tools">
+            <div class="rib-group">
+              <button class="tool-btn big" data-id="btn_ribbon_paste" title="Pegar (Ctrl + V)">
+                <span style="font-size:1.4em">📋</span>Pegar
+              </button>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <button class="tool-btn small" data-id="btn_ribbon_cut" title="Cortar (Ctrl + X)"><span>✂️</span>Cortar</button>
+                <button class="tool-btn small" data-id="btn_ribbon_copy" title="Copiar (Ctrl + C)"><span>📋</span>Copiar</button>
+              </div>
+            </div>
+            <div class="rib-group">
+              <button class="tool-btn small" data-id="btn_ribbon_undo" title="Deshacer (Ctrl + Z)"><span>↩️</span>Deshacer</button>
+            </div>
+            <div style="font-size:0.8em;font-weight:700;color:#64748b;padding-left:0.4em">
+              Calibri (12) · <b>N</b> <i>K</i> <u>S</u>
+            </div>
+          </div>
+        </div>
+        <div class="doc-scroll" data-id="doc_blank">
+          <div class="word-page" data-id="word_page">
+            ${renderWordContent(run.i, ctx)}
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Interfaz de Edge / Wikipedia simulada
+    appHtml = `
+      <div class="win-app">
+        <div class="win-titlebar">
+          <div class="win-app-name">${ICONS.edge} <span>Valladolid - Wikipedia, la enciclopedia libre</span></div>
+          <div class="win-btns"><span class="wbtn min"></span><span class="wbtn max"></span><span class="wbtn close"></span></div>
+        </div>
+        <div class="edge-bar">
+          <div class="nav-btns"><span>‹</span><span>›</span><span>↻</span></div>
+          <div class="address-box ${ctx.urlSelected ? 'selected' : ''}" data-id="address_input" title="Barra de direcciones">
+            <span>🔒</span><span>https://es.wikipedia.org/wiki/Valladolid</span>
+          </div>
+        </div>
+        <div class="web-page">
+          <div class="wiki-header">
+            <h1 class="wiki-h1">Valladolid</h1>
+            <span style="color:#64748b;font-size:0.85em">Artículo · Discusión</span>
+          </div>
+          <div class="wiki-sidebox">
+            <b>Plaza Mayor</b>
+            <div class="wiki-img" data-id="wiki_photo" title="Fotografía de la Plaza Mayor (clic derecho para copiar)">
+              <svg width="100%" height="100%" viewBox="0 0 200 120" preserveAspectRatio="none">
+                <rect width="200" height="120" fill="#cbd5e1"/>
+                <rect x="20" y="30" width="160" height="70" fill="#94a3b8" rx="4"/>
+                <polygon points="100,10 40,40 160,40" fill="#b91c1c"/>
+                <circle cx="100" cy="55" r="10" fill="#fef08a"/>
+              </svg>
+              <div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:0.7em;padding:2px 6px;border-radius:4px">
+                📷 Plaza Mayor
+              </div>
+            </div>
+            <small style="color:#64748b">Centro histórico de Valladolid</small>
+          </div>
+          <p class="sel-target ${ctx.webCopied || run.s > 0 ? 'selected' : ''}" data-id="wiki_paragraph" style="margin-bottom:1em">
+            <b>Valladolid</b> es un municipio y una ciudad española situada en el cuadrante noroeste de la península ibérica, capital de la provincia homónima y sede de las Cortes y la Junta de Castilla y León. Cuenta con una población acogedora y un rico patrimonio histórico.
+          </p>
+          <p style="color:#475569;margin-bottom:1em">
+            El río Pisuerga baña la ciudad, ofreciendo amplias zonas verdes y paseos como el Campo Grande.
+          </p>
+        </div>
+
+        ${ctx.menuOpen ? `
+          <div class="context-menu" style="top:160px;right:70px">
+            <div class="ctx-item" data-id="ctx_open_tab">Abrir imagen en pestaña nueva</div>
+            <div class="ctx-item" data-id="ctx_save_img">Guardar imagen como...</div>
+            <div class="ctx-item" data-id="ctx_copy_img" style="background:#eff6ff;color:#1d4ed8"><b>📋 Copiar imagen</b></div>
+            <div class="ctx-item" data-id="ctx_copy_link">Copiar dirección de enlace</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Barra de tareas Windows 11
+  const taskbarHtml = `
+    <div class="win11-taskbar">
+      <div class="tb-tray"><span style="color:#2563eb">ESP</span></div>
+      <div class="tb-center">
+        <button class="tb-icon" title="Inicio">${ICONS.win}</button>
+        <button class="tb-icon ${isWord ? 'active' : ''}" data-id="tb_word" title="Microsoft Word">${ICONS.word}</button>
+        <button class="tb-icon ${!isWord ? 'active' : ''}" data-id="tb_edge" title="Navegador Microsoft Edge">${ICONS.edge}</button>
+      </div>
+      <div class="tb-tray">
+        <span>📶</span><span>🔊</span><span>11:30</span>
+      </div>
+    </div>
+  `;
+
+  // Barra de atajos rápidos accesibles
+  const shortcutsHtml = `
+    <div class="kb-shortcuts-bar">
+      <span class="kb-label">Atajos en pantalla:</span>
+      <button class="key-chip" data-id="key_ctrlc"><kbd>Ctrl + C</kbd> Copiar</button>
+      <button class="key-chip" data-id="key_ctrlv"><kbd>Ctrl + V</kbd> Pegar</button>
+      <button class="key-chip" data-id="key_ctrlx"><kbd>Ctrl + X</kbd> Cortar</button>
+      <button class="key-chip" data-id="key_ctrlz"><kbd>Ctrl + Z</kbd> Deshacer</button>
+      <button class="key-chip" data-id="key_ctrle"><kbd>Ctrl + E</kbd> Seleccionar todo</button>
+    </div>
+  `;
+
+  box.innerHTML = `
+    <div class="win11-screen">
+      <div class="desktop-area">${appHtml}</div>
+      ${taskbarHtml}
+      ${shortcutsHtml}
+    </div>
+  `;
+
+  // Resaltado de pista si está activada
+  if (run.hint && step) {
+    const el = box.querySelector(`[data-id="${step.ok}"]`);
+    if (el) el.classList.add('hint-glow');
+  }
+}
+
+/* =========================================================
+   Contenidos específicos del documento de Word para cada tarea
+   ========================================================= */
+function renderWordContent(taskIndex, ctx) {
+  if (taskIndex === 0) {
+    // Tarea 1: Seleccionar
+    const all = ctx.sel === 'all';
+    return `
+      <div class="doc-title ${all ? 'sel-target selected' : ''}">Conociendo nuestra ciudad</div>
+      <p class="doc-p ${all ? 'sel-target selected' : ''}">
+        La ciudad de <span class="sel-target ${all || ctx.sel === 'valla' ? 'selected' : ''}" data-id="word_valla" style="font-weight:700">Valladolid</span> destaca por su rica historia y cultura.
+      </p>
+      <p class="doc-p ${all ? 'sel-target selected' : ''}">
+        Pasear junto a las orillas del <span class="sel-target ${all || ctx.sel === 'pisuerga' ? 'selected' : ''}" data-id="frag_pisuerga" style="font-weight:700">río Pisuerga</span> es una de las costumbres más agradables.
+      </p>
+      <p class="doc-p ${all ? 'sel-target selected' : ''}">
+        En sus plazas y avenidas los vecinos se encuentran cada mañana para conversar y disfrutar del día.
+      </p>
+    `;
+  }
+
+  if (taskIndex === 1) {
+    // Tarea 2: Copiar título
+    return `
+      <div class="doc-title">
+        <span class="sel-target ${ctx.sel === 'title' || ctx.copied ? 'selected' : ''}" data-id="title_fiestas">Fiestas patronales</span>
+      </div>
+      <p class="doc-p">Programa oficial de celebraciones y actividades culturales para todos los públicos.</p>
+      <p class="doc-p">Lugar: Plaza Mayor y Paseo Central.</p>
+      <div style="margin-top:2em;border-top:1px dashed #cbd5e1;padding-top:1em">
+        <div style="font-size:0.85em;color:#64748b;margin-bottom:0.4em">Segunda copia del encabezado:</div>
+        <div class="paste-target-box ${ctx.cursorAtSlot ? 'active-cursor' : ''}" data-id="target_slot_1">
+          ${ctx.pasted ? '<b>Fiestas patronales</b>' : (ctx.cursorAtSlot ? '<span class="cur-line"></span>' : 'Haz clic aquí para situar la rayita de texto')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (taskIndex === 2) {
+    // Tarea 3: Cortar y mover
+    return `
+      <div class="doc-title">Receta de la abuela: Sopa castellana</div>
+      ${!ctx.cutDone ? `
+        <div class="sel-target ${ctx.sel === 'descolocado' ? 'selected' : ''}" data-id="sel_descolocado" style="background:#fee2e2;color:#991b1b;padding:0.4em 0.8em;border-radius:6px;margin-bottom:1em;display:inline-block;font-weight:800">
+          ⚠️ ¡Buen provecho a todos!
+        </div>
+      ` : ''}
+      <p class="doc-p"><b>Ingredientes:</b> Pan del día anterior, ajos dorados, pimentón dulce, caldo caliente y jamón.</p>
+      <p class="doc-p"><b>Elaboración:</b> Dorar los ajos en la cazuela de barro, añadir el pan en rebanadas finas y regar con el caldo bien caliente a fuego lento.</p>
+      <div style="margin-top:1.5em">
+        <div class="paste-target-box ${ctx.slotEndActive ? 'active-cursor' : ''}" data-id="target_slot_end">
+          ${ctx.moved ? '<b style="color:#15803d;font-size:1.1em">¡Buen provecho a todos!</b>' : (ctx.slotEndActive ? '<span class="cur-line"></span>' : 'Coloca aquí la frase final')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (taskIndex === 3) {
+    // Tarea 4: Wikipedia a Word
+    if (!ctx.pastedInWord) {
+      return `
+        <div class="doc-title">Apuntes sobre la historia local</div>
+        <div class="paste-target-box active-cursor" data-id="target_blank_doc" style="min-height:90px">
+          <span class="cur-line"></span> Pulsa Ctrl + V aquí para pegar el texto de la web...
+        </div>
+      `;
+    }
+    if (!ctx.cleaned) {
+      return `
+        <div class="doc-title">Apuntes sobre la historia local</div>
+        <div style="background:#f1f5f9;border-left:4px solid #3b82f6;padding:0.8em;font-size:0.95em;position:relative">
+          <span style="font-family:serif;color:#1d4ed8;text-decoration:underline">Valladolid</span>
+          <span> es un municipio y una ciudad española situada en el cuadrante noroeste de la península ibérica... [1]</span>
+          <div class="paste-options-bubble" style="bottom:-38px;left:20px">
+            <span>(Ctrl) Opciones de pegado:</span>
+            <button class="p-opt-btn" data-id="btn_paste_textonly"><span>🔤</span> <b>Mantener solo texto (A)</b></button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="doc-title">Apuntes sobre la historia local</div>
+      <p class="doc-p" style="color:#0f172a;line-height:1.6">
+        Valladolid es un municipio y una ciudad española situada en el cuadrante noroeste de la península ibérica, capital de la provincia homónima y sede de las Cortes y la Junta de Castilla y León.
+      </p>
+      <div style="margin-top:1em;color:#15803d;font-weight:700">✓ Formato limpio aplicado correctamente.</div>
+    `;
+  }
+
+  if (taskIndex === 4) {
+    // Tarea 5: Copiar imagen
+    return `
+      <div class="doc-title">Guía turística de Castilla y León</div>
+      <p class="doc-p">Uno de los rincones más emblemáticos para visitar en el centro de la ciudad es su gran plaza porticada:</p>
+      <div class="paste-target-box ${ctx.imgPasted ? '' : 'active-cursor'}" data-id="target_img_box" style="min-height:140px;display:grid;place-items:center">
+        ${ctx.imgPasted ? `
+          <div style="text-align:center">
+            <svg width="220" height="110" viewBox="0 0 200 120" style="border-radius:6px;box-shadow:0 3px 10px rgba(0,0,0,0.15)">
+              <rect width="200" height="120" fill="#cbd5e1"/>
+              <rect x="20" y="30" width="160" height="70" fill="#94a3b8" rx="4"/>
+              <polygon points="100,10 40,40 160,40" fill="#b91c1c"/>
+              <circle cx="100" cy="55" r="10" fill="#fef08a"/>
+            </svg>
+            <div style="font-size:0.85em;color:#475569;margin-top:4px">Fotografía: Plaza Mayor de Valladolid</div>
+          </div>
+        ` : 'Haz clic aquí y pulsa Pegar (Ctrl + V)'}
+      </div>
+    `;
+  }
+
+  if (taskIndex === 5) {
+    // Tarea 6: URL y Deshacer
+    return `
+      <div class="doc-title">Ficha informativa de la ciudad</div>
+      ${ctx.deletedAccident ? `
+        <div style="background:#fef2f2;border:2px dashed #ef4444;padding:1.2em;border-radius:8px;color:#991b1b;text-align:center">
+          💥 <b>¡El párrafo se ha borrado por error!</b><br>
+          <small>No te preocupes. Pulsa <b>Ctrl + Z</b> para deshacer y recuperarlo.</small>
+        </div>
+      ` : `
+        <p class="doc-p">
+          Valladolid cuenta con una destacada tradición universitaria y una amplia oferta cultural durante todo el año, acogiendo festivales internacionales como la Seminci.
+        </p>
+      `}
+      <div style="margin-top:1.5em;padding-top:0.8em;border-top:1px solid #e2e8f0;font-size:0.9em">
+        <b>Fuente consultada:</b>
+        <span style="color:#2563eb;word-break:break-all">
+          ${ctx.urlPasted ? 'https://es.wikipedia.org/wiki/Valladolid' : '<span class="cur-line"></span>'}
+        </span>
+      </div>
+    `;
+  }
+
+  return '';
+}
+
+/* =========================================================
+   Renderizado del panel superior de la tarea
+   ========================================================= */
+function renderPanel() {
+  const ex = EX[run.i];
+  $('note').innerHTML = `📋 <b>En tu ordenador:</b> ${ex.note}`;
+
+  if (run.done) {
+    const n = starsOf(run);
+    $('now').innerHTML = `
+      <div class="now-n">¡Tarea completada!</div>
+      <div class="now-t">🎉 ${starsHTML(n)} ¡Excelente trabajo!<br>Ya dominas este procedimiento.</div>
+    `;
+  } else {
+    $('now').innerHTML = `
+      <div class="now-n">Paso ${run.s + 1} de ${run.steps.length}</div>
+      <div class="now-t">${run.steps[run.s].text}</div>
+    `;
+  }
+
+  $('pips').innerHTML = run.steps.map((_, j) =>
+    `<span class="pip ${run.done || j < run.s ? 'past' : j === run.s ? 'cur' : ''}"></span>`
+  ).join('');
+
+  $('b-hint').hidden = run.done;
+  $('b-next').hidden = !run.done;
+  $('b-skip').hidden = run.done || !!S.stars[run.i];
+  $('b-next').textContent = firstPending(run.i + 1) >= EX.length ? 'Ver resultado final 🏆' : 'Siguiente tarea ▶';
+}
+
+function paint() {
+  renderMonitor();
+  renderPanel();
+}
+
+const starsOf = r => {
+  const e = r.err + r.hints;
+  return e <= 1 ? 3 : e <= 4 ? 2 : 1;
+};
+
+/* =========================================================
+   Lógica de acierto y avance
+   ========================================================= */
+function success(step, id) {
+  const r = run;
+  r.busy = true;
+  if (step.after) step.after(r.ctx, id);
+
+  fb('ok', '✅ ' + (step.done || '¡Muy bien hecho!'));
+
+  setTimeout(() => {
+    if (run !== r) return;
+    r.busy = false;
+    r.hint = false;
+    r.s++;
+    if (r.s >= r.steps.length) {
+      finish();
+    } else {
+      enterStep();
+      paint();
+      fb('', '');
+    }
+  }, 950);
+}
+
+function finish() {
+  run.done = true;
+  const n = starsOf(run);
+  S.stars[run.i] = Math.max(S.stars[run.i] || 0, n);
+  delete S.skip[run.i];
+  save();
+  paint();
+  refresh();
+  fb('ok', '🎉 ' + (run.steps[run.steps.length - 1].done || '¡Tarea terminada con éxito!'));
+}
+
+function wrong(step, id, el, customMsg) {
+  run.err++;
+  if (el) {
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+  }
+  const msg = customMsg || (step.wrong && step.wrong[id]) || ('Ese no es el botón o acción adecuada. ' + step.hint);
+  fb('bad', '🙂 ' + msg);
+}
+
+/* =========================================================
+   Eventos y Acciones del Usuario
+   ========================================================= */
+const stage = $('stage');
+
+// Función que procesa una acción (por clic, botón o atajo de teclado)
+function triggerAction(actionId, targetEl, isRightClick = false) {
+  if (!run || run.busy || run.done) return;
+  const step = curStep();
+  if (!step) return;
+
+  // Interacciones visuales internas de selección previa al acierto
+  if (actionId === 'word_valla') { run.ctx.sel = 'valla'; }
+  if (actionId === 'frag_pisuerga') { run.ctx.sel = 'pisuerga'; }
+  if (actionId === 'title_fiestas') { run.ctx.sel = 'title'; }
+  if (actionId === 'sel_descolocado') { run.ctx.sel = 'descolocado'; }
+  if (actionId === 'key_ctrle') { run.ctx.sel = 'all'; }
+
+  // Verificación de si la acción cumple el paso actual
+  if (step.ok === actionId) {
+    success(step, actionId);
+    paint();
+  } else {
+    wrong(step, actionId, targetEl);
+  }
+}
+
+// Clics generales sobre la interfaz
+stage.addEventListener('click', e => {
+  // Botones de control del ejercicio
+  const btn = e.target.closest('button');
+  if (btn && run) {
+    if (btn.id === 'b-hint' && !run.done) {
+      run.hints++;
+      run.hint = true;
+      paint();
+      fb('soft', '💡 Pista: ' + curStep().hint);
+      return;
+    }
+    if (btn.id === 'b-redo') {
+      startRun(run.i);
+      paint();
+      fb('', '');
+      return;
+    }
+    if (btn.id === 'b-next') {
+      openTask(firstPending(run.i + 1));
+      return;
+    }
+    if (btn.id === 'b-skip' && !run.done) {
+      S.skip[run.i] = true;
+      openTask(firstPending(run.i + 1));
+      return;
+    }
+  }
+
+  const head = e.target.closest('.t-head');
+  if (head) {
+    openTask(+head.dataset.i);
+    return;
+  }
+
+  if (e.target.closest('#b-reset')) {
+    S.stars = {}; S.skip = {}; S.open = 0;
+    render();
+    $('stage').scrollTop = 0;
+    return;
+  }
+
+  // Clics sobre la pantalla de Windows / Word / Web
+  const t = e.target.closest('[data-id]');
+  if (t) {
+    const id = t.dataset.id;
+    // Si es un doble clic que se pide, el dblclick se gestiona aparte, pero un toque simple orienta
+    if (curStep() && curStep().ok === 'word_valla' && id === 'word_valla' && e.detail === 1) {
+      // Si hace solo un clic sobre la palabra, le animamos a hacer el doble clic
+      fb('soft', '🙂 ¡Casi! Haz <b>dos clics rápidos seguidos</b> (doble clic) para seleccionarla.');
+      return;
+    }
+    triggerAction(id, t);
+  }
+});
+
+// Doble clic para seleccionar palabras o títulos
+stage.addEventListener('dblclick', e => {
+  const t = e.target.closest('[data-id]');
+  if (!t) return;
+  const id = t.dataset.id;
+  if (['word_valla', 'title_fiestas'].includes(id)) {
+    triggerAction(id, t);
+  }
+});
+
+// Clic derecho (menú contextual) sobre la pantalla simulada
+stage.addEventListener('contextmenu', e => {
+  const t = e.target.closest('[data-id]');
+  if (t && t.closest('.win11-screen')) {
+    e.preventDefault(); // Evitar menú real del navegador
+    triggerAction(t.dataset.id, t, true);
+  }
+});
+
+// Soporte para pantalla táctil en clic derecho (pulsación mantenida)
+let holdTimer = null;
+stage.addEventListener('pointerdown', e => {
+  const t = e.target.closest('[data-id="wiki_photo"]');
+  if (!t) return;
+  holdTimer = setTimeout(() => {
+    triggerAction('wiki_photo', t, true);
+  }, 650);
+});
+stage.addEventListener('pointerup', () => clearTimeout(holdTimer));
+stage.addEventListener('pointercancel', () => clearTimeout(holdTimer));
+
+// Captura de atajos con el teclado FÍSICO real del alumno/profesor
+document.addEventListener('keydown', e => {
+  // Tecla F para pantalla completa
+  if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.altKey) {
+    toggleFull();
+    return;
+  }
+
+  if (!run || run.done) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (!ctrl) return;
+
+  const k = e.key.toLowerCase();
+  let action = null;
+  if (k === 'c') action = 'key_ctrlc';
+  if (k === 'v') action = 'key_ctrlv';
+  if (k === 'x') action = 'key_ctrlx';
+  if (k === 'z') action = 'key_ctrlz';
+  if (k === 'e' || k === 'a') action = 'key_ctrle';
+
+  if (action) {
+    e.preventDefault(); // Evitar acción por defecto del navegador
+    const btn = document.querySelector(`[data-id="${action}"]`);
+    triggerAction(action, btn);
+  }
+});
+
+/* =========================================================
+   Estructura HTML de la Lista de Tareas
+   ========================================================= */
+function stateOf(i) {
+  if (i === S.open) return 'open';
+  if (S.stars[i]) return 'done';
+  if (S.skip[i]) return 'skip';
+  return unlocked(i) ? 'avail' : 'locked';
+}
+
+function headHTML(i) {
+  const ex = EX[i], st = stateOf(i), n = S.stars[i];
+  const num = n ? '✔' : st === 'skip' ? '↷' : st === 'locked' ? '🔒' : i + 1;
+  const tag = n ? starsHTML(n) : st === 'open' ? 'Haciéndola…' : st === 'skip' ? 'Saltada · Hacer' : st === 'avail' ? 'Empezar ▶' : 'Bloqueada';
+  return `
+    <button class="t-head" type="button" data-i="${i}" aria-expanded="${st === 'open'}">
+      <span class="t-num">${num}</span>
+      <span class="t-ic">${ex.icon}</span>
+      <span class="t-txt">
+        <b>${i + 1}. ${ex.title}</b>
+        <small>🎯 ${ex.objective}</small>
+      </span>
+      <span class="t-state">${tag}</span>
+    </button>
+  `;
+}
+
+function bodyHTML(i) {
+  return `
+    <div class="t-body">
+      <div class="compact-guide">
+        <div class="guide-row">
+          <div class="now" id="now"></div>
+          <div class="acts">
+            <button class="abtn" id="b-hint" type="button">💡 Pista</button>
+            <button class="abtn" id="b-redo" type="button">↺ Repetir</button>
+            <button class="abtn go" id="b-next" type="button" hidden>Siguiente tarea ▶</button>
+            <button class="abtn quiet" id="b-skip" type="button">Saltar esta tarea ↷</button>
+          </div>
+        </div>
+        <div class="fb" id="fb"></div>
+        <div class="guide-bottom">
+          <div class="pips" id="pips"></div>
+          <div class="ex-note" id="note"></div>
+        </div>
+      </div>
+
+      <div class="monitor-box">
+        <div id="monitor-container"></div>
+      </div>
+    </div>
+  `;
+}
+
+function finalHTML() {
+  if (doneCount() < EX.length) {
+    return `
+      <li class="task final wait" id="final">
+        🏆 Cuando completes las 6 tareas verás aquí tu diploma y resultado final. Llevas <b>${starCount()} de ${EX.length}</b>.
+      </li>
+    `;
+  }
+  const all = EX.every((_, i) => S.stars[i]);
+  return `
+    <li class="task final" id="final">
+      <div class="trophy">🏆</div>
+      <div class="fin-txt">
+        <h2>${all ? '¡Enhorabuena! Práctica completada' : '¡Lista de tareas finalizada!'}</h2>
+        <p>
+          ${all
+            ? 'Has practicado con soltura <b>seleccionar, copiar, cortar, pegar y deshacer</b>. Ahora abre Word en tu ordenador y pruébalo tú mismo.'
+            : 'Has completado la sesión, aunque te quedó alguna tarea <b>saltada</b> (↷). Puedes pulsar en ella para conseguir todas las estrellas.'}
+        </p>
+        <div class="sumlist">
+          ${EX.map((e, i) => `<span>${e.icon} Tarea ${i+1}: ${S.stars[i] ? starsHTML(S.stars[i]) : '↷ Saltada'}</span>`).join('')}
+        </div>
+      </div>
+      <button class="abtn" id="b-reset" type="button">↺ Reiniciar práctica</button>
+    </li>
+  `;
+}
+
+function render() {
+  run = null;
+  stage.innerHTML = `
+    <p class="intro">
+      Realiza las prácticas paso a paso. Cuando termines una, <b>se abrirá la siguiente automáticamente</b>. Si vas más rápido que la clase, puedes continuar sin esperar.
+    </p>
+    <ol class="tasks">
+      ${EX.map((_, i) => `
+        <li class="task st-${stateOf(i)}" style="--ac:${EX[i].accent}">
+          ${headHTML(i)}
+          ${i === S.open ? bodyHTML(i) : ''}
+        </li>
+      `).join('')}
+      ${finalHTML()}
+    </ol>
+  `;
+
+  if (S.open >= 0) {
+    document.documentElement.style.setProperty('--accent', EX[S.open].accent);
+    startRun(S.open);
+    paint();
+  }
+  refreshTop();
+}
+
+function refresh() {
+  qsa('.tasks > li:not(.final)').forEach((li, i) => {
+    li.className = 'task st-' + stateOf(i);
+    li.querySelector('.t-head').outerHTML = headHTML(i);
+  });
+  const fin = $('final');
+  if (fin) fin.outerHTML = finalHTML();
+  refreshTop();
+}
+
+function refreshTop() {
+  const n = starCount();
+  $('count').textContent = `✅ ${n} de ${EX.length} tareas`;
+  $('prog-fill').style.width = (n / EX.length * 100) + '%';
+  $('btn-free').classList.toggle('on', S.free);
+  $('btn-free').textContent = S.free ? '🔒 Bloqueo normal' : '🔓 Abrir todas';
+  save();
+}
+
+function openTask(i) {
+  if (i >= EX.length) {
+    S.open = -1;
+    render();
+    const fin = $('final');
+    if (fin) fin.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (!unlocked(i)) {
+    const h = document.querySelector(`.t-head[data-i="${i}"]`);
+    if (h) {
+      h.classList.remove('shake');
+      void h.offsetWidth;
+      h.classList.add('shake');
+      const st = h.querySelector('.t-state');
+      if (st) st.textContent = `Termina antes la tarea ${i}`;
+    }
+    return;
+  }
+  S.open = S.open === i ? -1 : i;
+  render();
+  const li = qsa('.tasks > li')[i];
+  if (li) li.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function firstPending(fromIndex) {
+  for (let k = fromIndex; k < EX.length; k++) {
+    if (!S.stars[k]) return k;
+  }
+  return EX.length;
+}
+
+$('btn-free').onclick = () => {
+  S.free = !S.free;
+  refresh();
+};
+
+function toggleFull() {
+  try {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  } catch (e) {}
+}
+if (!document.fullscreenEnabled) $('btn-full').style.display = 'none';
+$('btn-full').onclick = toggleFull;
+document.addEventListener('fullscreenchange', () => {
+  $('btn-full').textContent = document.fullscreenElement ? '✕ Salir' : '⛶ Pantalla completa';
+});
+
+// Inicio
+render();
+</script>
+</body>
+</html>
