@@ -143,7 +143,14 @@
       <div class="field"><label for="prov">Proveedor</label><select id="prov" onchange="changeProvider()"></select></div>
       <div class="field"><label for="model">Modelo</label><select id="model" onchange="changeModel()"></select></div>
       <button class="btn btn-sm" style="margin-bottom:4px" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
-      <div class="field" style="margin-left:auto"><label for="nq">Nº de preguntas</label><input type="number" id="nq" min="3" max="50" value="10" onchange="saveSettings()"></div>
+      <div class="field" style="margin-left:auto"><label for="dif">Dificultad</label>
+        <select id="dif" onchange="saveSettings()">
+          <option value="basico">Básico</option>
+          <option value="medio">Medio</option>
+          <option value="avanzado">Avanzado</option>
+        </select>
+      </div>
+      <div class="field"><label for="nq">Nº de preguntas</label><input type="number" id="nq" min="3" max="50" value="10" onchange="saveSettings()"></div>
     </div>
   </div>
 
@@ -561,13 +568,32 @@ function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.p
 function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-let settings = Object.assign({provider:'aistudio', model:'gemini-flash-latest', nq:10}, loadJSON(LS.settings) || {});
+let settings = Object.assign({provider:'aistudio', model:'gemini-flash-latest', nq:10, dif:'medio'}, loadJSON(LS.settings) || {});
 if (!PROVIDERS[settings.provider]) { settings.provider = 'aistudio'; settings.model = 'gemini-flash-latest'; }
+if (!['basico', 'medio', 'avanzado'].includes(settings.dif)) settings.dif = 'medio';
 function saveSettings(){
   settings.nq = Math.max(3, Math.min(50, parseInt($('nq').value, 10) || 10));
   $('nq').value = settings.nq;
+  settings.dif = $('dif').value;
   saveJSON(LS.settings, settings);
 }
+
+// Instrucciones de dificultad: se añaden al prompt al generar, así funcionan
+// aunque hayas modificado el prompt desde el botón «Prompt».
+const DIFICULTAD = {
+  basico: 'NIVEL DE DIFICULTAD: BÁSICO.\n' +
+    '- Pregunta solo por lo esencial y directo del tema: qué es cada cosa, para qué sirve, cómo se llama, cuál es el primer paso.\n' +
+    '- Frases muy cortas y sencillas. Las opciones incorrectas deben ser claramente distintas de la correcta.\n' +
+    '- Las preguntas de situación, si las hay, deben ser muy simples y de un solo paso.',
+  medio: 'NIVEL DE DIFICULTAD: MEDIO.\n' +
+    '- Combina preguntas de recordar lo aprendido con otras de aplicarlo en situaciones cotidianas sencillas.\n' +
+    '- Las opciones incorrectas deben ser creíbles pero claramente erróneas para quien ha estudiado el tema.',
+  avanzado: 'NIVEL DE DIFICULTAD: AVANZADO.\n' +
+    '- Pregunta por detalles, matices y excepciones que aparezcan en el texto, por la diferencia entre cosas parecidas y por el orden correcto de varios pasos.\n' +
+    '- Plantea más situaciones prácticas en las que haya que decidir qué hacer, no solo recordar un dato.\n' +
+    '- Las opciones incorrectas deben ser muy verosímiles y exigir haber estudiado bien el tema (esto prevalece sobre la indicación de que sean "claramente erróneas"). En Verdadero/Falso, usa afirmaciones con matices.\n' +
+    '- Aun así, usa lenguaje sencillo y basa todo SOLO en el contenido del documento.'
+};
 function showStatus(type, msg){ const s = $('status'); s.className = 'status ' + (type || ''); s.textContent = msg || ''; }
 
 // ═════════════════════════════════════════════
@@ -762,7 +788,7 @@ async function processItem(it){
       if (it.text.length < 80) throw new Error('No se ha podido extraer texto del documento (¿es un PDF escaneado?).');
     }
     const nq = settings.nq;
-    const system = getPrompt().split('{N}').join(String(nq));
+    const system = getPrompt().split('{N}').join(String(nq)) + '\n\n' + DIFICULTAD[settings.dif];
     const doc = trimDoc(it.text, settings.provider);
     it.trimmed = doc.trimmed;
     const user = `Documento: «${it.file.name}»\n\n<documento>\n${doc.text}\n</documento>\n\nCrea el cuestionario de ${nq} preguntas. Responde solo con el JSON.`;
@@ -960,6 +986,7 @@ document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('mousedo
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); });
 
 $('nq').value = settings.nq;
+$('dif').value = settings.dif;
 renderModel();
 renderFiles();
 </script>

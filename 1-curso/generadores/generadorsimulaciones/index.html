@@ -221,6 +221,15 @@
       <button class="btn btn-sm" style="margin-bottom:4px" id="btn-refreset" onclick="resetRef()">↩️ Volver al original</button>
       <input type="file" id="reffile" accept=".html,.htm" hidden onchange="loadRef(this.files[0]); this.value=''">
     </div>
+    <div class="row">
+      <div class="field"><label for="dif">Dificultad de la simulación</label>
+        <select id="dif">
+          <option value="basico">Básico · muy guiado</option>
+          <option value="medio" selected>Medio · como el ejemplo</option>
+          <option value="avanzado">Avanzado · con menos ayuda</option>
+        </select>
+      </div>
+    </div>
     <details class="extra" id="extra-box">
       <summary>➕ Indicaciones para todas las simulaciones</summary>
       <p>Opcional. Se añaden a cada tema; por ejemplo: «En Probar, que el alumno tenga que escribir algo con el teclado».</p>
@@ -522,6 +531,31 @@ const extraT = $('extra');
 try { extraT.value = localStorage.getItem(LS.extra) || ''; if (extraT.value) $('extra-box').open = true; } catch(e){}
 extraT.addEventListener('input', () => { try { localStorage.setItem(LS.extra, extraT.value); } catch(e){} });
 
+// Dificultad: se añade al mensaje de cada simulación, así funciona aunque hayas modificado el prompt.
+const DIF_KEY = 'simulaciones_dif';
+const DIFICULTAD = {
+  basico:
+    'BÁSICO. Simulación muy guiada, para quien da sus primeros pasos.\n' +
+    '- Descubrir y Practicar: 5 partes, solo las esenciales del tema, con explicaciones muy cortas y sencillas. Lo que no quepa, va en los consejos del panel.\n' +
+    '- Probar: entre 6 y 8 retos sencillos, de lo más fácil a lo más difícil. La pista de cada reto dice con claridad qué hacer y dónde, y el panel lateral va explicando paso a paso lo que ocurre.\n' +
+    '- Practicar: preguntas «Toca …» con el nombre claro de cada parte. Si el alumno falla, el mensaje le dice dónde estaba.\n' +
+    '- Prioriza acciones sencillas (tocar o hacer clic); usa arrastrar o atajos de teclado solo si el tema lo exige.',
+  medio:
+    'MEDIO. Simulación equilibrada, como pide el prompt.\n' +
+    '- Entre 5 y 8 partes en Descubrir y Practicar y entre 6 y 12 retos en Probar.\n' +
+    '- Las pistas indican qué hacer y casi siempre dónde; de vez en cuando un reto pide encontrar el sitio por uno mismo.\n' +
+    '- Practicar mezcla preguntas sobre el nombre de las partes con otras sobre para qué sirven.',
+  avanzado:
+    'AVANZADO. Simulación con menos ayuda, para quien ya domina lo básico.\n' +
+    '- Descubrir y Practicar: entre 6 y 8 partes, incluyendo los detalles, matices y excepciones que explique el tema y las diferencias entre elementos parecidos.\n' +
+    '- Probar: entre 8 y 12 retos; los últimos combinan varias acciones del tema en una tarea completa. Las pistas dicen qué hay que conseguir y no siempre dónde pulsar (por ejemplo «Mueve el archivo a la carpeta Documentos»). Incluye como retos los errores frecuentes que mencione el tema.\n' +
+    '- Practicar: en lugar del nombre de la parte, pregunta por su función («Toca lo que usarías para…») y no des pistas en la pregunta.\n' +
+    '- Aun así, cada reto debe poder conseguirse con las acciones del tema, el lenguaje debe seguir siendo sencillo y todo debe salir solo del TEMA.'
+};
+const difSel = $('dif');
+try { const d = localStorage.getItem(DIF_KEY); if (DIFICULTAD[d]) difSel.value = d; } catch(e){}
+difSel.addEventListener('change', () => { try { localStorage.setItem(DIF_KEY, difSel.value); } catch(e){} });
+
 // ═════════════════════════════════════════════
 //  FICHEROS
 // ═════════════════════════════════════════════
@@ -737,6 +771,7 @@ function buildUserMsg(it){
     'TÍTULO DE LA SIMULACIÓN: ' + it.title.trim() + '\n\n' +
     '<ejemplo_de_referencia>\n' + refHtml() + '\n</ejemplo_de_referencia>\n\n' +
     '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n' +
+    'NIVEL DE DIFICULTAD (cumple además todas las demás instrucciones):\n' + DIFICULTAD[difSel.value] + '\n\n' +
     (extra ? 'INDICACIONES ADICIONALES DEL PROFESOR:\n' + extra + '\n\n' : '') +
     'Crea ahora la simulación completa sobre este tema. Responde solo con el HTML.';
 }

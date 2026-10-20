@@ -73,6 +73,7 @@
   textarea { width:100%; min-height:84px; resize:vertical; background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.14); border-radius:12px; color:var(--text); padding:10px 12px; font-size:.95rem; font-weight:600; line-height:1.4; }
   textarea::placeholder { color:rgba(138,155,191,.75); }
 
+  .level { margin:12px 0 0; }
   .extra { margin:12px 0; background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:10px 14px; }
   .extra summary { cursor:pointer; font-weight:800; color:var(--sub); }
   .extra[open] summary { margin-bottom:10px; color:var(--text); }
@@ -147,6 +148,15 @@
       </label>
 
       <div id="list"></div>
+
+      <div class="fld level">
+        <label for="dif">Dificultad de los ejercicios</label>
+        <select id="dif">
+          <option value="basico">Básico · muy guiado</option>
+          <option value="medio" selected>Medio · como el ejemplo</option>
+          <option value="avanzado">Avanzado · con menos ayuda</option>
+        </select>
+      </div>
 
       <details class="extra" id="extra-box">
         <summary>➕ Indicaciones para todas las prácticas</summary>
@@ -502,6 +512,35 @@ const extraT = $("extra");
 try { extraT.value = localStorage.getItem(EXTRA_KEY) || ""; if (extraT.value) $("extra-box").open = true; } catch (e) {}
 extraT.addEventListener("input", () => { try { localStorage.setItem(EXTRA_KEY, extraT.value); } catch (e) {} });
 
+/* Dificultad: se añade al mensaje de cada práctica, así funciona aunque cambies las instrucciones de Ajustes */
+const DIF_KEY = "genprac-dif-v1";
+const DIFICULTAD = {
+  basico:
+    "BÁSICO. Práctica muy guiada, para quien da sus primeros pasos.\n" +
+    "- Ejercicios de 3 a 5 pasos como máximo. Si el documento trae sus propios ejercicios, respétalos tal cual (orden y datos) y aplica el nivel solo a cómo se explican los pasos.\n" +
+    "- Cada paso nombra con claridad el sitio exacto donde hay que actuar (por ejemplo «Toca el icono ⚙️ Ajustes») y el recuadro con la ruta es completo.\n" +
+    "- Prioriza acciones sencillas (tocar o hacer clic). Usa mantener pulsado, deslizar o arrastrar solo si el tema lo exige, y explica el gesto con palabras muy sencillas.\n" +
+    "- Si el alumno se equivoca, el mensaje le dice con claridad dónde tocar. La pista señala el sitio exacto.\n" +
+    "- Pocas preguntas de comprobación, o ninguna.",
+  medio:
+    "MEDIO. Práctica equilibrada, como el ejemplo de referencia.\n" +
+    "- Cada paso indica qué hacer y casi siempre dónde; de vez en cuando un paso pide encontrar el sitio por uno mismo.\n" +
+    "- Mezcla acciones sencillas con los gestos que trate el tema (mantener pulsado, deslizar, arrastrar).\n" +
+    "- Si el alumno se equivoca, el mensaje explica por qué y le orienta.\n" +
+    "- Ejercicios de 3 a 8 pasos, de lo más fácil a lo más difícil.",
+  avanzado:
+    "AVANZADO. Práctica con menos ayuda, para quien ya domina lo básico.\n" +
+    "- Si el documento no trae ejercicios, crea entre 5 y 7, de 5 a 8 pasos cada uno, y haz que los últimos combinen varios procedimientos del tema en una tarea completa. Si el documento trae sus propios ejercicios, respétalos tal cual (orden y datos) y aplica el nivel solo a cómo se plantean los pasos.\n" +
+    "- Los pasos indican qué hay que conseguir y no siempre dónde pulsar (por ejemplo «Pon el brillo al mínimo»): el alumno busca el camino por sí mismo. El recuadro con la ruta va resumido.\n" +
+    "- Usa más a menudo los gestos del tema: mantener pulsado, deslizar, arrastrar, mover barras o escribir con el teclado.\n" +
+    "- Incluye alguna pregunta de comprobación en varios ejercicios.\n" +
+    "- Si el alumno se equivoca, el mensaje explica por qué esa no es la acción correcta, pero sin darle todo resuelto. La pista sigue disponible y señala el sitio.\n" +
+    "- Aun así, mantén el lenguaje sencillo y basa todo solo en el TEMA."
+};
+const difSel = $("dif");
+try { const d = localStorage.getItem(DIF_KEY); if (DIFICULTAD[d]) difSel.value = d; } catch (e) {}
+difSel.addEventListener("change", () => { try { localStorage.setItem(DIF_KEY, difSel.value); } catch (e) {} });
+
 /* =========================================================
    Llamada a la IA (con streaming)
    ========================================================= */
@@ -620,6 +659,7 @@ function buildUserMsg(it){
     "TÍTULO DE LA PRÁCTICA: " + it.title.trim() + "\n\n" +
     "===== EJEMPLO DE REFERENCIA (solo como modelo de estilo y estructura) =====\n" + refHtml() + "\n===== FIN DEL EJEMPLO =====\n\n" +
     "===== TEMA (contenido del documento) =====\n" + it.text + "\n===== FIN DEL TEMA =====\n\n" +
+    "NIVEL DE DIFICULTAD DE LOS EJERCICIOS (cumple además todas las demás instrucciones):\n" + DIFICULTAD[difSel.value] + "\n\n" +
     (extra ? "INDICACIONES ADICIONALES DEL PROFESOR:\n" + extra + "\n\n" : "") +
     "Crea ahora la práctica completa, con su lista de ejercicios, sobre este tema.";
 }
