@@ -1321,10 +1321,13 @@ function parseSegments(text, streaming){
     const closeRe = new RegExp('^\\s{0,3}' + fence[0].replace('`','\\`') + '{' + fence.length + ',}\\s*$');
     while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
     const closed = j < lines.length;
-    // Si el modelo no puso el nombre delante, se reconoce el ESENCIAL por su título
+    // Si el modelo no puso el nombre delante, se reconoce el fichero por su contenido
     if (!name){
       const first = (body.find(l => l.trim()) || '').trim();
-      if (/^#\s*LO ESENCIAL/i.test(first)) name = 'ESENCIAL_' + ((state.chapter || 'capitulo').trim().replace(/\s+/g, '_')) + '.md';
+      const all = body.join('\n'); const chap = (state.chapter || 'capitulo').trim().replace(/\s+/g, '_');
+      if (/^#\s*LO ESENCIAL/i.test(first)) name = 'ESENCIAL_' + chap + '.md';
+      else if (/Objetivo de la edici[oó]n/i.test(all)) name = 'PLAN_' + chap + '.md';
+      else if (/Pendiente de verificar/i.test(all)) name = 'CONTROL_' + chap + '.md';
     }
     flush();
     const isFile = name && (lang === 'markdown' || lang === 'md' || lang === '');
