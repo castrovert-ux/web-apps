@@ -181,7 +181,7 @@ main{flex:1;min-height:0;display:flex;}
 <div id="sync-status"><span id="sync-msg"></span><button onclick="hideStatus()" aria-label="Cerrar aviso">×</button></div>
 
 <header>
-  <div class="logo">Planificación<small>Historia de Castroverde de Cerrato · v. 21-oct</small></div>
+  <div class="logo">Planificación<small>Historia de Castroverde de Cerrato · v. 21-oct (2)</small></div>
   <div class="chapter">
     <label for="chapter">Capítulo (nombre corto)</label>
     <input id="chapter" type="text" placeholder="por ejemplo, prehistoria" maxlength="60" autocomplete="off">
@@ -1682,7 +1682,7 @@ async function runAssistant(id){
   } catch(e){
     if (e.name === 'AbortError'){
       if (msg.content.trim()) msg.note = 'Respuesta detenida.';
-      else st.messages.pop();
+      else { st.messages.pop(); st.error = 'La respuesta se detuvo antes de empezar. Pulsa «Reintentar» para volver a pedirla.'; }
     } else {
       if (!msg.content.trim()) st.messages.pop(); else msg.note = 'La respuesta se interrumpió por un error.';
       st.error = describeError(e);
@@ -1933,6 +1933,10 @@ $('chapter').addEventListener('input', () => { state.chapter = $('chapter').valu
 STEPS.forEach(s => {
   const msgs = state.steps[s.id].messages; const last = msgs[msgs.length - 1];
   if (last && last.streaming){ delete last.streaming; delete last.thinking; if (!last.content.trim()) msgs.pop(); else last.note = 'Respuesta interrumpida al cerrar la página.'; }
+  // Si el último mensaje es tuyo y no hay respuesta, se ofrece «Reintentar» en vez de quedarse en blanco
+  const now = msgs[msgs.length - 1];
+  if (now && now.role === 'user' && !state.steps[s.id].error)
+    state.steps[s.id].error = 'La respuesta no llegó (la página se cerró o se recargó mientras el modelo trabajaba). Pulsa «Reintentar».';
 });
 buildSteps();
 if (getKey('firebase')) initFirebase(getKey('firebase'));
