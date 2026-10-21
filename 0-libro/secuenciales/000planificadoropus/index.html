@@ -1232,7 +1232,7 @@ const RETIRED = {
 const STEPS = [
   {id:'esencial', num:2, title:'Lo esencial', promptKey:'esencial',
    slots:[{key:'bruto', label:'Texto en bruto'}],
-   empty:'<h2>Entrevista sobre lo esencial del capítulo</h2><p>Escribe arriba el nombre corto del capítulo, carga el texto en bruto en Markdown y pulsa «Empezar».</p><p>El modelo leerá el capítulo, te propondrá un resumen y te irá haciendo las preguntas de una en una. Al final entregará el fichero ESENCIAL, que podrás revisar y descargar; además pasará solo al paso 3.</p>'},
+   empty:'<h2>Entrevista sobre lo esencial del capítulo</h2><p>Escribe arriba el nombre corto del capítulo, carga el texto en bruto en Markdown y pulsa «Empezar».</p><p>El modelo leerá el capítulo, te propondrá un resumen y te irá haciendo las preguntas de una en una. Al final entregará el fichero ESENCIAL, que podrás revisar y descargar. El paso 3 lo usará automáticamente: pulsa «Pasar al paso 3 →» en la tarjeta del fichero o la pestaña 3.</p>'},
   {id:'plan', num:3, title:'Plan editorial', promptKey:'planificador',
    slots:[{key:'bruto', label:'Texto en bruto', fallback:'bruto'}, {key:'esencial', label:'Lo esencial', fallback:'esencial'}],
    empty:'<h2>Plan de acción editorial</h2><p>El bruto y el ESENCIAL del paso 2 se usan aquí automáticamente; si prefieres otros ficheros, cárgalos.</p><p>Al pulsar «Empezar», el Editor Jefe entregará su propuesta para validación. Respóndele con tus decisiones y elaborará los ficheros PLAN y CONTROL.</p>'},
@@ -1321,6 +1321,11 @@ function parseSegments(text, streaming){
     const closeRe = new RegExp('^\\s{0,3}' + fence[0].replace('`','\\`') + '{' + fence.length + ',}\\s*$');
     while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
     const closed = j < lines.length;
+    // Si el modelo no puso el nombre delante, se reconoce el ESENCIAL por su título
+    if (!name){
+      const first = (body.find(l => l.trim()) || '').trim();
+      if (/^#\s*LO ESENCIAL/i.test(first)) name = 'ESENCIAL_' + ((state.chapter || 'capitulo').trim().replace(/\s+/g, '_')) + '.md';
+    }
     flush();
     const isFile = name && (lang === 'markdown' || lang === 'md' || lang === '');
     if (isFile) segs.push({type:'file', name, body:body.join('\n'), idx:fileIdx++, writing: !closed && streaming});
@@ -1564,7 +1569,7 @@ function renderMsg(id, m, mi){
     if (sg.writing) return `<div class="filecard writing"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">Escribiendo… ${kb(text)}</div></div></div>`;
     return `<div class="filecard"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">${kb(text)}${m.edits && m.edits[sg.idx] != null ? ' · editado' : ''}</div></div>
       <div class="fbtns"><button class="btn btn-sm" onclick="openOutput('${id}',${mi},${sg.idx})">Ver y editar</button>
-      <button class="btn btn-sm btn-primary" onclick="downloadOutput('${id}',${mi},${sg.idx})">Descargar</button></div></div>`;
+      <button class="btn btn-sm btn-primary" onclick="downloadOutput('${id}',${mi},${sg.idx})">Descargar</button>${id === 'esencial' ? `<button class="btn btn-sm btn-primary" onclick="setTab('plan')">Pasar al paso 3 →</button>` : ''}</div></div>`;
   }).join('');
   if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
   const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
