@@ -149,6 +149,12 @@ main{flex:1;min-height:0;display:flex;}
 .composer-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;}
 .composer textarea{flex:1;resize:none;min-height:46px;max-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-body);font-size:15px;line-height:1.5;}
 .composer textarea:disabled{opacity:.6;}
+.sugs{max-width:860px;margin:0 auto 8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.sugs:empty{display:none;}
+.sugs .lbl{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-right:2px;}
+.sug{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:14px;padding:3px 11px;cursor:pointer;font-family:var(--font-body);font-size:13px;line-height:1.4;}
+.sug:hover{border-color:var(--muted);}
+.sug.on{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--card);}
 .composer .hint{max-width:860px;margin:5px auto 0;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
 
 /* Modales */
@@ -988,6 +994,7 @@ const PROVIDERS = {
                  {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
                  {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
   openrouter: {label:'OpenRouter', dynamic:true, models:[
+                 {id:'google/gemma-4-31b-it:free',  label:'google/gemma-4-31b-it:free'},
                  {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
                  {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
                  {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
@@ -1024,22 +1031,27 @@ const RETIRED = {
   'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
 };
 
+// Modelo por defecto para todos los pasos. Se aplica una sola vez también a quien ya
+// tenía otro guardado; después se respeta lo que se elija en los desplegables.
+const DEFAULT_MODEL = {provider:'openrouter', model:'google/gemma-4-31b-it:free'};
+const DEFAULT_TAG = 'gemma-4-31b';
+
 const SHARED = [{key:'bruto', label:'Texto en bruto'}, {key:'plan', label:'Plan editorial'}];
 const S_BRUTO = {key:'bruto', label:'Texto en bruto', shared:'bruto'};
 const S_PLAN  = {key:'plan',  label:'Plan editorial', shared:'plan'};
 const STEPS = [
-  {id:'ejecutor', num:4, title:'Edición', promptKey:'ejecutor', def:{provider:'claude', model:'claude-sonnet-4-6'},
+  {id:'ejecutor', num:4, title:'Edición', promptKey:'ejecutor', def:DEFAULT_MODEL,
    slots:[S_BRUTO, S_PLAN],
    empty:'<h2>Editor Ejecutor</h2><p>Carga arriba el texto en bruto y el PLAN del capítulo, y pulsa «Ejecutar».</p><p>Entregará el capítulo editado, que pasa solo al paso 5, y un fichero de incidencias para ti.</p>'},
-  {id:'integrador', num:5, title:'Notas', promptKey:'integrador', def:{provider:'claude', model:'claude-opus-5-5'},
+  {id:'integrador', num:5, title:'Notas', promptKey:'integrador', def:DEFAULT_MODEL,
    slots:[S_BRUTO, {key:'editado', label:'Capítulo editado', from:'ejecutor'}, S_PLAN],
    checks:{notesA:'bruto', notesLabel:'el bruto', textA:'editado', stripNew:true, textMustMatch:true},
    empty:'<h2>Integrador de notas</h2><p>Coloca las notas del bruto en el capítulo editado.</p><p>Al terminar, la aplicación comprueba que el texto no ha cambiado (solo deben añadirse llamadas de nota) y compara las notas con las del bruto.</p>'},
-  {id:'depuracion', num:6, title:'Depuración', promptKey:'depuracion', def:{provider:'claude', model:'claude-opus-5-5'},
+  {id:'depuracion', num:6, title:'Depuración', promptKey:'depuracion', def:DEFAULT_MODEL,
    slots:[{key:'texto', label:'Capítulo con notas', from:'integrador'}, S_BRUTO],
    checks:{notesA:'texto', notesLabel:'el capítulo con notas', textA:'texto'},
    empty:'<h2>Depuración de estilo y fidelidad</h2><p>Revisión conservadora del capítulo con notas, usando el bruto para saber qué frases son tuyas.</p><p>Al terminar verás qué ha cambiado en el texto y si las notas siguen intactas.</p>'},
-  {id:'corrector', num:7, title:'Corrección', promptKey:'corrector', def:{provider:'claude', model:'claude-sonnet-4-6'},
+  {id:'corrector', num:7, title:'Corrección', promptKey:'corrector', def:DEFAULT_MODEL,
    slots:[{key:'texto', label:'Capítulo revisado', from:'depuracion'}],
    checks:{notesA:'texto', notesLabel:'el capítulo revisado', textA:'texto'}, autoContinue:true,
    empty:'<h2>Corrección editorial</h2><p>Corrección ligera de ortografía y gramática.</p><p>Si el capítulo es largo y el corrector lo entrega por partes, la aplicación le pide que siga y junta las partes en un solo fichero.</p>'},
@@ -1069,6 +1081,10 @@ function saveState(now){
 function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
 function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 let modelChoice = loadJSON(LS.models) || {};
+if (loadJSON(LS.models + '_default') !== DEFAULT_TAG){
+  STEPS.forEach(s => modelChoice[s.id] = {...DEFAULT_MODEL});
+  saveJSON(LS.models, modelChoice); saveJSON(LS.models + '_default', DEFAULT_TAG);
+}
 STEPS.forEach(s => {
   if (!modelChoice[s.id]) modelChoice[s.id] = {...s.def};
   else if (RETIRED[modelChoice[s.id].model]) modelChoice[s.id].model = RETIRED[modelChoice[s.id].model];
@@ -1448,8 +1464,9 @@ function buildSteps(){
       <div class="results" id="results-${s.id}" style="display:none"></div>
       <div class="chat" id="chat-${s.id}"><div class="chat-inner" id="chatin-${s.id}"></div></div>
       <div class="composer">
+        <div class="sugs" id="sugs-${s.id}"></div>
         <div class="composer-inner">
-          <textarea id="input-${s.id}" rows="1" placeholder="Solo si hace falta: por ejemplo, «continúa» si la respuesta se ha cortado" oninput="autoGrow(this)" onkeydown="composerKey(event,'${s.id}')"></textarea>
+          <textarea id="input-${s.id}" rows="1" placeholder="Solo si hace falta: por ejemplo, «continúa» si la respuesta se ha cortado" oninput="autoGrow(this);markSugs('${s.id}')" onkeydown="composerKey(event,'${s.id}')"></textarea>
           <button class="btn btn-primary" id="send-${s.id}" onclick="sendUser('${s.id}')">Enviar</button>
         </div>
       </div>
@@ -1546,6 +1563,61 @@ function renderActions(id){
 function renderComposer(id){
   const can = state.steps[id].messages.length > 0 && !running[id];
   $('input-' + id).disabled = !can; $('send-' + id).disabled = !can;
+  renderSugs(id);
+}
+
+// Opciones sugeridas (en gris, encima de la caja de respuesta)
+const SUG_RE = /\[\[\s*opciones\s*:([^\]]*)\]\]/gi;
+const SUG_NOTE = `
+
+---
+
+## NOTA DE LA APLICACIÓN: OPCIONES SUGERIDAS
+
+Cuando hagas una pregunta al autor y el texto que tienes delante ofrezca respuestas candidatas razonables (personas, fechas, lugares, parajes, documentos, datos, frases del bruto…), añade al final del mensaje, en una línea aparte, esta marca:
+
+[[opciones: Opción 1 | Opción 2 | Opción 3]]
+
+- Entre 2 y 8 opciones, breves (unas pocas palabras cada una), sacadas del texto y escritas tal como aparecen en él.
+- La aplicación las muestra en gris como botones que el autor puede pulsar para añadirlas a su respuesta; no hace falta que las repitas en el cuerpo del mensaje.
+- Ponla solo si viene a cuento. Si no preguntas nada, o la pregunta es abierta y el texto no da candidatos claros, no la pongas.
+- Una sola marca por mensaje, y nunca dentro de un fichero ni de un bloque de código.`;
+function stripSugs(text, streaming){
+  let t = text.replace(SUG_RE, '');
+  if (streaming) t = t.replace(/\[\[[^\]]*$/, '').replace(/\[$/, '');
+  return t.replace(/\s+$/, '');
+}
+function msgSugs(m){
+  let out = []; let x; SUG_RE.lastIndex = 0;
+  while ((x = SUG_RE.exec(m.content || ''))) out = x[1].split('|').map(o => o.trim()).filter(Boolean);
+  return [...new Set(out)].slice(0, 12);
+}
+function currentSugs(id){
+  const st = state.steps[id]; const last = st.messages[st.messages.length - 1];
+  if (!last || last.role !== 'assistant' || last.streaming || running[id]) return [];
+  return msgSugs(last);
+}
+function renderSugs(id){
+  const box = $('sugs-' + id); if (!box) return;
+  const opts = currentSugs(id);
+  box.innerHTML = opts.length ? '<span class="lbl">Opciones:</span>' + opts.map((o, i) =>
+    `<button class="sug" data-i="${i}" title="Pulsa para añadirlo a tu respuesta (o quitarlo)" onclick="toggleSug('${id}',${i})">${esc(o)}</button>`).join('') : '';
+  markSugs(id);
+}
+function sugParts(v){ return v.split(/\s*[,;\n]\s*/).map(x => x.trim()).filter(Boolean); }
+function markSugs(id){
+  const box = $('sugs-' + id); if (!box) return;
+  const parts = sugParts($('input-' + id).value).map(x => x.toLowerCase());
+  const opts = currentSugs(id);
+  box.querySelectorAll('.sug').forEach(b => b.classList.toggle('on', parts.includes(opts[+b.dataset.i].toLowerCase())));
+}
+function toggleSug(id, i){
+  const t = $('input-' + id); if (t.disabled) return;
+  const o = currentSugs(id)[i]; if (!o) return;
+  let parts = sugParts(t.value);
+  const k = parts.findIndex(x => x.toLowerCase() === o.toLowerCase());
+  if (k >= 0) parts.splice(k, 1); else parts.push(o);
+  t.value = parts.join(', '); autoGrow(t); markSugs(id); t.focus();
 }
 function autoGrow(t){ t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 220) + 'px'; }
 function composerKey(e, id){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); sendUser(id); } }
@@ -1606,7 +1678,7 @@ function renderMsg(id, m, mi){
   if (m.role === 'user' && m.auto) return `<div class="msg auto">La aplicación le pide que siga</div>`;
   if (m.role === 'user') return `<div class="msg user">${esc(m.content)}</div>`;
   const streaming = !!m.streaming;
-  let body = parseSegments(m.content, streaming).map(sg => {
+  let body = parseSegments(stripSugs(m.content, streaming), streaming).map(sg => {
     if (sg.type === 'text') return mdToHtml(sg.text.split('\n').filter(l => !RE_CONT.test(l)).join('\n'));
     if (sg.type === 'code') return `<pre>${esc(sg.body)}</pre>`;
     const what = sg.type === 'part' && !sg.closed && !streaming ? 'fragmento, sigue en la respuesta siguiente' : '';
@@ -1616,7 +1688,7 @@ function renderMsg(id, m, mi){
   if (RE_CONT.test(m.content) && !streaming) body += '<div class="thinking">Entregado por partes: continúa en la respuesta siguiente.</div>';
   if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
   const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
-  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${streaming ? '' : `<button onclick="copyText(state.steps['${id}'].messages[${mi}].content)">Copiar respuesta</button>`}</div>
+  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${streaming ? '' : `<button onclick="copyText(stripSugs(state.steps['${id}'].messages[${mi}].content))">Copiar respuesta</button>`}</div>
     <div class="md ${streaming && m.content ? 'cursor' : ''}">${body}</div>${tail}</div>`;
 }
 
@@ -1754,7 +1826,7 @@ async function runAssistant(id){
     pending = false; const c = $('chat-' + id), atBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
     renderChat(id, true); if (atBottom) scrollChat(id); }); };
   try {
-    const res = await callModel({provider, model, system:st.prompt, messages:history, signal:ctrl.signal,
+    const res = await callModel({provider, model, system:st.prompt + SUG_NOTE, messages:history, signal:ctrl.signal,
       onText:t => { msg.content += t; repaint(); }, onThinking:() => { if (!msg.thinking){ msg.thinking = true; repaint(); } }});
     if (res.truncated) msg.note = 'La respuesta se ha cortado por llegar al límite de longitud. Escribe «continúa» abajo para que siga.';
     if (!msg.content.trim()) throw new Error('El modelo ha devuelto una respuesta vacía.');

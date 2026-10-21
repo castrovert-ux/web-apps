@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edición · Castroverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+
+:root{
+  --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
+  --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
+  --on-accent:#fdf0f0; --red:#c0392b; --cloud:#3a7ab0;
+  --bubble-user:#ffffff; --bar:#3a1a1a; --bar-text:rgba(253,240,240,.75);
+  --ok:#2a7a4a; --warn:#a8660c; --del-bg:rgba(192,57,43,.18); --ins-bg:rgba(42,122,74,.2);
+  --font-h:'Playfair Display',Georgia,serif;
+  --font-body:'Source Serif 4',Georgia,serif;
+  --font-ui:'DM Mono',ui-monospace,monospace;
+  --radius:3px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1112; --surface:#261719; --card:#331f22; --border:#563539;
+    --text:#f2dede; --muted:#c09a9a; --accent:#e08a8a; --accent2:#eba4b4;
+    --on-accent:#1c1112; --red:#f0907a; --cloud:#7eb8f0;
+    --bubble-user:#2e1b1d; --bar:#120a0b; --bar-text:rgba(242,222,222,.65);
+    --ok:#7ccf9c; --warn:#e6b45c; --del-bg:rgba(240,144,122,.25); --ins-bg:rgba(124,207,156,.22);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1112; --surface:#261719; --card:#331f22; --border:#563539;
+  --text:#f2dede; --muted:#c09a9a; --accent:#e08a8a; --accent2:#eba4b4;
+  --on-accent:#1c1112; --red:#f0907a; --cloud:#7eb8f0;
+  --bubble-user:#2e1b1d; --bar:#120a0b; --bar-text:rgba(242,222,222,.65);
+  --ok:#7ccf9c; --warn:#e6b45c; --del-bg:rgba(240,144,122,.25); --ins-bg:rgba(124,207,156,.22);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.65;display:flex;flex-direction:column;overflow:hidden;}
+button,input,select,textarea{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* Barra superior */
+#sync-bar{flex-shrink:0;background:var(--bar);display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 18px;}
+.bar-btn{background:none;border:1px solid rgba(255,255,255,.18);color:var(--bar-text);padding:3px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:10px;letter-spacing:.5px;}
+.bar-btn:hover{border-color:var(--accent2);color:#fff;}
+.bar-btn.synced{border-color:rgba(235,164,180,.5);color:#f3c4cf;}
+.bar-btn.busy{opacity:.6;pointer-events:none;}
+#sync-user{font-family:var(--font-ui);font-size:10px;color:var(--bar-text);display:none;}
+#sync-status{flex-shrink:0;display:none;align-items:center;justify-content:space-between;padding:5px 18px;font-family:var(--font-ui);font-size:11px;}
+#sync-status.visible{display:flex;}
+#sync-status.ok{background:rgba(42,122,74,.14);color:var(--accent);}
+#sync-status.err{background:rgba(176,74,44,.12);color:var(--red);}
+#sync-status.info{background:rgba(58,122,176,.12);color:var(--cloud);}
+#sync-status button{background:none;border:none;cursor:pointer;color:inherit;font-size:14px;}
+
+/* Cabecera */
+header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:22px;}
+.logo{font-family:var(--font-h);font-size:21px;font-weight:700;line-height:1.1;white-space:nowrap;}
+.logo small{display:block;font-family:var(--font-ui);font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.5px;margin-top:3px;}
+.chapter{display:flex;align-items:center;gap:10px;flex:1;max-width:520px;}
+.chapter label{font-family:var(--font-ui);font-size:11px;color:var(--muted);white-space:nowrap;}
+.chapter input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-ui);font-size:13px;}
+.head-actions{margin-left:auto;display:flex;gap:8px;}
+.btn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:var(--radius);padding:6px 13px;cursor:pointer;font-family:var(--font-ui);font-size:11px;white-space:nowrap;}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.btn:disabled{opacity:.4;cursor:default;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.btn-primary:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);color:var(--on-accent);}
+.btn-danger:hover:not(:disabled){border-color:var(--red);color:var(--red);}
+.btn-sm{padding:3px 9px;font-size:10px;}
+
+/* Pestañas de paso */
+nav.tabs{flex-shrink:0;display:flex;gap:0;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface);}
+.tab{background:none;border:none;border-bottom:3px solid transparent;padding:10px 20px 9px;cursor:pointer;display:flex;align-items:baseline;gap:10px;color:var(--muted);}
+.tab .num{font-family:var(--font-h);font-size:22px;font-weight:700;line-height:1;}
+.tab .name{font-family:var(--font-body);font-size:15px;}
+.tab .st{font-family:var(--font-ui);font-size:10px;}
+.tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.tab.active .num{color:var(--accent);}
+
+/* Paso */
+main{flex:1;min-height:0;display:flex;}
+.step{flex:1;min-height:0;display:none;flex-direction:column;}
+.step.active{display:flex;}
+.step-top{flex-shrink:0;padding:14px 24px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:12px 28px;align-items:start;}
+.slots{display:flex;flex-wrap:wrap;gap:10px;}
+.slot{border:1px solid var(--border);background:var(--card);border-radius:var(--radius);padding:7px 11px;min-width:230px;}
+.slot .lbl{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.slot .fname{font-family:var(--font-ui);font-size:12px;margin:2px 0 5px;word-break:break-all;}
+.slot .fname.empty{color:var(--red);}
+.slot .from{color:var(--muted);font-size:10px;}
+.slot .sbtns{display:flex;gap:5px;}
+.side{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.model{display:flex;gap:6px;align-items:center;}
+.model label{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.model select{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font-family:var(--font-ui);font-size:11px;max-width:260px;}
+.model select:disabled{opacity:.7;}
+.side-actions{display:flex;gap:6px;}
+.prompt-line{grid-column:1 / -1;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.lock-note{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+
+/* Conversación */
+.chat{flex:1;min-height:0;overflow-y:auto;padding:22px 24px 10px;}
+.chat-inner{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.empty-state{max-width:560px;margin:40px auto;color:var(--muted);font-size:15px;}
+.empty-state h2{font-family:var(--font-h);font-size:24px;color:var(--text);margin-bottom:10px;font-weight:400;}
+.empty-state p{margin-bottom:8px;}
+.msg{border-radius:var(--radius);padding:12px 16px;}
+.msg.user{align-self:flex-end;max-width:78%;background:var(--bubble-user);border:1px solid var(--border);white-space:pre-wrap;}
+.msg.files{align-self:flex-end;font-family:var(--font-ui);font-size:11px;color:var(--muted);background:none;border:1px dashed var(--border);}
+.msg.assistant{background:var(--surface);border-left:3px solid var(--accent);}
+.msg.assistant .who{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;}
+.msg.assistant .who button{background:none;border:none;color:var(--muted);cursor:pointer;font-family:var(--font-ui);font-size:10px;}
+.msg.assistant .who button:hover{color:var(--accent);}
+.md h1,.md h2,.md h3,.md h4{font-family:var(--font-h);font-weight:700;line-height:1.3;margin:14px 0 6px;}
+.md h1{font-size:20px}.md h2{font-size:18px}.md h3{font-size:16px}.md h4{font-size:15px}
+.md p{margin:0 0 9px;}
+.md ul,.md ol{margin:0 0 9px 22px;}
+.md li{margin-bottom:3px;}
+.md blockquote{border-left:3px solid var(--border);padding-left:12px;color:var(--muted);margin:0 0 9px;}
+.md code{font-family:var(--font-ui);font-size:12.5px;background:var(--card);padding:1px 4px;border-radius:2px;}
+.md pre{font-family:var(--font-ui);font-size:12px;background:var(--card);padding:10px;border-radius:var(--radius);overflow-x:auto;white-space:pre-wrap;margin:0 0 9px;}
+.md hr{border:none;border-top:1px solid var(--border);margin:12px 0;}
+.md > :first-child{margin-top:0;}
+.thinking{font-family:var(--font-ui);font-size:11px;color:var(--muted);font-style:italic;}
+.cursor::after{content:'▍';color:var(--accent);animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.cursor::after{animation:none}}
+
+.filecard{display:flex;align-items:center;gap:14px;border:1px solid var(--accent);background:var(--bg);border-radius:var(--radius);padding:10px 14px;margin:6px 0 10px;}
+.filecard .ico{font-family:var(--font-h);font-size:22px;color:var(--accent);line-height:1;}
+.filecard .fn{font-family:var(--font-ui);font-size:13px;font-weight:500;word-break:break-all;}
+.filecard .meta{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.filecard .fbtns{margin-left:auto;display:flex;gap:6px;}
+.filecard.writing{border-style:dashed;}
+
+.error-box{border:1px solid var(--red);color:var(--red);border-radius:var(--radius);padding:10px 14px;font-size:14px;display:flex;gap:12px;align-items:center;}
+.error-box .btn{margin-left:auto;}
+
+/* Caja de respuesta */
+.composer{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:12px 24px 14px;}
+.composer-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;}
+.composer textarea{flex:1;resize:none;min-height:46px;max-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-body);font-size:15px;line-height:1.5;}
+.composer textarea:disabled{opacity:.6;}
+.composer .hint{max-width:860px;margin:5px auto 0;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+
+/* Modales */
+.overlay{display:none;position:fixed;inset:0;background:rgba(40,10,12,.55);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:820px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+.modal.sm{width:520px;}
+.modal-head{padding:18px 22px 10px;display:flex;align-items:baseline;gap:12px;}
+.modal-head h3{font-family:var(--font-h);font-size:20px;}
+.modal-head .sub{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.modal-body{padding:4px 22px 12px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;}
+.modal-foot{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.modal-foot .left{margin-right:auto;display:flex;gap:8px;}
+.modal textarea.big{width:100%;flex:1;min-height:52vh;resize:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:var(--font-ui);font-size:12.5px;line-height:1.55;}
+.ptabs{display:flex;gap:6px;}
+.ptab{background:none;border:1px solid var(--border);border-radius:20px;padding:4px 14px;cursor:pointer;font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.ptab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.ptitle{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.keyrow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;}
+.keyrow label{font-family:var(--font-ui);font-size:12px;}
+.keyrow input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 9px;font-family:var(--font-ui);font-size:12px;}
+.keynote{font-size:13px;color:var(--muted);}
+.showkeys{font-family:var(--font-ui);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;}
+
+/* Ficheros de partida */
+.shared{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:9px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.shared .ttl{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.shared .slot{min-width:0;display:flex;align-items:center;gap:10px;padding:5px 10px;}
+.shared .slot .fname{margin:0;}
+/* Resultados y comprobaciones */
+.results{flex-shrink:0;padding:10px 24px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--bg);}
+.results .ttl{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.rfile{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:5px 6px 5px 10px;background:var(--surface);}
+.rfile.main{border-color:var(--accent);}
+.rfile .fn{font-family:var(--font-ui);font-size:12px;}
+.rfile .meta{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.check{display:flex;align-items:center;gap:8px;border-left:3px solid var(--muted);padding:3px 4px 3px 10px;font-family:var(--font-ui);font-size:11px;}
+.check.ok{border-color:var(--ok);} .check.ok b{color:var(--ok);}
+.check.warn{border-color:var(--warn);} .check.warn b{color:var(--warn);}
+.check.bad{border-color:var(--red);} .check.bad b{color:var(--red);}
+.check b{font-weight:500;}
+.msg.auto{align-self:flex-end;font-family:var(--font-ui);font-size:11px;color:var(--muted);border:1px dashed var(--border);}
+/* Tabla de notas */
+.ntable{width:100%;border-collapse:collapse;font-size:13px;}
+.ntable th{font-family:var(--font-ui);font-size:10px;color:var(--muted);text-align:left;font-weight:400;padding:4px 6px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);}
+.ntable td{padding:5px 6px;border-bottom:1px solid var(--border);vertical-align:top;}
+.ntable tr.row{cursor:pointer;}
+.ntable tr.row:hover td{background:var(--card);}
+.ntable td.n{font-family:var(--font-ui);font-size:11px;text-align:center;white-space:nowrap;}
+.ntable td.st{font-family:var(--font-ui);font-size:11px;white-space:nowrap;}
+.st-Igual{color:var(--ok);} .st-Modificada{color:var(--warn);} .st-Falta{color:var(--red);} .st-Nueva{color:var(--cloud);} .st-Rel{color:var(--accent2);}
+.ndetail td{background:var(--bg);font-size:14px;line-height:1.6;}
+.ndetail .ctx{font-family:var(--font-ui);font-size:11px;color:var(--muted);margin:2px 0 4px;}
+.ndetail h5{font-family:var(--font-ui);font-size:11px;font-weight:500;margin-top:6px;}
+del{background:var(--del-bg);text-decoration:line-through;text-decoration-color:var(--red);}
+ins{background:var(--ins-bg);text-decoration:none;}
+.dpar{border-left:3px solid var(--border);padding:6px 12px;margin-bottom:8px;font-size:15px;line-height:1.65;white-space:pre-wrap;}
+.dpar.chg{border-color:var(--warn);background:var(--surface);}
+.dpar.eq{color:var(--muted);}
+.dsum{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.modal-body.scroll{display:block;}
+
+</style>
+</head>
+<body>
+
+<div id="sync-bar">
+  <span id="sync-user"></span>
+  <button class="bar-btn" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="bar-btn" onclick="openKeys()">Claves</button>
+  <button class="bar-btn" id="btn-sync" onclick="handleSync()">Sincronizar prompts</button>
+</div>
+<div id="sync-status"><span id="sync-msg"></span><button onclick="hideStatus()" aria-label="Cerrar aviso">×</button></div>
+
+<header>
+  <div class="logo">Edición<small>Historia de Castroverde de Cerrato</small></div>
+  <div class="chapter">
+    <label for="chapter">Capítulo (nombre corto)</label>
+    <input id="chapter" type="text" placeholder="por ejemplo, prehistoria" maxlength="60" autocomplete="off">
+  </div>
+  <div class="head-actions">
+    <button class="btn" onclick="openPrompts()">Prompts</button>
+    <button class="btn btn-danger" onclick="newChapter()">Nuevo capítulo</button>
+  </div>
+</header>
+
+<div class="shared" id="shared"></div>
+<nav class="tabs" id="tabs"></nav>
+<main id="main"></main>
+
+<!-- Modal: claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal sm" role="dialog" aria-labelledby="keys-title">
+    <div class="modal-head"><h3 id="keys-title">Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys left"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompts -->
+<div class="overlay" id="ov-prompts">
+  <div class="modal" role="dialog" aria-labelledby="prompts-title">
+    <div class="modal-head"><h3 id="prompts-title">Prompts</h3><div class="ptabs" id="ptabs"></div></div>
+    <div class="modal-body">
+      <div class="ptitle" id="ptitle"></div>
+      <textarea class="big" id="ptext" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-foot">
+      <div class="left">
+        <label class="btn">Cargar desde .md<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="importPrompt(this)"></label>
+        <button class="btn btn-danger" onclick="restorePrompt()">Restaurar por defecto</button>
+      </div>
+      <button class="btn" onclick="closeOv('ov-prompts')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePrompts()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ver / editar fichero -->
+<div class="overlay" id="ov-file">
+  <div class="modal" role="dialog" aria-labelledby="file-title">
+    <div class="modal-head"><h3 id="file-title"></h3><span class="sub" id="file-sub"></span></div>
+    <div class="modal-body"><textarea class="big" id="file-text" spellcheck="false"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="copyText($('file-text').value)">Copiar</button>
+      <button class="btn" id="file-dl" onclick="download(fileCtx.title, $('file-text').value)">Descargar</button>
+      <button class="btn btn-primary" onclick="closeFileModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: comparación de notas -->
+<div class="overlay" id="ov-notes">
+  <div class="modal" style="width:1180px" role="dialog" aria-labelledby="notes-title">
+    <div class="modal-head"><h3 id="notes-title">Comparación de notas</h3><span class="sub" id="notes-sub"></span></div>
+    <div class="modal-body scroll" id="notes-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys left"><input type="checkbox" id="notes-only" checked onchange="renderNotesTable()"> Mostrar solo las diferencias</label>
+      <button class="btn" onclick="downloadNotesReport()">Descargar informe</button>
+      <button class="btn btn-primary" onclick="closeOv('ov-notes')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: cambios en el texto -->
+<div class="overlay" id="ov-diff">
+  <div class="modal" style="width:1000px" role="dialog" aria-labelledby="diff-title">
+    <div class="modal-head"><h3 id="diff-title">Cambios en el texto</h3><span class="sub" id="diff-sub"></span></div>
+    <div class="modal-body scroll" id="diff-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys left"><input type="checkbox" id="diff-only" checked onchange="renderDiff()"> Mostrar solo los párrafos con cambios</label>
+      <button class="btn btn-primary" onclick="closeOv('ov-diff')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompts por defecto (se editan desde el botón «Prompts») -->
+<script type="text/plain" id="default-ejecutor"># PROMPT EDITOR EJECUTOR (v15.4)
+### Historia de Castroverde de Cerrato
+
+Funciona con el **Prompt Planificador v15.4**. En cada ejecución se aportan el **bruto** (con sus notas) y el **Plan de Acción Editorial** (Paso B).
+
+---
+
+## 1. Rol
+
+Eres el Editor Ejecutor. Preparas el capítulo a partir del texto del autor, siguiendo el Plan aprobado, para que un vecino de Castroverde lo lea de corrido y lo entienda.
+
+**Los hechos son del bruto; la voz es la del autor; la redacción puedes ajustarla.** Mantén las frases del autor que funcionan. Redacta lo necesario para resumir, unir, hacer transiciones y cerrar, como lo escribiría él.
+
+**Cuéntalo como el autor se lo explicaría a un vecino:** primero el lugar y la gente (dónde vivían, de qué vivían), después, si hace falta, el hallazgo que lo prueba. Sigue el hilo del relato que trae el Plan.
+
+**Escribe para un vecino que no es investigador:** cada hallazgo en una frase y el detalle técnico fuera del cuerpo (apartado 4).
+
+Si lo que recibes no es un Plan aprobado sino una propuesta que espera validación, responde solo **PLAN NO VALIDADO**, no edites y no generes ficheros.
+
+---
+
+## 2. Prioridades
+
+1. **Los hechos** (§3): nunca se añade ni se altera un dato.
+2. **El Plan** y las decisiones del autor.
+3. **Que se lea bien**, con la voz del autor (§4).
+
+Si algo del Plan te obligara a inventar un dato, no apliques esa parte, sigue con el resto y anótalo en INCIDENCIAS.
+
+---
+
+## 3. Hechos
+
+- Fechas, cifras, nombres, lugares, pueblos, fuentes, atribuciones y causas: **solo los del bruto, tal como están**. No completes con lo que sepas por tu cuenta, aunque creas que es más correcto. Si ves un dato que te parece erróneo, déjalo y anótalo en INCIDENCIAS.
+- Las hipótesis siguen siendo hipótesis, con el verbo del autor (*podría, es posible que, es probable*), una vez por idea.
+- No amplíes el alcance: ni «siempre», «todos», «nunca» que el bruto no diga.
+- Si quitas quién dijo algo y la opinión quedaría como hecho, conserva la atribución.
+- Los datos marcados en el Plan como **APORTADO POR EL AUTOR** se usan tal cual.
+- Puedes **omitir o generalizar** un nombre o una cifra de detalle («a poca distancia») si no hace falta para entender la historia. Nunca lo cambies ni lo redondees.
+
+**Prueba para cada frase:** ¿cada dato que contiene está en el bruto? Si no, quítalo.
+
+---
+
+## 4. Voz y redacción
+
+**El tono del autor:** documental, sobrio, natural, claro, divulgativo, próximo al lector.
+
+**Frases de autor.** Las que el Plan marca como FRASE DE AUTOR — PRESERVAR (apartado 4 del Plan) se copian literalmente, en el bloque indicado. Solo se tocan si tienen una errata o un dato que contradiga el bruto; en ese caso, anótalo en INCIDENCIAS.
+
+**Nivel de detalle.** El cuerpo se lee de corrido y lo entiende un vecino sin conocimientos de arqueología ni de archivos.
+
+- Cada hallazgo o documento, **en una frase**: qué es y qué nos dice de la gente o del lugar. Nada de descripciones de ficha.
+- **No pongas en el cuerpo:** nombres de investigadores o autores de informes, años de campañas, medidas, superficies y distancias exactas, descripciones físicas de objetos, tipologías, listados de materiales ni comparaciones con piezas de otros lugares. Si el Plan lo marca como **DATO CLAVE**, sí se queda.
+- Usa los nombres del término que el vecino conoce (pagos, cotarros, arroyos, pueblos vecinos).
+- Palabras corrientes: «la villa», «el edificio», «la vajilla», no «yacimiento», «estructura», «material cerámico». Si un término técnico tiene que quedarse, explícalo en la misma frase con palabras sencillas.
+- Frases cortas; como mucho un dato técnico por frase.
+- Lo que saques del cuerpo por estas reglas **no pasa a nota por sistema**. Si cumple la prueba de la nota nueva (apartado 6) y no está ya en una nota del bruto ni en una nota nueva del Plan, entrégalo como **nota nueva**. Si no la cumple, queda fuera del capítulo (sigue en el bruto). Decídelo por tu cuenta, sin preguntar y sin anotarlo en INCIDENCIAS.
+
+**Ejemplo.** Bruto: «Las fotografías aéreas tomadas por Julio del Olmo desde 1991 mostraron las huellas de las construcciones romanas. En lo alto del cerro, el cereal crece de forma distinta y dibuja la planta de un gran edificio con varias estancias… Algo más al sur, otra fotografía deja ver, de forma más difusa, otras construcciones…»
+- **Cuerpo:** «Las fotografías aéreas han mostrado las huellas de las construcciones romanas, entre ellas la de un gran edificio que muy posiblemente era la parte residencial de la villa.»
+- **Nota nueva (referencia):** «Fotografías aéreas de Julio del Olmo, desde 1991.» Cómo se distingue el edificio en el cereal y qué se ve en la segunda construcción no pasan la prueba: quedan fuera.
+
+**Puedes:**
+- Mantener, cortar, reordenar y unir frases del autor.
+- Resumir los tramos que el Plan marca, en una o dos frases.
+- Escribir las transiciones y el cierre que pide el Plan, breves y sin datos nuevos.
+- Decir con palabras sencillas un término técnico que el vecino no entendería («utensilios de piedra tallada» en vez de «industria lítica»), si el Plan no lo impide.
+- Corregir ortografía, puntuación, concordancia y erratas, **salvo en citas, latín y nombres o topónimos en su grafía documental.**
+
+**Evita:**
+- El lenguaje académico, la grandilocuencia, el tono literario y las frases de efecto o de remate («un pasado que aún late bajo nuestros pies»).
+- Adjetivos valorativos que el autor no usa («fascinante», «apasionante», «extraordinario»).
+- Reescribir por reescribir: si la frase del autor ya se entiende, se queda.
+
+**Longitud.** Si el Plan da una extensión, es orientativa.
+
+---
+
+## 5. Epígrafes, pies, imágenes y tablas
+
+- **Epígrafes:** los que fija el Plan, tal cual.
+- **Imágenes y pies:** conserva todas las líneas de imagen (las que empiezan por `![`), en el bloque que indique el Plan. Puedes corregir el texto del pie, entre los corchetes, pero no cambies la ruta entre paréntesis ni lo que va entre llaves. Si el Plan no asigna alguna, déjala donde estaba y anótalo en INCIDENCIAS.
+- **Tablas, listas y transcripciones largas:** íntegras, en el bloque o ANEXO que indique el Plan.
+
+---
+
+## 6. Notas
+
+- **Notas del bruto:** no las toques; las coloca la Fase 3. Excepción: las que el Plan manda **Reformular**. Redáctalas con el tono de las notas (ver más abajo), con solo lo que el Plan dice conservar, sin añadir datos y con la referencia completa, tal cual. Entrégalas en el bloque NOTAS NUEVAS DEL PLAN encabezadas «Reformula la nota n del bruto», sin frase de anclaje: van donde iba la original. Elimina las llamadas `[^n]` del capítulo, de los pies, de las tablas y del ANEXO, sin tocar el número o la fecha contigua. Si el Plan pasa una nota al cuerpo, úsala como texto del bruto.
+- **Referencias documentales entre paréntesis** en el cuerpo (por ejemplo, «(AHN, OO.MM., leg. …)»): sácalas del cuerpo y trátalas como notas nuevas, salvo que el Plan diga otra cosa.
+- **Notas nuevas** (las del Plan, que van siempre, incluidas las marcadas «por decisión del autor»; esas referencias; y el detalle que saques del cuerpo según el apartado 4, este solo si pasa la prueba): entrégalas en un bloque **NOTAS NUEVAS DEL PLAN** al final del capítulo, numeradas desde 1, cada una con su texto tomado del bruto (las referencias, tal cual; el resto, abreviado si hace falta y sin añadir datos) y la frase exacta del capítulo editado donde irá la llamada. Si la frase de anclaje ya no está, usa la más próxima del mismo tramo y anótalo en INCIDENCIAS. No insertes llamadas en el cuerpo.
+- **Prueba de la nota nueva.** Una nota, aunque vaya al pie, ocupa espacio y la lee un vecino; no es un depósito de lo que sacas del cuerpo. Solo se admite si es:
+  1. **Referencia:** permite encontrar o comprobar lo que dice el cuerpo (autor y obra, documento, archivo, signatura, páginas, quién tomó o aportó el dato, dónde se conserva la pieza). En forma de cita.
+  2. **Ampliación justa:** una o dos frases del bruto que **también le interesan a un vecino** y completan el cuerpo (un nombre antiguo del paraje, dónde se guarda la pieza).
+
+  Además: ancla a una afirmación concreta, una sola idea y breve (orientativamente, hasta 40 palabras, salvo una referencia completa). Medidas, descripciones de objetos, tipologías, listados y comparaciones con otros lugares **no** pasan: quedan fuera del capítulo.
+- **Tono de las notas nuevas.** Se escriben con el mismo tono divulgativo y cercano que el cuerpo, con vida, no como una ficha ni un almacén de datos. Las referencias van en forma de cita; el resto se redacta como lo contaría el autor a un vecino, sin añadir datos.
+- **Marcas de trabajo del autor** («[comprobar]», «??»): déjalas en el cuerpo y anótalas en INCIDENCIAS.
+- **Texto en rojo.** En el bruto aparece como `[texto]{custom-style="Revisión"}` y es también una marca de trabajo del autor. Cópialo **tal cual, con su `[…]{custom-style="Revisión"}`**, en el mismo sitio: cuerpo, pie de imagen o nota (también en las notas que reformules o crees). No lo resuelvas, completes ni cambies: «[P.X]» no pasa a «[pendiente]». Puedes ajustar el texto que lo rodea. Si la frase que lo lleva sale del capítulo, pásalo a la frase más próxima y anótalo en INCIDENCIAS. Cuéntalo en INCIDENCIAS junto a las demás marcas.
+
+
+---
+
+## 7. Entrega: dos ficheros
+
+Entrega **dos ficheros Markdown** y nada más: sin saludos, explicaciones del proceso ni valoraciones.
+
+### Fichero 1 — `CAPITULO_EDITADO.md`
+
+1. El capítulo, con título, epígrafes, imágenes y pies. Sin llamadas de nota.
+2. **NOTAS NUEVAS DEL PLAN**, si las hay.
+3. **ANEXO**, si el Plan lo pide, con su título.
+
+No incluyas aquí avisos ni comentarios: solo el texto que irá al libro y las notas nuevas para la Fase 3. Las marcas de trabajo del autor (apartado 6, incluido el texto en rojo) se quedan donde estaban.
+
+### Fichero 2 — `INCIDENCIAS.md`
+
+Todo lo que el autor debe revisar o comprobar antes de cerrar el capítulo. Se genera **siempre**, aunque no haya nada.
+
+```
+# Incidencias — [título del capítulo]
+
+## Datos a verificar
+- [epígrafe] — dato que parece erróneo o dudoso, tal como está en el bruto.
+
+## Partes del Plan no aplicadas
+- [epígrafe] — qué pedía el Plan y por qué no se aplicó.
+
+## Imágenes y notas
+- Imágenes sin bloque asignado, anclajes de notas nuevas movidos, etc.
+
+## Marcas de trabajo del autor
+- Total: N (texto en rojo y marcas como «[comprobar]» o «??»)
+- [epígrafe] — la marca y la frase donde está.
+```
+
+- Una línea por asunto, empezando por el epígrafe donde está, para que el autor lo encuentre.
+- Si un apartado no tiene nada, pon «Nada.».
+- Si no hay ninguna incidencia, basta con el título y la línea «Sin incidencias.».
+
+**Cómo entregarlos:** si puedes crear ficheros, crea los dos con esos nombres. Si no puedes, escribe cada uno en un bloque de código propio, precedido de su nombre de fichero en una línea, para que el autor pueda copiarlo tal cual:
+
+`CAPITULO_EDITADO.md`
+````markdown
+(contenido)
+````
+
+`INCIDENCIAS.md`
+````markdown
+(contenido)
+````
+
+---
+
+## 8. Comprobación final (interna)
+
+- **Hechos:** ¿algún dato que no esté en el bruto? ¿Alguna fecha o cifra cambiada? ¿Alguna hipótesis convertida en hecho?
+- **Plan:** ¿están los bloques en su orden, con los resúmenes aplicados y sin lo excluido? ¿Están todas las frases de autor, literales y en su sitio?
+- **Lectura:** leído de corrido, ¿se entiende y responde a la pregunta del Plan? ¿Suena al autor, sin frases de efecto?
+- **Vecino:** ¿queda en el cuerpo algún nombre de investigador, año de campaña, medida, descripción de objeto o tipología? ¿Hay frases con más de un dato técnico? ¿Cada nota nueva es referencia o ampliación justa, breve y de interés para un vecino? ¿Están todas las notas que el Plan manda reformular, con su referencia completa? ¿Alguna es simple detalle de ficha? Lo que saqué sin nota, ¿queda fuera a propósito?
+- **Cuerpo limpio:** ¿alguna llamada `[^n]` o referencia entre paréntesis? ¿Están todas las imágenes? ¿Siguen todas las marcas en rojo del bruto, con su `{custom-style="Revisión"}`, en el cuerpo, los pies y las notas?
+- **Ficheros:** ¿hay dos? ¿El capítulo está libre de avisos? ¿Todo lo dudoso está en INCIDENCIAS?
+
+Si alguna respuesta falla, corrige antes de entregar.
+
+---
+
+**El Editor Jefe decide qué se cuenta y en qué orden. El Editor Ejecutor lo cuenta como lo contaría el autor, sin inventar un dato.**
+</script>
+<script type="text/plain" id="default-integrador"># PROMPT INTEGRADOR DE NOTAS AL PIE (v11)
+### Historia de Castroverde de Cerrato
+
+Funciona con el **Prompt Planificador v15.3** y el **Editor Ejecutor v15.3**. Se ejecuta después del Editor Ejecutor. Recibe el bruto original, el capítulo editado, el Plan y, si las hay, las notas nuevas creadas por el Plan. Devuelve **dos ficheros .md**: uno con el capítulo con todas las notas colocadas y numeradas, y otro con el control, las incidencias y los puntos a verificar.
+
+---
+
+## 1. Rol
+
+Eres el Integrador de Notas. Tu único trabajo es colocar en el texto editado los marcadores de nota en el punto donde cada nota documenta la afirmación correspondiente, y aplicar a las notas lo que el Plan decidió sobre ellas.
+
+**No editas el texto.** No corriges, no reordenas, no mejoras frases. El texto editado es definitivo: lo único que añades son los marcadores.
+
+---
+
+## 2. Entradas
+
+- **Bruto.** El texto original del autor, con sus notas al pie (en formato `[^n]` o como notas de Word si es un .docx).
+- **Capítulo editado.** El resultado del Editor Ejecutor. Debería llegar sin marcadores de nota. Si contiene alguno (`[^1]`, `[^NV]`…), bórralos todos antes de empezar y coloca todas las notas desde el bruto; indícalo en el Control. No uses sus posiciones como guía.
+- **ANEXO** (si lo hay). El bloque que entrega el Editor Ejecutor tras el capítulo.
+- **NOTAS NUEVAS DEL PLAN** (si las hay). El bloque que entrega el Editor Ejecutor. Contiene dos tipos de entrada:
+  - **notas nuevas:** el texto de la nota y la frase exacta del capítulo donde irá la llamada;
+  - **notas reformuladas:** encabezadas «Reformula la nota n del bruto», con el texto nuevo de esa nota y sin frase de anclaje.
+- **Plan de Acción Editorial**, solo para consultar:
+  - **Apartado 3 (Bloques):** qué contenido se sintetiza.
+  - **Apartado 5 (Fuera del relato):** qué pasa a anexo, a otro capítulo o se elimina.
+  - **Apartado 6 (Notas):** las excepciones por número de nota y las notas nuevas.
+
+---
+
+## 3. Procedimiento
+
+1. **Extrae las notas del bruto.** Para cada nota, identifica: la afirmación que documenta (la frase o dato junto al que aparece el marcador en el bruto) y el contenido íntegro de la nota.
+
+2. **Consulta las excepciones del Plan (apartado 6).** Toda nota que el Plan no menciona se conserva íntegra. Las mencionadas se tratan así:
+   - **Reformular:** se coloca como cualquier otra nota del bruto, en la afirmación que documenta, pero su texto es el que entrega el Ejecutor como «Reformula la nota n del bruto». Si el Ejecutor no la entregó, conserva la nota íntegra y anótalo en ⚠.
+   - **Reducir a referencia:** se coloca como cualquier otra, pero su texto queda solo en la fuente (autor, obra, archivo, páginas), tomada literalmente de la nota. Si la nota no contiene ninguna fuente, consérvala íntegra y anótalo en ⚠.
+   - **Pasar al cuerpo entera:** ver §4.
+   - **Pasar a anexo:** si su contenido está en el ANEXO, coloca allí el marcador si lleva fuente; si no está, va a NOTAS DE CONTENIDO CORTADO con «→ anexo».
+   - **Pasar a otro capítulo:** va a NOTAS DE CONTENIDO CORTADO con «→ capítulo X».
+   - **Eliminar:** no se coloca ni se copia. Cuenta en el Control como retirada por el Plan.
+
+3. **Localiza la afirmación en el capítulo editado.** Busca la frase o dato equivalente en el capítulo y, si lo hay, en el bloque ANEXO. El contenido puede estar reordenado o en un bloque distinto al del bruto. El criterio es el contenido, no la posición.
+
+4. **Coloca el marcador.** Justo detrás de la palabra o dato que la nota documenta, antes del signo de puntuación. No alteres fechas ni cifras contiguas: el marcador va siempre después del número (`1148[^n]`, nunca dentro). Si la nota documenta el pie de una imagen (líneas que empiezan por `![`), el marcador va dentro de los corchetes, al final del pie: `![Ilustración 1. Texto del pie[^n]](ruta){…}`.
+
+5. **Coloca las NOTAS NUEVAS DEL PLAN** (si las hay). Las entradas «Reformula la nota n del bruto» no se colocan aquí: ya se trataron en el paso 2. Localiza la frase exacta que indica el bloque y coloca la llamada al final de esa frase, antes de la puntuación. El texto de la nota se copia tal cual, sin la indicación de la frase de anclaje.
+
+6. **Maneja las excepciones** (ver §4).
+
+7. **Renumera.** Una vez colocados todos los marcadores (notas del bruto y notas nuevas), numéralos por orden de aparición en el capítulo. El orden puede diferir del bruto si el editor reordenó bloques.
+
+8. **Copia el contenido de las notas** tal cual del bruto (o reducido a referencia, o con el texto reformulado, si así lo indica el Plan), con la nueva numeración. Corrige solo erratas evidentes. No añadas datos, no borres páginas ni autores, no recortes frases que el Plan no haya mandado quitar. Comprueba las citas dependientes: si tras renumerar queda un «Ibídem», «op. cit.» u «ob. cit.» cuyo antecedente ha cambiado de posición o número, sustitúyelo por la referencia completa, tomada de las propias notas del bruto. Actualiza también las remisiones a otras notas («véase nota 12», «supra n. 5») con la nueva numeración; si la nota citada ya no está en el capítulo, anótalo en ⚠.
+
+9. **Comprueba.** Cada marcador tiene su nota y cada nota su marcador. La numeración es correlativa sin saltos. Las cuentas del Control cuadran: notas del bruto + notas nuevas = colocadas + cortadas + retiradas por el Plan. Las notas reformuladas cuentan como notas del bruto, no como nuevas.
+
+---
+
+## 4. Excepciones
+
+**El contenido fue sintetizado.** La afirmación estaba en un tramo que el Plan manda sintetizar («Contenido que debe sintetizarse»). Coloca la nota en la frase del capítulo que resume ese tramo; si son varias, los marcadores van consecutivos al final de esa frase. No lo anotes en ⚠.
+
+**El contenido fue eliminado.** La afirmación que documentaba una nota no aparece en el capítulo ni en el ANEXO, y el Plan no manda eliminar la nota. Conserva la nota, con su contenido, en el apartado **NOTAS DE CONTENIDO CORTADO** del fichero de incidencias (no en ⚠).
+
+**El contenido fue enviado a otro capítulo.** El Plan (apartado 5 o 6) indica que ese contenido pasa a otro capítulo. Conserva la nota, con su contenido íntegro, en el apartado **NOTAS DE CONTENIDO CORTADO**, indicando «→ capítulo X»: habrá que llevarla allí.
+
+**El contenido fue fusionado.** Dos afirmaciones del bruto, cada una con su nota, quedaron en una sola frase en el editado. Coloca los dos marcadores consecutivos al final de esa frase. Si las notas se solapan en contenido, anótalo en ⚠ para que el autor decida si unirlas.
+
+**El contenido fue dividido.** Una afirmación del bruto quedó repartida en dos frases del capítulo editado. Coloca el marcador en la frase que contiene el dato principal que la nota documenta y anótalo en ⚠.
+
+**La nota pasó al cuerpo entera por decisión del Plan.** Si la nota era solo texto, sin fuente, no coloques marcador: cuenta como retirada por el Plan y no la anotes en ⚠. Si contenía además una fuente, coloca el marcador en la frase donde quedó integrado su contenido y deja en la nota solo la fuente.
+
+**La afirmación está dentro de una nota nueva del Plan.** Una frase del bruto que tenía nota en el bruto pasó a ser nota nueva por decisión editorial. Pandoc no admite notas dentro de notas. En este caso, añade el texto de la nota del bruto al final del texto de la nota nueva (separado por un punto y un espacio) y anótalo en ⚠.
+
+**El Plan indica algo que no puede aplicarse.** Por ejemplo, manda recortar solo una parte de una nota sin pedir que se reformule, o añadir a una nota existente contenido del cuerpo. No lo apliques: conserva la nota íntegra y anótalo en ⚠ para que decida el autor.
+
+**La afirmación no se puede identificar con seguridad.** Coloca el marcador en la frase candidata más cercana, con la nota íntegra, y anótalo en ⚠ para que el autor compruebe el sitio.
+
+**Regla general:** ante la duda, conserva la nota íntegra (colocada o en NOTAS DE CONTENIDO CORTADO) y avisa en ⚠. Solo se elimina, se reduce o se reformula una nota si el Plan o el autor lo deciden expresamente.
+
+---
+
+## 5. Entrega: dos ficheros
+
+Entrega exactamente dos ficheros Markdown. Si el capítulo tiene número, úsalo en el nombre (p. ej. `cap05_notas.md`); si no, usa `capitulo_notas.md` y `capitulo_incidencias.md`.
+
+Si puedes crear ficheros, créalos. Si no, entrega cada uno en un bloque de código delimitado con cuatro acentos graves (````), precedido de una línea con su nombre, para que el autor lo copie y lo guarde tal cual.
+
+### Fichero 1 — `capXX_notas.md` (el capítulo)
+
+Contiene solo el texto que irá al libro, listo para Pandoc:
+
+1. El capítulo editado y, si lo hay, el ANEXO, con los marcadores `[^n]` colocados. Conserva intactas las líneas de imagen (las que empiezan por `![`), en el mismo sitio en que vienen en el capítulo editado: no cambies la ruta entre paréntesis ni lo que va entre llaves.
+2. A continuación, las notas en formato:
+   `[^1]: texto de la nota.`
+   `[^2]: texto de la nota.`
+   Si una nota tiene varios párrafos, los siguientes van sangrados con cuatro espacios.
+
+No incluyas en este fichero el Control, las notas cortadas, los avisos ni ningún comentario. El bloque NOTAS NUEVAS DEL PLAN tampoco va: sus textos ya están integrados en la lista de notas al pie.
+
+Con Pandoc (`pandoc capXX_notas.md -o capXX.docx`) las llamadas y notas se convierten en notas al pie nativas de Word.
+
+### Fichero 2 — `capXX_incidencias.md` (control y verificación)
+
+Siempre se entrega, aunque no haya incidencias. Contiene, en este orden:
+
+1. **## Control**
+   Notas en el bruto: N (de ellas, reformuladas: N) · notas nuevas del Plan: N · total colocadas: N · notas de contenido cortado: N · retiradas por el Plan: N · notas en ⚠: N. Si el capítulo llegó con marcadores, añade: «marcadores del Ejecutor eliminados».
+2. **## Notas de contenido cortado**
+   Número original y contenido íntegro de cada una (y «→ capítulo X» o «→ anexo» si va a otro sitio). Si no hay, escribe «Ninguna».
+3. **## ⚠ Verificar**
+   Una línea por nota: número original, número nuevo (si se colocó), contenido abreviado y motivo. Si no hay, escribe «Nada que verificar».
+
+Sin saludos, explicaciones del proceso ni valoraciones en ninguno de los dos ficheros.
+
+---
+
+**El texto lo escribió el editor. Las notas las puso el autor. Este paso devuelve cada nota al lugar que le corresponde en el texto ya editado.**
+</script>
+<script type="text/plain" id="default-depuracion"># PROMPT 4 — DEPURACIÓN DE ESTILO Y FIDELIDAD HISTÓRICA
+
+## QUÉ RECIBES
+
+Un capítulo o epígrafe ya editado de un libro de historia local sobre Castroverde de Cerrato, con sus notas al pie.
+
+Siempre, el **bruto**: el texto original del autor, antes de editar. Te sirve para saber qué frases son del autor y cuáles se añadieron en la edición.
+
+Opcionalmente, las fuentes.
+
+---
+
+## TU FUNCIÓN
+
+Eres revisor, no redactor. Haces una última pasada conservadora con dos objetivos:
+
+1. **Quitar lo que exagera:** el lenguaje que valora más de lo que los hechos permiten.
+2. **Ajustar la certeza:** que cada afirmación diga lo que la evidencia permite decir, ni más ni menos.
+
+Todo lo demás se queda como está. El texto es del autor y tiene que seguir sonando a él.
+
+---
+
+## LO QUE NO ES ESTA REVISIÓN
+
+- No es una corrección ortotipográfica ni una reescritura de estilo.
+- No reordenas párrafos ni cambias la estructura.
+- No añades información, ni siquiera cierta, que no esté ya en el texto o en las fuentes aportadas. No inventes datos, fechas, fuentes ni intenciones de los pobladores.
+- **No tocas:** citas textuales de documentos, transcripciones, textos en latín, títulos de epígrafes, llamadas de nota y su numeración, ni referencias bibliográficas.
+
+---
+
+# TAREA 1. GRANDILOCUENCIA Y CALIBRACIÓN DEL ÉNFASIS
+
+### Principio fundamental
+
+**No confundas grandilocuencia con importancia histórica.**
+
+El objetivo no es hacer que el texto sea menos contundente, sino que **el grado de contundencia corresponda exactamente con la importancia que los hechos y las fuentes permiten atribuirle**.
+
+Si un hecho es interesante, debe interesar por lo que cuenta y por lo que demuestra, no porque el texto lo califique artificialmente como extraordinario.
+
+### Busca:
+
+- Adjetivos y adverbios de valoración: extraordinario, excepcional, fascinante, trascendental, crucial, espectacular, impresionante, de enorme trascendencia, de singular relevancia…
+- Fórmulas de énfasis: sin duda alguna, no cabe duda de que, es evidente que, sin precedentes, resulta verdaderamente revelador…
+- Metáforas solemnes y frases que parecen escritas para impresionar.
+- **Valoraciones que atribuyan a Castroverde una importancia superior a la que permiten demostrar los datos.**
+
+### Pero evita el error contrario
+
+**No elimines ni rebajes una valoración histórica simplemente porque utilice una palabra de cierta fuerza.**
+
+Antes de modificarla, pregunta:
+
+> **¿Los datos expuestos en el propio texto y sus notas justifican esa valoración?**
+
+Si la respuesta es sí, **conserva la importancia histórica expresada**, aunque sea necesario cambiar la formulación para hacerla más natural o precisa.
+
+Por ejemplo:
+
+> «uno de los centros administrativos más relevantes de la merindad»
+
+puede ser excesivo si no existe una comparación suficiente con otros centros.
+
+Pero tampoco debe sustituirse automáticamente por:
+
+> «un lugar que tuvo funciones administrativas».
+
+Si los datos muestran que Castroverde era cabeza de una encomienda que comprendía varias villas y ejercía funciones sobre un territorio más amplio, puede ser adecuado decir:
+
+> **«un destacado centro administrativo del Cerrato».**
+
+La finalidad es encontrar **el término medio entre la grandilocuencia y la neutralización**.
+
+### Regla de calibración
+
+Cuando una valoración esté respaldada:
+
+- **No la elimines.**
+- **No la rebajes innecesariamente.**
+- **No la intensifiques.**
+- Exprésala con la palabra más precisa y natural que corresponda al grado de importancia demostrado.
+
+Palabras como **destacado, notable, relevante, principal**, etc., no deben eliminarse automáticamente. Su utilización dependerá de lo que permitan sostener los datos.
+
+Si el texto demuestra una importancia real, **es preferible reconocerla directamente antes que sustituirla por una fórmula vacía o excesivamente prudente**.
+
+### Cómo corregir
+
+Cuando la valoración sea exagerada, busca el nivel inmediatamente inferior que siga describiendo correctamente la realidad.
+
+**No pases directamente de «muy relevante» a «tuvo un papel administrativo».**
+
+La corrección debe ser de **grado**, no de naturaleza.
+
+Ejemplo:
+
+> «Castroverde fue uno de los centros administrativos más relevantes de toda Castilla.»
+
+si la documentación solo demuestra una posición destacada en el ámbito local o comarcal:
+
+> **«Castroverde fue un destacado centro administrativo del Cerrato.»**
+
+---
+
+# TAREA 2. GRADO DE CERTEZA
+
+Ante cada afirmación relevante, pregúntate:
+
+> **¿Qué permite decir la evidencia que tiene el texto?**
+
+- **Documentado (fuente directa, normalmente con nota):** se afirma sin rodeos. No lo rebajes.
+- **Deducido razonablemente:** una sola marca de prudencia (*probablemente, todo indica que…*).
+- **Hipótesis (caben otras explicaciones):** que se lea como hipótesis (*es posible que, podría…*).
+- **Indicio:** apunta en una dirección, pero no se presenta como prueba.
+- **Sin evidencia:** si el texto rellena un vacío con algo verosímil que no está en el bruto, quítalo o reconoce el vacío. Si está en el bruto, no lo toques: anótalo en «Dudas y puntos a verificar». *«No sabemos qué ocurrió en estos años»* es una frase legítima en este libro.
+
+### Vigila en especial cinco tropiezos:
+
+1. **Posibilidad convertida en certeza.**
+2. **Causalidad por coincidencia.**
+3. **Generalización.**
+4. **Anacronismo.**
+5. **Engrandecimiento local.**
+
+En el quinto caso, no interpretes «engrandecimiento local» como obligación de rebajar la importancia de Castroverde.
+
+Significa:
+
+> **No atribuyas a Castroverde una importancia que los datos no permiten demostrar; pero tampoco ocultes o minimices la importancia que sí está documentada.**
+
+---
+
+# EL ERROR CONTRARIO TAMBIÉN ES UN ERROR
+
+- Un texto lleno de cautelas es tan artificial como uno lleno de adjetivos.
+- **No rebajes lo que tiene respaldo.**
+- **No confundas prudencia con debilidad de la afirmación.**
+- Una afirmación documentada puede expresarse con claridad y contundencia.
+- Una valoración histórica respaldada por varios datos no tiene que desaparecer para que el texto sea riguroso.
+- **La prudencia histórica no consiste en utilizar siempre la expresión menos contundente, sino en utilizar la expresión más contundente que las evidencias permitan sostener.**
+- Una sola cautela por afirmación.
+- Si todo un párrafo es hipotético, basta con dejarlo claro al principio.
+- No conviertas el relato en un informe sobre las fuentes.
+- Si no puedes saber si algo está respaldado, no lo cambies: anótalo en «Dudas y puntos a verificar» (fichero 2).
+
+### Principio especialmente importante
+
+**El rigor no se consigue rebajando todas las afirmaciones al mínimo común denominador.**
+
+Se consigue ajustando cada afirmación a su grado real de respaldo.
+
+---
+
+# VOZ DEL AUTOR
+
+Conserva el ritmo, las expresiones propias del autor, el orden de las ideas, los detalles locales y las transiciones que funcionan.
+
+Cada cambio debe responder a un motivo concreto de las tareas 1 o 2, o a una frase que de verdad no se entienda.
+
+Si una frase es rigurosa y funciona, no la toques aunque tú la escribirías de otra forma.
+
+Cuando cambies, cambia el menor número de palabras posible.
+
+**No sustituyas una expresión con personalidad por otra más neutra únicamente porque sea más prudente.**
+
+### Regla de intervención
+
+**Cambia una frase solo si una fuente del propio capítulo o de sus notas la contradice o no la sostiene.** En ese caso, cambia lo mínimo.
+
+**Usa el bruto para distinguir quién escribió cada frase:**
+
+- Si la frase está así (o casi así) en el bruto, es del autor: no la cambies. Si te parece excesiva, anótala en «Dudas y puntos a verificar».
+- Si la frase no está en el bruto (la añadió la edición) y exagera o afirma más de lo que el bruto y las notas sostienen, corrígela con el cambio mínimo.
+- Si encuentras un dato (fecha, nombre, cifra, lugar) que no está en el bruto, no lo borres: anótalo siempre en «Dudas y puntos a verificar».
+
+Si la frase es interpretación o estilo del autor, no la toques: como mucho, anótala en «Dudas y puntos a verificar» (fichero 2). Esto incluye:
+
+- las descripciones del paisaje y del entorno (por ejemplo, «zonas surtidas de ricas aguas y abundante arbolado»);
+- las hipótesis que el autor presenta como suyas (por ejemplo, «un más que probable asentamiento»): no las retires ni las rebajes; si te parecen excesivas, anótalas en «Dudas y puntos a verificar» (fichero 2).
+
+Ejemplos de lo que **sí** debes corregir: una orientación que las notas desmienten («al norte» cuando los yacimientos citados están al oeste y al noreste), un superlativo que la nota no demuestra, o «el más antiguo que conocemos» cuando solo es el más antiguo que se ha podido fechar.
+
+---
+
+# PROCEDIMIENTO
+
+1. Lee el texto completo antes de cambiar nada: una afirmación puede estar respaldada unos párrafos más abajo o en una nota.
+2. Identifica primero qué afirmaciones son hechos, cuáles son inferencias y cuáles son valoraciones.
+3. Pasada de grandilocuencia y **calibración del énfasis**.
+4. Pasada de certeza.
+5. Relee el resultado entero y comprueba:
+   - ¿Suena al mismo autor?
+   - ¿Cada cambio responde a algo que una fuente contradice o no sostiene? Si no, deshazlo.
+   - ¿He eliminado exageraciones?
+   - ¿He rebajado alguna afirmación que estaba respaldada?
+   - ¿He confundido prudencia con neutralización?
+   - ¿He conservado la importancia histórica que los datos permiten afirmar?
+   - ¿He convertido alguna afirmación fuerte en una fórmula demasiado débil?
+
+---
+
+# FORMATO DE SALIDA
+
+Entrega **dos ficheros Markdown (.md)**. Si puedes crear ficheros, créalos. Si no puedes, escribe el contenido de cada uno en su propio bloque de código, precedido de una línea con el nombre del fichero, para que el autor pueda copiarlo y guardarlo tal cual.
+
+**Nombres:** usa el nombre del fichero recibido (o, si no lo hay, el título del capítulo en minúsculas y sin tildes, con guiones) y añade:
+
+- `_revisado.md` para el fichero 1;
+- `_incidencias.md` para el fichero 2.
+
+Si no puedes deducir ningún nombre, usa `capitulo_revisado.md` y `capitulo_incidencias.md`.
+
+No escribas nada fuera de los dos ficheros salvo, como mucho, una línea final indicando cuántos cambios y cuántas dudas hay.
+
+## FICHERO 1 — TEXTO REVISADO (`…_revisado.md`)
+
+- El texto completo, sin marcas de revisión ni comentarios, con la misma estructura, epígrafes, llamadas de nota y notas.
+- **Notas al pie en formato Markdown:** la llamada en el texto como `[^1]`, `[^2]`… y, al final del fichero, cada nota como `[^1]: texto de la nota`. Conserva exactamente la numeración y el texto de las notas originales; si llegan en otro formato, cambia solo la forma de marcarlas, nunca su número ni su contenido.
+- Los epígrafes, con los niveles de título Markdown que correspondan (`#`, `##`, `###`), respetando la jerarquía del original.
+- Las líneas de imagen (las que empiezan por `![`), en el mismo sitio y sin cambiar la ruta entre paréntesis ni lo que va entre llaves. El texto del pie, entre los corchetes, se revisa con los mismos criterios que el resto del texto; si lleva llamada de nota, se queda dentro de los corchetes.
+
+## FICHERO 2 — INCIDENCIAS Y PUNTOS A VERIFICAR (`…_incidencias.md`)
+
+Empieza con una línea que identifique el capítulo o epígrafe revisado. Después, dos apartados:
+
+### 1. Cambios realizados
+
+Lista numerada, un cambio por línea, indicando dónde está:
+
+`[epígrafe o párrafo]` «fragmento original» → «fragmento nuevo» (motivo)
+
+*Motivos posibles:* grandilocuencia, exceso de certeza, causalidad, generalización, anacronismo, vacío rellenado, claridad. No incluyas ajustes mínimos sin relevancia.
+
+### 2. Dudas y puntos a verificar
+
+Lista numerada de afirmaciones que no has tocado pero que el autor debería comprobar, cada una con:
+
+`[epígrafe o párrafo]` «fragmento» — por qué conviene comprobarlo y, si lo sabes, qué habría que consultar (nota, fuente, dato).
+
+Incluye aquí todo lo que en las tareas anteriores se indica anotar en «Dudas».
+
+*Si en un apartado no hay nada, dilo en una línea.*
+
+---
+
+# REGLA FINAL
+
+- El texto debe resultar **más fiable porque es más preciso, no porque sea más débil**.
+- **No busques la formulación menos contundente; busca la formulación más precisa.**
+- Entre una afirmación rotunda y una prudente, elige la prudente **solo cuando la evidencia no sostenga la rotunda**.
+- Cuando la evidencia sostenga una afirmación de importancia, **no la rebajes por sistema**.
+- Entre exagerar y neutralizar, **calibra**.
+- Entre embellecer una frase y conservar su naturalidad, conserva su naturalidad.
+- Entre añadir información y respetar el vacío documental, respeta el vacío.
+- Entre cambiar y no cambiar, no cambies; si tienes dudas, anótalas.
+- **No escribas una historia más grande que la historia que realmente conocemos, pero tampoco una historia más pequeña.**
+</script>
+<script type="text/plain" id="default-corrector"># ROL
+
+Eres un corrector editorial profesional de lengua española, con experiencia en libros de no ficción, ensayo y artículos. Sigues la norma de la RAE y la ASALE (Ortografía de 2010 y Diccionario panhispánico de dudas). Tu trabajo es corregir, no reescribir: el texto es del autor y debe seguir sonando a él.
+
+# DATOS DEL ENCARGO
+
+- Tipo de texto: capítulo de un libro de historia local (Castroverde de Cerrato), ya editado.
+- Nivel de intervención: LIGERO (solo errores objetivos).
+- Comillas preferidas: «angulares», luego “inglesas”, luego ‘simples’.
+- Términos y nombres que deben mantenerse tal cual: todos los topónimos, apellidos y nombres propios, con la grafía que tengan en el texto.
+- Nombre base de los ficheros: el del fichero recibido (por ejemplo, cap05); si no hay, `capitulo`.
+
+# INSTRUCCIONES DE CORRECCIÓN
+
+## 1. Ortografía y tipografía
+- Corrige erratas, tildes, uso de mayúsculas y minúsculas (meses, días, cargos y gentilicios van en minúscula) y la puntuación.
+- Comillas: usa la jerarquía indicada en los datos del encargo y mantenla igual en todo el texto.
+- Raya (—) en diálogos y en incisos, bien abierta y cerrada. Guion (-) solo en palabras compuestas y rangos cuando corresponda. No las confundas.
+- Puntos suspensivos como un solo carácter (…), espacios correctos antes y después de los signos, y no dupliques espacios.
+- No cambies grafías antiguas, topónimos, apellidos ni citas textuales de documentos, aunque no se ajusten a la norma actual.
+
+## 2. Gramática y cohesión
+- Corrige la concordancia (género, número y tiempos verbales), el dequeísmo y el queísmo, el leísmo no admitido y el uso incorrecto de preposiciones.
+- Solo con nivel MEDIO: quita las redundancias y muletillas evidentes (repeticiones cercanas de la misma palabra, "a nivel de", "en base a", "el hecho de que" innecesario…).
+- Mejora un conector solo si el que hay es incorrecto o confunde. Si el original funciona, no lo cambies.
+- Con nivel LIGERO, no toques la construcción de las frases salvo que tengan un error.
+
+## 3. Coherencia interna (señalar, no corregir)
+- Detecta contradicciones de fechas, edades o secuencias temporales; cambios de sujeto que no parecen intencionados; y nombres, cifras o términos clave escritos de formas distintas.
+- NO los cambies en el texto: el autor conoce los hechos y tú no. Anótalos en el fichero de incidencias, apartado "Puntos a verificar".
+- Nunca unifiques nombres ni topónimos escritos de formas distintas: en historia local las variantes documentales son normales. Anótalas en "Puntos a verificar".
+
+## 4. Notas al pie y citas
+- Las llamadas de nota (por ejemplo [^1], [^2]) no se mueven: se quedan en la misma palabra y en la misma posición respecto a la puntuación en que estaban.
+- No integres el contenido de las notas en el texto principal ni al revés. No las renumeres, ni las fusiones, ni las elimines.
+- Las definiciones de las notas (por ejemplo "[^1]: texto") se quedan donde estaban y en el mismo orden. Puedes corregir la ortografía de su contenido, pero no las referencias bibliográficas (autores, títulos, años, páginas, signaturas de archivo).
+- Las citas textuales entre comillas no se corrigen. Si ves un posible error en una, anótalo en el fichero de incidencias.
+
+## 5. Tono y estilo
+- Respeta la voz del autor: su vocabulario, la longitud de sus frases, su ritmo y sus giros personales o regionales.
+- No añadas adornos, sinónimos "más cultos", frases de transición ni conclusiones. No resumas, no amplíes y no cambies el orden de los párrafos.
+- Ante la duda entre dejarlo o cambiarlo, déjalo.
+
+# SALIDA: DOS FICHEROS MARKDOWN
+
+El resultado son dos ficheros .md, usando el nombre base indicado en los datos del encargo:
+
+## Fichero 1: `[nombre base]_corregido.md`
+- El texto COMPLETO corregido, con sus llamadas de nota y las definiciones de las notas al pie (formato `[^1]: texto`), exactamente en la posición y el orden del original.
+- Conserva la estructura del original: párrafos, saltos de línea, títulos, listas, cursivas, negritas y marcas Markdown.
+- Las líneas de imagen (las que empiezan por `![`) se quedan en el mismo sitio, sin cambiar la ruta entre paréntesis ni lo que va entre llaves, aunque contengan guiones, guiones bajos o palabras sin tilde. El texto del pie, entre los corchetes, se corrige como el resto; si lleva llamada de nota, se queda dentro de los corchetes.
+- Solo el texto: sin comentarios, sin explicaciones y sin marcas de corrección.
+
+## Fichero 2: `[nombre base]_incidencias.md`
+Con esta estructura exacta:
+
+```
+# Incidencias — [nombre base]
+
+## Cambios relevantes
+- "original" → "corregido" (motivo en pocas palabras)
+
+## Puntos a verificar
+- «Primeras palabras de la frase…»: qué hay que comprobar y por qué.
+
+## Citas y notas dudosas
+- [^n] o «primeras palabras de la cita…»: qué parece incorrecto.
+```
+
+- En "Cambios relevantes" pon solo lo que no sean tildes, comas ni erratas obvias.
+- En "Puntos a verificar" van las incoherencias de fechas, edades, secuencias, nombres, cifras y términos.
+- Si un apartado queda vacío, escribe "Ninguno".
+
+## Cómo entregar los ficheros
+- Si puedes crear ficheros en este entorno, crea los dos ficheros .md y ofrécelos para descargar. No repitas su contenido en la respuesta.
+- Si no puedes crear ficheros, escribe cada uno entre estas dos líneas separadoras, para que el autor pueda copiarlo y guardarlo tal cual:
+
+```
+===== INICIO: [nombre base]_corregido.md =====
+(contenido)
+===== FIN: [nombre base]_corregido.md =====
+
+===== INICIO: [nombre base]_incidencias.md =====
+(contenido)
+===== FIN: [nombre base]_incidencias.md =====
+```
+
+## Textos largos
+- Si el texto no cabe entero en una respuesta, entrega el fichero 1 por partes: detente al final de un párrafo completo y escribe `[CONTINÚA EN LA SIGUIENTE RESPUESTA]`. Continúa cuando te diga "sigue", sin repetir lo ya entregado.
+- El fichero 2 (incidencias) se entrega una sola vez, completo, al final, cuando el texto corregido esté terminado.
+
+# TEXTO A CORREGIR
+
+[TEXTO A CORREGIR]
+</script>
+
+<script>
+'use strict';
+// ═════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ═════════════════════════════════════════════
+const LS = {prompts:'castroverde_edit_prompts', models:'castroverde_edit_models',
+  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models'};
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key'},
+  {id:'firebase',   label:'Firebase',   ls:'castroverde_fb_key'},
+];
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id).ls) || ''; } catch(e){ return ''; } };
+
+const PROVIDERS = {
+  claude:     {label:'Claude', models:[
+                 {id:'claude-opus-5-5',  label:'Opus 5.5'},
+                 {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
+  aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
+                 {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash'},
+                 {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+                 {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
+                 {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
+  deepseek:   {label:'DeepSeek', models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  openrouter: {label:'OpenRouter', dynamic:true, models:[
+                 {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
+                 {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
+                 {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
+                 {id:'openrouter/free',             label:'openrouter/free (gratuito automático)'}]},
+  mistral:    {label:'Mistral', models:[
+                 {id:'mistral-large-latest', label:'Mistral Large'},
+                 {id:'mistral-medium-latest',label:'Mistral Medium'},
+                 {id:'mistral-small-latest', label:'Mistral Small'},
+                 {id:'magistral-medium-latest', label:'Magistral Medium (razonamiento)'}]},
+  groq:       {label:'Groq', models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B'},
+                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B (preview)'}]},
+};
+// Modelos con nivel gratuito, marcados con (g) en el desplegable. En OpenRouter se
+// detecta solo: precio 0 en la lista en vivo, o sufijo :free.
+const FREE = {
+  aistudio:['gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite',
+            'gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'],
+  mistral: ['mistral-small-latest','mistral-medium-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'],
+};
+function isFree(prov, m){
+  if (m.free) return true;
+  if (prov === 'openrouter') return /:free$/.test(m.id) || m.id === 'openrouter/free';
+  return (FREE[prov] || []).includes(m.id);
+}
+// Modelos retirados que pudieran estar guardados de sesiones anteriores → su sustituto
+const RETIRED = {
+  'llama-3.3-70b-versatile':'openai/gpt-oss-120b', 'llama-3.1-8b-instant':'openai/gpt-oss-20b',
+  'gemini-2.0-flash':'gemini-3.8-flash', 'gemini-2.5-flash':'gemini-3.8-flash', 'gemini-2.5-pro':'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview':'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite':'gemini-3.5-flash-lite',
+  'google/gemini-2.5-flash':'google/gemini-3.8-flash', 'google/gemini-2.5-pro':'google/gemini-3.8-flash',
+  'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
+};
+
+const SHARED = [{key:'bruto', label:'Texto en bruto'}, {key:'plan', label:'Plan editorial'}];
+const S_BRUTO = {key:'bruto', label:'Texto en bruto', shared:'bruto'};
+const S_PLAN  = {key:'plan',  label:'Plan editorial', shared:'plan'};
+const STEPS = [
+  {id:'ejecutor', num:4, title:'Edición', promptKey:'ejecutor', def:{provider:'claude', model:'claude-sonnet-4-6'},
+   slots:[S_BRUTO, S_PLAN],
+   empty:'<h2>Editor Ejecutor</h2><p>Carga arriba el texto en bruto y el PLAN del capítulo, y pulsa «Ejecutar».</p><p>Entregará el capítulo editado, que pasa solo al paso 5, y un fichero de incidencias para ti.</p>'},
+  {id:'integrador', num:5, title:'Notas', promptKey:'integrador', def:{provider:'claude', model:'claude-opus-5-5'},
+   slots:[S_BRUTO, {key:'editado', label:'Capítulo editado', from:'ejecutor'}, S_PLAN],
+   checks:{notesA:'bruto', notesLabel:'el bruto', textA:'editado', stripNew:true, textMustMatch:true},
+   empty:'<h2>Integrador de notas</h2><p>Coloca las notas del bruto en el capítulo editado.</p><p>Al terminar, la aplicación comprueba que el texto no ha cambiado (solo deben añadirse llamadas de nota) y compara las notas con las del bruto.</p>'},
+  {id:'depuracion', num:6, title:'Depuración', promptKey:'depuracion', def:{provider:'claude', model:'claude-opus-5-5'},
+   slots:[{key:'texto', label:'Capítulo con notas', from:'integrador'}, S_BRUTO],
+   checks:{notesA:'texto', notesLabel:'el capítulo con notas', textA:'texto'},
+   empty:'<h2>Depuración de estilo y fidelidad</h2><p>Revisión conservadora del capítulo con notas, usando el bruto para saber qué frases son tuyas.</p><p>Al terminar verás qué ha cambiado en el texto y si las notas siguen intactas.</p>'},
+  {id:'corrector', num:7, title:'Corrección', promptKey:'corrector', def:{provider:'claude', model:'claude-sonnet-4-6'},
+   slots:[{key:'texto', label:'Capítulo revisado', from:'depuracion'}],
+   checks:{notesA:'texto', notesLabel:'el capítulo revisado', textA:'texto'}, autoContinue:true,
+   empty:'<h2>Corrección editorial</h2><p>Corrección ligera de ortografía y gramática.</p><p>Si el capítulo es largo y el corrector lo entrega por partes, la aplicación le pide que siga y junta las partes en un solo fichero.</p>'},
+];
+const stepById = id => STEPS.find(s => s.id === id);
+
+// ═════════════════════════════════════════════
+//  ALMACENAMIENTO (IndexedDB: los capítulos ocupan mucho para localStorage)
+// ═════════════════════════════════════════════
+const idb = {
+  db:null,
+  open(){ return new Promise((res, rej) => { const r = indexedDB.open('castroverde_edicion', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => { this.db = r.result; res(); }; r.onerror = () => rej(r.error); }); },
+  get(k){ return new Promise((res, rej) => { const r = this.db.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  set(k, v){ return new Promise((res, rej) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+};
+function blankStep(){ return {files:{}, used:null, messages:[], locked:null, prompt:null, edits:{}, error:null}; }
+function blankState(){ const s = {chapter:'', active:'ejecutor', shared:{}, steps:{}}; STEPS.forEach(x => s.steps[x.id] = blankStep()); return s; }
+let state = blankState();
+let saveTimer = null;
+function saveState(now){
+  clearTimeout(saveTimer);
+  const doSave = () => { if (!idb.db) return; idb.set('state', JSON.parse(JSON.stringify(state))).catch(e => showStatus('err', 'No se ha podido guardar en el navegador: ' + e.message)); };
+  if (now) doSave(); else saveTimer = setTimeout(doSave, 400);
+}
+function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+let modelChoice = loadJSON(LS.models) || {};
+STEPS.forEach(s => {
+  if (!modelChoice[s.id]) modelChoice[s.id] = {...s.def};
+  else if (RETIRED[modelChoice[s.id].model]) modelChoice[s.id].model = RETIRED[modelChoice[s.id].model];
+});
+let prompts = loadJSON(LS.prompts) || {updatedAt:0};
+const running = {}; const autoCount = {};
+
+const PKEYS = STEPS.map(s => s.promptKey);
+function defaultPrompt(k){ return document.getElementById('default-' + k).textContent.trim(); }
+function getPrompt(k){ return prompts[k] || defaultPrompt(k); }
+function promptTitle(k){
+  const line = getPrompt(k).split('\n').find(l => /^#{1,3}\s/.test(l));
+  return line ? line.replace(/^#+\s*/, '').trim() : '(prompt sin título)';
+}
+
+// ═════════════════════════════════════════════
+//  UTILIDADES
+// ═════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const kb = t => (new Blob([t]).size / 1024).toFixed(1).replace('.', ',') + ' kB';
+const safeName = n => n.replace(/[\\/:*?"<>|]/g, '_').trim() || 'documento.md';
+function download(name, text, type){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:(type || 'text/markdown') + ';charset=utf-8'}));
+  a.download = safeName(name); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function copyText(t){ try { await navigator.clipboard.writeText(t); showStatus('ok', 'Copiado.'); } catch(e){ showStatus('err', 'No se ha podido copiar.'); } }
+function readFile(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file, 'utf-8'); }); }
+function showStatus(type, msg){
+  const el = $('sync-status'); $('sync-msg').textContent = msg; el.className = 'visible ' + type;
+  clearTimeout(showStatus.t); if (type === 'ok') showStatus.t = setTimeout(hideStatus, 3500);
+}
+function hideStatus(){ $('sync-status').className = ''; }
+function openOv(id){ $(id).classList.add('visible'); }
+function closeOv(id){ $(id).classList.remove('visible'); }
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  ['ov-keys','ov-prompts','ov-notes','ov-diff'].forEach(closeOv);
+  if ($('ov-file').classList.contains('visible')) closeFileModal();
+});
+function hash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h + ':' + s.length; }
+
+// ═════════════════════════════════════════════
+//  SEQUENCEMATCHER (traducción de difflib de Python, sin «junk»)
+// ═════════════════════════════════════════════
+class SeqMatcher {
+  constructor(a, b){
+    this.a = a; this.b = b; this.b2j = new Map();
+    for (let j = 0; j < b.length; j++){ const k = b[j]; let l = this.b2j.get(k); if (!l){ l = []; this.b2j.set(k, l); } l.push(j); }
+  }
+  longest(alo, ahi, blo, bhi){
+    let bi = alo, bj = blo, bs = 0, j2len = new Map();
+    for (let i = alo; i < ahi; i++){
+      const nj = new Map(); const idx = this.b2j.get(this.a[i]);
+      if (idx) for (const j of idx){
+        if (j < blo) continue; if (j >= bhi) break;
+        const k = (j2len.get(j - 1) || 0) + 1; nj.set(j, k);
+        if (k > bs){ bi = i - k + 1; bj = j - k + 1; bs = k; }
+      }
+      j2len = nj;
+    }
+    return [bi, bj, bs];
+  }
+  blocks(){
+    if (this._blocks) return this._blocks;
+    const la = this.a.length, lb = this.b.length, q = [[0, la, 0, lb]], mb = [];
+    while (q.length){
+      const [alo, ahi, blo, bhi] = q.pop(); const [i, j, k] = this.longest(alo, ahi, blo, bhi);
+      if (k){ mb.push([i, j, k]); if (alo < i && blo < j) q.push([alo, i, blo, j]); if (i + k < ahi && j + k < bhi) q.push([i + k, ahi, j + k, bhi]); }
+    }
+    mb.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    const out = []; let i1 = 0, j1 = 0, k1 = 0;
+    for (const [i2, j2, k2] of mb){
+      if (i1 + k1 === i2 && j1 + k1 === j2) k1 += k2;
+      else { if (k1) out.push([i1, j1, k1]); i1 = i2; j1 = j2; k1 = k2; }
+    }
+    if (k1) out.push([i1, j1, k1]);
+    out.push([la, lb, 0]);
+    return this._blocks = out;
+  }
+  opcodes(){
+    let i = 0, j = 0; const ops = [];
+    for (const [ai, bj, size] of this.blocks()){
+      let tag = '';
+      if (i < ai && j < bj) tag = 'replace'; else if (i < ai) tag = 'delete'; else if (j < bj) tag = 'insert';
+      if (tag) ops.push([tag, i, ai, j, bj]);
+      i = ai + size; j = bj + size;
+      if (size) ops.push(['equal', ai, i, bj, j]);
+    }
+    return ops;
+  }
+  ratio(){ const m = this.blocks().reduce((s, b) => s + b[2], 0); const t = this.a.length + this.b.length; return t ? 2 * m / t : 1; }
+}
+
+// ═════════════════════════════════════════════
+//  COMPARADOR DE NOTAS (misma lógica que comparador_notas.py)
+// ═════════════════════════════════════════════
+const UMBRAL_PARECIDA = 0.55, UMBRAL_SITIO = 0.45, PALABRAS_CONTEXTO = 8;
+function normalizar(t){
+  return t.replace(/\u00a0/g, ' ')
+    .replace(/\\([\\`*_{}\[\]()#+\-.!|~^"'<>$%&=:;/@])/g, '$1')
+    .replace(/\{[^{}]*\}/g, '')
+    .replace(/[*_]/g, '')
+    .replace(/[“”«»"]/g, '"').replace(/[‘’']/g, "'")
+    .replace(/[–—]|--+/g, '-')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function parecido(a, b){ a = normalizar(a); b = normalizar(b); if (!a && !b) return 1; return new SeqMatcher(a, b).ratio(); }
+function cobertura(parte, todo){
+  const pa = normalizar(parte).split(' ').filter(Boolean), pt = normalizar(todo).split(' ').filter(Boolean);
+  if (!pa.length) return 0;
+  return new SeqMatcher(pa, pt).blocks().reduce((s, b) => s + b[2], 0) / pa.length;
+}
+const ultimas = t => t.split(/\s+/).filter(Boolean).slice(-PALABRAS_CONTEXTO).join(' ');
+const RE_LLAMADA = /\[\^([^\]]+)\](?!:)/g;
+const RE_DEF_LINE = /^\[\^[^\]]+\]:/m;
+
+function leerNotas(t){
+  t = t.replace(/\r/g, '');
+  const defs = {};
+  const re = /^\[\^([^\]]+)\]:[ \t]*([\s\S]*?)(?=^\[\^[^\]]+\]:|^\S|(?![\s\S]))/gm;
+  let m;
+  while ((m = re.exec(t))){ defs[m[1]] = m[2].replace(/^ {4}/gm, '').trim(); if (m[0] === '') re.lastIndex++; }
+  const d = t.search(RE_DEF_LINE);
+  const texto = d >= 0 ? t.slice(0, d) : t;
+  const notas = [], vistas = new Set();
+  for (const par of texto.split(/\n\s*\n/)){
+    for (const c of par.matchAll(RE_LLAMADA)){
+      const et = c[1]; if (vistas.has(et)) continue; vistas.add(et);
+      let antes = par.slice(0, c.index).replace(RE_LLAMADA, '');
+      antes = antes.replace(/!\[|\]\([^)]*\)(\{[^}]*\})?|^#+\s*/gm, ' ');
+      notas.push({numero:notas.length + 1, texto:(defs[et] != null ? defs[et] : '(nota sin texto)').trim(), contexto:ultimas(antes)});
+    }
+  }
+  return notas;
+}
+function compararNotas(A, B){
+  const cand = [];
+  for (const a of A) for (const b of B){
+    const p = parecido(a.texto, b.texto);
+    if (p >= UMBRAL_PARECIDA) cand.push([p, parecido(a.contexto, b.contexto), a, b]);
+  }
+  cand.sort((x, y) => (y[0] - x[0]) || (y[1] - x[1]));
+  const ua = new Set(), ub = new Set(), parejas = new Map();
+  for (const [p, ps, a, b] of cand){
+    if (ua.has(a.numero) || ub.has(b.numero)) continue;
+    ua.add(a.numero); ub.add(b.numero); parejas.set(a.numero, [b, p, ps]);
+  }
+  const rel = new Map();
+  const sa = A.filter(a => !ua.has(a.numero)), sb = B.filter(b => !ub.has(b.numero));
+  for (const b of sb){
+    let mejor = null;
+    for (const a of sa){
+      const cba = cobertura(b.texto, a.texto), cab = cobertura(a.texto, b.texto);
+      const pts = [Math.max(cba, cab), parecido(a.contexto, b.contexto)];
+      if (pts[0] >= 0.8 && (!mejor || pts[0] > mejor[0][0] || (pts[0] === mejor[0][0] && pts[1] > mejor[0][1])))
+        mejor = [pts, a, cba >= cab ? 'Recortada o dividida' : 'Fusionada o ampliada'];
+    }
+    if (mejor){ if (!rel.has(mejor[1].numero)) rel.set(mejor[1].numero, []); rel.get(mejor[1].numero).push([b, mejor[2]]); }
+  }
+  rel.forEach(l => l.forEach(([b]) => ub.add(b.numero)));
+  const filas = [];
+  for (const a of A){
+    if (rel.has(a.numero)) rel.get(a.numero).forEach(([b, e]) => filas.push({a, b, estado:e, sitio:''}));
+    else if (parejas.has(a.numero)){
+      const [b, p, ps] = parejas.get(a.numero);
+      const estado = normalizar(a.texto) === normalizar(b.texto) ? 'Igual' : 'Modificada';
+      const sitio = (ps >= UMBRAL_SITIO || !(a.contexto && b.contexto)) ? '' : 'Cambia de sitio';
+      filas.push({a, b, estado, sitio});
+    } else filas.push({a, b:null, estado:'Falta en B', sitio:''});
+  }
+  for (const b of B) if (!ub.has(b.numero)) filas.push({a:null, b, estado:'Nueva en B', sitio:''});
+  const clave = f => {
+    if (f.a) return [f.a.numero, 0];
+    const ant = filas.filter(g => g.a && g.b && g.b.numero < f.b.numero).map(g => g.a.numero);
+    return [ant.length ? Math.max(...ant) : 0, 1];
+  };
+  filas.sort((x, y) => { const kx = clave(x), ky = clave(y); return kx[0] - ky[0] || kx[1] - ky[1]; });
+  return filas;
+}
+function resumenNotas(A, B, filas){
+  const cuenta = e => filas.filter(f => f.estado === e).length;
+  const conA = e => new Set(filas.filter(f => f.estado === e).map(f => f.a.numero)).size;
+  return {nA:A.length, nB:B.length, iguales:cuenta('Igual'), modificadas:cuenta('Modificada'), faltan:cuenta('Falta en B'),
+    nuevas:cuenta('Nueva en B'), sitio:filas.filter(f => f.sitio).length, recortadas:conA('Recortada o dividida'), fusionadas:conA('Fusionada o ampliada')};
+}
+
+// ═════════════════════════════════════════════
+//  CAMBIOS EN EL TEXTO
+// ═════════════════════════════════════════════
+function cuerpo(t, stripNew){
+  t = t.replace(/\r/g, '');
+  const d = t.search(RE_DEF_LINE); if (d >= 0) t = t.slice(0, d);
+  if (stripNew){
+    // quita el bloque NOTAS NUEVAS DEL PLAN que entrega el Editor Ejecutor (hasta el ANEXO, si lo hay)
+    const lines = t.split('\n'); const out = []; let skip = false;
+    for (const l of lines){
+      const s = l.replace(/[#*_\s]/g, '').toUpperCase();
+      if (l.length < 90 && s.startsWith('NOTASNUEVASDELPLAN')){ skip = true; continue; }
+      if (skip && l.length < 90 && /^(#|\*\*)?\s*ANEXO/i.test(l.trim())) skip = false;
+      if (!skip) out.push(l);
+    }
+    t = out.join('\n');
+  }
+  return t.replace(RE_LLAMADA, '');
+}
+const parrafos = t => t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+const claveP = p => p.replace(/\s+/g, ' ');
+function diffPalabras(a, b){
+  const ta = a.replace(/\s+/g, ' ').split(/(?<= )/), tb = b.replace(/\s+/g, ' ').split(/(?<= )/);
+  let html = '';
+  for (const [op, i1, i2, j1, j2] of new SeqMatcher(ta, tb).opcodes()){
+    const A = esc(ta.slice(i1, i2).join('')), B = esc(tb.slice(j1, j2).join(''));
+    if (op === 'equal') html += A;
+    else { if (A) html += '<del>' + A + '</del>'; if (B) html += '<ins>' + B + '</ins>'; }
+  }
+  return html;
+}
+function diffTexto(a, b){
+  const pa = parrafos(a), pb = parrafos(b);
+  const ops = new SeqMatcher(pa.map(claveP), pb.map(claveP)).opcodes();
+  const items = []; let cambios = 0;
+  for (const [op, i1, i2, j1, j2] of ops){
+    if (op === 'equal'){ for (let i = i1; i < i2; i++) items.push({t:'eq', html:esc(pa[i])}); continue; }
+    cambios++;
+    const A = pa.slice(i1, i2), B = pb.slice(j1, j2);
+    if (op === 'replace' && A.length === B.length) A.forEach((x, k) => items.push({t:'chg', html:diffPalabras(x, B[k])}));
+    else items.push({t:'chg', html:diffPalabras(A.join('\n\n'), B.join('\n\n'))});
+  }
+  return {items, cambios};
+}
+
+// ═════════════════════════════════════════════
+//  FICHEROS EN LAS RESPUESTAS
+//  · bloques de código precedidos del nombre (```markdown o ````markdown)
+//  · bloques «===== INICIO: nombre =====» … «===== FIN: nombre =====» (Corrector)
+// ═════════════════════════════════════════════
+const RE_INI = /^\s*=====\s*INICIO:\s*(.+?)\s*=====\s*$/;
+const RE_FIN = /^\s*=====\s*FIN:\s*(.+?)\s*=====\s*$/;
+const RE_CONT = /\[CONTIN[ÚU]A EN LA SIGUIENTE RESPUESTA\]/i;
+function parseSegments(text, streaming){
+  const lines = text.split('\n'); const segs = []; let buf = []; let i = 0;
+  const flush = () => { if (buf.length){ segs.push({type:'text', text:buf.join('\n')}); buf = []; } };
+  while (i < lines.length){
+    const ini = lines[i].match(RE_INI);
+    if (ini){
+      flush(); let j = i + 1; const body = [];
+      while (j < lines.length && !RE_FIN.test(lines[j])){ if (!RE_CONT.test(lines[j])) body.push(lines[j]); j++; }
+      segs.push({type:'part', name:ini[1].trim(), body:body.join('\n'), closed:j < lines.length, writing:j >= lines.length && streaming});
+      i = j < lines.length ? j + 1 : j; continue;
+    }
+    if (RE_FIN.test(lines[i])){ i++; continue; }
+    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)\s*$/);
+    if (!m){ buf.push(lines[i]); i++; continue; }
+    const fence = m[1], lang = (m[2] || '').toLowerCase();
+    let name = null;
+    for (let k = buf.length - 1, seen = 0; k >= 0 && seen < 3; k--){
+      if (!buf[k].trim()) continue; seen++;
+      const nm = buf[k].match(/([\wÀ-ÿ.\-]+\.md)\b/g); if (nm){ name = nm[nm.length - 1]; break; }
+    }
+    let j = i + 1; const body = [];
+    const closeRe = new RegExp('^\\s{0,3}' + (fence[0] === '`' ? '`' : '~') + '{' + fence.length + ',}\\s*$');
+    while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
+    const closed = j < lines.length;
+    flush();
+    if (name && ['markdown', 'md', ''].includes(lang)) segs.push({type:'file', name, body:body.join('\n'), writing:!closed && streaming, closed});
+    else segs.push({type:'code', body:body.join('\n')});
+    i = closed ? j + 1 : j;
+  }
+  flush();
+  return segs;
+}
+// Une los fragmentos «INICIO/FIN» repartidos en varias respuestas
+function parseSeparated(text){
+  const files = new Map(); let open = null;
+  for (const line of text.split('\n')){
+    const ini = line.match(RE_INI), fin = line.match(RE_FIN);
+    if (ini){ const n = ini[1].trim(); if (!open || open.name !== n) open = {name:n, lines:[]}; continue; }
+    if (fin){ if (open){ files.set(open.name, open.lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n'); open = null; } continue; }
+    if (RE_CONT.test(line)) continue;
+    if (open) open.lines.push(line);
+  }
+  return files;
+}
+function stepOutputs(id){
+  const st = state.steps[id]; const map = new Map();
+  const asst = st.messages.filter(m => m.role === 'assistant' && !m.streaming);
+  asst.forEach(m => parseSegments(m.content, false).forEach(s => { if (s.type === 'file' && s.closed) map.set(s.name, s.body.trim() + '\n'); }));
+  parseSeparated(asst.map(m => m.content).join('\n\n')).forEach((v, k) => map.set(k, v));
+  return [...map].map(([name, text]) => ({name, text:st.edits[name] != null ? st.edits[name] : text, edited:st.edits[name] != null}));
+}
+function mainOutput(id){ const o = stepOutputs(id).filter(f => !/incidencias/i.test(f.name)); return o[o.length - 1] || null; }
+
+// Ficheros de entrada de un paso: los usados al ejecutar, los cargados aquí, los de partida o el resultado del paso anterior
+function slotFile(id, slot){
+  const st = state.steps[id];
+  if (st.used && st.used[slot.key]) return st.used[slot.key];
+  const own = st.files[slot.key];
+  if (own) return {...own, from:'cargado aquí'};
+  if (slot.shared){ const f = state.shared[slot.shared]; return f ? {...f, from:'de partida'} : null; }
+  if (slot.from){ const f = mainOutput(slot.from); return f ? {name:f.name, text:f.text, from:'del paso ' + stepById(slot.from).num} : null; }
+  return null;
+}
+
+// ═════════════════════════════════════════════
+//  MARKDOWN → HTML (sencillo)
+// ═════════════════════════════════════════════
+function inlineMd(s){
+  return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+}
+function mdToHtml(text){
+  const lines = text.split('\n'); let html = '', list = null, para = [];
+  const endPara = () => { if (para.length){ html += '<p>' + para.map(inlineMd).join('<br>') + '</p>'; para = []; } };
+  const endList = () => { if (list){ html += '</' + list + '>'; list = null; } };
+  for (const raw of lines){
+    const l = raw.replace(/\s+$/, ''); let m;
+    if (!l.trim()){ endPara(); endList(); continue; }
+    if ((m = l.match(/^(#{1,6})\s+(.*)$/))){ endPara(); endList(); const n = Math.min(4, m[1].length); html += `<h${n}>${inlineMd(m[2])}</h${n}>`; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endPara(); endList(); html += '<hr>'; continue; }
+    if ((m = l.match(/^\s*>\s?(.*)$/))){ endPara(); endList(); html += '<blockquote>' + inlineMd(m[1]) + '</blockquote>'; continue; }
+    if ((m = l.match(/^\s*[-*+]\s+(.*)$/))){ endPara(); if (list !== 'ul'){ endList(); html += '<ul>'; list = 'ul'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+    if ((m = l.match(/^\s*\d+[.)]\s+(.*)$/))){ endPara(); if (list !== 'ol'){ endList(); html += '<ol>'; list = 'ol'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+    endList(); para.push(l);
+  }
+  endPara(); endList(); return html;
+}
+
+// ═════════════════════════════════════════════
+//  INTERFAZ
+// ═════════════════════════════════════════════
+function renderShared(){
+  const locked = STEPS.some(s => state.steps[s.id].messages.length);
+  $('shared').innerHTML = '<span class="ttl">Ficheros de partida</span>' + SHARED.map(s => {
+    const f = state.shared[s.key];
+    return `<div class="slot"><div><div class="lbl">${s.label}</div><div class="fname ${f ? '' : 'empty'}">${f ? esc(f.name) + ' · ' + kb(f.text) : 'Sin cargar'}</div></div>
+      <div class="sbtns"><label class="btn btn-sm">${f ? 'Cambiar' : 'Cargar'}<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="loadShared('${s.key}',this)"></label>
+      ${f ? `<button class="btn btn-sm" onclick="viewShared('${s.key}')">Ver</button>` : ''}</div></div>`;
+  }).join('') + (locked ? '<span class="lock-note">Cambiarlos no afecta a los pasos ya ejecutados.</span>' : '');
+}
+function viewShared(key){ const f = state.shared[key]; viewText(f.name, f.text); }
+async function loadShared(key, input){
+  const f = input.files[0]; if (!f) return;
+  state.shared[key] = {name:f.name, text:await readFile(f)};
+  saveState(); renderAll();
+}
+
+function renderTabs(){
+  $('tabs').innerHTML = STEPS.map(s => {
+    const st = state.steps[s.id]; let label = '';
+    if (running[s.id]) label = 'trabajando…';
+    else if (mainOutput(s.id)) label = '✓ hecho';
+    else if (st.messages.length) label = 'en curso';
+    return `<button class="tab ${state.active === s.id ? 'active' : ''}" onclick="setTab('${s.id}')"><span class="num">${s.num}</span><span class="name">${s.title}</span><span class="st">${label}</span></button>`;
+  }).join('');
+}
+function setTab(id){ state.active = id; saveState(); renderTabs(); document.querySelectorAll('.step').forEach(el => el.classList.toggle('active', el.dataset.step === id)); }
+
+function buildSteps(){
+  $('main').innerHTML = STEPS.map(s => `
+    <section class="step" data-step="${s.id}">
+      <div class="step-top">
+        <div class="slots" id="slots-${s.id}"></div>
+        <div class="side">
+          <div class="model">
+            <label for="prov-${s.id}">Modelo</label>
+            <select id="prov-${s.id}" onchange="changeProvider('${s.id}')"></select>
+            <select id="model-${s.id}" title="(g) = modelo con uso gratuito" onchange="changeModel('${s.id}')"></select>
+            <button class="btn btn-sm" id="refresh-${s.id}" title="Actualizar la lista de modelos" onclick="refreshModels('${s.id}')">↻</button>
+          </div>
+          <div class="side-actions" id="actions-${s.id}"></div>
+        </div>
+        <div class="prompt-line" id="pline-${s.id}"></div>
+      </div>
+      <div class="results" id="results-${s.id}" style="display:none"></div>
+      <div class="chat" id="chat-${s.id}"><div class="chat-inner" id="chatin-${s.id}"></div></div>
+      <div class="composer">
+        <div class="composer-inner">
+          <textarea id="input-${s.id}" rows="1" placeholder="Solo si hace falta: por ejemplo, «continúa» si la respuesta se ha cortado" oninput="autoGrow(this)" onkeydown="composerKey(event,'${s.id}')"></textarea>
+          <button class="btn btn-primary" id="send-${s.id}" onclick="sendUser('${s.id}')">Enviar</button>
+        </div>
+      </div>
+    </section>`).join('');
+  renderAll();
+  setTab(state.active || 'ejecutor');
+}
+function renderAll(){ renderShared(); STEPS.forEach(s => renderStep(s.id)); }
+function renderStep(id){
+  renderSlots(id); renderModel(id); renderActions(id); renderResults(id); renderChat(id); renderComposer(id);
+  $('pline-' + id).textContent = 'Prompt: ' + promptTitle(stepById(id).promptKey);
+  renderTabs();
+}
+
+function renderSlots(id){
+  const s = stepById(id), st = state.steps[id], locked = !!st.used;
+  $('slots-' + id).innerHTML = s.slots.map(sl => {
+    const f = slotFile(id, sl), own = !!st.files[sl.key];
+    return `<div class="slot"><div class="lbl">${sl.label}</div>
+      <div class="fname ${f ? '' : 'empty'}">${f ? esc(f.name) + ' · ' + kb(f.text) + ` <span class="from">(${f.from})</span>` : 'Sin cargar'}</div>
+      <div class="sbtns">
+        ${locked ? '' : `<label class="btn btn-sm">Cargar otro<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="loadSlot('${id}','${sl.key}',this)"></label>`}
+        ${f ? `<button class="btn btn-sm" onclick="viewSlot('${id}','${sl.key}')">Ver</button>` : ''}
+        ${own && !locked ? `<button class="btn btn-sm" onclick="clearSlot('${id}','${sl.key}')" title="Volver a usar el de la cadena">Quitar</button>` : ''}
+      </div></div>`;
+  }).join('') + (locked ? '<div class="lock-note" style="align-self:center">Ficheros y modelo fijados para esta ejecución.</div>' : '');
+}
+async function loadSlot(id, key, input){
+  const f = input.files[0]; if (!f) return;
+  state.steps[id].files[key] = {name:f.name, text:await readFile(f)};
+  saveState(); renderAll();
+}
+function clearSlot(id, key){ delete state.steps[id].files[key]; saveState(); renderAll(); }
+function viewSlot(id, key){ const f = slotFile(id, stepById(id).slots.find(x => x.key === key)); viewText(f.name, f.text); }
+function viewText(name, text){ openFileModal({title:name, sub:'Fichero de entrada (solo lectura)', text, readonly:true}); }
+
+// Modelo
+function modelList(prov){
+  if (prov === 'openrouter'){ const c = loadJSON(LS.orList); if (c && c.length) return c; }
+  if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  return PROVIDERS[prov].models;
+}
+function renderModel(id){
+  const st = state.steps[id], cur = st.locked || modelChoice[id];
+  const ps = $('prov-' + id), ms = $('model-' + id);
+  ps.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === cur.provider ? 'selected' : ''}>${p.label}</option>`).join('');
+  let list = modelList(cur.provider);
+  if (!list.some(m => m.id === cur.model)) list = [{id:cur.model, label:cur.model}, ...list];
+  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}${isFree(cur.provider, m) ? ' (g)' : ''}</option>`).join('');
+  ps.disabled = ms.disabled = !!st.locked;
+  $('refresh-' + id).style.display = (!st.locked && PROVIDERS[cur.provider].dynamic) ? '' : 'none';
+}
+function changeProvider(id){
+  const prov = $('prov-' + id).value;
+  modelChoice[id] = {provider:prov, model:modelList(prov)[0].id}; saveJSON(LS.models, modelChoice); renderModel(id);
+  if (PROVIDERS[prov].dynamic && !loadJSON(prov === 'openrouter' ? LS.orList : LS.gemList)) refreshModels(id, true);
+}
+function changeModel(id){ modelChoice[id].model = $('model-' + id).value; saveJSON(LS.models, modelChoice); }
+async function refreshModels(id, quiet){
+  const prov = modelChoice[id].provider;
+  try {
+    if (prov === 'openrouter'){
+      const r = await fetch('https://openrouter.ai/api/v1/models'); if (!r.ok) throw new Error('OpenRouter ' + r.status);
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
+      saveJSON(LS.orList, ((await r.json()).data || []).filter(m => keep.test(m.id)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id)));
+    } else if (prov === 'aistudio'){
+      const key = getKey('aistudio'); if (!key){ if (!quiet) openKeys('aistudio'); return; }
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}});
+      if (!r.ok) throw new Error('AI Studio ' + r.status);
+      saveJSON(LS.gemList, ((await r.json()).models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|transcribe|robotics|banana|omni|lyria|veo)/.test(m.name))
+        .map(m => ({id:m.name.replace(/^models\//, ''), label:m.displayName || m.name.replace(/^models\//, ''), out:m.outputTokenLimit}))
+        .sort((a, b) => b.id.localeCompare(a.id)));
+    }
+    STEPS.forEach(s => renderModel(s.id)); if (!quiet) showStatus('ok', 'Lista de modelos actualizada.');
+  } catch(e){ if (!quiet) showStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+}
+
+// Acciones
+function missingFor(id){
+  const miss = [];
+  if (!$('chapter').value.trim()) miss.push('el nombre corto del capítulo');
+  stepById(id).slots.forEach(sl => { if (!slotFile(id, sl)) miss.push(sl.label.toLowerCase()); });
+  return miss;
+}
+function renderActions(id){
+  const st = state.steps[id], el = $('actions-' + id);
+  if (running[id]){ el.innerHTML = `<button class="btn btn-danger" onclick="stopStep('${id}')">Detener</button>`; return; }
+  if (!st.messages.length){
+    const miss = missingFor(id);
+    el.innerHTML = `<button class="btn btn-primary" ${miss.length ? 'disabled' : ''} title="${miss.length ? 'Falta ' + esc(miss.join(' y ')) : ''}" onclick="startStep('${id}')">Ejecutar</button>`;
+  } else el.innerHTML = `<button class="btn btn-danger" onclick="resetStep('${id}')">Reiniciar paso</button>`;
+}
+function renderComposer(id){
+  const can = state.steps[id].messages.length > 0 && !running[id];
+  $('input-' + id).disabled = !can; $('send-' + id).disabled = !can;
+}
+function autoGrow(t){ t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 220) + 'px'; }
+function composerKey(e, id){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); sendUser(id); } }
+
+// Resultados y comprobaciones
+const checkCache = {};
+const pl = (n, s, p) => n ? n + ' ' + (n === 1 ? s : p) : '';
+function stepChecks(id){
+  const s = stepById(id); if (!s.checks) return null;
+  const out = mainOutput(id); if (!out) return null;
+  const fa = slotFile(id, s.slots.find(x => x.key === s.checks.notesA));
+  const ft = slotFile(id, s.slots.find(x => x.key === s.checks.textA));
+  if (!fa || !ft) return null;
+  const k = hash(fa.text + '\u0000' + ft.text + '\u0000' + out.text);
+  if (checkCache[id] && checkCache[id].k === k) return checkCache[id];
+  const A = leerNotas(fa.text), B = leerNotas(out.text), filas = compararNotas(A, B);
+  const diff = diffTexto(cuerpo(ft.text, s.checks.stripNew), cuerpo(out.text, false));
+  return checkCache[id] = {k, A, B, filas, res:resumenNotas(A, B, filas), diff, aName:fa.name, bName:out.name, tName:ft.name};
+}
+function renderResults(id){
+  const el = $('results-' + id), s = stepById(id), outs = stepOutputs(id), main = mainOutput(id);
+  if (!outs.length){ el.style.display = 'none'; return; }
+  el.style.display = '';
+  const next = STEPS.find(x => x.slots.some(sl => sl.from === id));
+  let html = '<span class="ttl">Resultados</span>' + outs.map((f, oi) => {
+    const isMain = main && f.name === main.name;
+    return `<div class="rfile ${isMain ? 'main' : ''}"><div><div class="fn">${esc(f.name)}</div><div class="meta">${kb(f.text)}${f.edited ? ' · editado' : ''}${isMain && next ? ' · pasa al paso ' + next.num : ''}</div></div>
+      <button class="btn btn-sm" onclick="openOutput('${id}',${oi})">Ver y editar</button>
+      <button class="btn btn-sm btn-primary" onclick="downloadOutput('${id}',${oi})">Descargar</button></div>`;
+  }).join('');
+  const c = stepChecks(id);
+  if (c){
+    const r = c.res, cambiosNotas = r.modificadas + r.faltan + r.nuevas + r.sitio + r.recortadas + r.fusionadas;
+    const ncls = cambiosNotas ? 'warn' : 'ok';
+    const ntxt = cambiosNotas
+      ? `${r.nA} → ${r.nB} · ${[pl(r.modificadas, 'modificada', 'modificadas'), pl(r.faltan, 'falta', 'faltan'), pl(r.nuevas, 'nueva', 'nuevas'), pl(r.sitio, 'cambia de sitio', 'cambian de sitio'), pl(r.recortadas, 'recortada', 'recortadas'), pl(r.fusionadas, 'fusionada', 'fusionadas')].filter(Boolean).join(' · ')}`
+      : `las ${r.nA} siguen iguales y en su sitio`;
+    html += `<div class="check ${ncls}"><span><b>Notas:</b> ${ntxt}</span><button class="btn btn-sm" onclick="openNotes('${id}')">Ver</button></div>`;
+    const must = s.checks.textMustMatch;
+    const tcls = c.diff.cambios ? (must ? 'bad' : 'warn') : 'ok';
+    const ttxt = c.diff.cambios ? (must ? `el Integrador ha cambiado el texto en ${c.diff.cambios} sitio${c.diff.cambios > 1 ? 's' : ''}` : `${c.diff.cambios} cambio${c.diff.cambios > 1 ? 's' : ''}`) : (must ? 'intacto, solo se han añadido llamadas' : 'sin cambios');
+    html += `<div class="check ${tcls}"><span><b>Texto:</b> ${ttxt}</span>${c.diff.cambios ? `<button class="btn btn-sm" onclick="openDiff('${id}')">Ver</button>` : ''}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+// Conversación
+function renderChat(id, keepScroll){
+  const st = state.steps[id], s = stepById(id), box = $('chatin-' + id);
+  if (!st.messages.length && !st.error){ box.innerHTML = `<div class="empty-state">${s.empty}</div>`; return; }
+  box.innerHTML = st.messages.map((m, mi) => renderMsg(id, m, mi)).join('') +
+    (st.error ? `<div class="error-box"><span>${esc(st.error)}</span><button class="btn btn-sm" onclick="retry('${id}')">Reintentar</button></div>` : '');
+  if (!keepScroll) scrollChat(id);
+}
+function scrollChat(id){ const c = $('chat-' + id); c.scrollTop = c.scrollHeight; }
+function renderMsg(id, m, mi){
+  if (m.role === 'user' && m.kind === 'files') return `<div class="msg files">${esc(m.summary)}</div>`;
+  if (m.role === 'user' && m.auto) return `<div class="msg auto">La aplicación le pide que siga</div>`;
+  if (m.role === 'user') return `<div class="msg user">${esc(m.content)}</div>`;
+  const streaming = !!m.streaming;
+  let body = parseSegments(m.content, streaming).map(sg => {
+    if (sg.type === 'text') return mdToHtml(sg.text.split('\n').filter(l => !RE_CONT.test(l)).join('\n'));
+    if (sg.type === 'code') return `<pre>${esc(sg.body)}</pre>`;
+    const what = sg.type === 'part' && !sg.closed && !streaming ? 'fragmento, sigue en la respuesta siguiente' : '';
+    const meta = sg.writing ? 'Escribiendo… ' + kb(sg.body) : kb(sg.body) + (what ? ' · ' + what : '') + (sg.closed ? ' · disponible arriba, en Resultados' : '');
+    return `<div class="filecard ${sg.writing ? 'writing' : ''}"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">${meta}</div></div></div>`;
+  }).join('');
+  if (RE_CONT.test(m.content) && !streaming) body += '<div class="thinking">Entregado por partes: continúa en la respuesta siguiente.</div>';
+  if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
+  const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
+  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${streaming ? '' : `<button onclick="copyText(state.steps['${id}'].messages[${mi}].content)">Copiar respuesta</button>`}</div>
+    <div class="md ${streaming && m.content ? 'cursor' : ''}">${body}</div>${tail}</div>`;
+}
+
+// Ver / editar / descargar resultados
+let fileCtx = null;
+function getOutput(id, oi){ return stepOutputs(id)[oi]; }
+function openOutput(id, oi){ const f = getOutput(id, oi); openFileModal({title:f.name, sub:'Puedes corregirlo aquí; lo corregido es lo que pasa al paso siguiente', text:f.text, ctx:{id, name:f.name}}); }
+function downloadOutput(id, oi){ const f = getOutput(id, oi); download(f.name, f.text); }
+function openFileModal(o){
+  fileCtx = o; $('file-title').textContent = o.title; $('file-sub').textContent = o.sub || '';
+  const t = $('file-text'); t.value = o.text; t.readOnly = !!o.readonly; $('file-dl').style.display = o.readonly ? 'none' : '';
+  openOv('ov-file'); t.scrollTop = 0;
+}
+$('file-text').addEventListener('input', () => {
+  if (!fileCtx || !fileCtx.ctx) return;
+  state.steps[fileCtx.ctx.id].edits[fileCtx.ctx.name] = $('file-text').value; saveState();
+});
+function closeFileModal(){ closeOv('ov-file'); if (fileCtx && fileCtx.ctx) renderAll(); fileCtx = null; }
+
+// Tabla de notas
+let notesCtx = null;
+function openNotes(id){ notesCtx = stepChecks(id); notesCtx.step = id; $('notes-only').checked = true; renderNotesTable(); openOv('ov-notes'); }
+const stCls = e => e === 'Igual' ? 'st-Igual' : e === 'Modificada' ? 'st-Modificada' : e === 'Falta en B' ? 'st-Falta' : e === 'Nueva en B' ? 'st-Nueva' : 'st-Rel';
+function renderNotesTable(){
+  const c = notesCtx, r = c.res, only = $('notes-only').checked;
+  $('notes-sub').textContent = `A: ${c.aName} (${r.nA} notas) · B: ${c.bName} (${r.nB} notas)`;
+  const corto = n => n ? esc(n.texto.length > 110 ? n.texto.slice(0, 110) + '…' : n.texto) : '';
+  const rows = c.filas.map((f, i) => ({f, i})).filter(({f}) => !only || f.estado !== 'Igual' || f.sitio);
+  $('notes-body').innerHTML = `<p class="dsum" style="margin-bottom:8px">Iguales: ${r.iguales} · Modificadas: ${r.modificadas} · Faltan en B: ${r.faltan} · Nuevas en B: ${r.nuevas} · Cambian de sitio: ${r.sitio} · Recortadas o divididas: ${r.recortadas} · Fusionadas o ampliadas: ${r.fusionadas}. Pulsa una fila para ver las dos notas completas.</p>` +
+    (rows.length ? `<table class="ntable"><thead><tr><th>A</th><th>B</th><th>Estado</th><th>Sitio</th><th>Nota en A</th><th>Nota en B</th></tr></thead><tbody>` +
+    rows.map(({f, i}) => `<tr class="row" onclick="toggleNote(${i}, this)"><td class="n">${f.a ? f.a.numero : '—'}</td><td class="n">${f.b ? f.b.numero : '—'}</td><td class="st ${stCls(f.estado)}">${f.estado}</td><td class="st">${f.sitio}</td><td>${corto(f.a)}</td><td>${corto(f.b)}</td></tr>`).join('') +
+    '</tbody></table>' : '<p>Todas las notas coinciden y están en su sitio.</p>');
+}
+function toggleNote(i, tr){
+  const nx = tr.nextElementSibling;
+  if (nx && nx.classList.contains('ndetail')){ nx.remove(); return; }
+  const f = notesCtx.filas[i];
+  const lado = (titulo, n, otra, quitar) => {
+    if (!n) return `<h5>${titulo}</h5><div class="ctx">(no existe)</div>`;
+    let t;
+    if (!otra) t = esc(n.texto);
+    else {
+      const pa = n.texto.split(/\s+/), pb = otra.texto.split(/\s+/); t = '';
+      for (const [op, i1, i2] of new SeqMatcher(pa, pb).opcodes()){ const tr = esc(pa.slice(i1, i2).join(' ')); if (tr) t += (op === 'equal' ? tr : quitar ? `<del>${tr}</del>` : `<ins>${tr}</ins>`) + ' '; }
+    }
+    return `<h5>${titulo}</h5><div class="ctx">Tras: «…${esc(n.contexto)}»</div><div>${t}</div>`;
+  };
+  const row = document.createElement('tr'); row.className = 'ndetail';
+  row.innerHTML = `<td colspan="6">${lado('Nota en A', f.a, f.b, true)}${lado('Nota en B', f.b, f.a, false)}</td>`;
+  tr.after(row);
+}
+function downloadNotesReport(){
+  const c = notesCtx, r = c.res;
+  const l = ['Comparación de notas', 'A: ' + c.aName, 'B: ' + c.bName, '',
+    `A: ${r.nA} notas · B: ${r.nB} notas`,
+    `Iguales: ${r.iguales} · Modificadas: ${r.modificadas} · Faltan en B: ${r.faltan} · Nuevas en B: ${r.nuevas} · Cambian de sitio: ${r.sitio}`,
+    `Recortadas o divididas: ${r.recortadas} · Fusionadas o ampliadas: ${r.fusionadas}`, ''];
+  c.filas.forEach(f => {
+    if (f.estado === 'Igual' && !f.sitio) return;
+    l.push(`## Nota A${f.a ? f.a.numero : '—'} / B${f.b ? f.b.numero : '—'}: ${f.estado}${f.sitio ? ' · ' + f.sitio : ''}`);
+    if (f.a) l.push(`A (tras «…${f.a.contexto}»): ${f.a.texto}`);
+    if (f.b) l.push(`B (tras «…${f.b.contexto}»): ${f.b.texto}`);
+    l.push('');
+  });
+  if (c.filas.every(f => f.estado === 'Igual' && !f.sitio)) l.push('Todas las notas coinciden y están en su sitio.');
+  const base = ($('chapter').value.trim() || 'capitulo') + '_paso' + stepById(c.step).num;
+  download('notas_' + base + '.txt', l.join('\n'), 'text/plain');
+}
+
+// Cambios en el texto
+let diffCtx = null;
+function openDiff(id){ diffCtx = stepChecks(id); $('diff-only').checked = true; renderDiff(); openOv('ov-diff'); }
+function renderDiff(){
+  const c = diffCtx, only = $('diff-only').checked;
+  $('diff-sub').textContent = `${c.tName} → ${c.bName}`;
+  const items = c.diff.items.filter(it => !only || it.t !== 'eq');
+  $('diff-body').innerHTML = `<p class="dsum" style="margin-bottom:10px">${c.diff.cambios} cambio${c.diff.cambios === 1 ? '' : 's'}. En rojo tachado, lo que se ha quitado; en verde, lo que se ha añadido. Las llamadas de nota no se tienen en cuenta.</p>` +
+    items.map(it => `<div class="dpar ${it.t}">${it.html}</div>`).join('');
+}
+
+// ═════════════════════════════════════════════
+//  EJECUCIÓN
+// ═════════════════════════════════════════════
+function firstMessage(id){
+  const s = stepById(id), chap = $('chapter').value.trim();
+  let t = `Nombre corto del capítulo: «${chap}». Úsalo como nombre base de los ficheros que entregues.\n\n` +
+    'Nota de la aplicación: esta tarea se hace a través de una aplicación y no puedes crear ficheros. ' +
+    'Entrega cada fichero de la forma que tu prompt indica para cuando no se pueden crear ficheros, con su nombre de fichero.\n\n';
+  s.slots.forEach(sl => {
+    const f = slotFile(id, sl);
+    t += `=== ${sl.label.toUpperCase()} — fichero «${f.name}» ===\n\n${f.text}\n\n=== FIN DE ${sl.label.toUpperCase()} ===\n\n`;
+  });
+  return t + 'Empieza.';
+}
+function startStep(id){
+  if (missingFor(id).length) return;
+  const st = state.steps[id], s = stepById(id);
+  st.used = {}; s.slots.forEach(sl => { const f = slotFile(id, sl); st.used[sl.key] = {name:f.name, text:f.text, from:f.from}; });
+  st.locked = {...modelChoice[id]}; st.prompt = getPrompt(s.promptKey);
+  st.messages = [{role:'user', kind:'files', content:firstMessage(id),
+    summary:'Enviado: ' + s.slots.map(sl => `${st.used[sl.key].name} (${kb(st.used[sl.key].text)})`).join(' · ')}];
+  st.error = null; autoCount[id] = 0; saveState(); renderAll(); runAssistant(id);
+}
+function sendUser(id){
+  const t = $('input-' + id), text = t.value.trim();
+  if (!text || running[id]) return;
+  state.steps[id].messages.push({role:'user', content:text}); state.steps[id].error = null;
+  t.value = ''; autoGrow(t); saveState(); renderChat(id); runAssistant(id);
+}
+function resetStep(id){
+  const later = STEPS.filter(x => x.num > stepById(id).num && state.steps[x.id].messages.length);
+  if (!confirm('Se borrará la ejecución de este paso y sus resultados (descarga antes lo que quieras conservar).' + (later.length ? ' Los pasos siguientes ya ejecutados no cambian.' : '') + ' ¿Seguir?')) return;
+  stopStep(id); const files = state.steps[id].files;
+  state.steps[id] = blankStep(); state.steps[id].files = files; delete checkCache[id];
+  saveState(); renderAll();
+}
+function newChapter(){
+  if (!confirm('Se borrarán los ficheros de partida, las ejecuciones y los resultados de los cuatro pasos. Descarga antes lo que quieras conservar. ¿Empezar un capítulo nuevo?')) return;
+  STEPS.forEach(s => stopStep(s.id)); state = blankState(); $('chapter').value = '';
+  Object.keys(checkCache).forEach(k => delete checkCache[k]); saveState(true); buildSteps();
+}
+function stopStep(id){ if (running[id]) running[id].abort(); }
+function retry(id){ state.steps[id].error = null; runAssistant(id); }
+
+async function runAssistant(id){
+  const st = state.steps[id], {provider, model} = st.locked;
+  const label = PROVIDERS[provider].label + ' · ' + ((modelList(provider).find(m => m.id === model) || {}).label || model);
+  const history = st.messages.map(m => ({role:m.role, content:m.content}));
+  const msg = {role:'assistant', content:'', streaming:true, modelLabel:label};
+  st.messages.push(msg);
+  const ctrl = new AbortController(); running[id] = ctrl;
+  renderChat(id); renderActions(id); renderComposer(id); renderTabs();
+  let pending = false, aborted = false;
+  const repaint = () => { if (pending) return; pending = true; requestAnimationFrame(() => {
+    pending = false; const c = $('chat-' + id), atBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+    renderChat(id, true); if (atBottom) scrollChat(id); }); };
+  try {
+    const res = await callModel({provider, model, system:st.prompt, messages:history, signal:ctrl.signal,
+      onText:t => { msg.content += t; repaint(); }, onThinking:() => { if (!msg.thinking){ msg.thinking = true; repaint(); } }});
+    if (res.truncated) msg.note = 'La respuesta se ha cortado por llegar al límite de longitud. Escribe «continúa» abajo para que siga.';
+    if (!msg.content.trim()) throw new Error('El modelo ha devuelto una respuesta vacía.');
+  } catch(e){
+    if (e.name === 'AbortError'){ aborted = true; if (msg.content.trim()) msg.note = 'Ejecución detenida.'; else st.messages.pop(); }
+    else { if (!msg.content.trim()) st.messages.pop(); else msg.note = 'La respuesta se interrumpió por un error.'; st.error = describeError(e); }
+  } finally {
+    delete msg.streaming; delete msg.thinking; delete running[id];
+    saveState(true); renderAll();
+  }
+  // El Corrector entrega los textos largos por partes: se le pide que siga
+  if (stepById(id).autoContinue && !aborted && !st.error && RE_CONT.test(msg.content) && (autoCount[id] = (autoCount[id] || 0) + 1) <= 20){
+    st.messages.push({role:'user', content:'sigue', auto:true}); saveState(); runAssistant(id);
+  }
+}
+function describeError(e){
+  const m = e.message || String(e);
+  if (/Failed to fetch|NetworkError|CORS/i.test(m)) return 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m;
+  return m;
+}
+
+// ═════════════════════════════════════════════
+//  LLAMADAS A LAS APIS (con streaming)
+// ═════════════════════════════════════════════
+async function* sseData(resp, signal){
+  const reader = resp.body.getReader(), dec = new TextDecoder(); let buf = '';
+  while (true){
+    if (signal.aborted){ reader.cancel(); throw new DOMException('Detenido', 'AbortError'); }
+    const {done, value} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream:true}); let i;
+    while ((i = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+      if (line.startsWith('data:')){ const d = line.slice(5).trim(); if (d && d !== '[DONE]') yield d; }
+    }
+  }
+}
+async function httpError(resp, who){
+  let detail = '';
+  try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+  catch(e){ try { detail = await resp.text(); } catch(_){} }
+  if (typeof detail === 'object') detail = JSON.stringify(detail);
+  return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+}
+function needKey(id){
+  const k = getKey(id);
+  if (!k){ openKeys(id); throw new Error('Falta la clave de ' + KEYS.find(x => x.id === id).label + '. Añádela y pulsa «Reintentar».'); }
+  return k;
+}
+function callModel(o){
+  if (o.provider === 'claude') return callClaude(o);
+  if (o.provider === 'aistudio') return callGemini(o);
+  return callOpenAICompat(o, {
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:16000},
+  }[o.provider]);
+}
+async function callClaude({model, system, messages, signal, onText, onThinking}){
+  const key = needKey('claude');
+  const msgs = messages.map((m, i) => {
+    const cache = i === 0 || (i === messages.length - 1 && m.role === 'user');
+    return {role:m.role, content:[cache ? {type:'text', text:m.content, cache_control:{type:'ephemeral'}} : {type:'text', text:m.content}]};
+  });
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {method:'POST', signal,
+    headers:{'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:32000, stream:true, system:[{type:'text', text:system, cache_control:{type:'ephemeral'}}], messages:msgs})});
+  if (!resp.ok) throw await httpError(resp, 'Claude');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') onText(j.delta.text);
+    else if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'thinking_delta' && onThinking) onThinking();
+    else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason === 'max_tokens') truncated = true;
+    else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
+  }
+  return {truncated};
+}
+async function callGemini({model, system, messages, signal, onText, onThinking}){
+  const key = needKey('aistudio');
+  const info = (loadJSON(LS.gemList) || []).find(m => m.id === model);
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
+    method:'POST', signal, headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
+    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},
+      contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.content}]})),
+      generationConfig:{maxOutputTokens:Math.min((info && info.out) ? info.out : 65536, 65536)}})});
+  if (!resp.ok) throw await httpError(resp, 'AI Studio');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error('AI Studio: ' + j.error.message);
+    const c = j.candidates && j.candidates[0]; if (!c) continue;
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); else if (p.thought && onThinking) onThinking(); });
+    if (c.finishReason === 'MAX_TOKENS') truncated = true;
+  }
+  return {truncated};
+}
+async function callOpenAICompat({provider, model, system, messages, signal, onText, onThinking}, cfg){
+  const key = needKey(provider);
+  const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+  if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Edicion Castroverde'; }
+  const body = {model, stream:true, messages:[{role:'system', content:system}, ...messages]};
+  if (cfg.max) body.max_tokens = cfg.max;
+  const resp = await fetch(cfg.url, {method:'POST', signal, headers, body:JSON.stringify(body)});
+  if (!resp.ok) throw await httpError(resp, cfg.who);
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+    const ch = j.choices && j.choices[0]; if (!ch) continue;
+    const dl = ch.delta || {};
+    if (dl.reasoning_content || dl.reasoning) onThinking();
+    if (typeof dl.content === 'string' && dl.content) onText(dl.content);
+    else if (Array.isArray(dl.content)) dl.content.forEach(c => {
+      if (c.type === 'text' && c.text) onText(c.text); else if (c.type === 'thinking') onThinking();
+    });
+    if (ch.finish_reason === 'length') truncated = true;
+  }
+  return {truncated};
+}
+
+// ═════════════════════════════════════════════
+//  CLAVES
+// ═════════════════════════════════════════════
+function openKeys(focusId){
+  $('keys-body').innerHTML = '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones.</p>' +
+    KEYS.map(k => `<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"></div>`).join('');
+  $('showkeys').checked = false; openOv('ov-keys');
+  setTimeout(() => { const el = $('key-' + (typeof focusId === 'string' ? focusId : 'claude')); if (el) el.focus(); }, 60);
+}
+function toggleShowKeys(){ const t = $('showkeys').checked ? 'text' : 'password'; KEYS.forEach(k => $('key-' + k.id).type = t); }
+function saveKeys(){
+  const oldFb = getKey('firebase');
+  KEYS.forEach(k => { const v = $('key-' + k.id).value.trim(); try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){} });
+  closeOv('ov-keys'); showStatus('ok', 'Claves guardadas.');
+  const fb = getKey('firebase'); if (fb && fb !== oldFb) initFirebase(fb);
+}
+
+// ═════════════════════════════════════════════
+//  PROMPTS
+// ═════════════════════════════════════════════
+let ptabActive = 'ejecutor', pdraft = {};
+function openPrompts(){ pdraft = {}; PKEYS.forEach(k => pdraft[k] = getPrompt(k)); renderPtabs(); openOv('ov-prompts'); }
+function renderPtabs(){
+  $('ptabs').innerHTML = STEPS.map(s => `<button class="ptab ${s.promptKey === ptabActive ? 'active' : ''}" onclick="switchPtab('${s.promptKey}')">Paso ${s.num} · ${s.title}</button>`).join('');
+  $('ptext').value = pdraft[ptabActive];
+  $('ptitle').textContent = pdraft[ptabActive].trim() === defaultPrompt(ptabActive) ? 'Versión por defecto' : 'Versión modificada';
+}
+function switchPtab(k){ pdraft[ptabActive] = $('ptext').value; ptabActive = k; renderPtabs(); }
+async function importPrompt(input){ const f = input.files[0]; if (!f) return; pdraft[ptabActive] = await readFile(f); input.value = ''; renderPtabs(); }
+function restorePrompt(){ if (!confirm('¿Restaurar el prompt por defecto de este paso?')) return; pdraft[ptabActive] = defaultPrompt(ptabActive); renderPtabs(); }
+function savePrompts(){
+  pdraft[ptabActive] = $('ptext').value;
+  PKEYS.forEach(k => { prompts[k] = pdraft[k].trim() === defaultPrompt(k) ? null : pdraft[k]; });
+  prompts.updatedAt = Date.now(); saveJSON(LS.prompts, prompts);
+  closeOv('ov-prompts'); renderAll();
+  showStatus('ok', 'Prompts guardados. Se aplican a los pasos que ejecutes a partir de ahora.');
+  if (fbUser) doSync(true);
+}
+
+// ═════════════════════════════════════════════
+//  FIREBASE (sincroniza solo los prompts)
+// ═════════════════════════════════════════════
+let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+function initFirebase(apiKey){
+  if (!apiKey || typeof firebase === 'undefined') return;
+  try { if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey)); else startFirebase(apiKey); } catch(e){}
+}
+function startFirebase(apiKey){
+  firebase.initializeApp({apiKey, authDomain:'castroverde-apps.firebaseapp.com', projectId:'castroverde-apps',
+    storageBucket:'castroverde-apps.firebasestorage.app', messagingSenderId:'371026533141', appId:'1:371026533141:web:315767f60cbf8d6f47671c'});
+  fbAuth = firebase.auth(); fbDb = firebase.firestore(); fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(u => { fbUser = u; updateSyncUI(); });
+}
+function updateSyncUI(){
+  const b = $('btn-sync'), u = $('sync-user'), so = $('btn-signout');
+  if (fbUser){ b.classList.add('synced'); b.textContent = '✓ Sincronizar prompts'; u.textContent = fbUser.email; u.style.display = 'inline'; so.style.display = ''; }
+  else { b.classList.remove('synced'); b.textContent = 'Sincronizar prompts'; u.style.display = 'none'; so.style.display = 'none'; }
+}
+function handleSync(){
+  if (!fbAuth){ showStatus('err', 'Falta la clave de Firebase.'); openKeys('firebase'); return; }
+  if (!fbUser){ showStatus('info', 'Iniciando sesión…'); fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(e => showStatus('err', e.message)); }
+  else doSync();
+}
+async function doSync(quiet){
+  if (!fbUser || !fbDb) return;
+  const b = $('btn-sync'); b.classList.add('busy'); if (!quiet) showStatus('info', 'Sincronizando…');
+  try {
+    const ref = fbDb.collection('edicion').doc(fbUser.uid), snap = await ref.get(), remote = snap.exists ? snap.data() : null;
+    let pulled = false;
+    if (remote && remote.prompts && (remote.promptsUpdatedAt || 0) > (prompts.updatedAt || 0)){
+      prompts = {updatedAt:remote.promptsUpdatedAt}; PKEYS.forEach(k => prompts[k] = remote.prompts[k] || null);
+      saveJSON(LS.prompts, prompts); pulled = true; renderAll();
+    } else {
+      const p = {}; PKEYS.forEach(k => p[k] = prompts[k] || null);
+      await ref.set({prompts:p, promptsUpdatedAt:prompts.updatedAt || Date.now(), updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    showStatus('ok', pulled ? 'Prompts actualizados desde la nube.' : 'Prompts sincronizados.');
+  } catch(e){ showStatus('err', 'Error al sincronizar: ' + e.message); }
+  finally { b.classList.remove('busy'); }
+}
+function fbSignOut(){ if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
+
+// ═════════════════════════════════════════════
+//  ARRANQUE
+// ═════════════════════════════════════════════
+(async function init(){
+  try {
+    await idb.open();
+    const saved = await idb.get('state');
+    if (saved){ state = Object.assign(blankState(), saved); STEPS.forEach(s => { state.steps[s.id] = Object.assign(blankStep(), state.steps[s.id] || {}); const l = state.steps[s.id].locked; if (l && RETIRED[l.model]) l.model = RETIRED[l.model]; }); }
+  } catch(e){ showStatus('err', 'El navegador no permite guardar el trabajo (IndexedDB): se perderá al cerrar la página.'); }
+  STEPS.forEach(s => {
+    const msgs = state.steps[s.id].messages, last = msgs[msgs.length - 1];
+    if (last && last.streaming){ delete last.streaming; delete last.thinking; if (!last.content.trim()) msgs.pop(); else last.note = 'Respuesta interrumpida al cerrar la página.'; }
+  });
+  $('chapter').value = state.chapter || '';
+  $('chapter').addEventListener('input', () => { state.chapter = $('chapter').value; saveState(); STEPS.forEach(s => renderActions(s.id)); });
+  buildSteps();
+  if (getKey('firebase')) initFirebase(getKey('firebase'));
+})();
+</script>
+</body>
+</html>
