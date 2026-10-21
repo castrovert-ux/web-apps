@@ -181,7 +181,7 @@ main{flex:1;min-height:0;display:flex;}
 <div id="sync-status"><span id="sync-msg"></span><button onclick="hideStatus()" aria-label="Cerrar aviso">×</button></div>
 
 <header>
-  <div class="logo">Planificación<small>Historia de Castroverde de Cerrato</small></div>
+  <div class="logo">Planificación<small>Historia de Castroverde de Cerrato · v. 21-oct (2)</small></div>
   <div class="chapter">
     <label for="chapter">Capítulo (nombre corto)</label>
     <input id="chapter" type="text" placeholder="por ejemplo, prehistoria" maxlength="60" autocomplete="off">
@@ -1181,25 +1181,58 @@ const PROVIDERS = {
   claude:     {label:'Claude', models:[
                  {id:'claude-opus-5-5',  label:'Opus 5.5'},
                  {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
-                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'}]},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
   aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
-                 {id:'gemini-2.5-pro',  label:'Gemini 2.5 Pro'},
-                 {id:'gemini-2.5-flash',label:'Gemini 2.5 Flash'}]},
-  deepseek:   {label:'DeepSeek', models:[{id:'deepseek-v4-pro', label:'DeepSeek V4 Pro'}]},
+                 {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash'},
+                 {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+                 {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
+                 {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
+  deepseek:   {label:'DeepSeek', models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
   openrouter: {label:'OpenRouter', dynamic:true, models:[
-                 {id:'google/gemini-2.5-pro', label:'google/gemini-2.5-pro'},
-                 {id:'google/gemini-2.5-flash', label:'google/gemini-2.5-flash'}]},
+                 {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
+                 {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
+                 {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
+                 {id:'openrouter/free',             label:'openrouter/free (gratuito automático)'}]},
   mistral:    {label:'Mistral', models:[
                  {id:'mistral-large-latest', label:'Mistral Large'},
                  {id:'mistral-medium-latest',label:'Mistral Medium'},
-                 {id:'mistral-small-latest', label:'Mistral Small'}]},
-  groq:       {label:'Groq (Llama)', models:[{id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
+                 {id:'mistral-small-latest', label:'Mistral Small'},
+                 {id:'magistral-medium-latest', label:'Magistral Medium (razonamiento)'}]},
+  groq:       {label:'Groq', models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B'},
+                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B (preview)'}]},
+};
+// Modelos con nivel gratuito, marcados con (g) en el desplegable. En OpenRouter se
+// detecta solo: precio 0 en la lista en vivo, o sufijo :free.
+const FREE = {
+  aistudio:['gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite',
+            'gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'],
+  mistral: ['mistral-small-latest','mistral-medium-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'],
+};
+function isFree(prov, m){
+  if (m.free) return true;
+  if (prov === 'openrouter') return /:free$/.test(m.id) || m.id === 'openrouter/free';
+  return (FREE[prov] || []).includes(m.id);
+}
+// Modelos retirados que pudieran estar guardados de sesiones anteriores → su sustituto
+const RETIRED = {
+  'llama-3.3-70b-versatile':'openai/gpt-oss-120b', 'llama-3.1-8b-instant':'openai/gpt-oss-20b',
+  'gemini-2.0-flash':'gemini-3.8-flash', 'gemini-2.5-flash':'gemini-3.8-flash', 'gemini-2.5-pro':'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview':'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite':'gemini-3.5-flash-lite',
+  'google/gemini-2.5-flash':'google/gemini-3.8-flash', 'google/gemini-2.5-pro':'google/gemini-3.8-flash',
+  'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
 };
 
 const STEPS = [
   {id:'esencial', num:2, title:'Lo esencial', promptKey:'esencial',
    slots:[{key:'bruto', label:'Texto en bruto'}],
-   empty:'<h2>Entrevista sobre lo esencial del capítulo</h2><p>Escribe arriba el nombre corto del capítulo, carga el texto en bruto en Markdown y pulsa «Empezar».</p><p>El modelo leerá el capítulo, te propondrá un resumen y te irá haciendo las preguntas de una en una. Al final entregará el fichero ESENCIAL, que podrás revisar y descargar; además pasará solo al paso 3.</p>'},
+   empty:'<h2>Entrevista sobre lo esencial del capítulo</h2><p>Escribe arriba el nombre corto del capítulo, carga el texto en bruto en Markdown y pulsa «Empezar».</p><p>El modelo leerá el capítulo, te propondrá un resumen y te irá haciendo las preguntas de una en una. Al final entregará el fichero ESENCIAL, que podrás revisar y descargar. El paso 3 lo usará automáticamente: pulsa «Pasar al paso 3 →» en la tarjeta del fichero o la pestaña 3.</p>'},
   {id:'plan', num:3, title:'Plan editorial', promptKey:'planificador',
    slots:[{key:'bruto', label:'Texto en bruto', fallback:'bruto'}, {key:'esencial', label:'Lo esencial', fallback:'esencial'}],
    empty:'<h2>Plan de acción editorial</h2><p>El bruto y el ESENCIAL del paso 2 se usan aquí automáticamente; si prefieres otros ficheros, cárgalos.</p><p>Al pulsar «Empezar», el Editor Jefe entregará su propuesta para validación. Respóndele con tus decisiones y elaborará los ficheros PLAN y CONTROL.</p>'},
@@ -1211,8 +1244,13 @@ const STEPS = [
 function blankStep(){ return {files:{}, messages:[], locked:null}; }
 let state = loadJSON(LS.state) || {chapter:'', active:'esencial', steps:{}};
 STEPS.forEach(s => { if (!state.steps[s.id]) state.steps[s.id] = blankStep(); });
+// Si un paso quedó fijado con un modelo retirado, se cambia por su sustituto
+STEPS.forEach(s => { const l = state.steps[s.id].locked; if (l && RETIRED[l.model]) l.model = RETIRED[l.model]; });
 let modelChoice = loadJSON(LS.models) || {};
-STEPS.forEach(s => { if (!modelChoice[s.id]) modelChoice[s.id] = {provider:'claude', model:'claude-opus-5-5'}; });
+STEPS.forEach(s => {
+  if (!modelChoice[s.id]) modelChoice[s.id] = {provider:'claude', model:'claude-opus-5-5'};
+  else if (RETIRED[modelChoice[s.id].model]) modelChoice[s.id].model = RETIRED[modelChoice[s.id].model];
+});
 let prompts = loadJSON(LS.prompts) || {esencial:null, planificador:null, updatedAt:0};
 const running = {};   // stepId -> AbortController
 
@@ -1269,7 +1307,7 @@ function parseSegments(text, streaming){
   const segs = []; let buf = []; let i = 0; let fileIdx = 0;
   const flush = () => { if (buf.length){ segs.push({type:'text', text:buf.join('\n')}); buf = []; } };
   while (i < lines.length){
-    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)\s*$/);
+    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)[^`]*$/);
     if (!m){ buf.push(lines[i]); i++; continue; }
     const fence = m[1], lang = (m[2]||'').toLowerCase();
     // nombre del fichero: en las 3 líneas no vacías anteriores
@@ -1283,8 +1321,17 @@ function parseSegments(text, streaming){
     const closeRe = new RegExp('^\\s{0,3}' + fence[0].replace('`','\\`') + '{' + fence.length + ',}\\s*$');
     while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
     const closed = j < lines.length;
+    // Si el modelo no puso el nombre delante, se reconoce el fichero por su contenido
+    let byContent = false;
+    if (!name){
+      const all = body.join('\n'); const chap = (state.chapter || 'capitulo').trim().replace(/\s+/g, '_');
+      if (/LO ESENCIAL|Lo m[aá]s importante, en palabras del autor/i.test(all)) name = 'ESENCIAL_' + chap + '.md';
+      else if (/Objetivo de la edici[oó]n/i.test(all)) name = 'PLAN_' + chap + '.md';
+      else if (/Pendiente de verificar/i.test(all)) name = 'CONTROL_' + chap + '.md';
+      byContent = !!name;
+    }
     flush();
-    const isFile = name && (lang === 'markdown' || lang === 'md' || lang === '');
+    const isFile = name && (byContent || lang === 'markdown' || lang === 'md' || lang === '' || lang === 'text' || lang === 'txt');
     if (isFile) segs.push({type:'file', name, body:body.join('\n'), idx:fileIdx++, writing: !closed && streaming});
     else segs.push({type:'code', body:body.join('\n')});
     i = closed ? j + 1 : j;
@@ -1371,7 +1418,7 @@ function buildSteps(){
           <div class="model">
             <label for="prov-${s.id}">Modelo</label>
             <select id="prov-${s.id}" onchange="changeProvider('${s.id}')"></select>
-            <select id="model-${s.id}" onchange="changeModel('${s.id}')"></select>
+            <select id="model-${s.id}" title="(g) = modelo con uso gratuito" onchange="changeModel('${s.id}')"></select>
             <button class="btn btn-sm" id="refresh-${s.id}" title="Actualizar la lista de modelos" onclick="refreshModels('${s.id}')">↻</button>
           </div>
           <div class="side-actions" id="actions-${s.id}"></div>
@@ -1441,7 +1488,7 @@ function renderModel(id){
   ps.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === cur.provider ? 'selected' : ''}>${p.label}</option>`).join('');
   let list = modelList(cur.provider);
   if (!list.some(m => m.id === cur.model)) list = [{id:cur.model, label:cur.model}, ...list];
-  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
+  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}${isFree(cur.provider, m) ? ' (g)' : ''}</option>`).join('');
   ps.disabled = ms.disabled = !!lock;
   $('refresh-' + id).style.display = (!lock && PROVIDERS[cur.provider].dynamic) ? '' : 'none';
 }
@@ -1460,16 +1507,16 @@ async function refreshModels(id, quiet){
       const r = await fetch('https://openrouter.ai/api/v1/models');
       if (!r.ok) throw new Error('OpenRouter ' + r.status);
       const data = (await r.json()).data || [];
-      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai)\//;
-      const list = data.filter(m => keep.test(m.id)).map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
+      const list = data.filter(m => keep.test(m.id)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id));
       saveJSON(LS.orList, list);
     } else if (prov === 'aistudio'){
       const key = getKey('aistudio');
       if (!key){ if (!quiet) openKeys('aistudio'); return; }
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}});
       if (!r.ok) throw new Error('AI Studio ' + r.status);
       const data = (await r.json()).models || [];
-      const list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision)/.test(m.name))
+      const list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|transcribe|robotics|banana|omni|lyria|veo)/.test(m.name))
         .map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, '')), out:m.outputTokenLimit}))
         .sort((a, b) => b.id.localeCompare(a.id));
       saveJSON(LS.gemList, list);
@@ -1526,7 +1573,7 @@ function renderMsg(id, m, mi){
     if (sg.writing) return `<div class="filecard writing"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">Escribiendo… ${kb(text)}</div></div></div>`;
     return `<div class="filecard"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">${kb(text)}${m.edits && m.edits[sg.idx] != null ? ' · editado' : ''}</div></div>
       <div class="fbtns"><button class="btn btn-sm" onclick="openOutput('${id}',${mi},${sg.idx})">Ver y editar</button>
-      <button class="btn btn-sm btn-primary" onclick="downloadOutput('${id}',${mi},${sg.idx})">Descargar</button></div></div>`;
+      <button class="btn btn-sm btn-primary" onclick="downloadOutput('${id}',${mi},${sg.idx})">Descargar</button>${id === 'esencial' ? `<button class="btn btn-sm btn-primary" onclick="setTab('plan')">Pasar al paso 3 →</button>` : ''}</div></div>`;
   }).join('');
   if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
   const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
@@ -1635,7 +1682,7 @@ async function runAssistant(id){
   } catch(e){
     if (e.name === 'AbortError'){
       if (msg.content.trim()) msg.note = 'Respuesta detenida.';
-      else st.messages.pop();
+      else { st.messages.pop(); st.error = 'La respuesta se detuvo antes de empezar. Pulsa «Reintentar» para volver a pedirla.'; }
     } else {
       if (!msg.content.trim()) st.messages.pop(); else msg.note = 'La respuesta se interrumpió por un error.';
       st.error = describeError(e);
@@ -1691,12 +1738,12 @@ function callModel(o){
     openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
     deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
     mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
-    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:8000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:16000},
   }[o.provider];
   return callOpenAICompat(o, cfg);
 }
 
-async function callClaude({model, system, messages, signal, onText}){
+async function callClaude({model, system, messages, signal, onText, onThinking}){
   const key = needKey('claude');
   // Caché de contexto: el prompt y el primer mensaje (con el bruto) se reutilizan en cada turno
   const msgs = messages.map((m, i) => {
@@ -1714,19 +1761,21 @@ async function callClaude({model, system, messages, signal, onText}){
   for await (const d of sseData(resp, signal)){
     let j; try { j = JSON.parse(d); } catch(e){ continue; }
     if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') onText(j.delta.text);
+    else if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'thinking_delta' && onThinking) onThinking();
     else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason === 'max_tokens') truncated = true;
     else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
   }
   return {truncated};
 }
 
-async function callGemini({model, system, messages, signal, onText}){
+async function callGemini({model, system, messages, signal, onText, onThinking}){
   const key = needKey('aistudio');
   const info = (loadJSON(LS.gemList) || []).find(m => m.id === model);
-  const maxOut = (info && info.out) ? info.out : 65536;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+  // Gemini 4 no admite más de 65.536 tokens de salida en llamadas normales
+  const maxOut = Math.min((info && info.out) ? info.out : 65536, 65536);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
   const resp = await fetch(url, {
-    method:'POST', signal, headers:{'Content-Type':'application/json'},
+    method:'POST', signal, headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
     body:JSON.stringify({
       systemInstruction:{parts:[{text:system}]},
       contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.content}]})),
@@ -1739,7 +1788,7 @@ async function callGemini({model, system, messages, signal, onText}){
     let j; try { j = JSON.parse(d); } catch(e){ continue; }
     if (j.error) throw new Error('AI Studio: ' + j.error.message);
     const c = j.candidates && j.candidates[0]; if (!c) continue;
-    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); });
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); else if (p.thought && onThinking) onThinking(); });
     if (c.finishReason === 'MAX_TOKENS') truncated = true;
   }
   return {truncated};
@@ -1760,7 +1809,10 @@ async function callOpenAICompat({provider, model, system, messages, signal, onTe
     const ch = j.choices && j.choices[0]; if (!ch) continue;
     const dl = ch.delta || {};
     if (dl.reasoning_content || dl.reasoning) onThinking();   // el razonamiento interno no se muestra
-    if (dl.content) onText(dl.content);
+    if (typeof dl.content === 'string' && dl.content) onText(dl.content);
+    else if (Array.isArray(dl.content)) dl.content.forEach(c => {
+      if (c.type === 'text' && c.text) onText(c.text); else if (c.type === 'thinking') onThinking();
+    });
     if (ch.finish_reason === 'length') truncated = true;
   }
   return {truncated};
@@ -1881,6 +1933,10 @@ $('chapter').addEventListener('input', () => { state.chapter = $('chapter').valu
 STEPS.forEach(s => {
   const msgs = state.steps[s.id].messages; const last = msgs[msgs.length - 1];
   if (last && last.streaming){ delete last.streaming; delete last.thinking; if (!last.content.trim()) msgs.pop(); else last.note = 'Respuesta interrumpida al cerrar la página.'; }
+  // Si el último mensaje es tuyo y no hay respuesta, se ofrece «Reintentar» en vez de quedarse en blanco
+  const now = msgs[msgs.length - 1];
+  if (now && now.role === 'user' && !state.steps[s.id].error)
+    state.steps[s.id].error = 'La respuesta no llegó (la página se cerró o se recargó mientras el modelo trabajaba). Pulsa «Reintentar».';
 });
 buildSteps();
 if (getKey('firebase')) initFirebase(getKey('firebase'));

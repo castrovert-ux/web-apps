@@ -976,19 +976,52 @@ const PROVIDERS = {
   claude:     {label:'Claude', models:[
                  {id:'claude-opus-5-5',  label:'Opus 5.5'},
                  {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
-                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'}]},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
   aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
-                 {id:'gemini-2.5-pro',  label:'Gemini 2.5 Pro'},
-                 {id:'gemini-2.5-flash',label:'Gemini 2.5 Flash'}]},
-  deepseek:   {label:'DeepSeek', models:[{id:'deepseek-v4-pro', label:'DeepSeek V4 Pro'}]},
+                 {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash'},
+                 {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+                 {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
+                 {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
+  deepseek:   {label:'DeepSeek', models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
   openrouter: {label:'OpenRouter', dynamic:true, models:[
-                 {id:'google/gemini-2.5-pro', label:'google/gemini-2.5-pro'},
-                 {id:'google/gemini-2.5-flash', label:'google/gemini-2.5-flash'}]},
+                 {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
+                 {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
+                 {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
+                 {id:'openrouter/free',             label:'openrouter/free (gratuito automático)'}]},
   mistral:    {label:'Mistral', models:[
                  {id:'mistral-large-latest', label:'Mistral Large'},
                  {id:'mistral-medium-latest',label:'Mistral Medium'},
-                 {id:'mistral-small-latest', label:'Mistral Small'}]},
-  groq:       {label:'Groq (Llama)', models:[{id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
+                 {id:'mistral-small-latest', label:'Mistral Small'},
+                 {id:'magistral-medium-latest', label:'Magistral Medium (razonamiento)'}]},
+  groq:       {label:'Groq', models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B'},
+                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B (preview)'}]},
+};
+// Modelos con nivel gratuito, marcados con (g) en el desplegable. En OpenRouter se
+// detecta solo: precio 0 en la lista en vivo, o sufijo :free.
+const FREE = {
+  aistudio:['gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite',
+            'gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'],
+  mistral: ['mistral-small-latest','mistral-medium-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'],
+};
+function isFree(prov, m){
+  if (m.free) return true;
+  if (prov === 'openrouter') return /:free$/.test(m.id) || m.id === 'openrouter/free';
+  return (FREE[prov] || []).includes(m.id);
+}
+// Modelos retirados que pudieran estar guardados de sesiones anteriores → su sustituto
+const RETIRED = {
+  'llama-3.3-70b-versatile':'openai/gpt-oss-120b', 'llama-3.1-8b-instant':'openai/gpt-oss-20b',
+  'gemini-2.0-flash':'gemini-3.8-flash', 'gemini-2.5-flash':'gemini-3.8-flash', 'gemini-2.5-pro':'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview':'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite':'gemini-3.5-flash-lite',
+  'google/gemini-2.5-flash':'google/gemini-3.8-flash', 'google/gemini-2.5-pro':'google/gemini-3.8-flash',
+  'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
 };
 
 const SHARED = [{key:'bruto', label:'Texto en bruto'}, {key:'plan', label:'Plan editorial'}];
@@ -1036,7 +1069,10 @@ function saveState(now){
 function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
 function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 let modelChoice = loadJSON(LS.models) || {};
-STEPS.forEach(s => { if (!modelChoice[s.id]) modelChoice[s.id] = {...s.def}; });
+STEPS.forEach(s => {
+  if (!modelChoice[s.id]) modelChoice[s.id] = {...s.def};
+  else if (RETIRED[modelChoice[s.id].model]) modelChoice[s.id].model = RETIRED[modelChoice[s.id].model];
+});
 let prompts = loadJSON(LS.prompts) || {updatedAt:0};
 const running = {}; const autoCount = {};
 
@@ -1402,7 +1438,7 @@ function buildSteps(){
           <div class="model">
             <label for="prov-${s.id}">Modelo</label>
             <select id="prov-${s.id}" onchange="changeProvider('${s.id}')"></select>
-            <select id="model-${s.id}" onchange="changeModel('${s.id}')"></select>
+            <select id="model-${s.id}" title="(g) = modelo con uso gratuito" onchange="changeModel('${s.id}')"></select>
             <button class="btn btn-sm" id="refresh-${s.id}" title="Actualizar la lista de modelos" onclick="refreshModels('${s.id}')">↻</button>
           </div>
           <div class="side-actions" id="actions-${s.id}"></div>
@@ -1462,7 +1498,7 @@ function renderModel(id){
   ps.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === cur.provider ? 'selected' : ''}>${p.label}</option>`).join('');
   let list = modelList(cur.provider);
   if (!list.some(m => m.id === cur.model)) list = [{id:cur.model, label:cur.model}, ...list];
-  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
+  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}${isFree(cur.provider, m) ? ' (g)' : ''}</option>`).join('');
   ps.disabled = ms.disabled = !!st.locked;
   $('refresh-' + id).style.display = (!st.locked && PROVIDERS[cur.provider].dynamic) ? '' : 'none';
 }
@@ -1477,14 +1513,14 @@ async function refreshModels(id, quiet){
   try {
     if (prov === 'openrouter'){
       const r = await fetch('https://openrouter.ai/api/v1/models'); if (!r.ok) throw new Error('OpenRouter ' + r.status);
-      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai)\//;
-      saveJSON(LS.orList, ((await r.json()).data || []).filter(m => keep.test(m.id)).map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id)));
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
+      saveJSON(LS.orList, ((await r.json()).data || []).filter(m => keep.test(m.id)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id)));
     } else if (prov === 'aistudio'){
       const key = getKey('aistudio'); if (!key){ if (!quiet) openKeys('aistudio'); return; }
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}});
       if (!r.ok) throw new Error('AI Studio ' + r.status);
       saveJSON(LS.gemList, ((await r.json()).models || [])
-        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision)/.test(m.name))
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|transcribe|robotics|banana|omni|lyria|veo)/.test(m.name))
         .map(m => ({id:m.name.replace(/^models\//, ''), label:m.displayName || m.name.replace(/^models\//, ''), out:m.outputTokenLimit}))
         .sort((a, b) => b.id.localeCompare(a.id)));
     }
@@ -1774,10 +1810,10 @@ function callModel(o){
     openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
     deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
     mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
-    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:8000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:16000},
   }[o.provider]);
 }
-async function callClaude({model, system, messages, signal, onText}){
+async function callClaude({model, system, messages, signal, onText, onThinking}){
   const key = needKey('claude');
   const msgs = messages.map((m, i) => {
     const cache = i === 0 || (i === messages.length - 1 && m.role === 'user');
@@ -1791,26 +1827,27 @@ async function callClaude({model, system, messages, signal, onText}){
   for await (const d of sseData(resp, signal)){
     let j; try { j = JSON.parse(d); } catch(e){ continue; }
     if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') onText(j.delta.text);
+    else if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'thinking_delta' && onThinking) onThinking();
     else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason === 'max_tokens') truncated = true;
     else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
   }
   return {truncated};
 }
-async function callGemini({model, system, messages, signal, onText}){
+async function callGemini({model, system, messages, signal, onText, onThinking}){
   const key = needKey('aistudio');
   const info = (loadJSON(LS.gemList) || []).find(m => m.id === model);
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`, {
-    method:'POST', signal, headers:{'Content-Type':'application/json'},
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
+    method:'POST', signal, headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
     body:JSON.stringify({systemInstruction:{parts:[{text:system}]},
       contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.content}]})),
-      generationConfig:{maxOutputTokens:(info && info.out) ? info.out : 65536}})});
+      generationConfig:{maxOutputTokens:Math.min((info && info.out) ? info.out : 65536, 65536)}})});
   if (!resp.ok) throw await httpError(resp, 'AI Studio');
   let truncated = false;
   for await (const d of sseData(resp, signal)){
     let j; try { j = JSON.parse(d); } catch(e){ continue; }
     if (j.error) throw new Error('AI Studio: ' + j.error.message);
     const c = j.candidates && j.candidates[0]; if (!c) continue;
-    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); });
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); else if (p.thought && onThinking) onThinking(); });
     if (c.finishReason === 'MAX_TOKENS') truncated = true;
   }
   return {truncated};
@@ -1830,7 +1867,10 @@ async function callOpenAICompat({provider, model, system, messages, signal, onTe
     const ch = j.choices && j.choices[0]; if (!ch) continue;
     const dl = ch.delta || {};
     if (dl.reasoning_content || dl.reasoning) onThinking();
-    if (dl.content) onText(dl.content);
+    if (typeof dl.content === 'string' && dl.content) onText(dl.content);
+    else if (Array.isArray(dl.content)) dl.content.forEach(c => {
+      if (c.type === 'text' && c.text) onText(c.text); else if (c.type === 'thinking') onThinking();
+    });
     if (ch.finish_reason === 'length') truncated = true;
   }
   return {truncated};
@@ -1925,7 +1965,7 @@ function fbSignOut(){ if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; u
   try {
     await idb.open();
     const saved = await idb.get('state');
-    if (saved){ state = Object.assign(blankState(), saved); STEPS.forEach(s => { state.steps[s.id] = Object.assign(blankStep(), state.steps[s.id] || {}); }); }
+    if (saved){ state = Object.assign(blankState(), saved); STEPS.forEach(s => { state.steps[s.id] = Object.assign(blankStep(), state.steps[s.id] || {}); const l = state.steps[s.id].locked; if (l && RETIRED[l.model]) l.model = RETIRED[l.model]; }); }
   } catch(e){ showStatus('err', 'El navegador no permite guardar el trabajo (IndexedDB): se perderá al cerrar la página.'); }
   STEPS.forEach(s => {
     const msgs = state.steps[s.id].messages, last = msgs[msgs.length - 1];
