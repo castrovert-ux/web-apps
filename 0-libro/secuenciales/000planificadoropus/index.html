@@ -181,7 +181,7 @@ main{flex:1;min-height:0;display:flex;}
 <div id="sync-status"><span id="sync-msg"></span><button onclick="hideStatus()" aria-label="Cerrar aviso">×</button></div>
 
 <header>
-  <div class="logo">Planificación<small>Historia de Castroverde de Cerrato</small></div>
+  <div class="logo">Planificación<small>Historia de Castroverde de Cerrato · v. 21-oct</small></div>
   <div class="chapter">
     <label for="chapter">Capítulo (nombre corto)</label>
     <input id="chapter" type="text" placeholder="por ejemplo, prehistoria" maxlength="60" autocomplete="off">
@@ -1307,7 +1307,7 @@ function parseSegments(text, streaming){
   const segs = []; let buf = []; let i = 0; let fileIdx = 0;
   const flush = () => { if (buf.length){ segs.push({type:'text', text:buf.join('\n')}); buf = []; } };
   while (i < lines.length){
-    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)\s*$/);
+    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)[^`]*$/);
     if (!m){ buf.push(lines[i]); i++; continue; }
     const fence = m[1], lang = (m[2]||'').toLowerCase();
     // nombre del fichero: en las 3 líneas no vacías anteriores
@@ -1322,15 +1322,16 @@ function parseSegments(text, streaming){
     while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
     const closed = j < lines.length;
     // Si el modelo no puso el nombre delante, se reconoce el fichero por su contenido
+    let byContent = false;
     if (!name){
-      const first = (body.find(l => l.trim()) || '').trim();
       const all = body.join('\n'); const chap = (state.chapter || 'capitulo').trim().replace(/\s+/g, '_');
-      if (/^#\s*LO ESENCIAL/i.test(first)) name = 'ESENCIAL_' + chap + '.md';
+      if (/LO ESENCIAL|Lo m[aá]s importante, en palabras del autor/i.test(all)) name = 'ESENCIAL_' + chap + '.md';
       else if (/Objetivo de la edici[oó]n/i.test(all)) name = 'PLAN_' + chap + '.md';
       else if (/Pendiente de verificar/i.test(all)) name = 'CONTROL_' + chap + '.md';
+      byContent = !!name;
     }
     flush();
-    const isFile = name && (lang === 'markdown' || lang === 'md' || lang === '');
+    const isFile = name && (byContent || lang === 'markdown' || lang === 'md' || lang === '' || lang === 'text' || lang === 'txt');
     if (isFile) segs.push({type:'file', name, body:body.join('\n'), idx:fileIdx++, writing: !closed && streaming});
     else segs.push({type:'code', body:body.join('\n')});
     i = closed ? j + 1 : j;
