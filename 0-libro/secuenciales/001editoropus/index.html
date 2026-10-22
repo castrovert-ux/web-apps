@@ -967,7 +967,7 @@ Con esta estructura exacta:
 //  CONFIGURACIÓN
 // ═════════════════════════════════════════════
 const LS = {prompts:'castroverde_edit_prompts', models:'castroverde_edit_models',
-  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models'};
+  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models', dskList:'castroverde_plan_deepseek_models'};
 const KEYS = [
   {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
   {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
@@ -991,9 +991,9 @@ const PROVIDERS = {
                  {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
                  {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
                  {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
-  deepseek:   {label:'DeepSeek', models:[
-                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
-                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  deepseek:   {label:'DeepSeek', dynamic:true, models:[
+                 {id:'deepseek-chat',     label:'DeepSeek V3 (Chat)'},
+                 {id:'deepseek-reasoner', label:'DeepSeek R1 (Reasoner)'}]},
   openrouter: {label:'OpenRouter', dynamic:true, models:[
                  {id:'google/gemma-4-31b-it:free',  label:'google/gemma-4-31b-it:free'},
                  {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
@@ -1511,6 +1511,7 @@ function viewText(name, text){ openFileModal({title:name, sub:'Fichero de entrad
 function modelList(prov){
   if (prov === 'openrouter'){ const c = loadJSON(LS.orList); if (c && c.length) return c; }
   if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  if (prov === 'deepseek'){ const c = loadJSON(LS.dskList); if (c && c.length) return [...PROVIDERS.deepseek.models.filter(m => !c.some(x => x.id === m.id)), ...c]; }
   return PROVIDERS[prov].models;
 }
 // «Solo gratuitos»: en OpenRouter muestra solo los modelos gratuitos (marcado por defecto)
@@ -1544,7 +1545,8 @@ function renderModel(id){
 function changeProvider(id){
   const prov = $('prov-' + id).value;
   modelChoice[id] = {provider:prov, model:visibleList(prov)[0].id}; saveJSON(LS.models, modelChoice); renderModel(id);
-  if (PROVIDERS[prov].dynamic && !loadJSON(prov === 'openrouter' ? LS.orList : LS.gemList)) refreshModels(id, true);
+  const dynKey = prov === 'openrouter' ? LS.orList : prov === 'aistudio' ? LS.gemList : prov === 'deepseek' ? LS.dskList : null;
+  if (PROVIDERS[prov].dynamic && dynKey && !loadJSON(dynKey)) refreshModels(id, true);
 }
 function changeModel(id){ modelChoice[id].model = $('model-' + id).value; saveJSON(LS.models, modelChoice); }
 async function refreshModels(id, quiet){
@@ -1554,6 +1556,12 @@ async function refreshModels(id, quiet){
       const r = await fetch('https://openrouter.ai/api/v1/models'); if (!r.ok) throw new Error('OpenRouter ' + r.status);
       const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
       saveJSON(LS.orList, ((await r.json()).data || []).filter(m => keep.test(m.id) || /:free$/.test(m.id) || !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id))); saveJSON(LS.orList + '_t', Date.now());
+    } else if (prov === 'deepseek'){
+      const key = getKey('deepseek'); if (!key){ if (!quiet) openKeys('deepseek'); return; }
+      const r = await fetch('https://api.deepseek.com/models', {headers:{'Authorization':'Bearer ' + key}});
+      if (!r.ok) throw new Error('DeepSeek ' + r.status);
+      const list = ((await r.json()).data || []).filter(m => m.object === 'model').map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      if (list.length) saveJSON(LS.dskList, list);
     } else if (prov === 'aistudio'){
       const key = getKey('aistudio'); if (!key){ if (!quiet) openKeys('aistudio'); return; }
       const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}});

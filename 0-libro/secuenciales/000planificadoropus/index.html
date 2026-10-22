@@ -1170,7 +1170,7 @@ La narrativa decide **en qué orden y de qué manera conviene contarlo**.
 // ═════════════════════════════════════════════
 const LS = {
   state:'castroverde_plan_state', prompts:'castroverde_plan_prompts', models:'castroverde_plan_models',
-  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models'
+  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models', dskList:'castroverde_plan_deepseek_models'
 };
 // Mismas claves que el resto de la suite, para no volver a introducirlas
 const KEYS = [
@@ -1196,9 +1196,9 @@ const PROVIDERS = {
                  {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
                  {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
                  {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
-  deepseek:   {label:'DeepSeek', models:[
-                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
-                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  deepseek:   {label:'DeepSeek', dynamic:true, models:[
+                 {id:'deepseek-chat',     label:'DeepSeek V3 (Chat)'},
+                 {id:'deepseek-reasoner', label:'DeepSeek R1 (Reasoner)'}]},
   openrouter: {label:'OpenRouter', dynamic:true, models:[
                  {id:'nvidia/nemotron-3-ultra-550b-a55b:free', label:'nvidia/nemotron-3-ultra-550b-a55b:free'},
                  {id:'nvidia/nemotron-3-super-120b-a12b:free', label:'nvidia/nemotron-3-super-120b-a12b:free'},
@@ -1506,6 +1506,7 @@ function modelList(prov){
     if (c && c.length) return [...PROVIDERS.openrouter.models.filter(m => !c.some(x => x.id === m.id)), ...c];
   }
   if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  if (prov === 'deepseek'){ const c = loadJSON(LS.dskList); if (c && c.length) return [...p.models.filter(m => !c.some(x => x.id === m.id)), ...c]; }
   return p.models;
 }
 // «Solo gratuitos»: en OpenRouter muestra solo los modelos gratuitos (marcado por defecto)
@@ -1541,7 +1542,8 @@ function changeProvider(id){
   const prov = $('prov-' + id).value;
   modelChoice[id] = {provider:prov, model:visibleList(prov)[0].id};
   saveModels(); renderModel(id);
-  if (PROVIDERS[prov].dynamic && !loadJSON(prov === 'openrouter' ? LS.orList : LS.gemList)) refreshModels(id, true);
+  const dynKey = prov === 'openrouter' ? LS.orList : prov === 'aistudio' ? LS.gemList : prov === 'deepseek' ? LS.dskList : null;
+  if (PROVIDERS[prov].dynamic && dynKey && !loadJSON(dynKey)) refreshModels(id, true);
 }
 function changeModel(id){ modelChoice[id].model = $('model-' + id).value; saveModels(); }
 
@@ -1555,6 +1557,16 @@ async function refreshModels(id, quiet){
       const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
       const list = data.filter(m => keep.test(m.id) || /:free$/.test(m.id) || !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id));
       saveJSON(LS.orList, list); saveJSON(LS.orList + '_t', Date.now());
+    } else if (prov === 'deepseek'){
+      const key = getKey('deepseek');
+      if (!key){ if (!quiet) openKeys('deepseek'); return; }
+      const r = await fetch('https://api.deepseek.com/models', {headers:{'Authorization':'Bearer ' + key}});
+      if (!r.ok) throw new Error('DeepSeek ' + r.status);
+      const data = (await r.json()).data || [];
+      const list = data.filter(m => m.object === 'model')
+        .map(m => ({id:m.id, label:m.id}))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      if (list.length) saveJSON(LS.dskList, list);
     } else if (prov === 'aistudio'){
       const key = getKey('aistudio');
       if (!key){ if (!quiet) openKeys('aistudio'); return; }
