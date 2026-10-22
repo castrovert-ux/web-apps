@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consola IA · Castroverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --bg:#fdf0f0; --surface:#f5e4e4; --card:#eed8d8; --border:#d4aaaa;
+  --text:#3a1a1a; --muted:#8a5a5a; --accent:#8a2a2a; --accent2:#b05070;
+  --on-accent:#fdf0f0; --red:#c0392b; --ok:#2a7a4a; --bubble-user:#ffffff;
+  --font-h:'Playfair Display',Georgia,serif;
+  --font-body:'Source Serif 4',Georgia,serif;
+  --font-ui:'DM Mono',ui-monospace,monospace;
+  --radius:3px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1c1112; --surface:#261719; --card:#331f22; --border:#563539;
+    --text:#f2dede; --muted:#c09a9a; --accent:#e08a8a; --accent2:#eba4b4;
+    --on-accent:#1c1112; --red:#f0907a; --ok:#7ccf9c; --bubble-user:#2e1b1d; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.65;display:flex;flex-direction:column;overflow:hidden;}
+button,input,select,textarea{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.logo{font-family:var(--font-h);font-size:21px;font-weight:700;line-height:1.1;white-space:nowrap;}
+.logo small{display:block;font-family:var(--font-ui);font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.5px;margin-top:3px;}
+.model{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.model select{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font-family:var(--font-ui);font-size:11px;max-width:260px;}
+.freetick{font-family:var(--font-ui);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;}
+.head-actions{margin-left:auto;display:flex;gap:8px;}
+.btn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:var(--radius);padding:6px 13px;cursor:pointer;font-family:var(--font-ui);font-size:11px;white-space:nowrap;}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.btn:disabled{opacity:.4;cursor:default;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.btn-primary:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);color:var(--on-accent);}
+.btn-danger:hover:not(:disabled){border-color:var(--red);color:var(--red);}
+.btn-sm{padding:3px 9px;font-size:10px;}
+
+#status{flex-shrink:0;display:none;align-items:center;justify-content:space-between;padding:5px 20px;font-family:var(--font-ui);font-size:11px;}
+#status.visible{display:flex;}
+#status.ok{background:rgba(42,122,74,.14);color:var(--ok);}
+#status.err{background:rgba(192,57,43,.12);color:var(--red);}
+#status.info{background:rgba(58,122,176,.12);color:var(--accent);}
+#status button{background:none;border:none;cursor:pointer;color:inherit;font-size:14px;}
+
+.chat{flex:1;min-height:0;overflow-y:auto;padding:22px 20px 10px;}
+.chat-inner{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.empty-state{max-width:560px;margin:40px auto;color:var(--muted);}
+.empty-state h2{font-family:var(--font-h);font-size:24px;color:var(--text);margin-bottom:10px;font-weight:400;}
+.empty-state p{margin-bottom:8px;}
+.msg{border-radius:var(--radius);padding:12px 16px;}
+.msg.user{align-self:flex-end;max-width:78%;background:var(--bubble-user);border:1px solid var(--border);white-space:pre-wrap;}
+.msg.user .files{display:block;margin-top:6px;font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.msg.assistant{background:var(--surface);border-left:3px solid var(--accent);}
+.who{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.acts{display:flex;gap:6px;}
+.acts button{background:none;border:1px solid var(--border);border-radius:20px;padding:1px 10px;color:var(--muted);cursor:pointer;font-family:var(--font-ui);font-size:10px;}
+.acts button:hover{border-color:var(--accent);color:var(--accent);}
+.note{font-family:var(--font-ui);font-size:11px;color:var(--red);margin-top:8px;}
+.md > *:first-child{margin-top:0;} .md > *:last-child{margin-bottom:0;}
+.md p,.md ul,.md ol,.md pre,.md table,.md blockquote{margin:0 0 .8em;}
+.md h1,.md h2,.md h3,.md h4{font-family:var(--font-h);line-height:1.25;margin:1.1em 0 .4em;}
+.md h1{font-size:1.5em;} .md h2{font-size:1.3em;} .md h3{font-size:1.1em;}
+.md ul,.md ol{padding-left:1.5em;}
+.md code{font-family:var(--font-ui);font-size:.88em;background:var(--card);padding:1px 5px;border-radius:2px;}
+.md pre{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;overflow-x:auto;}
+.md pre code{background:none;padding:0;}
+.md blockquote{border-left:3px solid var(--border);padding-left:12px;color:var(--muted);}
+.md table{border-collapse:collapse;display:block;overflow-x:auto;}
+.md th,.md td{border:1px solid var(--border);padding:4px 10px;text-align:left;}
+.thinking{color:var(--muted);font-family:var(--font-ui);font-size:12px;}
+
+.composer{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:10px 20px 14px;}
+.composer-inner{max-width:860px;margin:0 auto;}
+#chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);border-radius:20px;padding:2px 6px 2px 11px;font-family:var(--font-ui);font-size:11px;}
+.chip button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;}
+.chip button:hover{color:var(--red);}
+.row{display:flex;gap:10px;align-items:stretch;}
+#prompt{flex:1;min-height:84px;max-height:40vh;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-body);font-size:15px;line-height:1.5;}
+.col{display:flex;flex-direction:column;gap:8px;justify-content:space-between;}
+.hint{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-top:6px;}
+body.drag .composer{outline:2px dashed var(--accent);outline-offset:-4px;}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(40,10,12,.55);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:520px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+.modal-head{padding:18px 22px 10px;}
+.modal-head h3{font-family:var(--font-h);font-size:20px;}
+.modal-body{padding:4px 22px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.modal-foot{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.modal-foot .left{margin-right:auto;}
+.keyrow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;}
+.keyrow label{font-family:var(--font-ui);font-size:12px;}
+.keyrow input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 9px;font-family:var(--font-ui);font-size:12px;}
+.keynote{font-size:13px;color:var(--muted);}
+.showkeys{font-family:var(--font-ui);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Consola IA<small>Castroverde</small></div>
+  <div class="model">
+    <select id="prov" aria-label="Proveedor"></select>
+    <select id="model" aria-label="Modelo"></select>
+    <label class="freetick" id="freetick" title="Mostrar solo los modelos gratuitos de OpenRouter"><input type="checkbox" id="onlyfree">Solo gratuitos</label>
+    <button class="btn btn-sm" id="btn-refresh" title="Actualizar la lista de modelos">↻ Modelos</button>
+  </div>
+  <div class="head-actions">
+    <button class="btn" id="btn-keys">Claves</button>
+    <button class="btn btn-danger" id="btn-new">Nueva conversación</button>
+  </div>
+</header>
+<div id="status"><span id="status-msg"></span><button onclick="hideStatus()" aria-label="Cerrar">×</button></div>
+
+<div class="chat" id="chat"><div class="chat-inner" id="inner"></div></div>
+
+<div class="composer">
+  <div class="composer-inner">
+    <div id="chips"></div>
+    <div class="row">
+      <textarea id="prompt" placeholder="Escribe aquí tu prompt…"></textarea>
+      <div class="col">
+        <button class="btn" id="btn-attach">Adjuntar</button>
+        <button class="btn btn-primary" id="btn-send">Enviar</button>
+      </div>
+    </div>
+    <div class="hint">Ctrl+Intro para enviar · Adjuntos: .md, .txt, Word (.docx), PDF e imágenes · también puedes arrastrarlos aquí</div>
+    <input type="file" id="file" multiple hidden accept=".md,.txt,.csv,.json,.html,.docx,.pdf,.png,.jpg,.jpeg,.webp,.gif">
+  </div>
+</div>
+
+<div class="overlay" id="ov-keys">
+  <div class="modal" role="dialog" aria-labelledby="keys-title">
+    <div class="modal-head"><h3 id="keys-title">Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys left"><input type="checkbox" id="showkeys"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═════════════════════════════════════════════
+//  CONFIGURACIÓN (copiada de la app de edición)
+// ═════════════════════════════════════════════
+const LS = {models:'castroverde_consola_models', orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models'};
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key'},
+];
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id).ls) || ''; } catch(e){ return ''; } };
+
+const PROVIDERS = {
+  claude:     {label:'Claude', models:[
+                 {id:'claude-opus-5-5',  label:'Opus 5.5'},
+                 {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
+  aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
+                 {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash'},
+                 {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+                 {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
+                 {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
+  deepseek:   {label:'DeepSeek', models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  openrouter: {label:'OpenRouter', dynamic:true, models:[
+                 {id:'google/gemma-4-31b-it:free',  label:'google/gemma-4-31b-it:free'},
+                 {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
+                 {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
+                 {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
+                 {id:'qwen/qwen3.8-27b:free',       label:'qwen/qwen3.8-27b:free'},
+                 {id:'openrouter/free',             label:'openrouter/free (gratuito automático)'}]},
+  mistral:    {label:'Mistral', models:[
+                 {id:'mistral-large-latest', label:'Mistral Large'},
+                 {id:'mistral-medium-latest',label:'Mistral Medium'},
+                 {id:'mistral-small-latest', label:'Mistral Small'},
+                 {id:'magistral-medium-latest', label:'Magistral Medium (razonamiento)'}]},
+  groq:       {label:'Groq', models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B'},
+                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B (preview)'}]},
+};
+const NO_VISION = ['deepseek', 'groq'];   // proveedores que no aceptan imágenes
+const FREE = {
+  aistudio:['gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite',
+            'gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'],
+  mistral: ['mistral-small-latest','mistral-medium-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'],
+};
+function isFree(prov, m){
+  if (m.free) return true;
+  if (prov === 'openrouter') return /:free$/.test(m.id) || m.id === 'openrouter/free';
+  return (FREE[prov] || []).includes(m.id);
+}
+const RETIRED = {
+  'llama-3.3-70b-versatile':'openai/gpt-oss-120b', 'llama-3.1-8b-instant':'openai/gpt-oss-20b',
+  'gemini-2.0-flash':'gemini-3.8-flash', 'gemini-2.5-flash':'gemini-3.8-flash', 'gemini-2.5-pro':'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview':'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite':'gemini-3.5-flash-lite',
+  'google/gemini-2.5-flash':'google/gemini-3.8-flash', 'google/gemini-2.5-pro':'google/gemini-3.8-flash',
+  'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
+};
+const DEFAULT_MODEL = {provider:'openrouter', model:'google/gemma-4-31b-it:free'};
+
+// ═════════════════════════════════════════════
+//  UTILIDADES
+// ═════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function openOv(id){ $(id).classList.add('visible'); }
+function closeOv(id){ $(id).classList.remove('visible'); }
+function showStatus(type, msg){ const s = $('status'); s.className = 'visible ' + type; $('status-msg').textContent = msg; }
+function hideStatus(){ $('status').className = ''; }
+function md(s){
+  if (typeof marked === 'undefined') return '<pre>' + esc(s) + '</pre>';
+  const d = new DOMParser().parseFromString(marked.parse(s), 'text/html');
+  d.querySelectorAll('script,iframe,object,embed,style,link').forEach(e => e.remove());
+  d.querySelectorAll('*').forEach(e => [...e.attributes].forEach(a => {
+    if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) e.removeAttribute(a.name);
+  }));
+  return d.body.innerHTML;
+}
+function download(name, mime, content){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], {type:mime + ';charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
+
+// ═════════════════════════════════════════════
+//  SELECTOR DE PROVEEDOR Y MODELO
+// ═════════════════════════════════════════════
+let choice = loadJSON(LS.models) || DEFAULT_MODEL;
+if (!PROVIDERS[choice.provider]) choice = DEFAULT_MODEL;
+if (RETIRED[choice.model]) choice.model = RETIRED[choice.model];
+let onlyFree = (() => { try { return localStorage.getItem(LS.models + '_onlyfree') !== '0'; } catch(e){ return true; } })();
+
+function modelList(prov){
+  if (prov === 'openrouter'){ const c = loadJSON(LS.orList); if (c && c.length) return c; }
+  if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  return PROVIDERS[prov].models;
+}
+function visibleList(prov){
+  const l = modelList(prov);
+  if (prov !== 'openrouter' || !onlyFree) return l;
+  const f = l.filter(m => isFree(prov, m)); return f.length ? f : l;
+}
+function renderModel(){
+  const ps = $('prov'), ms = $('model');
+  ps.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === choice.provider ? 'selected' : ''}>${p.label}</option>`).join('');
+  let list = visibleList(choice.provider);
+  $('freetick').style.display = choice.provider === 'openrouter' ? '' : 'none';
+  $('onlyfree').checked = onlyFree;
+  if (!list.some(m => m.id === choice.model)) list = [{id:choice.model, label:choice.model}, ...list];
+  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === choice.model ? 'selected' : ''}>${esc(m.label)}${isFree(choice.provider, m) ? ' (g)' : ''}</option>`).join('');
+  $('btn-refresh').style.display = PROVIDERS[choice.provider].dynamic ? '' : 'none';
+}
+function changeProvider(){
+  const prov = $('prov').value;
+  choice = {provider:prov, model:visibleList(prov)[0].id}; saveJSON(LS.models, choice); renderModel();
+  if (PROVIDERS[prov].dynamic && !loadJSON(prov === 'openrouter' ? LS.orList : LS.gemList)) refreshModels(true);
+}
+function changeModel(){ choice.model = $('model').value; saveJSON(LS.models, choice); }
+async function refreshModels(quiet){
+  const prov = choice.provider;
+  try {
+    if (prov === 'openrouter'){
+      const r = await fetch('https://openrouter.ai/api/v1/models'); if (!r.ok) throw new Error('OpenRouter ' + r.status);
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
+      const zero = m => !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0);
+      saveJSON(LS.orList, ((await r.json()).data || []).filter(m => keep.test(m.id) || /:free$/.test(m.id) || zero(m))
+        .map(m => ({id:m.id, label:m.id, free:zero(m)})).sort((a, b) => a.id.localeCompare(b.id)));
+    } else if (prov === 'aistudio'){
+      const key = getKey('aistudio'); if (!key){ if (!quiet) openKeys('aistudio'); return; }
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}});
+      if (!r.ok) throw new Error('AI Studio ' + r.status);
+      saveJSON(LS.gemList, ((await r.json()).models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|transcribe|robotics|banana|omni|lyria|veo)/.test(m.name))
+        .map(m => ({id:m.name.replace(/^models\//, ''), label:m.displayName || m.name.replace(/^models\//, ''), out:m.outputTokenLimit}))
+        .sort((a, b) => b.id.localeCompare(a.id)));
+    }
+    renderModel(); if (!quiet) showStatus('ok', 'Lista de modelos actualizada.');
+  } catch(e){ if (!quiet) showStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+}
+
+// ═════════════════════════════════════════════
+//  LLAMADAS A LAS APIs (con soporte de imágenes)
+// ═════════════════════════════════════════════
+async function* sseData(resp, signal){
+  const reader = resp.body.getReader(), dec = new TextDecoder(); let buf = '';
+  while (true){
+    if (signal.aborted){ reader.cancel(); throw new DOMException('Detenido', 'AbortError'); }
+    const {done, value} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream:true}); let i;
+    while ((i = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+      if (line.startsWith('data:')){ const d = line.slice(5).trim(); if (d && d !== '[DONE]') yield d; }
+    }
+  }
+}
+async function httpError(resp, who){
+  let detail = '';
+  try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+  catch(e){ try { detail = await resp.text(); } catch(_){} }
+  if (typeof detail === 'object') detail = JSON.stringify(detail);
+  return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+}
+function needKey(id){
+  const k = getKey(id);
+  if (!k){ openKeys(id); throw new Error('Falta la clave de ' + KEYS.find(x => x.id === id).label + '. Añádela y vuelve a enviar.'); }
+  return k;
+}
+function callModel(o){
+  if (o.images && NO_VISION.includes(o.provider)) throw new Error(PROVIDERS[o.provider].label + ' no admite imágenes. Elige otro proveedor o quita la imagen.');
+  if (o.provider === 'claude') return callClaude(o);
+  if (o.provider === 'aistudio') return callGemini(o);
+  return callOpenAICompat(o, {
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:16000},
+  }[o.provider]);
+}
+async function callClaude({model, messages, signal, onText, onThinking}){
+  const key = needKey('claude');
+  const msgs = messages.map(m => ({role:m.role, content:[
+    ...(m.images || []).map(i => ({type:'image', source:{type:'base64', media_type:i.mime, data:i.data}})),
+    {type:'text', text:m.content}]}));
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {method:'POST', signal,
+    headers:{'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:32000, stream:true, messages:msgs})});
+  if (!resp.ok) throw await httpError(resp, 'Claude');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') onText(j.delta.text);
+    else if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'thinking_delta') onThinking();
+    else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason === 'max_tokens') truncated = true;
+    else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
+  }
+  return {truncated};
+}
+async function callGemini({model, messages, signal, onText, onThinking}){
+  const key = needKey('aistudio');
+  const info = (loadJSON(LS.gemList) || []).find(m => m.id === model);
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
+    method:'POST', signal, headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
+    body:JSON.stringify({
+      contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user',
+        parts:[{text:m.content}, ...(m.images || []).map(i => ({inlineData:{mimeType:i.mime, data:i.data}}))]})),
+      generationConfig:{maxOutputTokens:Math.min((info && info.out) ? info.out : 65536, 65536)}})});
+  if (!resp.ok) throw await httpError(resp, 'AI Studio');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error('AI Studio: ' + j.error.message);
+    const c = j.candidates && j.candidates[0]; if (!c) continue;
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); else if (p.thought) onThinking(); });
+    if (c.finishReason === 'MAX_TOKENS') truncated = true;
+  }
+  return {truncated};
+}
+async function callOpenAICompat({provider, model, messages, signal, onText, onThinking}, cfg){
+  const key = needKey(provider);
+  const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+  if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Consola IA Castroverde'; }
+  const body = {model, stream:true, messages:messages.map(m => (m.images && m.images.length)
+    ? {role:m.role, content:[{type:'text', text:m.content}, ...m.images.map(i => ({type:'image_url', image_url:{url:`data:${i.mime};base64,${i.data}`}}))]}
+    : {role:m.role, content:m.content})};
+  if (cfg.max) body.max_tokens = cfg.max;
+  const resp = await fetch(cfg.url, {method:'POST', signal, headers, body:JSON.stringify(body)});
+  if (!resp.ok) throw await httpError(resp, cfg.who);
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+    const ch = j.choices && j.choices[0]; if (!ch) continue;
+    const dl = ch.delta || {};
+    if (dl.reasoning_content || dl.reasoning) onThinking();
+    if (typeof dl.content === 'string' && dl.content) onText(dl.content);
+    else if (Array.isArray(dl.content)) dl.content.forEach(c => { if (c.type === 'text' && c.text) onText(c.text); else if (c.type === 'thinking') onThinking(); });
+    if (ch.finish_reason === 'length') truncated = true;
+  }
+  return {truncated};
+}
+
+// ═════════════════════════════════════════════
+//  CLAVES
+// ═════════════════════════════════════════════
+function openKeys(focusId){
+  $('keys-body').innerHTML = '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones.</p>' +
+    KEYS.map(k => `<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"></div>`).join('');
+  $('showkeys').checked = false; openOv('ov-keys');
+  setTimeout(() => { const el = $('key-' + (typeof focusId === 'string' ? focusId : 'claude')); if (el) el.focus(); }, 60);
+}
+function saveKeys(){
+  KEYS.forEach(k => { const v = $('key-' + k.id).value.trim(); try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){} });
+  closeOv('ov-keys'); showStatus('ok', 'Claves guardadas.');
+}
+
+// ═════════════════════════════════════════════
+//  ADJUNTOS: md, txt, Word, PDF e imágenes
+// ═════════════════════════════════════════════
+let attached = [];
+async function readAttachment(f){
+  const n = f.name, ext = (n.split('.').pop() || '').toLowerCase();
+  if (['png','jpg','jpeg','webp','gif'].includes(ext)){
+    const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+    const m = /^data:(.+?);base64,(.*)$/.exec(url);
+    return {name:n, image:{mime:m[1], data:m[2]}};
+  }
+  if (ext === 'docx'){
+    if (typeof mammoth === 'undefined') throw new Error('No se ha cargado el lector de Word (¿sin conexión?).');
+    return {name:n, text:(await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value};
+  }
+  if (ext === 'doc') throw new Error('«' + n + '»: los .doc antiguos no se pueden leer. Guárdalo como .docx.');
+  if (ext === 'pdf'){
+    if (typeof pdfjsLib === 'undefined') throw new Error('No se ha cargado el lector de PDF (¿sin conexión?).');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise, out = [];
+    for (let p = 1; p <= pdf.numPages; p++){ const tc = await (await pdf.getPage(p)).getTextContent(); out.push(tc.items.map(i => i.str).join(' ')); }
+    const text = out.join('\n\n').trim();
+    if (!text) throw new Error('«' + n + '» no tiene texto seleccionable (¿PDF escaneado?). Prueba a subirlo como imagen.');
+    return {name:n, text};
+  }
+  return {name:n, text:await f.text()};
+}
+async function addFiles(list){
+  for (const f of list){
+    try { attached.push(await readAttachment(f)); } catch(e){ showStatus('err', e.message); }
+  }
+  renderChips();
+}
+function renderChips(){
+  $('chips').innerHTML = attached.map((a, i) => `<span class="chip">${a.image ? '🖼 ' : '📄 '}${esc(a.name)}<button onclick="attached.splice(${i},1);renderChips()" aria-label="Quitar">×</button></span>`).join('');
+}
+
+// ═════════════════════════════════════════════
+//  CONVERSACIÓN
+// ═════════════════════════════════════════════
+let msgs = [], busy = false, ctrl = null;
+
+function draw(){
+  const inner = $('inner');
+  if (!msgs.length){
+    inner.innerHTML = '<div class="empty-state"><h2>Consola de IA</h2><p>Elige arriba el proveedor y el modelo, escribe tu prompt y, si quieres, adjunta documentos (.md, Word, PDF) o imágenes.</p><p>Cada respuesta se puede copiar o descargar como Markdown o como documento de Word.</p></div>';
+    return;
+  }
+  inner.innerHTML = msgs.map((m, i) => m.role === 'user'
+    ? `<div class="msg user">${esc(m.text)}${m.atts.length ? `<span class="files">📎 ${m.atts.map(a => esc(a.name)).join(' · ')}</span>` : ''}</div>`
+    : `<div class="msg assistant"><div class="who"><span>${esc(m.label)}</span><span class="acts">${m.content && !m.streaming ? `<button onclick="copyMsg(${i})">Copiar</button><button onclick="dlMsg(${i},'md')">↓ .md</button><button onclick="dlMsg(${i},'doc')">↓ Word</button>` : ''}</span></div><div class="md" id="md-${i}">${bodyHtml(m)}</div>${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}</div>`
+  ).join('');
+  $('chat').scrollTop = $('chat').scrollHeight;
+}
+function bodyHtml(m){ return m.content ? md(m.content) : `<span class="thinking">${m.streaming ? (m.thinking ? 'Pensando…' : 'Esperando respuesta…') : ''}</span>`; }
+let raf = 0;
+function drawLast(){
+  if (raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = 0; const i = msgs.length - 1, el = $('md-' + i); if (!el) return;
+    const ch = $('chat'), stick = ch.scrollHeight - ch.scrollTop - ch.clientHeight < 80;
+    el.innerHTML = bodyHtml(msgs[i]); if (stick) ch.scrollTop = ch.scrollHeight;
+  });
+}
+function setBusy(v){ busy = v; $('btn-send').textContent = v ? 'Detener' : 'Enviar'; $('btn-attach').disabled = v; }
+
+async function send(){
+  if (busy){ if (ctrl) ctrl.abort(); return; }
+  const text = $('prompt').value.trim();
+  if (!text && !attached.length){ $('prompt').focus(); return; }
+  const atts = attached, images = atts.filter(a => a.image).map(a => a.image);
+  const docs = atts.filter(a => !a.image).map(a => `--- Documento: ${a.name} ---\n${a.text}`).join('\n\n');
+  const full = [docs, text].filter(Boolean).join('\n\n') || '(Analiza las imágenes adjuntas.)';
+  const {provider, model} = choice;
+  const label = PROVIDERS[provider].label + ' · ' + ((modelList(provider).find(m => m.id === model) || {}).label || model);
+  msgs.push({role:'user', text, full, images, atts});
+  msgs.push({role:'assistant', content:'', label, streaming:true});
+  attached = []; $('prompt').value = ''; renderChips(); hideStatus(); draw(); setBusy(true);
+  const a = msgs[msgs.length - 1];
+  const apiMsgs = msgs.slice(0, -1).map(m => m.role === 'user' ? {role:'user', content:m.full, images:m.images} : {role:'assistant', content:m.content});
+  ctrl = new AbortController();
+  try {
+    const r = await callModel({provider, model, messages:apiMsgs, signal:ctrl.signal,
+      images:images.length > 0 || apiMsgs.some(m => m.images && m.images.length),
+      onText:t => { a.content += t; a.thinking = false; drawLast(); },
+      onThinking:() => { if (!a.content){ a.thinking = true; drawLast(); } }});
+    if (r && r.truncated) a.note = 'La respuesta se ha cortado por el límite de longitud del modelo.';
+  } catch(e){
+    if (e.name === 'AbortError'){ a.note = 'Respuesta detenida.'; }
+    else if (!a.content){
+      msgs.splice(-2, 2); attached = atts; $('prompt').value = text; renderChips();
+      showStatus('err', e.message);
+    } else a.note = 'Error: ' + e.message;
+  } finally {
+    a.streaming = false; a.thinking = false; ctrl = null; setBusy(false); draw();
+  }
+}
+function copyMsg(i){ navigator.clipboard.writeText(msgs[i].content).then(() => showStatus('ok', 'Respuesta copiada.'), () => showStatus('err', 'No se ha podido copiar.')); }
+function dlMsg(i, kind){
+  const c = msgs[i].content, name = 'respuesta-' + stamp();
+  if (kind === 'md') download(name + '.md', 'text/markdown', c);
+  else download(name + '.doc', 'application/msword',
+    '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Respuesta</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.4}table{border-collapse:collapse}td,th{border:1px solid #999;padding:3px 6px}pre,code{font-family:Consolas,monospace}</style></head><body>' + md(c) + '</body></html>');
+}
+function newChat(){
+  if (busy && ctrl) ctrl.abort();
+  if (msgs.length && !confirm('¿Empezar una conversación nueva? Se borrará la actual.')) return;
+  msgs = []; attached = []; renderChips(); hideStatus(); draw(); $('prompt').focus();
+}
+
+// ═════════════════════════════════════════════
+//  ARRANQUE
+// ═════════════════════════════════════════════
+$('prov').addEventListener('change', changeProvider);
+$('model').addEventListener('change', changeModel);
+$('onlyfree').addEventListener('change', e => { onlyFree = e.target.checked; try { localStorage.setItem(LS.models + '_onlyfree', onlyFree ? '1' : '0'); } catch(_){} renderModel(); });
+$('btn-refresh').addEventListener('click', () => refreshModels(false));
+$('btn-keys').addEventListener('click', () => openKeys());
+$('btn-new').addEventListener('click', newChat);
+$('btn-send').addEventListener('click', send);
+$('btn-attach').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', e => { addFiles([...e.target.files]); e.target.value = ''; });
+$('showkeys').addEventListener('change', e => KEYS.forEach(k => { const el = $('key-' + k.id); if (el) el.type = e.target.checked ? 'text' : 'password'; }));
+$('prompt').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOv('ov-keys'); });
+['dragenter','dragover'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); document.body.classList.add('drag'); }));
+['dragleave','drop'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); if (t === 'drop' || e.target === document.documentElement) document.body.classList.remove('drag'); }));
+document.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); });
+window.addEventListener('beforeunload', e => { if (msgs.length){ e.preventDefault(); e.returnValue = ''; } });
+
+renderModel(); draw();
+if (PROVIDERS[choice.provider].dynamic && !loadJSON(choice.provider === 'openrouter' ? LS.orList : LS.gemList)) refreshModels(true);
+</script>
+</body>
+</html>
