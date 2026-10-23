@@ -190,17 +190,20 @@
     <div class="mbody">
 
     <h3>Inteligencia artificial</h3>
-    <p class="hint"><b>Gratis:</b> <b>Gemini</b> (clave en aistudio.google.com) con un modelo <b>Flash</b>: unas 20 prácticas al día. <b>Mistral</b> (clave en console.mistral.ai, plan «Experiment»): muchas más, pero solo 1 o 2 peticiones por minuto, así que entre tema y tema hay una pausa. <b>Groq</b> (clave en console.groq.com): muy rápido, pero con un límite de tokens por minuto; si un tema es muy largo puede rechazarlo. En los planes gratuitos el proveedor puede usar lo que envías para mejorar sus modelos.<br><b>De pago:</b> <b>Claude</b> (clave en console.anthropic.com): la mejor calidad, se paga por uso.</p>
+    <p class="hint">Elige proveedor, introduce su clave y selecciona un modelo. Las claves se comparten con las demás aplicaciones que usan este mismo navegador. Gemini, Groq, Mistral, DeepSeek y algunos modelos de OpenRouter ofrecen opciones gratuitas con límites; Claude es de pago. Revisa las condiciones de privacidad y uso de cada proveedor antes de enviar documentos.</p>
     <div class="fld"><label for="p-prov">Proveedor</label>
       <select id="p-prov">
-        <option value="gemini">Gemini (Google) · gratis</option>
-        <option value="mistral">Mistral · gratis</option>
-        <option value="groq">Groq · gratis</option>
-        <option value="claude">Claude (Anthropic) · de pago</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="mistral">Mistral</option>
+        <option value="groq">Groq</option>
+        <option value="claude">Claude (Anthropic)</option>
       </select>
     </div>
     <div class="fld"><label for="p-key">Clave de la API</label>
       <div class="keyrow"><input type="password" id="p-key" autocomplete="off" spellcheck="false"><button class="btn sm" id="b-eye" type="button">👁️</button></div>
+      <p class="hint" style="margin-top:5px">Clave compartida con las demás aplicaciones en este navegador · <a id="p-key-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--c1)">Obtener clave ↗</a></p>
     </div>
     <div class="grid2">
       <div class="fld"><label for="p-model">Modelo</label>
@@ -658,11 +661,24 @@ const CFG_KEY = "genprac-config-v1";
 const EXTRA_KEY = "genprac-extra-v1";
 
 const PROV = {
-  claude:  { name:"Claude",  model:"claude-opus-5-5",      max:16000, models:["claude-opus-5-5","claude-sonnet-5-5"], gap:0 },
-  gemini:  { name:"Gemini",  model:"gemini-3.8-flash",     max:32000, models:["gemini-3.8-flash","gemini-3.6-flash","gemini-3.1-flash-lite"], gap:3000 },
-  mistral: { name:"Mistral", model:"mistral-large-latest", max:16000, models:["mistral-large-latest","mistral-medium-latest"], gap:35000 },
-  groq:    { name:"Groq",    model:"openai/gpt-oss-120b",  max:8000,  models:["openai/gpt-oss-120b","openai/gpt-oss-20b"], gap:20000 }
+  claude:    { name:"Claude",    model:"claude-opus-5-5", max:16000, models:["claude-opus-5-5","claude-sonnet-5-5"], gap:0 },
+  gemini:    { name:"Gemini",    model:"gemini-3.8-flash", max:32000, models:["gemini-3.8-flash","gemini-3.6-flash","gemini-3.1-flash-lite"], gap:3000 },
+  deepseek:  { name:"DeepSeek",  model:"deepseek-chat", max:16000, models:["deepseek-chat","deepseek-reasoner"], gap:3000 },
+  openrouter:{ name:"OpenRouter",model:"meta-llama/llama-3.3-70b-instruct:free", max:16000, models:["meta-llama/llama-3.3-70b-instruct:free"], gap:3000 },
+  mistral:   { name:"Mistral",   model:"mistral-large-latest", max:16000, models:["mistral-large-latest","mistral-medium-latest"], gap:35000 },
+  groq:      { name:"Groq",      model:"openai/gpt-oss-120b", max:8000, models:["openai/gpt-oss-120b","openai/gpt-oss-20b"], gap:20000 }
 };
+
+const SHARED_KEYS = {
+  claude: { storage:"castroverde_ana_claude_key", url:"https://console.anthropic.com/settings/keys" },
+  gemini: { storage:"castroverde_ana_gemini_key", url:"https://aistudio.google.com/apikey" },
+  deepseek: { storage:"castroverde_deepseek_key", url:"https://platform.deepseek.com/api_keys" },
+  openrouter: { storage:"castroverde_or_key", url:"https://openrouter.ai/settings/keys" },
+  mistral: { storage:"castroverde_ana_mistral_key", url:"https://console.mistral.ai/api-keys" },
+  groq: { storage:"castroverde_groq_key", url:"https://console.groq.com/keys" }
+};
+function sharedKey(p) { try { return localStorage.getItem(SHARED_KEYS[p].storage) || ""; } catch(e) { return ""; } }
+function setSharedKey(p, key) { try { key ? localStorage.setItem(SHARED_KEYS[p].storage, key) : localStorage.removeItem(SHARED_KEYS[p].storage); } catch(e) {} }
 
 const DEFAULT_PROMPT = `Eres profesor de informática para personas mayores en los cursos de Cruz Roja en Valladolid. Preparas las PRÁCTICAS EN CLASE de un tema: una lista de tareas reales que los alumnos hacen en su propio ordenador o móvil mientras el profesor proyecta la lista en la pantalla digital del aula.
 
@@ -699,6 +715,8 @@ const PLANTILLA = $("plantilla").textContent.replace(/<\\\/script>/g, "<\/script
 let cfg = { provider:"gemini", keys:{}, models:{}, max:{}, prompt:"" };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY)) || {}); } catch (e) {}
 cfg.lists = cfg.lists || {};
+cfg.keys = cfg.keys || {};
+Object.keys(SHARED_KEYS).forEach(p => { if (!cfg.keys[p] && sharedKey(p)) cfg.keys[p] = sharedKey(p); });
 delete cfg.refHtml; delete cfg.refName;
 /* Gemini 2.5 y 2.0 dejaron de funcionar el 16 de octubre de 2026 */
 if (cfg.models.gemini && !/flash/i.test(cfg.models.gemini)) delete cfg.models.gemini;
@@ -998,7 +1016,12 @@ function apiRequest(provider, system, messages){
     },
     cut: s => s.stop === "MAX_TOKENS"
   };
-  const url = provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://api.mistral.ai/v1/chat/completions";
+  const url = ({
+    deepseek:"https://api.deepseek.com/chat/completions",
+    openrouter:"https://openrouter.ai/api/v1/chat/completions",
+    groq:"https://api.groq.com/openai/v1/chat/completions",
+    mistral:"https://api.mistral.ai/v1/chat/completions"
+  })[provider];
   return {
     url,
     headers: { "Content-Type":"application/json", "Authorization":"Bearer " + key },
@@ -1207,7 +1230,8 @@ function chosenModel(){
 function fillProv(p){
   draftProv = p;
   $("p-prov").value = p;
-  $("p-key").value = cfg.keys[p] || "";
+  $("p-key").value = cfg.keys[p] || sharedKey(p) || "";
+  $("p-key-link").href = SHARED_KEYS[p].url;
   modelOptions(p, model(p));
   $("p-max").value = maxTok(p);
   $("models-info").textContent = cfg.lists[p] ? "Lista cargada de tu cuenta (" + cfg.lists[p].length + " modelos)." : "Pon la clave y pulsa el botón para ver todos los modelos que tienes disponibles.";
@@ -1223,14 +1247,20 @@ async function listModels(p, key){
   let url, headers = {};
   if (p === "claude") { url = "https://api.anthropic.com/v1/models?limit=100"; headers = { "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" }; }
   else if (p === "gemini") url = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=" + encodeURIComponent(key);
-  else { url = p === "groq" ? "https://api.groq.com/openai/v1/models" : "https://api.mistral.ai/v1/models"; headers = { "Authorization":"Bearer " + key }; }
+  else {
+    url = ({deepseek:"https://api.deepseek.com/models",openrouter:"https://openrouter.ai/api/v1/models",groq:"https://api.groq.com/openai/v1/models",mistral:"https://api.mistral.ai/v1/models"})[p];
+    headers = { "Authorization":"Bearer " + key };
+  }
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(res.status === 401 || res.status === 403 || res.status === 400 ? "la clave no es válida" : "error " + res.status);
   const j = await res.json();
   let ids;
   if (p === "gemini") ids = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
                           .map(m => m.name.replace(/^models\//, "")).filter(n => /^gemini/.test(n) && !/(image|tts|audio|live|embedding|banana|omni|robotics|transcribe)/.test(n));
-  else ids = (j.data || []).map(m => m.id).filter(n => !/(embed|whisper|tts|guard|moderation|ocr|transcri|audio)/i.test(n));
+  else {
+    ids = (j.data || []).map(m => m.id).filter(n => !/(embed|whisper|tts|guard|moderation|ocr|transcri|audio)/i.test(n));
+    if (p === "openrouter") ids = ids.filter(n => /:free$/.test(n));
+  }
   return [...new Set(ids)].sort((a, b) => b.localeCompare(a, "en", { numeric:true }));
 }
 $("b-models").onclick = async () => {
@@ -1256,6 +1286,7 @@ function openCfg(){
 function keepDraft(){
   const p = draftProv;
   cfg.keys[p] = $("p-key").value.trim();
+  setSharedKey(p, cfg.keys[p]);
   cfg.models[p] = chosenModel() || PROV[p].model;
   cfg.max[p] = Math.max(4000, +$("p-max").value || PROV[p].max);
 }
