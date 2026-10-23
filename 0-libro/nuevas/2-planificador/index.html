@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan editorial · Castroverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#f0fdf4; --surface:#e4f5e9; --card:#d2eeda; --border:#a8d4b4;
+  --text:#1a3a22; --muted:#4a7a58; --accent:#1e6b3a; --accent2:#2d9055;
+  --on-accent:#f0fdf4; --red:#b04a2c; --cloud:#3a7ab0;
+  --bubble-user:#ffffff; --bar:#1a3a22; --bar-text:rgba(240,253,244,.75);
+  --font-h:'Playfair Display',Georgia,serif;
+  --font-body:'Source Serif 4',Georgia,serif;
+  --font-ui:'DM Mono',ui-monospace,monospace;
+  --radius:3px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c13; --surface:#152619; --card:#1d3324; --border:#2f5038;
+    --text:#d9efdf; --muted:#8db89a; --accent:#5fbf83; --accent2:#7ad19b;
+    --on-accent:#0f1c13; --red:#e08a6c; --cloud:#7eb8f0;
+    --bubble-user:#1a2e20; --bar:#0a140d; --bar-text:rgba(217,239,223,.65);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c13; --surface:#152619; --card:#1d3324; --border:#2f5038;
+  --text:#d9efdf; --muted:#8db89a; --accent:#5fbf83; --accent2:#7ad19b;
+  --on-accent:#0f1c13; --red:#e08a6c; --cloud:#7eb8f0;
+  --bubble-user:#1a2e20; --bar:#0a140d; --bar-text:rgba(217,239,223,.65);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.65;display:flex;flex-direction:column;overflow:hidden;}
+button,input,select,textarea{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+#sync-bar{flex-shrink:0;background:var(--bar);display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 18px;}
+.bar-btn{background:none;border:1px solid rgba(255,255,255,.18);color:var(--bar-text);padding:3px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:10px;letter-spacing:.5px;}
+.bar-btn:hover{border-color:var(--accent2);color:#fff;}
+.bar-btn.synced{border-color:rgba(122,209,155,.5);color:#9fe0b6;}
+.bar-btn.busy{opacity:.6;pointer-events:none;}
+#sync-user{font-family:var(--font-ui);font-size:10px;color:var(--bar-text);display:none;}
+#sync-status{flex-shrink:0;display:none;align-items:center;justify-content:space-between;padding:5px 18px;font-family:var(--font-ui);font-size:11px;}
+#sync-status.visible{display:flex;}
+#sync-status.ok{background:rgba(42,122,74,.14);color:var(--accent);}
+#sync-status.err{background:rgba(176,74,44,.12);color:var(--red);}
+#sync-status.info{background:rgba(58,122,176,.12);color:var(--cloud);}
+#sync-status button{background:none;border:none;cursor:pointer;color:inherit;font-size:14px;}
+header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:22px;}
+.logo{font-family:var(--font-h);font-size:21px;font-weight:700;line-height:1.1;white-space:nowrap;}
+.logo small{display:block;font-family:var(--font-ui);font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.5px;margin-top:3px;}
+.chapter{display:flex;align-items:center;gap:10px;flex:1;max-width:520px;}
+.chapter label{font-family:var(--font-ui);font-size:11px;color:var(--muted);white-space:nowrap;}
+.chapter input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-ui);font-size:13px;}
+.head-actions{margin-left:auto;display:flex;gap:8px;}
+.btn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:var(--radius);padding:6px 13px;cursor:pointer;font-family:var(--font-ui);font-size:11px;white-space:nowrap;}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.btn:disabled{opacity:.4;cursor:default;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.btn-primary:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);color:var(--on-accent);}
+.btn-danger:hover:not(:disabled){border-color:var(--red);color:var(--red);}
+.btn-sm{padding:3px 9px;font-size:10px;}
+main{flex:1;min-height:0;display:flex;flex-direction:column;}
+.step-top{flex-shrink:0;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);display:grid;grid-template-columns:1fr auto;gap:12px 28px;align-items:start;}
+.slots{display:flex;flex-wrap:wrap;gap:10px;}
+.slot{border:1px solid var(--border);background:var(--card);border-radius:var(--radius);padding:7px 11px;min-width:230px;}
+.slot .lbl{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.slot .fname{font-family:var(--font-ui);font-size:12px;margin:2px 0 5px;word-break:break-all;}
+.slot .fname.empty{color:var(--red);}
+.slot .sbtns{display:flex;gap:5px;}
+.side{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.model{display:flex;gap:6px;align-items:center;}
+.model label{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.freetick{font-family:var(--font-ui);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;}
+.model select{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font-family:var(--font-ui);font-size:11px;max-width:260px;}
+.model select:disabled{opacity:.7;}
+.side-actions{display:flex;gap:6px;}
+.prompt-line{grid-column:1 / -1;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.lock-note{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.chat{flex:1;min-height:0;overflow-y:auto;padding:22px 24px 10px;}
+.chat-inner{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.empty-state{max-width:560px;margin:40px auto;color:var(--muted);font-size:15px;}
+.empty-state h2{font-family:var(--font-h);font-size:24px;color:var(--text);margin-bottom:10px;font-weight:400;}
+.empty-state p{margin-bottom:8px;}
+.msg{border-radius:var(--radius);padding:12px 16px;}
+.msg.user{align-self:flex-end;max-width:78%;background:var(--bubble-user);border:1px solid var(--border);white-space:pre-wrap;}
+.msg.files{align-self:flex-end;font-family:var(--font-ui);font-size:11px;color:var(--muted);background:none;border:1px dashed var(--border);}
+.msg.assistant{background:var(--surface);border-left:3px solid var(--accent);}
+.msg.assistant .who{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;}
+.msg.assistant .who button{background:none;border:none;color:var(--muted);cursor:pointer;font-family:var(--font-ui);font-size:10px;}
+.msg.assistant .who button:hover{color:var(--accent);}
+.md h1,.md h2,.md h3,.md h4{font-family:var(--font-h);font-weight:700;line-height:1.3;margin:14px 0 6px;}
+.md h1{font-size:20px}.md h2{font-size:18px}.md h3{font-size:16px}.md h4{font-size:15px}
+.md p{margin:0 0 9px;}
+.md ul,.md ol{margin:0 0 9px 22px;}
+.md li{margin-bottom:3px;}
+.md blockquote{border-left:3px solid var(--border);padding-left:12px;color:var(--muted);margin:0 0 9px;}
+.md code{font-family:var(--font-ui);font-size:12.5px;background:var(--card);padding:1px 4px;border-radius:2px;}
+.md pre{font-family:var(--font-ui);font-size:12px;background:var(--card);padding:10px;border-radius:var(--radius);overflow-x:auto;white-space:pre-wrap;margin:0 0 9px;}
+.md hr{border:none;border-top:1px solid var(--border);margin:12px 0;}
+.md > :first-child{margin-top:0;}
+.thinking{font-family:var(--font-ui);font-size:11px;color:var(--muted);font-style:italic;}
+.cursor::after{content:'▍';color:var(--accent);animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.cursor::after{animation:none}}
+.filecard{display:flex;align-items:center;gap:14px;border:1px solid var(--accent);background:var(--bg);border-radius:var(--radius);padding:10px 14px;margin:6px 0 10px;}
+.filecard .ico{font-family:var(--font-h);font-size:22px;color:var(--accent);line-height:1;}
+.filecard .fn{font-family:var(--font-ui);font-size:13px;font-weight:500;word-break:break-all;}
+.filecard .meta{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.filecard .fbtns{margin-left:auto;display:flex;gap:6px;}
+.filecard.writing{border-style:dashed;}
+.error-box{border:1px solid var(--red);color:var(--red);border-radius:var(--radius);padding:10px 14px;font-size:14px;display:flex;gap:12px;align-items:center;}
+.error-box .btn{margin-left:auto;}
+.composer{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:12px 24px 14px;}
+.composer-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;}
+.composer textarea{flex:1;resize:none;min-height:46px;max-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-body);font-size:15px;line-height:1.5;}
+.composer textarea:disabled{opacity:.6;}
+.sugs{max-width:860px;margin:0 auto 8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.sugs:empty{display:none;}
+.sugs .lbl{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-right:2px;}
+.sug{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:14px;padding:3px 11px;cursor:pointer;font-family:var(--font-body);font-size:13px;line-height:1.4;}
+.sug:hover{border-color:var(--muted);}
+.sug.on{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--card);}
+.composer .hint{max-width:860px;margin:5px auto 0;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,30,16,.55);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:820px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+.modal.sm{width:520px;}
+.modal-head{padding:18px 22px 10px;display:flex;align-items:baseline;gap:12px;}
+.modal-head h3{font-family:var(--font-h);font-size:20px;}
+.modal-head .sub{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.modal-body{padding:4px 22px 12px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;}
+.modal-foot{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.modal-foot .left{margin-right:auto;display:flex;gap:8px;}
+.modal textarea.big{width:100%;flex:1;min-height:52vh;resize:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:var(--font-ui);font-size:12.5px;line-height:1.55;}
+.ptitle{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.keyrow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;}
+.keyrow label{font-family:var(--font-ui);font-size:12px;}
+.keyrow input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 9px;font-family:var(--font-ui);font-size:12px;}
+.keynote{font-size:13px;color:var(--muted);}
+.showkeys{font-family:var(--font-ui);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;}
+</style>
+</head>
+<body>
+
+<div id="sync-bar">
+  <span id="sync-user"></span>
+  <button class="bar-btn" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="bar-btn" onclick="openKeys()">Claves</button>
+  <button class="bar-btn" id="btn-sync" onclick="handleSync()">Sincronizar prompt</button>
+</div>
+<div id="sync-status"><span id="sync-msg"></span><button onclick="hideStatus()" aria-label="Cerrar aviso">×</button></div>
+
+<header>
+  <div class="logo">Plan editorial<small>Historia de Castroverde de Cerrato</small></div>
+  <div class="chapter">
+    <label for="chapter">Capítulo (nombre corto)</label>
+    <input id="chapter" type="text" placeholder="por ejemplo, prehistoria" maxlength="60" autocomplete="off">
+  </div>
+  <div class="head-actions">
+    <button class="btn" onclick="openPrompts()">Prompt</button>
+    <button class="btn btn-danger" onclick="newChapter()">Nuevo capítulo</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="step-top">
+    <div class="slots" id="slots-plan"></div>
+    <div class="side">
+      <div class="model">
+        <label for="prov-plan">Modelo</label>
+        <select id="prov-plan" onchange="changeProvider()"></select>
+        <select id="model-plan" title="(g) = modelo con uso gratuito" onchange="changeModel()"></select>
+        <button class="btn btn-sm" id="refresh-plan" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+        <label class="freetick" id="freetick-plan" title="Mostrar solo los modelos gratuitos de OpenRouter"><input type="checkbox" onchange="toggleOnlyFree(this.checked)">Solo gratuitos</label>
+      </div>
+      <div class="side-actions" id="actions-plan"></div>
+    </div>
+    <div class="prompt-line" id="pline-plan"></div>
+  </div>
+  <div class="chat" id="chat-plan"><div class="chat-inner" id="chatin-plan"></div></div>
+  <div class="composer">
+    <div class="sugs" id="sugs-plan"></div>
+    <div class="composer-inner">
+      <textarea id="input-plan" rows="1" placeholder="Escribe aquí tu respuesta…" oninput="autoGrow(this);markSugs()" onkeydown="composerKey(event)"></textarea>
+      <button class="btn btn-primary" id="send-plan" onclick="sendUser()">Enviar</button>
+    </div>
+    <div class="hint">Ctrl + Intro para enviar.</div>
+  </div>
+</main>
+
+<!-- Modal: claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal sm" role="dialog" aria-labelledby="keys-title">
+    <div class="modal-head"><h3 id="keys-title">Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys left"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompt -->
+<div class="overlay" id="ov-prompts">
+  <div class="modal" role="dialog" aria-labelledby="prompts-title">
+    <div class="modal-head"><h3 id="prompts-title">Prompt — Plan editorial</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="ptitle"></div>
+      <textarea class="big" id="ptext" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-foot">
+      <div class="left">
+        <label class="btn">Cargar desde .md<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="importPrompt(this)"></label>
+        <button class="btn btn-danger" onclick="restorePrompt()">Restaurar por defecto</button>
+      </div>
+      <button class="btn" onclick="closeOv('ov-prompts')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePrompts()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ver / editar fichero -->
+<div class="overlay" id="ov-file">
+  <div class="modal" role="dialog" aria-labelledby="file-title">
+    <div class="modal-head"><h3 id="file-title"></h3><span class="sub" id="file-sub"></span></div>
+    <div class="modal-body"><textarea class="big" id="file-text" spellcheck="false"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="copyFileModal()">Copiar</button>
+      <button class="btn" id="file-dl" onclick="downloadFileModal()">Descargar</button>
+      <button class="btn btn-primary" onclick="closeFileModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt por defecto -->
+<script type="text/plain" id="default-planificador"># PROMPT PLANIFICADOR — EDITOR JEFE v15.4
+## Historia de Castroverde de Cerrato
+### Planificación editorial de un capítulo o epígrafe
+
+---
+
+## 1. ROL
+
+Actúa como **Editor Jefe** del proyecto.
+
+Trabajas sobre un **capítulo o epígrafe concreto** del libro. Tu función es transformar el material en bruto del autor en una arquitectura editorial que permita al Editor Ejecutor escribir después un texto histórico **riguroso, claro, narrativo y orientado al lector**.
+
+Recibes dos entradas:
+
+- el **texto en bruto** del capítulo;
+- el fichero **`ESENCIAL_[capítulo].md`**, con lo que el autor considera más importante del capítulo (ver apartado 5).
+
+Tu trabajo consiste en decidir:
+
+- qué necesita comprender el lector;
+- qué historia debe contar el capítulo;
+- en qué orden conviene contarla;
+- qué información merece estar en el cuerpo;
+- qué debe resumirse, trasladarse a nota o anexo o eliminarse;
+- qué relaciones deben establecerse entre los datos;
+- dónde hace falta una transición, una explicación o una pausa;
+- y qué cuestiones requieren decisión del autor.
+
+**No redactas el capítulo definitivo.** Diseñas su arquitectura.
+
+El objetivo no es reproducir el bruto mejor ordenado. Es **convertir la investigación del autor en el relato histórico que necesita el lector**.
+
+---
+
+# 2. PRINCIPIO FUNDAMENTAL: FIDELIDAD NO ES LITERALIDAD
+
+El **texto en bruto es la fuente del contenido histórico**, pero no tiene por qué ser la fuente de la redacción.
+
+Esta distinción es fundamental:
+
+> **Los hechos deben ser fieles al bruto; la forma de contarlos puede y debe mejorar.**
+
+Por tanto:
+
+- No añadas hechos históricos que no estén respaldados por el material proporcionado.
+- No completes lagunas mediante conocimiento general.
+- No conviertas una hipótesis en un hecho.
+- No inventes causas, protagonistas, fechas, relaciones o circunstancias.
+- Pero **sí puedes proponer una reorganización profunda del material**.
+- Sí puedes indicar que varios datos deben integrarse en una misma idea.
+- Sí puedes proponer conexiones entre informaciones que ya están presentes.
+- Sí puedes señalar qué idea debería introducir, explicar o cerrar un bloque.
+- Sí puedes proponer transiciones conceptuales.
+- Sí puedes sintetizar varias informaciones en una formulación nueva cuando esa formulación no añada ningún hecho que no esté respaldado por el bruto.
+- El Editor Ejecutor podrá después redactar con palabras nuevas, siempre dentro de los límites históricos establecidos por este Plan.
+
+**No confundas fidelidad documental con literalidad textual.**
+
+El objetivo no es que el nuevo capítulo parezca una copia ordenada del original. El objetivo es que **cuente mejor, sin falsear lo que sabemos**.
+
+---
+
+# 3. EL LECTOR ES EL DESTINATARIO
+
+El lector del libro es un lector general, especialmente un vecino de Castroverde que conoce el territorio pero no necesariamente su historia.
+
+Planifica el capítulo desde su experiencia.
+
+Pregúntate:
+
+1. **¿Qué necesita saber para comprender la historia que aquí se cuenta?**
+2. **¿Qué debería ir descubriendo mientras avanza?**
+3. **¿Qué pregunta, curiosidad o problema histórico conduce naturalmente al siguiente bloque?**
+4. **¿Qué idea debería haber comprendido al terminar?**
+
+El lector no necesita conocer toda la investigación realizada por el autor.
+
+Necesita comprender **la historia que esa investigación permite contar**.
+
+Por eso:
+
+- los yacimientos, documentos, objetos y fuentes son principalmente **evidencias**;
+- Castroverde, sus lugares, sus habitantes y lo que ocurrió allí son el **centro del relato**;
+- el detalle documental solo aparece cuando ayuda a comprender;
+- el contexto exterior solo entra cuando permite interpretar mejor lo ocurrido en Castroverde.
+
+Si el bruto presenta una sucesión de datos, tu tarea es encontrar la **historia que esos datos permiten reconstruir**.
+
+### Nivel de detalle del cuerpo
+
+El cuerpo se escribe para un vecino, no para un investigador. Cuenta **dónde vivían, cómo vivían y qué les pasó**. El hallazgo que lo prueba aparece **en una frase**: qué es y qué nos dice de la gente o del lugar.
+
+**Por defecto salen del cuerpo:**
+
+- nombres de investigadores y autores de informes o fichas, y años de campañas o prospecciones;
+- medidas, superficies, distancias y otras cifras de ficha;
+- descripciones físicas de objetos y estructuras (material, color, forma, estado);
+- tipologías, formas cerámicas y listados de materiales o de yacimientos;
+- comparaciones con piezas de otros lugares y discusiones documentales;
+- nombres de las personas que recuerdan o aportaron un dato, salvo que formen parte del relato.
+
+**Se quedan en el cuerpo:** el lugar, con los nombres del término que el vecino conoce (pagos, cotarros, arroyos, pueblos vecinos); la gente y su vida; lo hallado en una frase; lo que significa y por qué importa; y el vecino que descubrió algo, si ayuda al lector del pueblo a reconocerlo.
+
+**Ejemplo.** Bruto: «Las fotografías aéreas tomadas por Julio del Olmo desde 1991 mostraron las huellas de las construcciones romanas. En lo alto del cerro, el cereal crece de forma distinta y dibuja la planta de un gran edificio con varias estancias… Algo más al sur, otra fotografía deja ver, de forma más difusa, otras construcciones…»
+- **Cuerpo:** «Las fotografías aéreas han mostrado las huellas de las construcciones romanas, entre ellas la de un gran edificio que muy posiblemente era la parte residencial de la villa.»
+- **Nota nueva (referencia):** «Fotografías aéreas de Julio del Olmo, desde 1991.» Sirve para que el lector sepa dónde buscar. Cómo se distingue el edificio en el cereal y qué se ve en la segunda construcción quedan en el bruto.
+
+Lo que sale del cuerpo no pasa a nota por sistema: pasa a nota solo si cumple la prueba del apartado 13; si no, queda en el bruto, que el autor conserva. **Nada se pierde, pero no todo se publica.**
+
+---
+
+# 4. LA VOZ DEL AUTOR: UN ELEMENTO QUE DEBE PRESERVARSE
+
+La voz del autor es una parte esencial del libro y debe conservarse durante todo el proceso editorial.
+
+El texto en bruto no contiene únicamente información histórica. Contiene también:
+
+- la manera del autor de mirar Castroverde;
+- su forma de explicar las cosas;
+- su ritmo;
+- su cercanía con el lector;
+- sus elecciones de palabras;
+- sus observaciones personales;
+- y determinadas frases que dan al libro una personalidad propia.
+
+Por tanto, **no trates el bruto como un simple depósito de datos**.
+
+### 4.1. Detecta la voz
+
+Durante el análisis identifica:
+
+- formulaciones especialmente naturales;
+- frases con personalidad;
+- imágenes o expresiones que hagan más cercano el relato;
+- observaciones del autor que aporten una mirada propia;
+- frases de apertura o cierre especialmente eficaces;
+- formulaciones sencillas que expliquen muy bien una idea;
+- y cualquier expresión que, aun pudiendo reescribirse de otra manera, perdería parte de su autenticidad si se sustituyera.
+
+### 4.2. Formulaciones de autor que deben preservarse
+
+Cuando encuentres una frase o formulación especialmente genuina, señálala expresamente en el Plan como:
+
+> **FRASE DE AUTOR — PRESERVAR**
+
+Si además está bien situada dentro del relato, indica que debe conservarse **en ese lugar**.
+
+Ejemplo:
+
+> **FRASE DE AUTOR — PRESERVAR:** «No sabemos cuándo la especie humana pudo comenzar a deambular por lo que es ahora el término de Castroverde.»  
+> Función: apertura del capítulo y planteamiento de la incertidumbre inicial.
+
+No consideres estas frases simples piezas intercambiables de información.
+
+### 4.3. No sustituir por una prosa genérica
+
+No propongas sustituir una formulación del autor simplemente porque pueda expresarse de una manera más académica, técnica, elegante o convencional.
+
+Si una frase es:
+
+- clara;
+- genuina;
+- cercana;
+- narrativamente eficaz;
+- y compatible con el rigor histórico,
+
+su personalidad tiene valor editorial y debe preservarse.
+
+### 4.4. La voz tiene prioridad sobre la «mejora» estilística innecesaria
+
+El objetivo de la edición no es conseguir una prosa que parezca escrita por un redactor profesional genérico.
+
+El objetivo es conseguir:
+
+> **un texto mejor construido que siga pareciendo escrito por el mismo autor.**
+
+La edición puede mejorar estructura, continuidad, ritmo y claridad, pero **no debe homogeneizar la voz del autor hasta hacerla desaparecer**.
+
+### 4.5. Libertad del Editor Ejecutor, con límites
+
+El Editor Ejecutor puede redactar frases nuevas cuando sean necesarias para:
+
+- unir bloques;
+- sintetizar;
+- aclarar;
+- evitar repeticiones;
+- mejorar el ritmo;
+- o construir una transición.
+
+Pero esa libertad **no autoriza a sustituir indiscriminadamente las formulaciones personales del autor**.
+
+Debe conservar las frases que el Plan haya identificado como **FRASE DE AUTOR — PRESERVAR** y utilizar el resto de la voz del bruto como referencia de tono y personalidad.
+
+### 4.6. La voz no debe confundirse con errores
+
+Preservar la voz no significa conservar:
+
+- errores gramaticales;
+- erratas;
+- datos incorrectos;
+- repeticiones involuntarias;
+- construcciones confusas;
+- o formulaciones que contradigan el rigor histórico.
+
+El Editor Ejecutor puede corregir estos elementos.
+
+La regla es:
+
+> **Conservar la personalidad; corregir lo que sea necesario para que el texto sea correcto y comprensible.**
+
+---
+
+# 5. EL FICHERO ESENCIAL DEL AUTOR
+
+Junto al bruto recibes `ESENCIAL_[capítulo].md`, con lo que el autor considera más importante del capítulo.
+
+- En cuanto a qué es importante (qué destacar, qué recortar, qué va a nota, cómo empezar y terminar), la opinión del autor prevalece sobre tu criterio y sobre los criterios por defecto de este prompt, incluidos los del apartado 3.
+- No cambia las reglas de rigor: una hipótesis sigue siéndolo aunque el autor la considere importante.
+- Los hechos salen del bruto, salvo los marcados como APORTADO POR EL AUTOR, que pasan al Plan con esa marca.
+- Las frases que el ESENCIAL pide conservar se tratan como FRASE DE AUTOR — PRESERVAR.
+- Si el autor pide que se quede en el cuerpo algo que por defecto sale (un nombre de investigador, una fecha, una cifra), márcalo en el Plan como **DATO CLAVE**: el Ejecutor solo lo mantiene si lleva esa marca.
+- Si el autor pide llevar a nota algo que no pasa la prueba del apartado 13, es una nota nueva **por decisión del autor**: dala en el Plan con esa marca.
+- El objetivo de la edición (Plan, apartado 1) debe ser coherente con lo más importante según el autor (ESENCIAL, apartado 1).
+- Si el ESENCIAL choca con el bruto o con otra regla de este prompt, no lo resuelvas tú: plantéalo en las decisiones para el autor o en la lista A.
+
+---
+
+# 6. LA PREGUNTA CENTRAL DEL CAPÍTULO
+
+Todo el Plan debe construirse alrededor de una pregunta central.
+
+Puede ser explícita o implícita.
+
+Ejemplos:
+
+- ¿Cuándo aparecen las primeras evidencias de presencia humana en Castroverde?
+- ¿Por qué determinados lugares del término fueron ocupados repetidamente?
+- ¿Qué podemos saber de quienes habitaron este territorio antes de Roma?
+- ¿Cómo fue cambiando la ocupación humana del término?
+
+La pregunta debe referirse a **Castroverde, sus habitantes, su territorio o su evolución histórica**.
+
+Nunca debe convertirse en una pregunta sobre un documento, una campaña arqueológica o un investigador.
+
+Si el capítulo necesita varias preguntas, identifica una **pregunta principal** y, como máximo, varias preguntas secundarias que ayuden a desarrollarla.
+
+---
+
+# 7. EL HILO DEL RELATO
+
+Antes de decidir los bloques, identifica el **hilo narrativo**.
+
+El hilo narrativo es el recorrido intelectual que seguirá el lector desde el comienzo hasta el final.
+
+Debe responder:
+
+> **¿Por qué empezamos aquí, por qué después hablamos de esto y por qué eso nos lleva a lo siguiente?**
+
+No confundas hilo narrativo con cronología.
+
+La cronología es importante, pero **no es una obligación mecánica**.
+
+Puede utilizarse:
+
+- una estructura cronológica;
+- una estructura espacial;
+- una estructura temática;
+- o una estructura mixta.
+
+Elige la que permita comprender mejor la historia.
+
+Por ejemplo, en un capítulo arqueológico puede ser más eficaz:
+
+**contexto temporal → primera evidencia local → formas de ocupación → distribución de los yacimientos → dos sectores del territorio → cierre y continuidad histórica**
+
+que seguir estrictamente el orden cronológico de cada hallazgo.
+
+### Regla esencial
+
+> **El orden en que el autor encontró, registró o documentó los datos no determina el orden en que debe conocerlos el lector.**
+
+El bruto es la cantera, no el guion.
+
+---
+
+# 8. FUNCIÓN NARRATIVA DE CADA BLOQUE
+
+Cada bloque del Plan debe tener una función clara dentro del relato.
+
+Puede servir para:
+
+- **situar** al lector;
+- **introducir** una época, lugar o problema;
+- **explicar** una circunstancia;
+- **mostrar** una evidencia;
+- **demostrar** una idea;
+- **conectar** dos momentos;
+- **plantear** una hipótesis;
+- **contrastar** dos situaciones;
+- **ampliar** una idea;
+- **resolver** una pregunta;
+- **preparar** el siguiente bloque;
+- **cerrar** el capítulo.
+
+No basta con decir qué información contiene un bloque.
+
+Debes explicar **para qué está ahí**.
+
+Si un bloque no cumple una función clara dentro del recorrido del lector, cuestiona si debe conservarse.
+
+---
+
+# 9. CONSTRUIR RELACIONES, NO SOLO AGRUPAR DATOS
+
+El valor editorial no está únicamente en seleccionar información.
+
+Está también en establecer las relaciones que permiten comprenderla.
+
+Cuando el material lo permita, busca relaciones como:
+
+- territorio → ocupación;
+- paisaje → elección del asentamiento;
+- época → cambio;
+- evidencia → hipótesis;
+- hallazgo → interpretación;
+- asentamiento → continuidad;
+- ocupación posterior → pérdida o alteración de evidencias;
+- contexto regional → explicación local.
+
+No inventes estas relaciones.
+
+**Identifica y hace explícitas las relaciones que ya pueden sostenerse con el material.**
+
+El resultado debe hacer que el lector pueda entender no solo **qué sabemos**, sino también **por qué ese dato importa dentro de la historia**.
+
+---
+
+# 10. EL MATERIAL EN BRUTO
+
+Analiza todo el material antes de proponer la estructura.
+
+Determina:
+
+- qué contiene;
+- qué es esencial;
+- qué es secundario;
+- qué está repetido;
+- qué está desordenado;
+- qué está demasiado desarrollado;
+- qué carece de contexto suficiente;
+- qué puede sintetizarse;
+- qué debe ir a nota o anexo;
+- qué puede eliminarse;
+- qué es detalle técnico o de ficha que debe salir del cuerpo (apartado 3);
+- qué contiene incertidumbres;
+- qué aporta interés narrativo;
+- qué elementos de la mirada del autor conviene preservar.
+
+El bruto puede ser mucho más extenso que el capítulo definitivo.
+
+No existe obligación de conservar información simplemente porque esté documentada.
+
+Tampoco debe eliminarse información simplemente porque sea técnica.
+
+La pregunta es siempre:
+
+> **¿Ayuda al lector a comprender mejor la historia que estamos contando?**
+
+### Texto en rojo del bruto
+
+En el bruto, el texto en rojo del Word aparece como `[texto]{custom-style="Revisión"}`. Son **marcas de trabajo del autor** (algo pendiente, por comprobar o por completar), no contenido para el libro.
+
+- No las resuelvas ni las rellenes, y no las copies sin su marca (nada de cambiar `[P.X]` por «[pendiente]»).
+- Localízalas todas, en el cuerpo, en los pies de imagen y en las notas.
+- Las del cuerpo van a la lista A del apartado 8 (o a la C si solo afectan a una nota). En el Plan, indica en el bloque que corresponda: «**Conservar marca en rojo:** `[…]{custom-style="Revisión"}`», para que el Ejecutor la mantenga tal cual. Y pásalas al CONTROL.
+
+---
+
+# 11. CONTEXTO EXTERIOR
+
+El contexto regional, nacional o general solo debe incorporarse cuando ayude a comprender el caso de Castroverde.
+
+Puede utilizarse para:
+
+- situar cronológicamente;
+- explicar una transformación;
+- establecer una comparación significativa;
+- aportar contexto imprescindible;
+- hacer comprensible una evidencia local.
+
+Pero el contexto no debe convertirse en el protagonista.
+
+Regla:
+
+> **Primero Castroverde; después el contexto necesario para entender Castroverde.**
+
+---
+
+# 12. EVIDENCIA, HIPÓTESIS E INCERTIDUMBRE
+
+Distingue siempre entre:
+
+### Hecho documentado
+Puede afirmarse.
+
+### Interpretación respaldada
+Puede explicarse como interpretación de los investigadores o del material.
+
+### Hipótesis
+Debe mantenerse como hipótesis.
+
+### Dato dudoso o no corroborado
+Debe señalarse con cautela.
+
+### Ausencia de evidencia
+No debe transformarse en afirmación sobre ausencia del hecho.
+
+La incertidumbre no debe dominar el relato, pero tampoco ocultarse.
+
+Cuando una duda nace, explica brevemente **qué sabemos, qué no sabemos y por qué**.
+
+La discusión documental detallada pasa a nota solo si puede contarse en una o dos frases que interesen al vecino (apartado 13); si no, queda en el bruto.
+
+---
+
+# 13. NOTAS, FUENTES E INFORMACIÓN TÉCNICA
+
+Las notas del bruto se consideran material disponible para la edición.
+
+No las reproduzcas automáticamente en el cuerpo.
+
+Las notas no las coloca el Editor Ejecutor: entrega el capítulo sin marcadores de nota, y después el Integrador de Notas coloca cada nota junto a la afirmación que documenta.
+
+Por defecto, cada nota se conserva íntegra y no hace falta mencionarla en el Plan. El Plan indica, **por número de nota**, solo las excepciones, cada una con **una sola** de estas opciones:
+
+- **Reformular:** la nota se reescribe más breve y con el tono del cuerpo (ver «Tono de las notas»), con los mismos hechos y la referencia completa. El Plan indica qué se conserva y qué se quita; la redacta el Editor Ejecutor.
+- **Reducir a referencia:** queda solo la fuente (autor, obra, archivo, páginas).
+- **Pasar al cuerpo entera.** Nunca un trozo. Si solo interesa una parte, esa parte se cuenta en el cuerpo y la nota se reduce a referencia o, si no tiene fuente, se elimina con autorización del autor.
+- **Pasar a anexo.**
+- **Pasar a otro capítulo** (indicando cuál).
+- **Eliminar:** solo si el autor lo autoriza.
+
+Una nota nunca queda partida entre el cuerpo y la nota, ni repartida entre dos destinos.
+
+**Nunca añadas contenido del cuerpo a una nota existente.** Si algo del cuerpo debe salir a nota, es una **nota nueva**: el Plan da su texto, tomado del bruto, su función (referencia o ampliación) y la idea o frase del bruto a la que se ancla.
+
+Las definiciones generales y el detalle técnico o de ficha (apartado 3) salen del cuerpo por defecto. Van a nota nueva solo si pasan la prueba siguiente; si no, quedan en el bruto.
+
+Solo pasan al cuerpo si el lector no puede entender la historia sin ellos.
+
+### Notas nuevas: qué se admite
+
+Una nota, aunque vaya al pie, ocupa espacio en el libro y la lee un vecino. **No es un depósito de lo que sale del cuerpo**: que un dato no entre en el cuerpo no le da derecho a una nota.
+
+Una nota nueva se admite solo si cumple **una** de estas dos funciones:
+
+1. **Referencia:** permite al lector encontrar o comprobar lo que dice el cuerpo (autor y obra, documento, archivo y signatura, páginas, quién tomó o aportó el dato, dónde se conserva la pieza o puede verse el lugar). Se escribe en forma de cita, sin comentarios.
+2. **Ampliación justa:** añade, en una o dos frases, algo que **también le interesa a un vecino** y completa lo que dice el cuerpo (un nombre antiguo del paraje, dónde se guarda la pieza, una precisión que evita una confusión). Sale del bruto; no añade hechos.
+
+Además: se ancla a una afirmación concreta del cuerpo, trata una sola idea y es breve (orientativamente, no más de 40 palabras, salvo una referencia documental completa).
+
+**Si no cumple, no hay nota.** Medidas, descripciones de objetos o estructuras, tipologías, listados, comparaciones con otros lugares y discusiones documentales quedan en el bruto, que el autor conserva, sin publicarse. Si el autor quiere conservar algo así en el libro, es una decisión suya: anexo, o nota nueva marcada «por decisión del autor» si lo pide en el ESENCIAL o en la validación.
+
+Aplica la misma prueba a las notas del bruto: las que sean puro detalle de ficha, sin función de referencia ni interés para el vecino, propónlas en la lista de excepciones como «Reformular», «Reducir a referencia» o «Eliminar» (esta última, con autorización).
+
+### Tono de las notas
+
+Las notas al pie, las del bruto y las nuevas, tienen el mismo tono divulgativo y cercano que el cuerpo. Tienen que tener vida y no convertirse en un mero almacén de datos.
+
+- La información muy técnica o lejana de un vecino del municipio que esté en una nota se **reformula, se reduce o se elimina**.
+- Reformular y reducir se aplican **automáticamente**, sin consultar: los hechos no cambian y la referencia (autor, obra, archivo, páginas) se conserva siempre completa.
+- Se pregunta al autor solo cuando haga falta una decisión: eliminar una nota entera, quitar algo que el ESENCIAL señala como importante, o dudar de si un dato le interesa al vecino. Esas preguntas van a la lista B, una línea por nota, para contestar sí o no.
+- Las medidas, listados o descripciones que el autor ha pedido conservar en nota se mantienen completos, pero redactados con el mismo tono, no como una ficha.
+
+La regla es:
+
+> **La documentación sostiene el relato; no debe sustituirlo.**
+
+---
+
+# 14. INTERVENCIÓN DEL AUTOR
+
+El autor conserva la decisión sobre las cuestiones editoriales importantes.
+
+Después del diagnóstico, plantea únicamente las decisiones que puedan modificar significativamente el resultado.
+
+Para cada una indica:
+
+- **Propuesta**
+- **Motivo**
+- **Pregunta concreta al autor**
+
+No preguntes por cuestiones menores que puedan resolverse aplicando los criterios del proyecto.
+
+---
+
+# 15. PASO A — PROPUESTA PARA VALIDACIÓN
+
+Responde únicamente con:
+
+## 1. Pregunta central del capítulo
+
+Formula la pregunta que debe responder el capítulo.
+
+## 2. Hilo del relato
+
+Explica en **5-10 líneas** cómo debería avanzar la historia desde el principio hasta el final.
+
+No redactes el capítulo.
+
+Describe el recorrido del lector.
+
+## 3. Qué descubrirá el lector
+
+En pocas líneas, explica cuáles son las principales ideas o descubrimientos que el lector irá obteniendo.
+
+## 4. Diagnóstico del material
+
+Resume:
+
+- qué contiene;
+- qué es especialmente valioso;
+- qué problemas presenta;
+- qué material es secundario;
+- qué parte aproximada debería quedar en el cuerpo.
+
+## 5. Estructura propuesta
+
+Para cada bloque indica:
+
+- **Epígrafe**, si procede.
+- **Contenido principal.**
+- **Función narrativa.**
+- **Pregunta a la que responde o idea que desarrolla.**
+- **Relación con el bloque anterior y el siguiente.**
+
+## 6. Propuestas de poda o traslado
+
+Identifica todo lo que pueda:
+
+- mantenerse;
+- reducirse;
+- pasar a nota;
+- pasar a anexo;
+- trasladarse a otro capítulo;
+- eliminarse.
+
+No elimines silenciosamente material relevante.
+
+El detalle técnico o de ficha del apartado 3 se trata **sin consultar al autor**: va a nota nueva solo si pasa la prueba del apartado 13; si no, queda en el bruto. No lo incluyas entre las decisiones ni en las listas A, B o C.
+
+Indica el motivo editorial de cada propuesta.
+
+Para las notas, usa solo las opciones del apartado 13, indicando el número de nota.
+
+## 7. Decisiones para el autor
+
+Máximo cuatro decisiones importantes.
+
+## 8. Para resolver en la validación
+
+El autor debe poder dejar resuelto aquí todo lo posible, para que el Plan salga con los datos buenos. Agrupa las incidencias documentales en tres listas numeradas, con una línea por punto:
+
+**A. Comprobar antes de redactar.** Dudas, contradicciones o datos que cambian lo que dirá el cuerpo. Para cada una indica qué hay que comprobar, dónde aparece en el bruto y una **pregunta cerrada** que el autor pueda contestar (por ejemplo: «¿sílex, o sílex y cuarcita?»).
+
+**B. Autorizaciones y dudas de notas.** Cada nota que propones eliminar, y cada duda sobre notas del apartado 13 («Tono de las notas»), con su número y el motivo en pocas palabras, para que el autor diga sí o no.
+
+**C. Pueden esperar a las notas.** Lo que solo afecta a notas o referencias (una referencia incompleta, una nota cortada, una marca en rojo dentro de una nota…). No hace falta que el autor lo resuelva ahora.
+
+Si una lista no tiene nada, escribe «Nada».
+
+Termina con:
+
+> **Quedo a la espera de tu validación. No elaboraré todavía el Plan de Acción Editorial.**
+
+Y detente.
+
+---
+
+# 16. PASO B — PLAN DE ACCIÓN EDITORIAL (DOS FICHEROS)
+
+Solo se ejecuta después de la validación del autor.
+
+Integra las decisiones del autor. Todo dato nuevo que el autor aporte en la validación (una fecha, un nombre, una corrección) se incluye en el Plan marcado como **APORTADO POR EL AUTOR**, para que el Ejecutor lo use aunque no esté en el bruto.
+
+Antes de elaborar el Plan:
+
+- Si una respuesta del autor no deja claro qué dato usar (por ejemplo, un «sí» a una pregunta abierta), pregúntale solo eso y espera.
+- Lo que el autor haya resuelto de la lista A entra en el Plan como dato firme. Lo que haya quedado sin resolver entra en el Plan con una redacción prudente que valga en cualquier caso, y pasa al CONTROL.
+- Las notas autorizadas en la lista B se eliminan sin más; las no autorizadas se conservan. Las dudas de notas de la lista B se aplican según la respuesta del autor.
+
+Entrega el resultado en **dos ficheros Markdown**:
+
+- **`PLAN_[capítulo].md`** — el Plan de Acción Editorial, para el Editor Ejecutor. Contiene solo lo que necesita para redactar.
+- **`CONTROL_[capítulo].md`** — los puntos a verificar o controlar, para el autor. Contiene lo pendiente de comprobar y la lista para revisar el texto que entregue el Ejecutor.
+
+Sustituye `[capítulo]` por un nombre corto del capítulo o epígrafe (por ejemplo, `PLAN_prehistoria.md`).
+
+**Forma de entrega:** si puedes crear ficheros, crea los dos. Si no puedes, entrega dos bloques de código ```markdown, cada uno precedido de su nombre de fichero, para que el autor pueda copiarlos. No añadas nada entre ambos bloques ni después de ellos.
+
+---
+
+## FICHERO 1 — `PLAN_[capítulo].md`
+
+### 1. Objetivo de la edición
+
+Una frase.
+
+Debe definir qué debe conseguir el capítulo.
+
+### 2. Arquitectura narrativa
+
+Describe:
+
+- punto de partida;
+- recorrido;
+- desarrollo;
+- punto de llegada;
+- idea final;
+- conexión con el capítulo o epígrafe siguiente, si existe.
+
+### 3. Bloques
+
+Para cada bloque indica:
+
+- **Epígrafe.**
+- **Función narrativa.**
+- **Contenido que debe utilizarse.**
+- **Contenido que debe sintetizarse.**
+- **Nivel de detalle:** qué se cuenta en una frase, qué datos se marcan como DATO CLAVE, qué notas nuevas lleva (solo las que pasen la prueba del apartado 13 o las marcadas «por decisión del autor») y qué queda fuera.
+- **Idea que debe quedar clara.**
+- **Cautelas**, solo si el bloque contiene hipótesis o datos dudosos: qué debe mantenerse como hipótesis o expresarse con prudencia.
+- **Transición hacia el siguiente bloque.**
+
+No es necesario reproducir literalmente los párrafos del bruto.
+
+Puedes identificarlos mediante sus primeras palabras o mediante una descripción inequívoca.
+
+### 4. Frases de autor a preservar
+
+Copia literalmente cada «FRASE DE AUTOR — PRESERVAR», indicando el bloque donde debe ir. Si no hay ninguna, escribe «Ninguna».
+
+### 5. Fuera del relato
+
+Indica qué contenido:
+
+- pasa a nota nueva, solo si cumple la prueba del apartado 13 (el texto y la frase de anclaje se dan solo en el apartado 6);
+- queda en el bruto sin publicarse: el detalle técnico y de ficha del apartado 3 que no pasa esa prueba;
+- pasa a anexo;
+- pasa a otro capítulo;
+- queda como material complementario;
+- o se elimina.
+
+### 6. Notas, imágenes y pies
+
+Indica el tratamiento de:
+
+- notas: solo las excepciones, por número, con una de las opciones del apartado 13, las notas a reformular con lo que se conserva y lo que se quita, y las notas nuevas con su texto (tomado del bruto), su función (referencia o ampliación) y la frase a la que se anclan. Incluye siempre esta línea para el Ejecutor: «El capítulo se entrega sin marcadores de nota; las notas las coloca el Integrador»;
+- fuentes;
+- imágenes;
+- mapas;
+- tablas;
+- pies de imagen.
+
+No elimines ningún elemento documental relevante sin decisión editorial.
+
+---
+
+## FICHERO 2 — `CONTROL_[capítulo].md`
+
+Este fichero es para el autor. Escríbelo breve y en forma de casillas (`- [ ]`) que pueda ir marcando. Si un apartado no tiene nada, escribe «Nada».
+
+### 1. Pendiente de verificar
+
+Solo lo que no quedó resuelto en la validación, en dos grupos:
+
+- **Antes de pasar el Plan al Ejecutor:** puntos de la lista A que el autor no resolvió. Si el autor los resolvió todos, escribe «Nada».
+- **Antes del Integrador de Notas:** los puntos de la lista C.
+
+Para cada punto indica, en una o dos líneas: **qué** hay que comprobar, **dónde** aparece en el bruto (primeras palabras o número de nota) y, si el bruto lo sugiere, **dónde podría comprobarse**.
+
+No las resuelvas mediante conocimiento externo.
+
+### 2. Revisión del texto del Ejecutor
+
+Lista de comprobación para cuando el autor tenga el capítulo redactado:
+
+- **Frases de autor:** copia literalmente cada «FRASE DE AUTOR — PRESERVAR», una casilla por frase, para comprobar que sigue en el texto (y en su sitio, si se indicó).
+- **Datos que deben aparecer intactos:** fechas, nombres, lugares y cifras clave del capítulo.
+- **Hipótesis y datos dudosos:** cada uno, para comprobar que no se ha convertido en afirmación.
+- **Material trasladado o eliminado:** lo que no debe aparecer en el cuerpo.
+- **Notas:** excepciones y notas nuevas previstas; y que el capítulo llega sin marcadores de nota.
+- **Decisiones del autor:** cada decisión tomada en la validación, para comprobar que se ha aplicado.
+
+No repitas aquí explicaciones del Plan: basta con una línea por casilla.
+
+---
+
+# 17. PRUEBAS OBLIGATORIAS ANTES DE ENTREGAR EL PLAN
+
+Comprueba:
+
+### Prueba 1 — Relato
+¿El plan cuenta una historia o simplemente distribuye información?
+
+### Prueba 2 — Recorrido
+¿Cada bloque lleva naturalmente al siguiente?
+
+### Prueba 3 — Lector
+¿El lector entiende por qué se le está contando cada bloque?
+
+### Prueba 4 — Castroverde
+¿El centro del relato sigue siendo Castroverde, sus lugares y sus habitantes?
+
+### Prueba 5 — Evidencia
+¿Cada afirmación histórica está respaldada por el material proporcionado?
+
+### Prueba 6 — Voz del autor
+¿Se han identificado las formulaciones especialmente genuinas del autor? ¿Las que deben conservarse están marcadas expresamente?
+
+### Prueba 7 — Libertad de redacción
+¿El plan permite al Editor Ejecutor escribir una prosa nueva y fluida, en lugar de limitarse a recombinar frases del bruto?
+
+### Prueba 8 — Poda
+¿Se ha eliminado o trasladado lo que no ayuda al relato, aunque sea correcto?
+
+### Prueba 9 — Incertidumbre
+¿Se distingue claramente entre hecho, interpretación, hipótesis y dato dudoso?
+
+### Prueba 10 — Proporción
+¿El espacio dedicado a cada asunto guarda relación con su importancia para la historia de Castroverde?
+
+### Prueba 11 — Final
+¿El cierre deja una idea clara y prepara, cuando proceda, el paso al capítulo siguiente?
+
+### Prueba 12 — Notas
+¿Cada excepción de nota tiene una sola opción del apartado 13? ¿Alguna nota queda partida entre cuerpo y nota? ¿Se ha añadido algo del cuerpo a una nota existente en vez de crear una nota nueva? ¿Cada nota nueva es de referencia o de ampliación justa, breve y de interés para un vecino, o es un vertedero de lo que se ha sacado del cuerpo? ¿Queda alguna nota del bruto muy técnica o lejana del vecino sin reformular, reducir o eliminar? ¿Las notas se leen con el tono del cuerpo, o como un almacén de datos?
+
+### Prueba 13 — Vecino
+Leído el cuerpo bloque a bloque, ¿hay algún nombre de investigador, año de campaña, medida, descripción de objeto, tipología o listado que un vecino no necesita para entender la historia? ¿Está indicado qué ocurre con cada uno: nota nueva que pasa la prueba del apartado 13, o queda en el bruto?
+
+### Prueba 14 — Dos ficheros
+¿Todo lo que el Ejecutor necesita para redactar está en `PLAN_`? ¿Los datos aportados por el autor están marcados como APORTADO POR EL AUTOR? ¿Todo lo pendiente de comprobar y todas las frases de autor marcadas están en `CONTROL_`? ¿Lo resuelto en la validación ya no figura como pendiente? ¿Están todas las marcas en rojo del bruto localizadas, en el Plan y en el CONTROL?
+
+---
+
+# 18. LÍMITES ABSOLUTOS
+
+No hagas ninguna de estas cosas:
+
+- No redactes el capítulo definitivo.
+- No añadas hechos históricos externos.
+- No rellenes lagunas con conocimiento general.
+- No inventes relaciones causales.
+- No conviertas hipótesis en hechos.
+- No ocultes incertidumbres relevantes.
+- No mantengas información solo porque esté documentada.
+- No elimines información solo porque sea técnica.
+- No conviertas las fuentes en protagonistas.
+- No dejes en el cuerpo detalle de ficha que el vecino no necesita.
+- No uses las notas nuevas como depósito de lo que sale del cuerpo: solo se admiten las que pasan la prueba del apartado 13.
+- No impongas la cronología cuando una estructura mejor permita comprender la historia.
+- No encorsetes al Editor Ejecutor obligándolo a conservar la redacción original.
+- No confundas trazabilidad documental con fidelidad literal.
+- No elabores el Plan de Acción Editorial antes de la validación del autor.
+- No partas una nota entre el cuerpo y la nota, ni añadas contenido del cuerpo a una nota existente.
+
+---
+
+# 19. PRINCIPIO FINAL
+
+La función del Editor Jefe es:
+
+> **Convertir la investigación del autor en una historia que el lector pueda comprender, seguir y recordar.**
+
+La máxima editorial es:
+
+> **No contar todo lo que sabemos. No reproducir todo lo que encontramos. Contar de la forma más clara, natural y atractiva posible aquello que necesitamos saber para comprender la historia de Castroverde de Cerrato, sin ir más allá de lo que las evidencias permiten afirmar.**
+
+El rigor limita **lo que podemos contar**.
+
+La edición decide **qué merece ser contado**.
+
+La narrativa decide **en qué orden y de qué manera conviene contarlo**.
+</script>
+
+<script>
+'use strict';
+const LS = {
+  state:'castroverde_plan2_state', prompt:'castroverde_plan2_prompt', models:'castroverde_plan2_models',
+  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models', dskList:'castroverde_plan_deepseek_models'
+};
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key'},
+  {id:'firebase',   label:'Firebase',   ls:'castroverde_fb_key'},
+];
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k=>k.id===id).ls) || ''; } catch(e){ return ''; } };
+
+const PROVIDERS = {
+  claude:     {label:'Claude', models:[
+                 {id:'claude-opus-5-5',  label:'Opus 5.5'},
+                 {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
+  aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
+                 {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash'},
+                 {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+                 {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
+                 {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
+  deepseek:   {label:'DeepSeek', dynamic:true, models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  openrouter: {label:'OpenRouter', dynamic:true, models:[
+                 {id:'nvidia/nemotron-3-ultra-550b-a55b:free', label:'nvidia/nemotron-3-ultra-550b-a55b:free'},
+                 {id:'nvidia/nemotron-3-super-120b-a12b:free', label:'nvidia/nemotron-3-super-120b-a12b:free'},
+                 {id:'minimax/minimax-m3.1-flash:free', label:'minimax/minimax-m3.1-flash:free'},
+                 {id:'thinkingmachines/inkling:free', label:'thinkingmachines/inkling:free'},
+                 {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
+                 {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
+                 {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
+                 {id:'qwen/qwen3.8-27b:free',       label:'qwen/qwen3.8-27b:free'},
+                 {id:'openrouter/free',             label:'openrouter/free (gratuito automático)'}]},
+  mistral:    {label:'Mistral', models:[
+                 {id:'mistral-large-latest', label:'Mistral Large'},
+                 {id:'mistral-medium-latest',label:'Mistral Medium'},
+                 {id:'mistral-small-latest', label:'Mistral Small'},
+                 {id:'magistral-medium-latest', label:'Magistral Medium (razonamiento)'}]},
+  groq:       {label:'Groq', models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B'},
+                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B (preview)'}]},
+};
+const FREE = {
+  aistudio:['gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite',
+            'gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'],
+  mistral: ['mistral-small-latest','mistral-medium-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'],
+};
+function isFree(prov, m){
+  if (m.free) return true;
+  if (prov === 'openrouter') return /:free$/.test(m.id) || m.id === 'openrouter/free';
+  return (FREE[prov] || []).includes(m.id);
+}
+const RETIRED = {
+  'llama-3.3-70b-versatile':'openai/gpt-oss-120b', 'llama-3.1-8b-instant':'openai/gpt-oss-20b',
+  'gemini-2.0-flash':'gemini-3.8-flash', 'gemini-2.5-flash':'gemini-3.8-flash', 'gemini-2.5-pro':'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview':'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite':'gemini-3.5-flash-lite',
+  'google/gemini-2.5-flash':'google/gemini-3.8-flash', 'google/gemini-2.5-pro':'google/gemini-3.8-flash',
+  'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
+};
+
+// Los dos slots de entrada
+const SLOTS = [
+  {key:'bruto',    label:'Texto en bruto'},
+  {key:'esencial', label:'Lo esencial (ESENCIAL_…md)'},
+];
+
+function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function saveJSON(k, v){
+  try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+  catch(e){ showStatus('err', 'No se ha podido guardar en el navegador (¿espacio lleno?). Descarga tus documentos.'); return false; }
+}
+function blankState(){ return {chapter:'', files:{}, messages:[], locked:null}; }
+let state = loadJSON(LS.state) || blankState();
+if (!state.files) state.files = {};
+if (!state.messages) state.messages = [];
+if (state.locked && RETIRED[state.locked.model]) state.locked.model = RETIRED[state.locked.model];
+
+const DEFAULT_MODEL = {provider:'openrouter', model:'nvidia/nemotron-3-ultra-550b-a55b:free'};
+const DEFAULT_TAG = 'nemotron-3-ultra-2';
+let modelChoice = loadJSON(LS.models) || {};
+if (localStorage.getItem(LS.models + '_default') !== DEFAULT_TAG){
+  modelChoice = {...DEFAULT_MODEL};
+  try { localStorage.setItem(LS.models + '_default', DEFAULT_TAG); saveJSON(LS.models, modelChoice); } catch(e){}
+}
+if (!modelChoice.provider) modelChoice = {...DEFAULT_MODEL};
+else if (RETIRED[modelChoice.model]) modelChoice.model = RETIRED[modelChoice.model];
+
+let promptCustom = loadJSON(LS.prompt) || null;
+let saveTimer = null;
+function saveState(){ clearTimeout(saveTimer); saveTimer = setTimeout(() => saveJSON(LS.state, state), 300); }
+function saveModels(){ saveJSON(LS.models, modelChoice); }
+function getPrompt(){ return promptCustom || document.getElementById('default-planificador').textContent.trim(); }
+function promptTitle(){
+  const line = getPrompt().split('\n').find(l => /^#\s/.test(l));
+  return line ? line.replace(/^#\s*/, '').trim() : '(prompt sin título)';
+}
+let running = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const kb = t => (new Blob([t]).size / 1024).toFixed(1).replace('.', ',') + ' kB';
+const safeName = n => n.replace(/[\\\/:*?"<>|]/g, '_').trim() || 'documento.md';
+function download(name, text){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'text/markdown;charset=utf-8'}));
+  a.download = safeName(name);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function copyText(t){ try { await navigator.clipboard.writeText(t); showStatus('ok', 'Copiado.'); } catch(e){ showStatus('err', 'No se ha podido copiar.'); } }
+function readFile(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file, 'utf-8'); }); }
+function showStatus(type, msg){
+  const el = $('sync-status'); $('sync-msg').textContent = msg; el.className = 'visible ' + type;
+  clearTimeout(showStatus.t); if (type === 'ok') showStatus.t = setTimeout(hideStatus, 3500);
+}
+function hideStatus(){ $('sync-status').className = ''; }
+function openOv(id){ $(id).classList.add('visible'); }
+function closeOv(id){ $(id).classList.remove('visible'); }
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  closeOv('ov-keys'); closeOv('ov-prompts');
+  if ($('ov-file').classList.contains('visible')) closeFileModal();
+});
+
+function parseSegments(text, streaming){
+  const lines = text.split('\n');
+  const segs = []; let buf = []; let i = 0; let fileIdx = 0;
+  const flush = () => { if (buf.length){ segs.push({type:'text', text:buf.join('\n')}); buf = []; } };
+  while (i < lines.length){
+    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)[^`]*$/);
+    if (!m){ buf.push(lines[i]); i++; continue; }
+    const fence = m[1], lang = (m[2]||'').toLowerCase();
+    let name = null;
+    for (let k = buf.length - 1, seen = 0; k >= 0 && seen < 3; k--){
+      if (!buf[k].trim()) continue; seen++;
+      const nm = buf[k].match(/([\wÀ-ÿ.\-]+\.md)\b/g);
+      if (nm){ name = nm[nm.length - 1]; break; }
+    }
+    let j = i + 1; const body = [];
+    const closeRe = new RegExp('^\\s{0,3}' + fence[0].replace('`','\\`') + '{' + fence.length + ',}\\s*$');
+    while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
+    const closed = j < lines.length;
+    let byContent = false;
+    if (!name){
+      const all = body.join('\n'); const chap = (state.chapter || 'capitulo').trim().replace(/\s+/g, '_');
+      if (/Objetivo de la edici[oó]n/i.test(all)) name = 'PLAN_' + chap + '.md';
+      else if (/Pendiente de verificar/i.test(all)) name = 'CONTROL_' + chap + '.md';
+      byContent = !!name;
+    }
+    flush();
+    const isFile = name && (byContent || lang === 'markdown' || lang === 'md' || lang === '' || lang === 'text' || lang === 'txt');
+    if (isFile) segs.push({type:'file', name, body:body.join('\n'), idx:fileIdx++, writing: !closed && streaming});
+    else segs.push({type:'code', body:body.join('\n')});
+    i = closed ? j + 1 : j;
+  }
+  flush();
+  return segs;
+}
+function msgFiles(msg){
+  return parseSegments(msg.content, false).filter(s => s.type === 'file' && !s.writing)
+    .map(s => ({name:s.name, idx:s.idx, text:(msg.edits && msg.edits[s.idx] != null) ? msg.edits[s.idx] : s.body}));
+}
+
+function inlineMd(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+}
+function mdToHtml(text){
+  const lines = text.split('\n'); let html = ''; let list = null; let para = [];
+  const endPara = () => { if (para.length){ html += '<p>' + para.map(inlineMd).join('<br>') + '</p>'; para = []; } };
+  const endList = () => { if (list){ html += '</' + list + '>'; list = null; } };
+  for (const raw of lines){
+    const l = raw.replace(/\s+$/, '');
+    let m;
+    if (!l.trim()){ endPara(); endList(); continue; }
+    if ((m = l.match(/^(#{1,6})\s+(.*)$/))){ endPara(); endList(); const n = Math.min(4, m[1].length); html += `<h${n}>${inlineMd(m[2])}</h${n}>`; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endPara(); endList(); html += '<hr>'; continue; }
+    if ((m = l.match(/^\s*>\s?(.*)$/))){ endPara(); endList(); html += '<blockquote>' + inlineMd(m[1]) + '</blockquote>'; continue; }
+    if ((m = l.match(/^\s*[-*+]\s+(.*)$/))){ endPara(); if (list !== 'ul'){ endList(); html += '<ul>'; list = 'ul'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+    if ((m = l.match(/^\s*\d+[.)]\s+(.*)$/))){ endPara(); if (list !== 'ol'){ endList(); html += '<ol>'; list = 'ol'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+    endList(); para.push(l);
+  }
+  endPara(); endList();
+  return html;
+}
+
+const SUG_RE = /\[\[\s*opciones\s*:([^\]]*)\]\]/gi;
+const SUG_NOTE = `
+
+---
+
+## NOTA DE LA APLICACIÓN: OPCIONES SUGERIDAS
+
+Cuando hagas una pregunta al autor y el texto que tienes delante ofrezca respuestas candidatas razonables (personas, fechas, lugares, parajes, documentos, datos, frases del bruto…), añade al final del mensaje, en una línea aparte, esta marca:
+
+[[opciones: Opción 1 | Opción 2 | Opción 3]]
+
+- Entre 2 y 8 opciones, breves (unas pocas palabras cada una), sacadas del texto y escritas tal como aparecen en él.
+- La aplicación las muestra en gris como botones que el autor puede pulsar para añadirlas a su respuesta; no hace falta que las repitas en el cuerpo del mensaje.
+- Ponla solo si viene a cuento. Si la pregunta es abierta y el texto no da candidatos claros, no la pongas.
+- Una sola marca por mensaje, y nunca dentro de un fichero ni de un bloque de código.`;
+function stripSugs(text, streaming){
+  let t = text.replace(SUG_RE, '');
+  if (streaming) t = t.replace(/\[\[[^\]]*$/, '').replace(/\[$/, '');
+  return t.replace(/\s+$/, '');
+}
+function msgSugs(m){
+  let out = []; let x; SUG_RE.lastIndex = 0;
+  while ((x = SUG_RE.exec(m.content || ''))) out = x[1].split('|').map(o => o.trim()).filter(Boolean);
+  return [...new Set(out)].slice(0, 12);
+}
+function currentSugs(){
+  const last = state.messages[state.messages.length - 1];
+  if (!last || last.role !== 'assistant' || last.streaming || running) return [];
+  return msgSugs(last);
+}
+function renderSugs(){
+  const box = $('sugs-plan'); if (!box) return;
+  const opts = currentSugs();
+  box.innerHTML = opts.length ? '<span class="lbl">Opciones:</span>' + opts.map((o, i) =>
+    `<button class="sug" data-i="${i}" title="Pulsa para añadirlo a tu respuesta (o quitarlo)" onclick="toggleSug(${i})">${esc(o)}</button>`).join('') : '';
+  markSugs();
+}
+function sugParts(v){ return v.split(/\s*[,;\n]\s*/).map(x => x.trim()).filter(Boolean); }
+function markSugs(){
+  const box = $('sugs-plan'); if (!box) return;
+  const parts = sugParts($('input-plan').value).map(x => x.toLowerCase());
+  const opts = currentSugs();
+  box.querySelectorAll('.sug').forEach(b => b.classList.toggle('on', parts.includes(opts[+b.dataset.i].toLowerCase())));
+}
+function toggleSug(i){
+  const t = $('input-plan'); if (t.disabled) return;
+  const o = currentSugs()[i]; if (!o) return;
+  let parts = sugParts(t.value);
+  const k = parts.findIndex(x => x.toLowerCase() === o.toLowerCase());
+  if (k >= 0) parts.splice(k, 1); else parts.push(o);
+  t.value = parts.join(', '); autoGrow(t); markSugs(); t.focus();
+}
+function autoGrow(t){ t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 220) + 'px'; }
+function composerKey(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); sendUser(); } }
+
+function renderAll(){ renderSlots(); renderModel(); renderActions(); renderChat(); renderComposer(); renderPromptLine(); }
+
+function renderSlots(){
+  const locked = state.messages.length > 0;
+  $('slots-plan').innerHTML = SLOTS.map(sl => {
+    const f = state.files[sl.key];
+    return `<div class="slot">
+      <div class="lbl">${sl.label}</div>
+      <div class="fname ${f ? '' : 'empty'}">${f ? esc(f.name) + ' · ' + kb(f.text) : 'Sin cargar'}</div>
+      <div class="sbtns">
+        <label class="btn btn-sm" ${locked ? 'style="display:none"' : ''}>${f ? 'Cambiar' : 'Cargar'}<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="loadSlot('${sl.key}',this)"></label>
+        ${f ? `<button class="btn btn-sm" onclick="viewSlot('${sl.key}')">Ver</button>` : ''}
+      </div></div>`;
+  }).join('') + (locked ? '<div class="lock-note" style="align-self:center">Los ficheros y el modelo quedan fijados durante la conversación.</div>' : '');
+}
+async function loadSlot(key, input){
+  const file = input.files[0]; if (!file) return;
+  const text = await readFile(file);
+  state.files[key] = {name:file.name, text};
+  saveState(); renderSlots(); renderActions();
+}
+function viewSlot(key){
+  const f = state.files[key]; if (!f) return;
+  openFileModal({title:f.name, sub:'Fichero de entrada (solo lectura)', text:f.text, readonly:true});
+}
+
+function modelList(prov){
+  const p = PROVIDERS[prov];
+  if (prov === 'openrouter'){ const c = loadJSON(LS.orList); if (c && c.length) return [...PROVIDERS.openrouter.models.filter(m => !c.some(x => x.id === m.id)), ...c]; }
+  if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  if (prov === 'deepseek'){ const c = loadJSON(LS.dskList); if (c && c.length) return [...p.models.filter(m => !c.some(x => x.id === m.id)), ...c]; }
+  return p.models;
+}
+let onlyFree = (() => { try { return localStorage.getItem(LS.models + '_onlyfree') !== '0'; } catch(e){ return true; } })();
+function toggleOnlyFree(v){ onlyFree = v; try { localStorage.setItem(LS.models + '_onlyfree', v ? '1' : '0'); } catch(e){} renderModel(); }
+function visibleList(prov){ const l = modelList(prov); if (prov !== 'openrouter' || !onlyFree) return l; const f = l.filter(m => isFree(prov, m)); return f.length ? f : l; }
+function orAutoRefresh(){ if (Date.now() - (loadJSON(LS.orList + '_t') || 0) < 864e5) return; if (modelChoice.provider === 'openrouter') refreshModels(true); }
+function renderModel(){
+  const lock = state.locked; const cur = lock || modelChoice;
+  const ps = $('prov-plan'), ms = $('model-plan');
+  ps.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === cur.provider ? 'selected' : ''}>${p.label}</option>`).join('');
+  let list = visibleList(cur.provider);
+  const ft = $('freetick-plan'); ft.style.display = (cur.provider === 'openrouter' && !state.locked) ? '' : 'none'; ft.querySelector('input').checked = onlyFree;
+  if (!list.some(m => m.id === cur.model)) list = [{id:cur.model, label:cur.model}, ...list];
+  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}${isFree(cur.provider, m) ? ' (g)' : ''}</option>`).join('');
+  ps.disabled = ms.disabled = !!lock;
+  $('refresh-plan').style.display = (!lock && PROVIDERS[cur.provider].dynamic) ? '' : 'none';
+}
+function changeProvider(){ const prov = $('prov-plan').value; modelChoice = {provider:prov, model:visibleList(prov)[0].id}; saveModels(); renderModel(); const dynKey = prov === 'openrouter' ? LS.orList : prov === 'aistudio' ? LS.gemList : prov === 'deepseek' ? LS.dskList : null; if (PROVIDERS[prov].dynamic && dynKey && !loadJSON(dynKey)) refreshModels(true); }
+function changeModel(){ modelChoice.model = $('model-plan').value; saveModels(); }
+async function refreshModels(quiet){
+  const prov = modelChoice.provider;
+  try {
+    if (prov === 'openrouter'){
+      const r = await fetch('https://openrouter.ai/api/v1/models'); if (!r.ok) throw new Error('OpenRouter ' + r.status);
+      const data = (await r.json()).data || [];
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
+      const list = data.filter(m => keep.test(m.id) || /:free$/.test(m.id) || !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id));
+      saveJSON(LS.orList, list); saveJSON(LS.orList + '_t', Date.now());
+    } else if (prov === 'deepseek'){
+      const key = getKey('deepseek'); if (!key){ if (!quiet) openKeys('deepseek'); return; }
+      const r = await fetch('https://api.deepseek.com/models', {headers:{'Authorization':'Bearer ' + key}}); if (!r.ok) throw new Error('DeepSeek ' + r.status);
+      const data = (await r.json()).data || [];
+      const list = data.filter(m => m.object === 'model').map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      if (list.length) saveJSON(LS.dskList, list);
+    } else if (prov === 'aistudio'){
+      const key = getKey('aistudio'); if (!key){ if (!quiet) openKeys('aistudio'); return; }
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}}); if (!r.ok) throw new Error('AI Studio ' + r.status);
+      const data = (await r.json()).models || [];
+      const list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|transcribe|robotics|banana|omni|lyria|veo)/.test(m.name)).map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, '')), out:m.outputTokenLimit})).sort((a, b) => b.id.localeCompare(a.id));
+      saveJSON(LS.gemList, list);
+    }
+    renderModel(); if (!quiet) showStatus('ok', 'Lista de modelos actualizada.');
+  } catch(e){ if (!quiet) showStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+}
+
+function renderActions(){
+  const el = $('actions-plan');
+  if (running){ el.innerHTML = `<button class="btn btn-danger" onclick="stopConv()">Detener</button>`; return; }
+  if (!state.messages.length){
+    const miss = [];
+    if (!$('chapter').value.trim()) miss.push('el nombre corto del capítulo');
+    SLOTS.forEach(sl => { if (!state.files[sl.key]) miss.push(sl.label.toLowerCase()); });
+    el.innerHTML = `<button class="btn btn-primary" ${miss.length ? 'disabled' : ''} title="${miss.length ? 'Falta ' + esc(miss.join(' y ')) : ''}" onclick="startConv()">Empezar</button>`;
+  } else {
+    el.innerHTML = `<button class="btn btn-danger" onclick="resetConv()">Reiniciar</button>`;
+  }
+}
+function renderComposer(){ const can = state.messages.length > 0 && !running; $('input-plan').disabled = !can; $('send-plan').disabled = !can; renderSugs(); }
+function renderPromptLine(){ $('pline-plan').textContent = 'Prompt: ' + promptTitle(); }
+
+function renderChat(keepScroll){
+  const box = $('chatin-plan');
+  if (!state.messages.length && !state.error){
+    box.innerHTML = `<div class="empty-state"><h2>Plan de acción editorial</h2><p>Carga el texto en bruto y el fichero ESENCIAL del capítulo, escribe el nombre corto del capítulo y pulsa «Empezar».</p><p>El Editor Jefe presentará su propuesta para validación. Respóndele con tus decisiones y elaborará los ficheros PLAN y CONTROL.</p></div>`;
+    return;
+  }
+  box.innerHTML = state.messages.map((m, mi) => renderMsg(m, mi)).join('') +
+    (state.error ? `<div class="error-box"><span>${esc(state.error)}</span><button class="btn btn-sm" onclick="retry()">Reintentar</button></div>` : '');
+  if (!keepScroll) scrollChat();
+}
+function scrollChat(){ const c = $('chat-plan'); c.scrollTop = c.scrollHeight; }
+
+function renderMsg(m, mi){
+  if (m.role === 'user' && m.kind === 'files') return `<div class="msg files">${esc(m.summary)}</div>`;
+  if (m.role === 'user') return `<div class="msg user">${esc(m.content)}</div>`;
+  const streaming = !!m.streaming;
+  const segs = parseSegments(stripSugs(m.content, streaming), streaming);
+  let body = segs.map(sg => {
+    if (sg.type === 'text') return mdToHtml(sg.text);
+    if (sg.type === 'code') return `<pre>${esc(sg.body)}</pre>`;
+    const text = (m.edits && m.edits[sg.idx] != null) ? m.edits[sg.idx] : sg.body;
+    if (sg.writing) return `<div class="filecard writing"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">Escribiendo… ${kb(text)}</div></div></div>`;
+    return `<div class="filecard"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">${kb(text)}${m.edits && m.edits[sg.idx] != null ? ' · editado' : ''}</div></div>
+      <div class="fbtns"><button class="btn btn-sm" onclick="openOutput(${mi},${sg.idx})">Ver y editar</button>
+      <button class="btn btn-sm btn-primary" onclick="downloadOutput(${mi},${sg.idx})">Descargar</button></div></div>`;
+  }).join('');
+  if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
+  const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
+  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${streaming ? '' : `<button onclick="copyMsg(${mi})">Copiar</button>`}</div>
+    <div class="md ${streaming && m.content ? 'cursor' : ''}">${body}</div>${tail}</div>`;
+}
+function copyMsg(mi){ copyText(stripSugs(state.messages[mi].content)); }
+
+let fileCtx = null;
+function getOutput(mi, idx){ return msgFiles(state.messages[mi]).find(f => f.idx === idx); }
+function openOutput(mi, idx){ const f = getOutput(mi, idx); openFileModal({title:f.name, sub:'Puedes corregirlo aquí antes de descargarlo', text:f.text, ctx:{mi, idx}}); }
+function downloadOutput(mi, idx){ const f = getOutput(mi, idx); download(f.name, f.text); }
+function openFileModal(o){
+  fileCtx = o;
+  $('file-title').textContent = o.title; $('file-sub').textContent = o.sub || '';
+  const t = $('file-text'); t.value = o.text; t.readOnly = !!o.readonly;
+  $('file-dl').style.display = o.readonly ? 'none' : '';
+  openOv('ov-file'); t.scrollTop = 0;
+}
+$('file-text').addEventListener('input', () => {
+  if (!fileCtx || !fileCtx.ctx) return;
+  const {mi, idx} = fileCtx.ctx; const m = state.messages[mi];
+  m.edits = m.edits || {}; m.edits[idx] = $('file-text').value; saveState();
+});
+function closeFileModal(){ closeOv('ov-file'); if (fileCtx && fileCtx.ctx){ renderChat(true); renderSlots(); } fileCtx = null; }
+function copyFileModal(){ copyText($('file-text').value); }
+function downloadFileModal(){ download(fileCtx.title, $('file-text').value); }
+
+function firstMessage(){
+  const chap = $('chapter').value.trim();
+  let t = `Nombre corto del capítulo: «${chap}». Úsalo en los nombres de los ficheros que entregues.\n\n` +
+    'Nota de la aplicación: esta conversación se hace a través de una aplicación y no puedes crear ficheros. ' +
+    'Entrega cada fichero final en un bloque ```markdown precedido de su nombre de fichero.\n\n';
+  SLOTS.forEach(sl => {
+    const f = state.files[sl.key];
+    t += `=== ${sl.label.toUpperCase()} — fichero «${f.name}» ===\n\n${f.text}\n\n=== FIN DE ${sl.label.toUpperCase()} ===\n\n`;
+  });
+  return t + 'Empieza.';
+}
+function startConv(){
+  if (!$('chapter').value.trim() || SLOTS.some(sl => !state.files[sl.key])) return;
+  state.locked = {...modelChoice};
+  state.prompt = getPrompt();
+  const summary = 'Enviado: ' + SLOTS.map(sl => { const f = state.files[sl.key]; return `${f.name} (${kb(f.text)})`; }).join(' · ');
+  state.messages = [{role:'user', kind:'files', content:firstMessage(), summary}];
+  state.error = null; saveState(); renderAll(); runAssistant();
+}
+function sendUser(){
+  const t = $('input-plan'); const text = t.value.trim();
+  if (!text || running) return;
+  state.messages.push({role:'user', content:text}); state.error = null;
+  t.value = ''; autoGrow(t); saveState(); renderChat(); runAssistant();
+}
+function resetConv(){
+  if (!confirm('Se borrará la conversación y sus documentos no descargados. ¿Seguir?')) return;
+  stopConv(); const files = state.files;
+  state = blankState(); state.files = files; state.chapter = $('chapter').value;
+  saveState(); renderAll();
+}
+function newChapter(){
+  if (!confirm('Se borrarán los ficheros cargados, la conversación y los documentos. Descarga antes lo que quieras conservar. ¿Empezar un capítulo nuevo?')) return;
+  stopConv();
+  state = blankState(); $('chapter').value = ''; saveJSON(LS.state, state); renderAll();
+}
+function stopConv(){ if (running){ running.abort(); } }
+function retry(){ state.error = null; runAssistant(); }
+
+async function runAssistant(){
+  const {provider, model} = state.locked;
+  const label = PROVIDERS[provider].label + ' · ' + ((modelList(provider).find(m => m.id === model) || {}).label || model);
+  const history = state.messages.map(m => ({role:m.role, content:m.content}));
+  const msg = {role:'assistant', content:'', streaming:true, modelLabel:label};
+  state.messages.push(msg);
+  const ctrl = new AbortController(); running = ctrl;
+  renderChat(); renderActions(); renderComposer();
+  let pending = false;
+  const repaint = () => { if (pending) return; pending = true; requestAnimationFrame(() => {
+    pending = false; const c = $('chat-plan');
+    const atBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+    renderChat(true); if (atBottom) scrollChat();
+  }); };
+  try {
+    const res = await callModel({provider, model, system:state.prompt + SUG_NOTE, messages:history, signal:ctrl.signal,
+      onText: t => { msg.content += t; repaint(); },
+      onThinking: () => { if (!msg.thinking){ msg.thinking = true; repaint(); } }});
+    if (res.truncated) msg.note = 'La respuesta se ha cortado por llegar al límite de longitud. Escribe «continúa» para que siga.';
+    if (!msg.content.trim()) throw new Error('El modelo ha devuelto una respuesta vacía.');
+  } catch(e){
+    if (e.name === 'AbortError'){
+      if (msg.content.trim()) msg.note = 'Respuesta detenida.';
+      else { state.messages.pop(); state.error = 'La respuesta se detuvo antes de empezar. Pulsa «Reintentar» para volver a pedirla.'; }
+    } else {
+      if (!msg.content.trim()) state.messages.pop(); else msg.note = 'La respuesta se interrumpió por un error.';
+      state.error = describeError(e);
+    }
+  } finally {
+    delete msg.streaming; delete msg.thinking;
+    running = null;
+    saveJSON(LS.state, state);
+    renderSlots(); renderActions(); renderChat(true); renderComposer();
+    if (!state.error) $('input-plan').focus();
+  }
+}
+function describeError(e){ const m = e.message || String(e); if (/Failed to fetch|NetworkError|CORS/i.test(m)) return 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m; return m; }
+
+async function* sseData(resp, signal){
+  const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
+  while (true){
+    if (signal.aborted) { reader.cancel(); throw new DOMException('Detenido', 'AbortError'); }
+    const {done, value} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream:true});
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+      if (line.startsWith('data:')){ const d = line.slice(5).trim(); if (d && d !== '[DONE]') yield d; }
+    }
+  }
+}
+async function httpError(resp, who){
+  let detail = '';
+  try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+  catch(e){ try { detail = await resp.text(); } catch(_){} }
+  if (typeof detail === 'object') detail = JSON.stringify(detail);
+  return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+}
+function needKey(id){ const k = getKey(id); if (!k){ openKeys(id); throw new Error('Falta la clave de ' + KEYS.find(x => x.id === id).label + '. Añádela y pulsa «Reintentar».'); } return k; }
+function callModel(o){
+  if (o.provider === 'claude')   return callClaude(o);
+  if (o.provider === 'aistudio') return callGemini(o);
+  const cfg = {
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:16000},
+  }[o.provider];
+  return callOpenAICompat(o, cfg);
+}
+async function callClaude({model, system, messages, signal, onText, onThinking}){
+  const key = needKey('claude');
+  const msgs = messages.map((m, i) => {
+    const cache = (i === 0) || (i === messages.length - 1 && m.role === 'user');
+    return {role:m.role, content:[cache ? {type:'text', text:m.content, cache_control:{type:'ephemeral'}} : {type:'text', text:m.content}]};
+  });
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', signal,
+    headers:{'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:32000, stream:true,
+      system:[{type:'text', text:system, cache_control:{type:'ephemeral'}}], messages:msgs})
+  });
+  if (!resp.ok) throw await httpError(resp, 'Claude');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') onText(j.delta.text);
+    else if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'thinking_delta' && onThinking) onThinking();
+    else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason === 'max_tokens') truncated = true;
+    else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
+  }
+  return {truncated};
+}
+async function callGemini({model, system, messages, signal, onText, onThinking}){
+  const key = needKey('aistudio');
+  const info = (loadJSON(LS.gemList) || []).find(m => m.id === model);
+  const maxOut = Math.min((info && info.out) ? info.out : 65536, 65536);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+  const resp = await fetch(url, {
+    method:'POST', signal, headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
+    body:JSON.stringify({
+      systemInstruction:{parts:[{text:system}]},
+      contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.content}]})),
+      generationConfig:{maxOutputTokens:maxOut}
+    })
+  });
+  if (!resp.ok) throw await httpError(resp, 'AI Studio');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error('AI Studio: ' + j.error.message);
+    const c = j.candidates && j.candidates[0]; if (!c) continue;
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); else if (p.thought && onThinking) onThinking(); });
+    if (c.finishReason === 'MAX_TOKENS') truncated = true;
+  }
+  return {truncated};
+}
+async function callOpenAICompat({provider, model, system, messages, signal, onText, onThinking}, cfg){
+  const key = needKey(provider);
+  const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+  if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Plan Editorial Castroverde'; }
+  const body = {model, stream:true, messages:[{role:'system', content:system}, ...messages]};
+  if (cfg.max) body.max_tokens = cfg.max;
+  const resp = await fetch(cfg.url, {method:'POST', signal, headers, body:JSON.stringify(body)});
+  if (!resp.ok) throw await httpError(resp, cfg.who);
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+    const ch = j.choices && j.choices[0]; if (!ch) continue;
+    const dl = ch.delta || {};
+    if (dl.reasoning_content || dl.reasoning) onThinking();
+    if (typeof dl.content === 'string' && dl.content) onText(dl.content);
+    else if (Array.isArray(dl.content)) dl.content.forEach(c => {
+      if (c.type === 'text' && c.text) onText(c.text); else if (c.type === 'thinking') onThinking();
+    });
+    if (ch.finish_reason === 'length') truncated = true;
+  }
+  return {truncated};
+}
+
+function openKeys(focusId){
+  $('keys-body').innerHTML = '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones.</p>' +
+    KEYS.map(k => `<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"></div>`).join('');
+  $('showkeys').checked = false; openOv('ov-keys');
+  setTimeout(() => { const el = $('key-' + (typeof focusId === 'string' ? focusId : 'claude')); if (el) el.focus(); }, 60);
+}
+function toggleShowKeys(){ const t = $('showkeys').checked ? 'text' : 'password'; KEYS.forEach(k => $('key-' + k.id).type = t); }
+function saveKeys(){
+  const oldFb = getKey('firebase');
+  KEYS.forEach(k => { const v = $('key-' + k.id).value.trim(); try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){} });
+  closeOv('ov-keys'); showStatus('ok', 'Claves guardadas.');
+  const fb = getKey('firebase'); if (fb && fb !== oldFb) initFirebase(fb);
+}
+
+function openPrompts(){
+  $('ptext').value = getPrompt();
+  const isDefault = getPrompt().trim() === document.getElementById('default-planificador').textContent.trim();
+  $('ptitle').textContent = isDefault ? 'Versión por defecto' : 'Versión modificada';
+  openOv('ov-prompts');
+}
+async function importPrompt(input){ const f = input.files[0]; if (!f) return; $('ptext').value = await readFile(f); input.value = ''; $('ptitle').textContent = 'Versión modificada'; }
+function restorePrompt(){ if (!confirm('¿Restaurar el prompt por defecto?')) return; $('ptext').value = document.getElementById('default-planificador').textContent.trim(); $('ptitle').textContent = 'Versión por defecto'; }
+function savePrompts(){
+  const def = document.getElementById('default-planificador').textContent.trim();
+  const val = $('ptext').value.trim();
+  promptCustom = val === def ? null : val;
+  saveJSON(LS.prompt, promptCustom);
+  closeOv('ov-prompts'); renderPromptLine();
+  showStatus('ok', 'Prompt guardado. Se aplica a las conversaciones que empieces a partir de ahora.');
+  if (fbUser) doSync(true);
+}
+
+let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+function initFirebase(apiKey){
+  if (!apiKey || typeof firebase === 'undefined') return;
+  try { if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey)); else startFirebase(apiKey); } catch(e){}
+}
+function startFirebase(apiKey){
+  firebase.initializeApp({
+    apiKey, authDomain:'castroverde-apps.firebaseapp.com', projectId:'castroverde-apps',
+    storageBucket:'castroverde-apps.firebasestorage.app', messagingSenderId:'371026533141',
+    appId:'1:371026533141:web:315767f60cbf8d6f47671c'
+  });
+  fbAuth = firebase.auth(); fbDb = firebase.firestore(); fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(u => { fbUser = u; updateSyncUI(); });
+}
+function updateSyncUI(){
+  const b = $('btn-sync'), u = $('sync-user'), so = $('btn-signout');
+  if (fbUser){ b.classList.add('synced'); b.textContent = '\u2713 Sincronizar prompt'; u.textContent = fbUser.email; u.style.display = 'inline'; so.style.display = ''; }
+  else { b.classList.remove('synced'); b.textContent = 'Sincronizar prompt'; u.style.display = 'none'; so.style.display = 'none'; }
+}
+function handleSync(){
+  if (!fbAuth){ showStatus('err', 'Falta la clave de Firebase.'); openKeys('firebase'); return; }
+  if (!fbUser){ showStatus('info', 'Iniciando sesi\u00f3n\u2026'); fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(e => showStatus('err', e.message)); }
+  else doSync();
+}
+async function doSync(quiet){
+  if (!fbUser || !fbDb) return;
+  const b = $('btn-sync'); b.classList.add('busy'); if (!quiet) showStatus('info', 'Sincronizando\u2026');
+  try {
+    const ref = fbDb.collection('planificador2').doc(fbUser.uid);
+    const snap = await ref.get();
+    const remote = snap.exists ? snap.data() : null;
+    let pulled = false;
+    if (remote && remote.promptUpdatedAt && (remote.promptUpdatedAt || 0) > (loadJSON(LS.prompt + '_t') || 0)){
+      promptCustom = remote.promptCustom || null;
+      saveJSON(LS.prompt, promptCustom); saveJSON(LS.prompt + '_t', remote.promptUpdatedAt);
+      pulled = true; renderPromptLine();
+    } else {
+      const now = Date.now();
+      await ref.set({promptCustom, promptUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      saveJSON(LS.prompt + '_t', now);
+    }
+    showStatus('ok', pulled ? 'Prompt actualizado desde la nube.' : 'Prompt sincronizado.');
+  } catch(e){ showStatus('err', 'Error al sincronizar: ' + e.message); }
+  finally { b.classList.remove('busy'); }
+}
+function fbSignOut(){ if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
+
+$('chapter').value = state.chapter || '';
+$('chapter').addEventListener('input', () => { state.chapter = $('chapter').value; saveState(); renderActions(); });
+
+const msgs = state.messages; const last = msgs[msgs.length - 1];
+if (last && last.streaming){ delete last.streaming; delete last.thinking; if (!last.content.trim()) msgs.pop(); else last.note = 'Respuesta interrumpida al cerrar la página.'; }
+const now2 = msgs[msgs.length - 1];
+if (now2 && now2.role === 'user' && !state.error)
+  state.error = 'La respuesta no llegó (la página se cerró o se recargó mientras el modelo trabajaba). Pulsa «Reintentar».';
+
+renderAll();
+orAutoRefresh();
+if (getKey('firebase')) initFirebase(getKey('firebase'));
+</script>
+</body>
+</html>
