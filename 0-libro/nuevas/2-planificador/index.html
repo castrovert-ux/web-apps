@@ -194,6 +194,30 @@ main{flex:1;min-height:0;display:flex;flex-direction:column;}
     </div>
     <div class="hint">Ctrl + Intro para enviar.</div>
   </div>
+
+<!-- Procesamiento por lotes -->
+<div style="padding:10px 24px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0">
+  <details id="batch-panel">
+    <summary style="cursor:pointer;font-family:var(--font-ui);font-size:12px;color:var(--accent)">Procesar varios capítulos en lote</summary>
+    <div style="padding:12px 0;display:grid;gap:10px">
+      <p style="font-size:13px;color:var(--muted)">Selecciona varios textos en bruto. La aplicación los procesará uno a uno con el modelo y el prompt elegidos. Los ficheros ESENCIAL son opcionales: selecciona varios y se asociarán por nombre (por ejemplo, bruto <code>prehistoria.docx.md</code> y esencial <code>ESENCIAL_prehistoria.md</code>). Si no hay coincidencia, se avisará y se usará un ESENCIAL vacío.</p>
+      <p style="font-size:12px;color:var(--muted)">Caché: el prompt editorial se mantiene como prefijo estable y los datos variables de cada capítulo se envían aparte. Claude usa caché explícita para el prompt; otros proveedores solo reutilizarán ese prefijo si el modelo/API admite caché automática. No se intenta cachear el texto de cada capítulo, porque cambia en cada petición.</p>
+      <label class="btn" style="width:max-content">Textos en bruto (.md o .txt)<input id="batch-raw" type="file" multiple accept=".md,.txt,text/markdown,text/plain" hidden></label>
+      <span id="batch-raw-list" style="font-family:var(--font-ui);font-size:11px;color:var(--muted)">Ningún fichero seleccionado</span>
+      <label class="btn" style="width:max-content">Ficheros ESENCIAL (opcional)<input id="batch-essential" type="file" multiple accept=".md,.txt,text/markdown,text/plain" hidden></label>
+      <span id="batch-essential-list" style="font-family:var(--font-ui);font-size:11px;color:var(--muted)">Ningún fichero seleccionado</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" id="batch-start" onclick="startBatch()">Iniciar lote</button>
+        <button class="btn" id="batch-stop" onclick="stopBatch()" disabled>Detener lote</button>
+        <button class="btn" id="batch-zip" onclick="downloadBatchZip()" disabled>Descargar todos (.zip)</button>
+        <span id="batch-progress" style="font-family:var(--font-ui);font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div id="batch-results" style="display:grid;gap:8px"></div>
+    </div>
+  </details>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 </main>
 
 <!-- Modal: claves -->
@@ -1535,10 +1559,14 @@ function callModel(o){
   }[o.provider];
   return callOpenAICompat(o, cfg);
 }
-async function callClaude({model, system, messages, signal, onText, onThinking}){
+async function callClaude({model, system, messages, signal, onText, onThinking, cacheUserMessages = true}){
   const key = needKey('claude');
+  // El sistema (prompt editorial + instrucciones estables) es el prefijo reutilizable.
+  // En lotes, el texto de cada capítulo cambia por completo: no conviene crear un
+  // punto de caché adicional para ese contenido único. En conversación normal sí
+  // conservamos el comportamiento previo, útil para reutilizar el historial.
   const msgs = messages.map((m, i) => {
-    const cache = (i === 0) || (i === messages.length - 1 && m.role === 'user');
+    const cache = cacheUserMessages && ((i === 0) || (i === messages.length - 1 && m.role === 'user'));
     return {role:m.role, content:[cache ? {type:'text', text:m.content, cache_control:{type:'ephemeral'}} : {type:'text', text:m.content}]};
   });
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1697,6 +1725,77 @@ if (now2 && now2.role === 'user' && !state.error)
 renderAll();
 orAutoRefresh();
 if (getKey('firebase')) initFirebase(getKey('firebase'));
+
+let batchBusy = false, batchController = null, batchResults = [];
+$('batch-raw').addEventListener('change', function(){
+  $('batch-raw-list').textContent = this.files.length ? Array.from(this.files).map(f=>f.name).join(' · ') : 'Ningún fichero seleccionado';
+});
+$('batch-essential').addEventListener('change', function(){
+  $('batch-essential-list').textContent = this.files.length ? Array.from(this.files).map(f=>f.name).join(' · ') : 'Ningún fichero seleccionado';
+});
+function batchBase(n){ return n.replace(/\.[^.]+$/,'').replace(/^ESENCIAL[_ -]?/i,'').toLowerCase().replace(/[^a-z0-9áéíóúüñ]+/gi,''); }
+function batchChapter(n){ return n.replace(/\.[^.]+$/,'').replace(/^bruto[_ -]?/i,'').replace(/^texto[_ -]?/i,'').replace(/^ESENCIAL[_ -]?/i,'').slice(0,60).replace(/[_-]+/g,' ').trim() || 'capitulo'; }
+function stopBatch(){ if(batchController) batchController.abort(); }
+function batchStatus(t){ $('batch-progress').textContent=t; }
+function startBatch(){
+  if(batchBusy) return;
+  const raws=Array.from($('batch-raw').files), essentials=Array.from($('batch-essential').files);
+  if(!raws.length){ showStatus('err','Selecciona al menos un texto en bruto.'); return; }
+  if(!modelChoice.provider || !modelChoice.model){ showStatus('err','Selecciona un proveedor y un modelo.'); return; }
+  if(!confirm('Se procesarán '+raws.length+' ficheros secuencialmente. Cada uno generará su propia respuesta y sus ficheros descargables. ¿Continuar?')) return;
+  batchBusy=true; batchResults=[]; batchController=new AbortController();
+  $('batch-start').disabled=true; $('batch-stop').disabled=false; $('batch-zip').disabled=true; $('batch-results').innerHTML='';
+  runBatchItems(raws,essentials,batchController.signal).catch(e=>showStatus('err',e.message||'Error en el lote')).finally(()=>{
+    batchBusy=false; batchController=null; $('batch-start').disabled=false; $('batch-stop').disabled=true;
+    $('batch-zip').disabled=!batchResults.some(r=>r.files.length);
+  });
+}
+async function runBatchItems(raws, essentials, signal){
+  const provider=modelChoice.provider, model=modelChoice.model, prompt=getPrompt();
+  for(let i=0;i<raws.length;i++){
+    if(signal.aborted) break;
+    const raw=raws[i], chapter=batchChapter(raw.name), base=batchBase(raw.name);
+    const ef=essentials.find(f=>batchBase(f.name)===base) || essentials.find(f=>batchBase(f.name).includes(base)||base.includes(batchBase(f.name)));
+    batchStatus(`Procesando ${i+1}/${raws.length}: ${raw.name}`);
+    const card=document.createElement('div'); card.className='msg assistant'; card.innerHTML=`<strong>${esc(raw.name)}</strong><div class="thinking">Procesando…</div>`; $('batch-results').appendChild(card);
+    try{
+      const rawText=await readFile(raw), essentialText=ef?await readFile(ef):'';
+      let userText=`Nombre corto del capítulo: «${chapter}». Úsalo en los nombres de los ficheros que entregues.\n\nNota de la aplicación: entrega cada fichero final en un bloque \`\`\`markdown precedido de su nombre de fichero.\n\n=== TEXTO EN BRUTO — fichero «${raw.name}» ===\n\n${rawText}\n\n=== FIN DEL TEXTO EN BRUTO ===\n\n=== LO ESENCIAL DEL AUTOR — fichero «${ef?ef.name:'no proporcionado'}» ===\n\n${essentialText || '(No se ha proporcionado un fichero ESENCIAL para este capítulo.)'}\n\n=== FIN DE LO ESENCIAL ===\n\nEmpieza.`;
+      const msgs=[{role:'user',content:userText}];
+      let responseText=''; const res=await callModel({provider,model,system:prompt+SUG_NOTE,messages:msgs,signal,cacheUserMessages:false,onText:t=>{responseText+=t;},onThinking:()=>{}});
+      // Batch responses are parsed independently from the active conversation.
+      const oldChapter=state.chapter; state.chapter=chapter;
+      const parsed=parseSegments(responseText,false);
+      state.chapter=oldChapter;
+      let files=parsed.filter(x=>x.type==='file'&&!x.writing).map(x=>({name:x.name,text:x.body}));
+      
+      if(!files.length) files=[{name:`RESPUESTA_${chapter.replace(/\s+/g,'_')}.md`,text:responseText}];
+      batchResults.push({chapter,source:raw.name,files,warning:!ef?'Sin fichero ESENCIAL coincidente.':''});
+      card.innerHTML=`<strong>${esc(raw.name)}</strong><div style="font-size:12px;color:var(--muted)">${ef?'ESENCIAL: '+esc(ef.name):'Aviso: no se encontró ESENCIAL coincidente.'} · ${files.length} resultado(s)</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${files.map((f,j)=>`<button class="btn btn-sm" data-batch="${batchResults.length-1}" data-file="${j}">${esc(f.name)} — Descargar</button>`).join('')}<button class="btn btn-sm btn-primary" data-batchall="${batchResults.length-1}">Descargar este capítulo (.zip)</button></div>`;
+      card.querySelectorAll('[data-batch]').forEach(b=>b.onclick=()=>{const r=batchResults[+b.dataset.batch],f=r.files[+b.dataset.file];download(f.name,f.text)});
+      card.querySelector('[data-batchall]').onclick=()=>downloadOneBatchZip(+card.querySelector('[data-batchall]').dataset.batchall);
+    }catch(e){
+      if(e.name==='AbortError'){card.innerHTML=`<strong>${esc(raw.name)}</strong><div class="thinking">Detenido.</div>`;break;}
+      batchResults.push({chapter,source:raw.name,files:[],error:e.message});
+      card.innerHTML=`<strong>${esc(raw.name)}</strong><div style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+    }
+  }
+  batchStatus(`Finalizado: ${batchResults.filter(r=>r.files.length).length} de ${raws.length} procesados correctamente.`);
+}
+async function downloadOneBatchZip(idx){
+  const r=batchResults[idx]; if(!r||!r.files.length)return;
+  if(typeof JSZip==='undefined'){showStatus('err','No se pudo cargar el componente ZIP. Descarga los ficheros individualmente.');return;}
+  const zip=new JSZip(); r.files.forEach(f=>zip.file(f.name,f.text));
+  const blob=await zip.generateAsync({type:'blob'}); triggerBlobDownload(blob,`Resultados_${r.chapter.replace(/\s+/g,'_')}.zip`);
+}
+async function downloadBatchZip(){
+  if(typeof JSZip==='undefined'){showStatus('err','No se pudo cargar el componente ZIP.');return;}
+  const zip=new JSZip();
+  batchResults.forEach(r=>r.files.forEach(f=>zip.file(`${r.chapter.replace(/[\\/:*?"<>|]+/g,'_')}/${f.name}`,f.text)));
+  const blob=await zip.generateAsync({type:'blob'}); triggerBlobDownload(blob,'Resultados_lote.zip');
+}
+function triggerBlobDownload(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safeName(name);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);}
+
 </script>
 </body>
 </html>
