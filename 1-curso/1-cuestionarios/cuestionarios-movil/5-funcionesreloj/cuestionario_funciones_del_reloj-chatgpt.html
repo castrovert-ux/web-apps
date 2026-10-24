@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Funciones del reloj</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c1:#6d5dfc;--c2:#4338ca;--c3:#ffd166;--c4:#ff6b8a;--c5:#52d6a2;
+  --bg:#0a1022;--card:#131d37;--text:#f7f8ff;--sub:#a6b2d1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.bg-blobs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.17;animation:float 15s ease-in-out infinite alternate}
+.blob:nth-child(1){width:520px;height:520px;background:var(--c1);top:-150px;left:-100px}
+.blob:nth-child(2){width:420px;height:420px;background:var(--c4);bottom:-120px;right:-80px;animation-delay:-5s}
+.blob:nth-child(3){width:330px;height:330px;background:var(--c3);top:42%;left:55%;animation-delay:-9s}
+@keyframes float{to{transform:translate(25px,18px)}}
+.container{position:relative;z-index:1;max-width:780px;margin:auto;padding:36px 20px 50px}
+.header{text-align:center;margin-bottom:32px}
+.badge{display:inline-block;background:linear-gradient(135deg,var(--c1),var(--c2));color:white;font-weight:800;font-size:.75rem;letter-spacing:1.5px;text-transform:uppercase;padding:7px 17px;border-radius:100px;margin-bottom:15px}
+h1{font-family:'Fredoka',sans-serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;background:linear-gradient(120deg,#b8b2ff,var(--c3),#ff9ab0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px}
+.subtitle{color:var(--sub);font-size:1rem;line-height:1.5;max-width:560px;margin:auto}
+.mini-guide{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:26px 0 30px}
+.guide-item{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 8px;text-align:center;color:var(--sub);font-size:.78rem;font-weight:800}
+.guide-item span{display:block;font-size:1.5rem;margin-bottom:5px}
+.progress-wrap{margin-bottom:18px}
+.progress-label{display:flex;justify-content:space-between;gap:10px;font-size:.85rem;font-weight:800;color:var(--sub);margin-bottom:8px}
+.progress-bar{height:8px;background:rgba(255,255,255,.09);border-radius:10px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--c1),var(--c3));transition:width .35s ease}
+.question-card{background:rgba(19,29,55,.94);border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:clamp(22px,5vw,36px);margin-bottom:18px;box-shadow:0 20px 55px rgba(0,0,0,.15);animation:fadeIn .3s ease}
+.q-type-badge{display:inline-flex;font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:100px;margin-bottom:16px;background:rgba(109,93,252,.18);color:#c5c0ff}
+.q-number{font-size:.82rem;color:var(--sub);font-weight:800;margin-bottom:8px}
+.q-text{font-size:clamp(1.08rem,2.5vw,1.28rem);font-weight:800;line-height:1.5;margin-bottom:22px}
+.options{display:flex;flex-direction:column;gap:11px}
+.option-btn{width:100%;background:rgba(255,255,255,.035);border:2px solid rgba(255,255,255,.09);border-radius:14px;padding:13px 16px;color:var(--text);font:700 1rem 'Nunito',sans-serif;text-align:left;cursor:pointer;display:flex;align-items:center;gap:13px;transition:.18s}
+.option-btn:hover:not(:disabled){background:rgba(109,93,252,.15);border-color:var(--c1);transform:translateX(4px)}
+.option-btn:disabled{cursor:default}
+.option-letter{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0}
+.option-btn.correct{background:rgba(82,214,162,.14);border-color:var(--c5)}
+.option-btn.wrong{background:rgba(255,107,138,.13);border-color:var(--c4)}
+.feedback{display:none;margin-top:18px;padding:15px;border-radius:12px;font-weight:700;line-height:1.55;animation:fadeIn .25s ease}
+.feedback.correct-fb{display:block;background:rgba(82,214,162,.12);color:#8df0c8;border:1px solid rgba(82,214,162,.5)}
+.feedback.wrong-fb{display:block;background:rgba(255,107,138,.1);color:#ffb0c0;border:1px solid rgba(255,107,138,.5)}
+.actions{display:flex;justify-content:flex-end}
+.btn{border:0;border-radius:14px;padding:13px 20px;font:900 .95rem 'Nunito',sans-serif;cursor:pointer;transition:.18s}
+.btn-next{display:none;min-width:190px;background:linear-gradient(135deg,var(--c3),#ffb547);color:#17182c}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.04)}
+.results{display:none;text-align:center;background:rgba(19,29,55,.94);border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:34px 24px;animation:fadeIn .35s ease}
+.result-emoji{font-size:4rem}
+.score-circle{width:140px;height:140px;border-radius:50%;border:8px solid var(--c1);display:flex;align-items:center;justify-content:center;margin:20px auto;font-size:2rem;font-family:'Fredoka',sans-serif;flex-direction:column;line-height:1.1}
+.score-circle small{font:800 .8rem 'Nunito',sans-serif;color:var(--sub);margin-top:5px}
+.results h2{font-family:'Fredoka',sans-serif;font-size:1.8rem;margin:8px 0}
+.result-sub{color:var(--sub);font-weight:700;line-height:1.6;max-width:520px;margin:0 auto}
+.btn-restart{margin-top:25px;background:linear-gradient(135deg,var(--c1),var(--c2));color:white}
+.review{margin-top:24px;text-align:left;background:rgba(255,255,255,.035);border-radius:14px;padding:16px}
+.review h3{margin-bottom:8px;font-size:1rem}
+.review p{color:var(--sub);font-size:.9rem;line-height:1.6}
+.hidden{display:none!important}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:520px){.container{padding:26px 13px 36px}.mini-guide{grid-template-columns:repeat(2,1fr)}.question-card{border-radius:19px}.option-btn{padding:12px}.actions .btn{width:100%}}
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+<main class="container">
+  <header class="header">
+    <div class="badge">⏰ Curso de móvil · Reto práctico</div>
+    <h1>Las funciones del reloj</h1>
+    <p class="subtitle">¿Sabrías elegir la función adecuada para cada situación? Responde, comprueba la explicación y consigue todos los puntos.</p>
+  </header>
+  <div class="mini-guide" aria-label="Funciones del reloj">
+    <div class="guide-item"><span>⏰</span>Alarma</div>
+    <div class="guide-item"><span>🌍</span>Reloj mundial</div>
+    <div class="guide-item"><span>⌛</span>Temporizador</div>
+    <div class="guide-item"><span>⏱️</span>Cronómetro</div>
+  </div>
+  <section id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label"><span id="prog-label">Pregunta 1 de 14</span><span id="prog-score">⭐ 0 puntos</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number"></div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback" aria-live="polite"></div>
+    </div>
+    <div class="actions"><button class="btn btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button></div>
+  </section>
+  <section class="results" id="results">
+    <div class="result-emoji" id="result-emoji">🏆</div>
+    <div class="score-circle" id="score-num">0/14</div>
+    <h2 id="result-msg">¡Reto completado!</h2>
+    <p class="result-sub" id="result-sub"></p>
+    <div class="review"><h3>🧠 Recuerda</h3><p><strong>Alarma:</strong> avisa a una hora concreta. <strong>Reloj mundial:</strong> muestra la hora de otras ciudades. <strong>Temporizador:</strong> cuenta hacia atrás y avisa al terminar. <strong>Cronómetro:</strong> mide el tiempo transcurrido desde cero.</p></div>
+    <button class="btn btn-restart" onclick="restartQuiz()">🔄 Repetir cuestionario</button>
+  </section>
+</main>
+<script>
+const questions = [
+ {q:"Mañana tienes que ir al médico a las 9:30. ¿Qué función te conviene configurar?",options:["Cronómetro","Alarma","Temporizador"],correct:1,expl:"La alarma suena a una hora concreta del día. Puedes configurarla para que te avise a las 9:30."},
+ {q:"Tu receta necesita 12 minutos de cocción. ¿Qué función utilizarías?",options:["Reloj mundial","Alarma para todos los días","Temporizador"],correct:2,expl:"El temporizador cuenta hacia atrás desde el tiempo que indiques y avisa cuando llega a cero."},
+ {q:"Quieres saber qué hora es ahora mismo en Tokio. ¿Qué función debes abrir?",options:["Reloj mundial","Cronómetro","Temporizador"],correct:0,expl:"El reloj mundial permite añadir ciudades y consultar la hora que tienen en ese momento."},
+ {q:"Quieres medir cuánto tardas en caminar hasta la tienda. ¿Qué función es la adecuada?",options:["Alarma","Cronómetro","Reloj mundial"],correct:1,expl:"El cronómetro cuenta hacia arriba desde cero y sirve para medir cuánto tiempo transcurre."},
+ {q:"En la aplicación del reloj, ¿qué símbolo suele permitir añadir una alarma nueva?",options:["El símbolo +","La papelera","El símbolo de compartir"],correct:0,expl:"El símbolo «+» suele utilizarse para añadir una nueva alarma."},
+ {q:"Quieres que una alarma suene de lunes a viernes. ¿Qué configuración buscarías?",options:["Vuelta","Solo días laborables","Reloj mundial"],correct:1,expl:"La opción «Solo días laborables», cuando está disponible, activa la alarma de lunes a viernes."},
+ {q:"Has añadido Nueva York al reloj mundial. ¿Qué información te interesa consultar?",options:["Cuánto tardas en llegar allí andando","Cuándo termina una cuenta atrás","La hora actual en Nueva York"],correct:2,expl:"El reloj mundial muestra la hora de las ciudades guardadas y ayuda a conocer la diferencia horaria."},
+ {q:"El temporizador está contando, pero necesitas detenerlo un momento. ¿Qué control usarías?",options:["Pausa (||)","Añadir ciudad (+)","Vuelta"],correct:0,expl:"La pausa detiene temporalmente la cuenta atrás. Después puedes reanudarla con el botón de iniciar."},
+ {q:"El temporizador llega a cero. ¿Qué debes hacer para silenciar el aviso?",options:["Añadir otra ciudad","Pulsar «Parar» o «Detener»","Pulsar «Vuelta»"],correct:1,expl:"Cuando termina, el móvil puede sonar o vibrar. Pulsa «Parar» o «Detener» para silenciarlo."},
+ {q:"Mientras el cronómetro está funcionando, quieres guardar un tiempo parcial sin detenerlo. ¿Qué opción buscas?",options:["Editar alarma","Borrar ciudad","Vuelta"],correct:2,expl:"La opción «Vuelta» registra un tiempo parcial y el cronómetro sigue funcionando."},
+ {q:"Si sales de la aplicación o bloqueas la pantalla, un temporizador que ya has iniciado puede seguir funcionando.",options:["Verdadero","Falso"],correct:0,type:"boolean",expl:"Verdadero. Según el material, el temporizador continúa funcionando aunque salgas de la aplicación o bloquees la pantalla."},
+ {q:"El cronómetro cuenta hacia atrás desde diez minutos hasta cero.",options:["Verdadero","Falso"],correct:1,type:"boolean",expl:"Falso. El cronómetro cuenta hacia arriba desde cero. La cuenta atrás corresponde al temporizador."},
+ {q:"La alarma está configurada, pero temes no oírla. ¿Qué ajuste conviene revisar?",options:["El volumen de las alarmas","La lista de ciudades","Las vueltas del cronómetro"],correct:0,expl:"Conviene revisar el volumen de las alarmas en Ajustes > Sonido > Volumen, o en los controles de volumen del móvil."},
+ {q:"Ya no necesitas una ciudad que guardaste en el reloj mundial. ¿Qué puedes hacer?",options:["Poner el cronómetro a cero","Eliminarla desde Editar o con la papelera, según el móvil","Pausar el temporizador"],correct:1,expl:"Según el móvil, puedes entrar en «Editar» o mantener pulsada la ciudad y eliminarla con la papelera o el símbolo «–»."}
+];
+let currentIdx=0,score=0,answered=false;
+const TOTAL=questions.length;
+function loadQuestion(){
+ answered=false;const q=questions[currentIdx];
+ document.getElementById('q-type').textContent=q.type==='boolean'?'✅ Verdadero o falso':'🎯 Opción múltiple';
+ document.getElementById('q-number').textContent='Situación '+(currentIdx+1);
+ document.getElementById('q-text').textContent=q.q;
+ const fb=document.getElementById('q-feedback');fb.style.display='none';fb.className='feedback';fb.textContent='';
+ const next=document.getElementById('btn-next');next.style.display='none';next.textContent=currentIdx===TOTAL-1?'Ver resultados 🏁':'Siguiente →';
+ const options=document.getElementById('q-options');options.innerHTML='';
+ q.options.forEach((opt,i)=>{const b=document.createElement('button');b.className='option-btn';const letter=document.createElement('span');letter.className='option-letter';letter.textContent=q.type==='boolean'?(i===0?'✓':'✕'):String.fromCharCode(65+i);const label=document.createElement('span');label.textContent=opt;b.append(letter,label);b.onclick=()=>checkAnswer(i);options.appendChild(b)});
+ document.getElementById('prog-label').textContent=`Pregunta ${currentIdx+1} de ${TOTAL}`;
+ document.getElementById('prog-score').textContent=`⭐ ${score} puntos`;
+ document.getElementById('prog-fill').style.width=(currentIdx/TOTAL*100)+'%';
+}
+function checkAnswer(idx){
+ if(answered)return;answered=true;const q=questions[currentIdx],buttons=document.querySelectorAll('.option-btn'),fb=document.getElementById('q-feedback');
+ buttons.forEach(b=>b.disabled=true);
+ if(idx===q.correct){buttons[idx].classList.add('correct');score++;fb.className='feedback correct-fb';fb.innerHTML='<strong>🎉 ¡Correcto!</strong><br>'+q.expl}
+ else{buttons[idx].classList.add('wrong');buttons[q.correct].classList.add('correct');fb.className='feedback wrong-fb';fb.innerHTML='<strong>💡 Repasa esta idea</strong><br>'+q.expl}
+ fb.style.display='block';document.getElementById('prog-score').textContent=`⭐ ${score} puntos`;document.getElementById('btn-next').style.display='block';
+}
+function nextQuestion(){if(!answered)return;currentIdx++;if(currentIdx<TOTAL)loadQuestion();else showResults()}
+function showResults(){
+ document.getElementById('quiz-area').classList.add('hidden');document.getElementById('results').style.display='block';
+ const pct=Math.round(score/TOTAL*100);document.getElementById('score-num').innerHTML=`${score}/${TOTAL}<small>${pct}%</small>`;
+ let emoji,msg,sub;
+ if(pct===100){emoji='🏆';msg='¡Perfecto!';sub='Has respondido correctamente a todas las preguntas.'}
+ else if(pct>=80){emoji='🌟';msg='¡Muy buen resultado!';sub='Conoces muy bien las funciones principales del reloj.'}
+ else if(pct>=60){emoji='👍';msg='¡Buen trabajo!';sub='Repasa las explicaciones de las preguntas que has fallado.'}
+ else if(pct>=40){emoji='📚';msg='Vamos a practicar un poco más';sub='Vuelve a repasar las cuatro funciones y prueba de nuevo.'}
+ else{emoji='⏰';msg='¡A practicar!';sub='Lee el material y vuelve a intentarlo: cada función tiene una utilidad diferente.'}
+ document.getElementById('result-emoji').textContent=emoji;document.getElementById('result-msg').textContent=msg;document.getElementById('result-sub').textContent=`${sub} Resultado: ${score} de ${TOTAL} puntos.`;document.getElementById('prog-fill').style.width='100%';
+}
+function restartQuiz(){currentIdx=0;score=0;answered=false;document.getElementById('results').style.display='none';document.getElementById('quiz-area').classList.remove('hidden');loadQuestion();window.scrollTo({top:0,behavior:'smooth'})}
+loadQuestion();
+</script>
+</body>
+</html>
