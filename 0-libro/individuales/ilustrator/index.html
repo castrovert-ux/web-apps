@@ -242,6 +242,28 @@
     font-family: 'EB Garamond', serif;
   }
 
+  .char-counter {
+    font-size: 11.5px;
+    color: #aaa496;
+    font-style: italic;
+    font-family: 'EB Garamond', serif;
+  }
+  .char-counter.warn { color: #c08040; }
+
+  .btn-download {
+    font-family: 'EB Garamond', serif;
+    font-size: 13.5px;
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: transparent;
+    color: #B89A5A;
+    cursor: pointer;
+    transition: background 0.12s;
+    letter-spacing: 0.02em;
+  }
+  .btn-download:hover { background: rgba(184,154,90,0.1); }
+
   .btn-copy {
     font-family: 'EB Garamond', serif;
     font-size: 13.5px;
@@ -761,8 +783,11 @@
   <!-- Output -->
   <div class="output-area" id="outputArea">
     <div class="output-header">
-      <span class="output-title">Prompt generado</span>
-      <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
+      <span class="output-title">Prompt generado &nbsp;<span class="char-counter" id="charCounter"></span></span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-download" id="downloadBtn" onclick="downloadPrompt()">↓ Descargar .txt</button>
+        <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
+      </div>
     </div>
     <div class="output-text" id="outputText"></div>
   </div>
@@ -774,7 +799,10 @@
         <div class="section-label" style="margin-bottom:0;">Historial de prompts</div>
         <span class="historial-count" id="historialCount">0 entradas</span>
       </div>
-      <button class="btn-clear-all" onclick="clearAll()">Borrar todo</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-clear-all" onclick="exportHistorial()" style="border-color:#c8b898;color:#8a7a60;" title="Exportar todo el historial como .txt">↓ Exportar</button>
+        <button class="btn-clear-all" onclick="clearAll()">Borrar todo</button>
+      </div>
     </div>
     <div id="historialList"></div>
   </div>
@@ -904,9 +932,10 @@
     area.classList.add('visible');
     document.getElementById('copyBtn').textContent = 'Copiar';
     document.getElementById('copyBtn').classList.remove('copied');
+    updateCharCounter(prompt);
 
     const sceneRawVal = document.getElementById('sceneRaw') ? document.getElementById('sceneRaw').value.trim() : '';
-    const entry = { id: Date.now(), date: new Date().toISOString(), scene, sceneRaw: sceneRawVal, prompt };
+    const entry = { id: Date.now(), date: new Date().toISOString(), scene, sceneRaw: sceneRawVal, prompt, title: sceneRawVal || scene };
     const list = loadHistorial();
     list.unshift(entry);
     saveHistorial(list);
@@ -948,7 +977,8 @@
     }
 
     container.innerHTML = '<div class="historial-list">' + list.map(e => {
-      const preview = e.scene.length > 95 ? e.scene.slice(0, 95) + '…' : e.scene;
+      const titleText = e.title || e.sceneRaw || e.scene;
+      const preview = titleText.length > 95 ? titleText.slice(0, 95) + '…' : titleText;
       return `
       <div class="hist-item" id="hitem-${e.id}">
         <div class="hist-item-header" onclick="toggleItem(${e.id})">
@@ -975,6 +1005,7 @@
           <div class="hist-prompt-full">${esc(e.prompt)}</div>
           <div class="hist-body-actions">
             <button class="btn-hist-action" onclick="copyEntry(${e.id}, this)">Copiar prompt</button>
+            <button class="btn-hist-action" onclick="downloadEntry(${e.id})">↓ Descargar .txt</button>
             <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar en el formulario ↑</button>
           </div>
         </div>
@@ -1020,6 +1051,101 @@
     if (!confirm('¿Borrar todo el historial? Esta acción no se puede deshacer.')) return;
     saveHistorial([]);
     renderHistorial();
+  }
+
+  /* === DESCARGA Y CONTADOR === */
+  function updateCharCounter(text) {
+    const el = document.getElementById('charCounter');
+    if (!el) return;
+    const n = text ? text.length : 0;
+    el.textContent = n ? n.toLocaleString('es-ES') + ' car.' : '';
+    el.className = 'char-counter' + (n > 3500 ? ' warn' : '');
+  }
+
+  function makeFilename(titleText, date) {
+    const d = new Date(date || Date.now());
+    const pad = n => String(n).padStart(2, '0');
+    const dateStr = d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
+    const slug = (titleText || 'escena')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0, 50)
+      .replace(/-+$/, '');
+    return 'castroverde_' + dateStr + '_' + slug + '.txt';
+  }
+
+  function downloadText(content, filename) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+  }
+
+  function downloadPrompt() {
+    const prompt = document.getElementById('outputText').textContent;
+    if (!prompt) return;
+    const sceneRaw = document.getElementById('sceneRaw') ? document.getElementById('sceneRaw').value.trim() : '';
+    const scene    = document.getElementById('scene').value.trim();
+    const titleText = sceneRaw || scene;
+
+    const anio       = document.getElementById('anio')?.value.trim() || '';
+    const personajes = document.getElementById('personajes')?.value.trim() || '';
+    const lugar      = document.getElementById('lugar')?.value.trim() || '';
+    const elementos  = document.getElementById('elementos')?.value.trim() || '';
+
+    let content = '═══════════════════════════════════════════════════\n';
+    content    += 'ILUSTRACIONES DEL LIBRO · CASTROVERDE DE CERRATO\n';
+    content    += '═══════════════════════════════════════════════════\n';
+    content    += 'Fecha: ' + new Date().toLocaleString('es-ES') + '\n';
+    if (sceneRaw) content += '\nDESCRIPCIÓN ORIGINAL (español):\n' + sceneRaw + '\n';
+    if (anio)       content += '\nAño aproximado: ' + anio;
+    if (lugar)      content += '\nLugar: ' + lugar;
+    if (personajes) content += '\nPersonajes: ' + personajes;
+    if (elementos)  content += '\nElementos: ' + elementos;
+    content    += '\n\n───────────────────────────────────────────────────\n';
+    content    += 'PROMPT COMPLETO (para ChatGPT / Google AI):\n';
+    content    += '───────────────────────────────────────────────────\n';
+    content    += prompt + '\n';
+
+    downloadText(content, makeFilename(titleText, new Date()));
+  }
+
+  function downloadEntry(id) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    let content = '═══════════════════════════════════════════════════\n';
+    content    += 'ILUSTRACIONES DEL LIBRO · CASTROVERDE DE CERRATO\n';
+    content    += '═══════════════════════════════════════════════════\n';
+    content    += 'Fecha: ' + new Date(entry.date).toLocaleString('es-ES') + '\n';
+    if (entry.sceneRaw) content += '\nDESCRIPCIÓN ORIGINAL (español):\n' + entry.sceneRaw + '\n';
+    content    += '\n───────────────────────────────────────────────────\n';
+    content    += 'PROMPT COMPLETO (para ChatGPT / Google AI):\n';
+    content    += '───────────────────────────────────────────────────\n';
+    content    += entry.prompt + '\n';
+    downloadText(content, makeFilename(entry.title || entry.sceneRaw || entry.scene, entry.date));
+  }
+
+  function exportHistorial() {
+    const list = loadHistorial();
+    if (!list.length) { alert('El historial está vacío.'); return; }
+    let content = '═══════════════════════════════════════════════════\n';
+    content    += 'HISTORIAL DE PROMPTS · CASTROVERDE DE CERRATO\n';
+    content    += 'Exportado: ' + new Date().toLocaleString('es-ES') + '\n';
+    content    += '═══════════════════════════════════════════════════\n\n';
+    list.forEach((e, i) => {
+      content += '───────────────────────────────────────────────────\n';
+      content += (i+1) + '. ' + new Date(e.date).toLocaleString('es-ES') + '\n';
+      if (e.sceneRaw) content += 'Escena: ' + e.sceneRaw + '\n';
+      content += '\nPROMPT:\n' + e.prompt + '\n\n';
+    });
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    downloadText(content, 'castroverde_historial_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.txt');
   }
 
   /* === AI EXPAND === */
