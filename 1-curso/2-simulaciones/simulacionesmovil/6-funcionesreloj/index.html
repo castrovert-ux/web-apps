@@ -1,3 +1,4 @@
+--- Documento: index.html ---
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -200,14 +201,64 @@
   .pin { position:absolute; z-index:8; width:1.9em; height:1.9em; border-radius:50%; background:var(--c2); color:#0a0614; font-weight:900; display:grid; place-items:center; font-size:.9em; box-shadow:0 2px 8px rgba(0,0,0,.5); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; }
   @keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.18);} }
   .mode-practica .pin { display:none; }
-  /* tabs descubrir */
-  .fn-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
-  .fn-tab { border:2px solid rgba(255,255,255,.12); background:transparent; border-radius:12px; padding:8px 14px; font-weight:800; font-size:.9rem; cursor:pointer; color:var(--sub); transition:all .2s; }
-  .fn-tab.on { background:rgba(124,58,237,.2); border-color:var(--c1); color:var(--text); }
-  .fn-sect { display:none; }
-  .fn-sect.on { display:block; animation:popIn .3s ease; }
-  /* pnum */
-  .pnum { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+
+  /* ===== NUEVA BARRA DE PESTAÑAS (Panel Derecho) ===== */
+  .fn-tabs-bar {
+    display: flex;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    margin: 0 -20px 16px; /* Compensa padding del panel */
+    padding: 4px;
+    position: sticky;
+    top: 18px; /* Padding superior del panel */
+    z-index: 10;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  }
+  .fn-tab-btn {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    padding: 10px 8px;
+    font-weight: 800;
+    font-size: .85rem;
+    color: var(--sub);
+    cursor: pointer;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all .2s ease;
+    white-space: nowrap;
+    position: relative;
+  }
+  .fn-tab-btn span.emoji { font-size: 1.5rem; line-height: 1; }
+  .fn-tab-btn span.label { font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; }
+  
+  /* Estado activo: fondo suave + barra inferior de color */
+  .fn-tab-btn.on {
+    color: var(--text);
+    background: linear-gradient(135deg, rgba(124,58,237,.15), rgba(167,139,250,.1));
+  }
+  .fn-tab-btn.on::after {
+    content: "";
+    position: absolute;
+    bottom: -4px; /* Sale un pelín para tapar el borde del contenedor */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--acc); /* Color por defecto, JS lo sobreescribe */
+    animation: tabSlide .25s ease;
+  }
+  @keyframes tabSlide { from { width: 0; opacity: 0; } to { width: 60%; opacity: 1; } }
+  
+  .fn-tab-btn:hover:not(.on) { color: var(--text); background: rgba(255,255,255,.05); }
+  .fn-tab-btn:focus-visible { outline: 2px solid var(--c3); outline-offset: -2px; }
+
   @media (prefers-reduced-motion:reduce) { *,*::before,*::after{animation:none!important;transition:none!important;} }
 </style>
 </head>
@@ -381,7 +432,6 @@ function setMode(m){
   document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('on',b.id==='m-'+m));
   $('st-parts').hidden = m==='live';
   $('st-live').hidden = m!=='live';
-  document.querySelector('.phone'+(m==='live'?'#ph2':'#ph1')||'#ph1');
   if(m==='desc') renderDesc();
   else if(m==='live') { renderLive(); renderLivePanel(); }
   else renderPractica();
@@ -396,8 +446,7 @@ function updateProg(done,total){
 
 // ===== MODO DESCUBRIR =====
 const FN_INFO={
-  alarma:{
-    color:'var(--c2)',emoji:'🔔',title:'Alarma',
+  alarma:{ color:'var(--c2)', emoji:'🔔', title:'Alarma',
     desc:`La <b>alarma</b> te avisa a una hora concreta del día. Es perfecta para <b>despertarte</b> o recordar un médico, pastillas o cualquier cita.`,
     chips:['⏰ Hora exacta','📅 Días concretos','🔁 Repetición','🔊 Sonido propio'],
     steps:[
@@ -409,8 +458,7 @@ const FN_INFO={
     ],
     tip:'<b>Consejo:</b> revisa que el volumen de alarma no esté a cero: Ajustes → Sonido → Volumen de alarma.',
   },
-  mundial:{
-    color:'var(--c6)',emoji:'🌍',title:'Reloj mundial',
+  mundial:{ color:'var(--c6)', emoji:'🌍', title:'Reloj mundial',
     desc:`El <b>reloj mundial</b> muestra la hora actual de otras ciudades del mundo. Muy útil para <b>llamar a familiares</b> en otro país sin despertarles.`,
     chips:['🌐 Varias ciudades','⏱ Hora en directo','➕ Añadir ciudades','🗑 Eliminar las que no uses'],
     steps:[
@@ -422,8 +470,7 @@ const FN_INFO={
     ],
     tip:'<b>Truco:</b> la diferencia horaria (−4 h, +8 h) te dice cuántas horas hay que sumar o restar respecto a tu ciudad.',
   },
-  timer:{
-    color:'var(--c8)',emoji:'⏳',title:'Temporizador',
+  timer:{ color:'var(--c8)', emoji:'⏳', title:'Temporizador',
     desc:`El <b>temporizador</b> cuenta <b>hacia atrás</b> desde el tiempo que le indicas. Ideal para cocina (huevo cocido, pasta…), pastillas o cualquier tarea con tiempo fijo.`,
     chips:['⬇ Cuenta atrás','📣 Avisa al terminar','⏸ Pausa y reanuda','🍳 Perfecto para cocinar'],
     steps:[
@@ -435,8 +482,7 @@ const FN_INFO={
     ],
     tip:'<b>Importante:</b> el temporizador usa el mismo volumen que la alarma. Si no lo oyes, sube el volumen en Ajustes → Sonido.',
   },
-  crono:{
-    color:'var(--c5)',emoji:'⏱️',title:'Cronómetro',
+  crono:{ color:'var(--c5)', emoji:'⏱️', title:'Cronómetro',
     desc:`El <b>cronómetro</b> cuenta <b>hacia arriba</b> desde cero. Mide cuánto tiempo tardas en dar un paseo, una receta o cualquier actividad.`,
     chips:['⬆ Cuenta hacia arriba','🏁 Vueltas parciales','▶ Inicia / ⏸ Pausa / ↺ Reset','🚶 Medir tiempo en actividades'],
     steps:[
@@ -451,28 +497,32 @@ const FN_INFO={
 };
 
 function renderDesc(){
-  // Actualizar tabs del móvil
+  // 1. Actualizar tabs del móvil (simulación)
   const tabs=$('ptabs').querySelectorAll('button');
-  tabs.forEach(b=>{
-    const fn=b.dataset.part;
-    b.classList.toggle('on',fn===S.descFn);
-  });
-  // Mostrar sección del móvil
+  tabs.forEach(b=>b.classList.toggle('on',b.dataset.part===S.descFn));
   ['alarma','mundial','timer','crono'].forEach(f=>{
     const el={alarma:$('p-alarma'),mundial:$('p-mundial'),timer:$('p-timer'),crono:$('p-crono')}[f];
     if(el)el.style.display=f===S.descFn?'':'none';
   });
+
   const info=FN_INFO[S.descFn];
   $('panel').style.setProperty('--ic',info.color);
+
+  // 2. Construir HTML del panel con NUEVA barra de pestañas
+  const tabsHtml = Object.entries(FN_INFO).map(([k,v])=>`<button class="fn-tab-btn${k===S.descFn?' on':''}" data-fn="${k}" onclick="switchDescFn('${k}')" ${k===S.descFn?'aria-current="true"':''}><span class="emoji">${v.emoji}</span><span class="label">${v.title}</span></button>`).join('');
+
   $('panel-content').innerHTML=`
     <div class="hello" style="padding:1vh 0 1.5vh">
       <div class="big">${info.emoji}</div>
       <h2>${info.title}</h2>
       <p>${info.desc}</p>
     </div>
-    <div class="fn-tabs">
-      ${Object.entries(FN_INFO).map(([k,v])=>`<button class="fn-tab${k===S.descFn?' on':''}" onclick="switchDescFn('${k}')">${v.emoji} ${v.title}</button>`).join('')}
+    
+    <!-- BARRA DE PESTAÑAS ESTILO APP -->
+    <div class="fn-tabs-bar" role="tablist" aria-label="Funciones del reloj">
+      ${tabsHtml}
     </div>
+
     <div class="pchips">${info.chips.map(c=>`<span class="pchip">${c}</span>`).join('')}</div>
     <div class="ph3">📋 Pasos a seguir</div>
     <ul class="steps">${info.steps.map((s,i)=>`<li><span class="rb">${i+1}</span><div class="rtx">${s.txt}<small>${s.sub}</small></div></li>`).join('')}</ul>
@@ -481,6 +531,10 @@ function renderDesc(){
       <button class="pbtn" onclick="setMode('live')">🛠️ Probar ahora →</button>
     </div>
   `;
+
+  // 3. Aplicar color dinámico a la barra inferior de la pestaña activa
+  const activeBtn = $('panel-content').querySelector('.fn-tab-btn.on');
+  if(activeBtn) activeBtn.style.setProperty('--acc', info.color); // Para el ::after
 }
 
 function switchDescFn(fn){
@@ -488,20 +542,18 @@ function switchDescFn(fn){
   renderDesc();
 }
 
-// Selección de parte en modo descubrir
+// Selección de parte en modo descubrir (resalta en el móvil)
 function selectPart(part,el){
   if(S.mode!=='desc'&&S.mode!=='practica') return;
   if(S.mode==='practica'){checkPart(part); return;}
-  // En descubrir, solo resalta
   document.querySelectorAll('.part').forEach(p=>p.classList.remove('psel'));
   el.classList.add('psel');
-  // Navegar a la función correspondiente
   const map={alarma:'alarma','alarma-row':'alarma',mundial:'mundial','mundial-row':'mundial','timer-ring':'timer',crono:'crono','crono-start':'crono'};
   if(map[part]) switchDescFn(map[part]);
 }
 
-// ===== MODO PROBAR =====
-let liveScreen='home'; // home | alarma | alarm-config | mundial | timer | crono
+// ===== MODO PROBAR (Simulador) =====
+let liveScreen='home';
 
 function renderLive(){
   liveScreen='home';
@@ -831,7 +883,7 @@ const QUIZ=[
 function renderPractica(){
   $('st-parts').hidden=false;
   $('st-live').hidden=true;
-  document.getElementById('ui-parts').classList.remove('mode-practica'); // reset
+  document.getElementById('ui-parts').classList.remove('mode-practica');
   if(S.pracQ>=QUIZ.length){
     renderPracticaFin();return;
   }
@@ -877,7 +929,7 @@ function renderPracticaFin(){
 }
 
 function resetPractica(){S.pracQ=0;S.progress=0;renderPractica();}
-function checkPart(){} // stub para modo descubrir
+function checkPart(){} // stub
 
 // ===== ARRANQUE =====
 renderDesc();
