@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aprende el teclado · Fácil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos base para asegurar un tamaño mínimo de fuente y buena legibilidad */
+        html { font-size: 22px; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f0f4f8; /* Fondo suave para alto contraste */
+            color: #1a202c;
+            min-height: 100vh;
+        }
+        
+        /* Ocultar barra de desplazamiento, pero permitir scroll */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Efecto 3D de las teclas */
+        .key-btn {
+            box-shadow: 0 6px 0 #94a3b8;
+            transition: all 0.1s ease;
+        }
+        .key-btn:active {
+            box-shadow: 0 0 0 #94a3b8;
+            transform: translateY(6px);
+        }
+        .key-btn-action {
+            box-shadow: 0 6px 0 #64748b;
+        }
+        .key-btn-action:active {
+            box-shadow: 0 0 0 #64748b;
+            transform: translateY(6px);
+        }
+        .toggle-btn {
+            box-shadow: 0 8px 0 #cbd5e1;
+            transition: all 0.15s ease;
+        }
+        .toggle-btn:active {
+            box-shadow: 0 2px 0 #cbd5e1;
+            transform: translateY(6px);
+        }
+        .toggle-btn.active {
+            box-shadow: 0 2px 0 #1e40af;
+            transform: translateY(6px);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center">
+
+    <main class="w-full max-w-6xl bg-white rounded-3xl shadow-2xl p-6 md:p-10">
+        
+        <!-- Cabecera amigable -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-blue-900 mb-3">Escribe sin miedo</h1>
+            <p class="text-2xl text-slate-600">Toca las teclas para practicar. Puedes borrar todo cuando quieras.</p>
+        </header>
+
+        <!-- Área de texto principal -->
+        <section class="flex flex-col gap-4 mb-10">
+            <div class="flex justify-between items-end mb-2">
+                <label for="screen" class="text-2xl font-bold text-slate-700 ml-2">Tu texto aparecerá aquí:</label>
+                <button id="btn-clear" class="bg-red-100 hover:bg-red-200 text-red-800 border-4 border-red-300 rounded-2xl px-6 py-3 font-bold text-2xl flex items-center gap-2 transition-colors">
+                    <span>🗑️</span> Borrar todo
+                </button>
+            </div>
+            <textarea id="screen" rows="4" placeholder="Empieza a escribir aquí..." class="w-full bg-blue-50 border-4 border-blue-200 rounded-3xl p-6 text-4xl text-blue-950 font-medium resize-none focus:outline-none focus:border-blue-500 focus:bg-white shadow-inner"></textarea>
+        </section>
+
+        <!-- Botones de Control (Sustituyen a Shift y AltGr) -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <button id="btn-caps" class="toggle-btn bg-slate-100 border-4 border-slate-300 text-slate-700 rounded-3xl p-6 text-3xl font-bold flex items-center justify-center gap-4">
+                <span class="text-4xl">🔠</span>
+                <span id="caps-label">Activar Mayúsculas</span>
+            </button>
+            
+            <button id="btn-alt" class="toggle-btn bg-slate-100 border-4 border-slate-300 text-slate-700 rounded-3xl p-6 text-3xl font-bold flex items-center justify-center gap-4">
+                <span class="text-4xl">🧩</span>
+                <span id="alt-label">Símbolos (@, €, #)</span>
+            </button>
+        </section>
+
+        <!-- Teclado interactivo -->
+        <section class="w-full overflow-x-auto no-scrollbar pb-6">
+            <div id="keyboard" class="flex flex-col gap-3 min-w-[900px]">
+                <!-- Las teclas se generarán con JavaScript -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // ESTADO DE LA APLICACIÓN
+        let capsActive = false;
+        let altActive = false;
+
+        // ESTRUCTURA DEL TECLADO ESPAÑOL (Normal, Mayúsculas, Símbolos AltGr)
+        const layout = [
+            [
+                { n: 'º', s: 'ª', a: '\\' }, { n: '1', s: '!', a: '|' }, { n: '2', s: '"', a: '@' }, 
+                { n: '3', s: '·', a: '#' }, { n: '4', s: '$', a: '~' }, { n: '5', s: '%', a: '€' }, 
+                { n: '6', s: '&', a: '¬' }, { n: '7', s: '/', a: '{' }, { n: '8', s: '(', a: '[' }, 
+                { n: '9', s: ')', a: ']' }, { n: '0', s: '=', a: '}' }, { n: "'", s: '?', a: '\\' }, 
+                { n: '¡', s: '¿', a: '' }, 
+                { n: 'Borrar ⌫', special: 'backspace', w: 1.5, color: 'bg-red-100 text-red-900 border-red-300' }
+            ],
+            [
+                { n: 'q' }, { n: 'w' }, { n: 'e', a: '€' }, { n: 'r' }, { n: 't' }, 
+                { n: 'y' }, { n: 'u' }, { n: 'i' }, { n: 'o' }, { n: 'p' }, 
+                { n: '`', s: '^', a: '[' }, { n: '+', s: '*', a: ']' },
+                { n: 'Intro ↵', special: 'enter', w: 1.8, color: 'bg-green-100 text-green-900 border-green-300' }
+            ],
+            [
+                { n: 'a' }, { n: 's' }, { n: 'd' }, { n: 'f' }, { n: 'g' }, 
+                { n: 'h' }, { n: 'j' }, { n: 'k' }, { n: 'l' }, { n: 'ñ' }, 
+                { n: '´', s: '¨', a: '{' }, { n: 'ç', s: 'Ç', a: '}' }
+            ],
+            [
+                { n: '<', s: '>' }, { n: 'z' }, { n: 'x' }, { n: 'c' }, { n: 'v' }, 
+                { n: 'b' }, { n: 'n' }, { n: 'm' }, { n: ',', s: ';' }, 
+                { n: '.', s: ':' }, { n: '-', s: '_' }
+            ],
+            [
+                { n: 'Espacio (separar palabras)', special: 'space', w: 10, color: 'bg-slate-200 text-slate-800 border-slate-300' }
+            ]
+        ];
+
+        // ELEMENTOS DEL DOM
+        const keyboardContainer = document.getElementById('keyboard');
+        const screen = document.getElementById('screen');
+        const btnCaps = document.getElementById('btn-caps');
+        const btnAlt = document.getElementById('btn-alt');
+        const btnClear = document.getElementById('btn-clear');
+        const capsLabel = document.getElementById('caps-label');
+        const altLabel = document.getElementById('alt-label');
+        
+        const keyButtons = []; // Guardar referencia a los botones creados
+
+        // FUNCIONES DE TEXTO
+        function insertText(text) {
+            const start = screen.selectionStart;
+            const end = screen.selectionEnd;
+            const val = screen.value;
+            screen.value = val.substring(0, start) + text + val.substring(end);
+            screen.selectionStart = screen.selectionEnd = start + text.length;
+            screen.focus();
+        }
+
+        function deleteText() {
+            const start = screen.selectionStart;
+            const end = screen.selectionEnd;
+            const val = screen.value;
+            if (start === end && start > 0) {
+                screen.value = val.substring(0, start - 1) + val.substring(end);
+                screen.selectionStart = screen.selectionEnd = start - 1;
+            } else {
+                screen.value = val.substring(0, start) + val.substring(end);
+                screen.selectionStart = screen.selectionEnd = start;
+            }
+            screen.focus();
+        }
+
+        // CALCULAR EL TEXTO VISIBLE DE CADA TECLA SEGÚN EL ESTADO
+        function getCurrentChar(keyObj) {
+            if (keyObj.special) return keyObj.n;
+
+            if (capsActive) {
+                if (keyObj.s) return keyObj.s;
+                return keyObj.n.toUpperCase();
+            }
+            
+            if (altActive) {
+                if (keyObj.a) return keyObj.a;
+                return keyObj.n; // Si no tiene símbolo alternativo, mostramos el normal
+            }
+
+            return keyObj.n;
+        }
+
+        // CONSTRUIR EL TECLADO
+        function buildKeyboard() {
+            keyboardContainer.innerHTML = '';
+            
+            layout.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'flex justify-center gap-2 md:gap-3 w-full';
+                
+                row.forEach(keyObj => {
+                    const btn = document.createElement('button');
+                    
+                    // Clases base para la tecla
+                    let baseClasses = 'key-btn flex items-center justify-center border-2 rounded-xl text-3xl font-bold p-4 select-none ';
+                    
+                    // Colores por defecto o especiales
+                    if (keyObj.color) {
+                        baseClasses += keyObj.color + ' key-btn-action';
+                    } else {
+                        baseClasses += 'bg-slate-50 text-slate-800 border-slate-300 hover:bg-white';
+                    }
+
+                    btn.className = baseClasses;
+                    
+                    // Ajustar el ancho de la tecla
+                    const widthFactor = keyObj.w || 1;
+                    if (widthFactor > 1) {
+                        btn.style.flex = widthFactor;
+                    } else {
+                        btn.style.width = '64px';
+                        btn.style.flexGrow = '1';
+                        btn.style.maxWidth = '80px';
+                    }
+
+                    btn.style.height = '85px'; // Teclas bien grandes
+
+                    // Guardar referencia para actualizar el texto después
+                    btn.keyData = keyObj;
+                    btn.innerText = getCurrentChar(keyObj);
+                    
+                    // Acción al pulsar la tecla
+                    btn.addEventListener('click', () => {
+                        if (keyObj.special === 'backspace') {
+                            deleteText();
+                        } else if (keyObj.special === 'enter') {
+                            insertText('\n');
+                        } else if (keyObj.special === 'space') {
+                            insertText(' ');
+                        } else {
+                            insertText(getCurrentChar(keyObj));
+                        }
+                    });
+
+                    rowDiv.appendChild(btn);
+                    keyButtons.push(btn);
+                });
+                
+                keyboardContainer.appendChild(rowDiv);
+            });
+        }
+
+        // ACTUALIZAR LOS TEXTOS DE LAS TECLAS (cuando cambian los modos)
+        function updateKeyboardDisplay() {
+            keyButtons.forEach(btn => {
+                btn.innerText = getCurrentChar(btn.keyData);
+                
+                // Efecto visual para teclas normales cuando no tienen función en AltGr
+                if (!btn.keyData.special && altActive && !btn.keyData.a) {
+                    btn.style.opacity = '0.3';
+                } else {
+                    btn.style.opacity = '1';
+                }
+            });
+        }
+
+        // GESTIÓN DE LOS BOTONES DE MODO
+        function toggleCaps() {
+            capsActive = !capsActive;
+            if (capsActive) altActive = false; // Desactivar el otro modo para no confundir
+            updateTogglesUI();
+            updateKeyboardDisplay();
+            screen.focus();
+        }
+
+        function toggleAlt() {
+            altActive = !altActive;
+            if (altActive) capsActive = false;
+            updateTogglesUI();
+            updateKeyboardDisplay();
+            screen.focus();
+        }
+
+        function updateTogglesUI() {
+            // Estilos botón Mayúsculas
+            if (capsActive) {
+                btnCaps.className = "toggle-btn active bg-blue-600 border-4 border-blue-700 text-white rounded-3xl p-6 text-3xl font-bold flex items-center justify-center gap-4";
+                capsLabel.innerText = "Mayúsculas ACTIVADAS";
+            } else {
+                btnCaps.className = "toggle-btn bg-slate-100 border-4 border-slate-300 text-slate-700 rounded-3xl p-6 text-3xl font-bold flex items-center justify-center gap-4 hover:bg-slate-200";
+                capsLabel.innerText = "Activar Mayúsculas";
+            }
+
+            // Estilos botón Símbolos
+            if (altActive) {
+                btnAlt.className = "toggle-btn active bg-purple-600 border-4 border-purple-700 text-white rounded-3xl p-6 text-3xl font-bold flex items-center justify-center gap-4";
+                altLabel.innerText = "Símbolos ACTIVADOS";
+            } else {
+                btnAlt.className = "toggle-btn bg-slate-100 border-4 border-slate-300 text-slate-700 rounded-3xl p-6 text-3xl font-bold flex items-center justify-center gap-4 hover:bg-slate-200";
+                altLabel.innerText = "Símbolos (@, €, #)";
+            }
+        }
+
+        // EVENTOS
+        btnCaps.addEventListener('click', toggleCaps);
+        btnAlt.addEventListener('click', toggleAlt);
+        
+        btnClear.addEventListener('click', () => {
+            screen.value = '';
+            screen.focus();
+        });
+
+        // INICIALIZACIÓN
+        buildKeyboard();
+        screen.focus();
+
+    </script>
+</body>
+</html>
