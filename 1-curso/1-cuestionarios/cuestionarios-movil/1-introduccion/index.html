@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Introducción al Uso del Teléfono Móvil</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+
+  .header { text-align: center; margin-bottom: 40px; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.8rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
+  }
+
+  .progress-wrap { margin-bottom: 30px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .q-type-badge {
+    display: inline-flex; font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+    background: rgba(33,115,70,0.2); color: #4ade80;
+  }
+
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px; color: var(--text);
+    font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 14px; transition: 0.2s;
+  }
+  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-btn:disabled { cursor: default; }
+  .option-letter {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+  }
+
+  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+
+  .feedback { display: none; margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 700; line-height: 1.5; animation: fadeIn 0.3s ease; }
+  .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-next {
+    display: none; width: 100%; max-width: 220px; margin: 0 0 0 auto;
+    padding: 14px; border-radius: 14px; border: none; font-weight: 800; font-family: inherit;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+
+  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; }
+  .score-circle {
+    width: 130px; height: 130px; border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 20px auto;
+    font-size: 1.9rem; font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
+  }
+  .score-circle small { font-family: 'Nunito'; font-size: 0.8rem; color: var(--sub); font-weight: 700; }
+  .hidden { display: none !important; }
+
+  .result-sub { color: var(--sub); font-weight: 700; margin-top: 8px; }
+  .btn-restart { margin-top: 30px; cursor: pointer; border: none; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">📱 Curso de Móvil</div>
+    <h1>Introducción al Uso del Teléfono Móvil</h1>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 10</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number">Cargando...</div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+
+  <div class="results" id="results">
+    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
+    <div class="score-circle" id="score-num">0/10</div>
+    <h2 id="result-msg"></h2>
+    <p class="result-sub" id="result-sub"></p>
+    <button class="badge btn-restart" onclick="restartQuiz()">🔄 Reiniciar Quiz</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    q: "¿Cuál es el objetivo principal de un teléfono móvil, según el curso?",
+    options: [
+      "Solo hacer llamadas y enviar mensajes.",
+      "Comunicarse, acceder a información, y usar diversas funciones.",
+      "Únicamente tomar fotos y navegar por internet."
+    ],
+    correct: 1,
+    expl: "Un teléfono móvil moderno sirve para mucho más que llamar: permite comunicarse, acceder a información y usar múltiples funciones."
+  },
+  {
+    q: "¿Qué botón usas para regresar a la pantalla anterior en tu teléfono?",
+    options: [
+      "El botón de Inicio (círculo o casa).",
+      "El botón de Volver (flecha hacia la izquierda).",
+      "El botón de Aplicaciones (cuadrado o líneas horizontales)."
+    ],
+    correct: 1,
+    expl: "El botón de Volver (flecha hacia la izquierda) te lleva a la pantalla anterior. El de Inicio va al inicio y el de Aplicaciones muestra las apps abiertas."
+  },
+  {
+    q: "Los ajustes rápidos te permiten activar o desactivar funciones sin entrar a los menús de configuración:",
+    options: ["Verdadero", "Falso"],
+    correct: 0,
+    type: "boolean",
+    expl: "Verdadero. Al deslizar desde la parte superior de la pantalla accedes a los ajustes rápidos (Wi-Fi, Bluetooth, linterna, etc.) sin entrar a los menús."
+  },
+  {
+    q: "Si quieres ahorrar batería en tu teléfono, ¿qué ajuste rápido deberías activar?",
+    options: ["Modo avión", "Wi-Fi", "Ahorro de batería"],
+    correct: 2,
+    expl: "El modo 'Ahorro de batería' reduce el consumo del dispositivo. El modo avión también ahorra, pero corta todas las conexiones."
+  },
+  {
+    q: "¿Qué debes hacer si quieres encender tu teléfono?",
+    options: [
+      "Presionar el botón de encendido/apagado una sola vez rápidamente.",
+      "Mantener presionado el botón de encendido/apagado por unos segundos.",
+      "Agitar el teléfono."
+    ],
+    correct: 1,
+    expl: "Para encender el teléfono hay que mantener presionado el botón de encendido/apagado durante unos segundos."
+  },
+  {
+    q: "¿Cuál de las siguientes opciones NO es un componente físico del teléfono mencionado en el curso?",
+    options: ["Pantalla", "Botones de control", "Teclado físico completo"],
+    correct: 2,
+    expl: "Los teléfonos táctiles actuales no llevan teclado físico completo: se usa un teclado en la pantalla."
+  },
+  {
+    q: "Verdadero o Falso: Para hacer una llamada, siempre debes ingresar el número manualmente usando el teclado:",
+    options: ["Verdadero", "Falso"],
+    correct: 1,
+    type: "boolean",
+    expl: "Falso. Puedes llamar desde tus contactos o desde el historial de llamadas sin escribir el número manualmente."
+  },
+  {
+    q: "Estás viendo una foto en tu teléfono y quieres verla más de cerca. ¿Qué gesto de la pantalla táctil debes usar?",
+    options: [
+      "Deslizar dos dedos hacia afuera (separarlos).",
+      "Deslizar dos dedos hacia adentro (juntarlos).",
+      "Tocar la pantalla dos veces rápidamente."
+    ],
+    correct: 0,
+    expl: "Separar dos dedos (pellizcar hacia afuera) acerca la imagen para verla más de cerca. Juntarlos la aleja."
+  },
+  {
+    q: "Recibes una llamada, pero no puedes atenderla en ese momento y quieres rechazarla. ¿Qué harías?",
+    options: [
+      "Deslizar el círculo blanco hacia la parte superior de la pantalla.",
+      "Presionar el botón de encendido/apagado.",
+      "Deslizar el círculo blanco hacia la parte inferior de la pantalla o presionar \"Descartar\"."
+    ],
+    correct: 2,
+    expl: "Para rechazar una llamada se desliza el círculo hacia abajo o se pulsa 'Descartar'. Deslizar hacia arriba sirve para contestar."
+  },
+  {
+    q: "Quieres escribir un mensaje de texto. ¿Qué debes hacer primero para que aparezca el teclado en la pantalla?",
+    options: [
+      "Tocar el botón de Inicio.",
+      "Tocar en el área de texto donde quieres escribir.",
+      "Reiniciar el teléfono."
+    ],
+    correct: 1,
+    expl: "Al tocar el área de texto, el teléfono detecta que quieres escribir y muestra el teclado en pantalla automáticamente."
+  }
+];
+
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+const TOTAL = questions.length;
+
+function loadQuestion() {
+  answered = false;
+  const qData = questions[currentIdx];
+
+  document.getElementById('q-type').textContent =
+    qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
+  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
+  document.getElementById('q-text').textContent = qData.q;
+  document.getElementById('btn-next').style.display = 'none';
+
+  const fb = document.getElementById('q-feedback');
+  fb.style.display = 'none';
+  fb.className = 'feedback';
+
+  const optionsDiv = document.getElementById('q-options');
+  optionsDiv.innerHTML = '';
+
+  qData.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(i);
+    optionsDiv.appendChild(btn);
+  });
+
+  const pct = (currentIdx / TOTAL) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
+  document.getElementById('btn-next').textContent =
+    currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
+}
+
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  const qData = questions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const fb = document.getElementById('q-feedback');
+
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === qData.correct) {
+    btns[idx].classList.add('correct');
+    score++;
+    fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${qData.expl}`;
+    fb.className = 'feedback correct-fb';
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[qData.correct].classList.add('correct');
+    fb.innerHTML = `<strong>💡 Nota:</strong><br>${qData.expl}`;
+    fb.className = 'feedback wrong-fb';
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  fb.style.display = 'block';
+  document.getElementById('btn-next').style.display = 'block';
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx < TOTAL) {
+    loadQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  document.getElementById('results').style.display = 'block';
+
+  const pct = Math.round((score / TOTAL) * 100);
+  document.getElementById('score-num').innerHTML = `${score}/${TOTAL}<small>${pct}%</small>`;
+
+  let emoji, msg, sub;
+  if (pct === 100)    { emoji = '🏆'; msg = '¡Perfecto! Dominas el tema';  sub = 'Respondiste todo correctamente.'; }
+  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';     sub = 'Solo te faltó un detalle.'; }
+  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';             sub = 'Vas por buen camino, repasa lo fallado.'; }
+  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';         sub = 'Vuelve a leer el material y reinténtalo.'; }
+  else                { emoji = '💪'; msg = '¡No te rindas!';             sub = 'Revisa el tema desde el principio.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-msg').textContent = msg;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('prog-fill').style.width = '100%';
+}
+
+function restartQuiz() {
+  currentIdx = 0;
+  score = 0;
+  answered = false;
+  document.getElementById('prog-score').textContent = '⭐ 0 pts';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-area').classList.remove('hidden');
+  loadQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.onload = loadQuestion;
+</script>
+</body>
+</html>
