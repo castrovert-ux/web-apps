@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Teclado – Curso de Ordenador</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+
+  .header { text-align: center; margin-bottom: 36px; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.8rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;
+  }
+
+  .progress-wrap { margin-bottom: 24px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  /* Pantalla de texto */
+  .screen {
+    background: #1a1a2e; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);
+    min-height: 72px; padding: 16px 20px; margin-bottom: 16px;
+    font-size: 1.35rem; font-weight: 700; color: #fff;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+    word-break: break-all; line-height: 1.6;
+    animation: fadeIn 0.3s ease;
+  }
+  .cursor {
+    display: inline-block; width: 3px; height: 1.4em;
+    background: var(--c3); animation: blink 1s step-end infinite; vertical-align: middle; flex-shrink: 0;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Instrucción */
+  .instr-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 20px 24px; margin-bottom: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+  .instr-tag {
+    display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 12px;
+    background: rgba(33,115,70,0.2); color: #4ade80;
+  }
+  .instr-text { font-size: 1.05rem; font-weight: 700; line-height: 1.55; }
+  .instr-text .hint { font-weight: 400; color: var(--sub); }
+
+  /* Feedback */
+  .feedback {
+    border-radius: 12px; padding: 13px 18px; font-weight: 700; font-size: 0.95rem;
+    line-height: 1.5; margin-bottom: 18px; transition: 0.3s; min-height: 50px;
+  }
+  .feedback.idle { background: rgba(255,255,255,0.04); color: var(--sub); border: 1px solid rgba(255,255,255,0.08); }
+  .feedback.ok   { background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
+  .feedback.err  { background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  /* Teclado */
+  .kbd-section { margin-bottom: 20px; }
+  .kbd-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
+
+  .key {
+    background: var(--card); border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 10px; color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 0.88rem; font-weight: 800; cursor: pointer;
+    transition: 0.15s; user-select: none; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px 12px; min-width: 54px; min-height: 54px; line-height: 1.2;
+  }
+  .key .key-sub { font-size: 0.62rem; color: var(--sub); font-weight: 600; margin-top: 3px; }
+  .key:hover:not(.locked) { background: rgba(33,115,70,0.25); border-color: var(--c1); transform: translateY(-2px); }
+  .key:active:not(.locked) { transform: scale(0.95); }
+  .key.locked { opacity: 0.3; cursor: default; pointer-events: none; }
+  .key.target {
+    border-color: var(--c3); box-shadow: 0 0 0 3px rgba(255,217,61,0.3);
+    animation: pulse-key 1.2s ease-in-out infinite;
+  }
+  .key.correct-flash { background: rgba(33,115,70,0.5); border-color: var(--c5); }
+  .key.wrong-flash   { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+  .key.wide    { min-width: 100px; }
+  .key.wider   { min-width: 130px; }
+  .key.widest  { min-width: 210px; }
+
+  @keyframes pulse-key {
+    0%,100% { box-shadow: 0 0 0 3px rgba(255,217,61,0.3); }
+    50%      { box-shadow: 0 0 0 7px rgba(255,217,61,0.12); }
+  }
+
+  /* Botón siguiente */
+  .btn-next {
+    display: none; margin: 0 0 0 auto; padding: 13px 30px;
+    border-radius: 14px; border: none; font-family: 'Nunito', sans-serif;
+    font-weight: 800; font-size: 1rem;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628;
+    cursor: pointer; transition: 0.2s;
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+
+  /* Resultados */
+  .results {
+    display: none; text-align: center; animation: fadeIn 0.4s ease;
+    background: var(--card); border-radius: 24px; padding: 40px 30px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .results .big { font-size: 4rem; margin-bottom: 12px; }
+  .results h2 {
+    font-family: 'Fredoka One', cursive; font-size: 1.8rem; margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--c1), var(--c3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .results p { color: var(--sub); font-weight: 700; margin-bottom: 6px; }
+  .keys-summary { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; }
+  .key-chip {
+    background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1);
+    border-radius: 100px; padding: 6px 16px; font-weight: 800; font-size: 0.85rem;
+  }
+  .btn-restart {
+    margin-top: 10px; padding: 14px 32px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, var(--c1), var(--c2)); color: #fff;
+    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1rem;
+    cursor: pointer; transition: 0.2s;
+  }
+  .btn-restart:hover { transform: translateY(-2px); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">⌨️ Curso de Ordenador</div>
+    <h1>Simulador de Teclado</h1>
+  </div>
+
+  <div id="sim-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Paso 1 de 7</span>
+        <span id="prog-pts">⭐ 0 / 7</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="instr-card">
+      <div class="instr-tag" id="instr-tag">🎯 Práctica</div>
+      <div class="instr-text" id="instr-text">Cargando…</div>
+    </div>
+
+    <div class="screen" id="screen"></div>
+    <div class="feedback idle" id="feedback">Pulsa la tecla que brilla en amarillo</div>
+
+    <div class="kbd-section" id="kbd-section"></div>
+
+    <div style="display:flex; justify-content:flex-end;">
+      <button class="btn-next" id="btn-next">Siguiente →</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="big">🏆</div>
+    <h2>¡Ejercicio completado!</h2>
+    <p>Has practicado las teclas especiales más importantes:</p>
+    <div class="keys-summary">
+      <span class="key-chip">Espacio</span>
+      <span class="key-chip">Tab (Tabulador)</span>
+      <span class="key-chip">Intro (Enter)</span>
+      <span class="key-chip">Retroceso ←</span>
+      <span class="key-chip">Supr (Delete)</span>
+    </div>
+    <p style="color:var(--sub); font-size:0.9rem;">¡Sigue practicando para recordarlas mejor!</p>
+    <button class="btn-restart" onclick="restart()">🔄 Repetir práctica</button>
+  </div>
+</div>
+
+<script>
+const steps = [
+  {
+    tag: '🔵 Barra espaciadora',
+    instr: 'La <strong>barra espaciadora</strong> (la barra larga de abajo) añade un espacio entre palabras.<br><span class="hint">Tienes escrito "Hola". Pulsa el <strong>Espacio</strong> para separar la siguiente palabra.</span>',
+    screenBefore: [{ t: 'Hola', col: '#fff' }],
+    screenAfter:  [{ t: 'Hola mundo', col: '#fff' }],
+    targetKey: 'space',
+    expl: '✅ ¡Perfecto! La barra espaciadora deja un espacio entre palabras.'
+  },
+  {
+    tag: '🔵 Tab – Tabulador',
+    instr: 'La tecla <strong>Tab</strong> (Tabulador) mueve el cursor varios espacios de golpe.<br><span class="hint">Es muy útil para sangrar texto o saltar entre campos de un formulario. Pulsa <strong>Tab</strong>.</span>',
+    screenBefore: [{ t: 'Nombre: María', col: '#fff' }, { t: '▌ (cursor aquí)', col: '#FFD93D' }],
+    screenAfter:  [{ t: 'Nombre: María', col: '#fff' }, { t: '        ← (sangría de Tab)', col: '#6BCB77' }],
+    targetKey: 'tab',
+    expl: '✅ ¡Correcto! Tab sangra el texto o salta al siguiente campo.'
+  },
+  {
+    tag: '🔵 Intro – Enter',
+    instr: 'La tecla <strong>Intro</strong> (Enter) baja el cursor a la línea siguiente.<br><span class="hint">Tienes "Nombre: María". Pulsa <strong>Intro</strong> para escribir en la línea de abajo.</span>',
+    screenBefore: [{ t: 'Nombre: María', col: '#fff' }],
+    screenAfter:  [{ t: 'Nombre: María', col: '#fff' }, { t: '↵ nueva línea', col: '#6BCB77' }],
+    targetKey: 'enter',
+    expl: '✅ ¡Muy bien! Intro baja el cursor a la siguiente línea.'
+  },
+  {
+    tag: '🔵 Retroceso (Backspace)',
+    instr: '<strong>Retroceso ←</strong> borra la letra que está a la <strong>izquierda</strong> del cursor.<br><span class="hint">Se ha colado una "z" de más al final. Pulsa <strong>Retroceso</strong> para quitarla.</span>',
+    screenBefore: [{ t: 'Casaz', col: '#fff' }, { t: '← z de más', col: '#FF6B6B' }],
+    screenAfter:  [{ t: 'Casa ✓', col: '#6BCB77' }],
+    targetKey: 'backspace',
+    expl: '✅ ¡Genial! Retroceso borra el carácter a la izquierda del cursor.'
+  },
+  {
+    tag: '🔵 Supr – Suprimir (Delete)',
+    instr: '<strong>Supr</strong> (Suprimir / Delete) borra la letra que está a la <strong>derecha</strong> del cursor.<br><span class="hint">El cursor está entre "Gato" y una "q" de más. Pulsa <strong>Supr</strong> para borrar la "q".</span>',
+    screenBefore: [{ t: 'Gato', col: '#fff' }, { t: '|', col: '#FFD93D' }, { t: 'q', col: '#FF6B6B' }, { t: ' ← sobra', col: '#FF6B6B' }],
+    screenAfter:  [{ t: 'Gato ✓', col: '#6BCB77' }],
+    targetKey: 'delete',
+    expl: '✅ ¡Exacto! Supr borra el carácter a la derecha del cursor.'
+  },
+  {
+    tag: '🔵 Repaso: Retroceso vs. Supr',
+    instr: '<strong>Diferencia clave:</strong> Retroceso borra a la izquierda, Supr borra a la derecha.<br><span class="hint">Hay un guión "_" sobrante al final de "Perro". Usa <strong>Retroceso</strong> para quitarlo.</span>',
+    screenBefore: [{ t: 'Perro_', col: '#fff' }, { t: ' ← guión de más', col: '#FF6B6B' }],
+    screenAfter:  [{ t: 'Perro ✓', col: '#6BCB77' }],
+    targetKey: 'backspace',
+    expl: '✅ ¡Correcto! Retroceso eliminó el "_" que estaba a la izquierda del cursor.'
+  },
+  {
+    tag: '🔵 Repaso general',
+    instr: '<strong>Último ejercicio:</strong> pon en práctica todo lo aprendido.<br><span class="hint">Falta un espacio entre "Buenos" y "días". Pulsa la <strong>barra espaciadora</strong>.</span>',
+    screenBefore: [{ t: 'Buenos', col: '#fff' }, { t: '|', col: '#FFD93D' }, { t: 'días', col: '#fff' }],
+    screenAfter:  [{ t: 'Buenos días ✓', col: '#6BCB77' }],
+    targetKey: 'space',
+    expl: '✅ ¡Enhorabuena! Dominas las teclas especiales del teclado.'
+  }
+];
+
+const keyDefs = [
+  { id: 'tab',       label: 'Tab',         sub: 'Tabulador',        row: 0, cls: 'wide' },
+  { id: 'q',         label: 'Q',           row: 0 },
+  { id: 'w',         label: 'W',           row: 0 },
+  { id: 'e',         label: 'E',           row: 0 },
+  { id: 'r',         label: 'R',           row: 0 },
+  { id: 't',         label: 'T',           row: 0 },
+  { id: 'a',         label: 'A',           row: 1 },
+  { id: 's',         label: 'S',           row: 1 },
+  { id: 'd',         label: 'D',           row: 1 },
+  { id: 'f',         label: 'F',           row: 1 },
+  { id: 'g',         label: 'G',           row: 1 },
+  { id: 'enter',     label: '↵ Intro',     sub: 'Enter',            row: 1, cls: 'wider' },
+  { id: 'backspace', label: '← Retroceso', sub: 'Backspace',        row: 2, cls: 'wider' },
+  { id: 'z',         label: 'Z',           row: 2 },
+  { id: 'x',         label: 'X',           row: 2 },
+  { id: 'c',         label: 'C',           row: 2 },
+  { id: 'delete',    label: 'Supr',        sub: 'Delete',           row: 2, cls: 'wide' },
+  { id: 'space',     label: '█  Espacio  █', sub: 'Barra espaciadora', row: 3, cls: 'widest' },
+];
+
+let stepIdx = 0;
+let correct = 0;
+let answered = false;
+
+function renderScreen(parts) {
+  const sc = document.getElementById('screen');
+  sc.innerHTML = parts.map(p => `<span style="color:${p.col}">${p.t}</span>`).join('') + '<span class="cursor"></span>';
+}
+
+function buildKbd(targetKey) {
+  const sec = document.getElementById('kbd-section');
+  sec.innerHTML = '';
+  [0, 1, 2, 3].forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'kbd-row';
+    keyDefs.filter(k => k.row === r).forEach(k => {
+      const btn = document.createElement('button');
+      const isTarget = k.id === targetKey;
+      btn.className = 'key' + (k.cls ? ' ' + k.cls : '') + (isTarget ? ' target' : ' locked');
+      btn.id = 'key-' + k.id;
+      btn.innerHTML = k.label + (k.sub ? `<span class="key-sub">${k.sub}</span>` : '');
+      btn.setAttribute('aria-label', k.sub || k.label);
+      btn.onclick = () => handleKey(k.id);
+      row.appendChild(btn);
+    });
+    sec.appendChild(row);
+  });
+}
+
+function handleKey(keyId) {
+  if (answered) return;
+  const step = steps[stepIdx];
+  const fb = document.getElementById('feedback');
+  const btn = document.getElementById('key-' + keyId);
+
+  if (keyId !== step.targetKey) {
+    if (btn) { btn.classList.add('wrong-flash'); setTimeout(() => btn && btn.classList.remove('wrong-flash'), 400); }
+    fb.className = 'feedback err';
+    fb.textContent = '❌ Esa no es la tecla correcta. Fíjate en la que brilla en amarillo.';
+    return;
+  }
+
+  answered = true;
+  correct++;
+  const target = document.getElementById('key-' + step.targetKey);
+  if (target) { target.classList.remove('target'); target.classList.add('correct-flash'); }
+  document.querySelectorAll('.key').forEach(b => b.classList.add('locked'));
+
+  renderScreen(step.screenAfter);
+  fb.className = 'feedback ok';
+  fb.innerHTML = step.expl;
+  document.getElementById('prog-pts').textContent = '⭐ ' + correct + ' / ' + steps.length;
+  document.getElementById('btn-next').style.display = 'block';
+}
+
+function loadStep() {
+  answered = false;
+  const step = steps[stepIdx];
+  const pct = (stepIdx / steps.length) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = 'Paso ' + (stepIdx + 1) + ' de ' + steps.length;
+  document.getElementById('instr-tag').textContent = step.tag;
+  document.getElementById('instr-text').innerHTML = step.instr;
+  document.getElementById('feedback').className = 'feedback idle';
+  document.getElementById('feedback').textContent = 'Pulsa la tecla que brilla en amarillo';
+  document.getElementById('btn-next').style.display = 'none';
+  renderScreen(step.screenBefore);
+  buildKbd(step.targetKey);
+}
+
+document.getElementById('btn-next').onclick = function () {
+  stepIdx++;
+  if (stepIdx >= steps.length) {
+    document.getElementById('prog-fill').style.width = '100%';
+    document.getElementById('sim-area').classList.add('hidden');
+    document.getElementById('results').style.display = 'block';
+  } else {
+    loadStep();
+  }
+};
+
+function restart() {
+  stepIdx = 0; correct = 0;
+  document.getElementById('prog-pts').textContent = '⭐ 0 / ' + steps.length;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('sim-area').classList.remove('hidden');
+  loadStep();
+}
+
+window.onload = loadStep;
+</script>
+</body>
+</html>
