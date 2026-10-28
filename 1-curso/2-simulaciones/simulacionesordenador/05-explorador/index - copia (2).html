@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descubre las partes del Explorador de Archivos</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --win:#f3f5f8; --win-ink:#1b2433;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c4); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.94) translateY(16px);} to{opacity:1; transform:none;} }
+
+  .container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:22px 24px 30px; }
+
+  /* Cabecera */
+  .top { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+  .badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.1; background:linear-gradient(135deg,var(--c6),var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+  .mode:hover { color:var(--text); }
+
+  .prog { display:flex; align-items:center; gap:14px; margin-bottom:16px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+
+  .layout { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(320px,1fr); gap:22px; align-items:start; }
+
+  /* ---------- Ventana simulada ---------- */
+  .win { background:var(--win); color:var(--win-ink); border-radius:14px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.12); font-size:clamp(.78rem,1.15vw,1rem); user-select:none; -webkit-user-select:none; }
+  .titlebar { display:flex; align-items:center; background:#e3e8ef; height:2.6em; padding-left:.8em; gap:.6em; font-weight:700; }
+  .tab { background:#fff; padding:.35em 1em; border-radius:8px 8px 0 0; margin-top:.5em; align-self:flex-end; height:2.1em; display:flex; align-items:center; gap:.5em; }
+  .tab-plus { font-size:1.2em; color:#6b7587; }
+  .ctrls { margin-left:auto; display:flex; height:100%; }
+  .ctrls span { width:3.4em; display:grid; place-items:center; font-weight:400; color:#445; }
+
+  .part { position:relative; cursor:pointer; transition:box-shadow .25s, filter .25s, opacity .25s; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .25s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 14%, transparent); }
+  .pin { position:absolute; z-index:5; top:6px; left:6px; width:2.1em; height:2.1em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:1.05em; box-shadow:0 2px 8px rgba(0,0,0,.35); animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found .pin { animation:none; }
+  .part.sel { z-index:3; box-shadow:0 0 0 4px var(--pc), 0 0 28px color-mix(in srgb,var(--pc) 70%, transparent); }
+  .win.focus .part:not(.sel) { filter:saturate(.4) brightness(.78); }
+  .part.ok { box-shadow:0 0 0 4px var(--c1), 0 0 28px rgba(37,211,102,.7); z-index:3; }
+  .part.bad { animation:shake .45s; box-shadow:0 0 0 4px var(--c4); z-index:3; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-7px);} 75%{transform:translateX(7px);} }
+  .mode-practica .pin { display:none; }
+
+  /* Barra de herramientas */
+  #p-tools { --pc:var(--c8); display:flex; align-items:center; gap:.2em; padding:.55em .9em .55em 3em; background:#fff; border-bottom:1px solid #dde2e8; flex-wrap:wrap; }
+  .tb { display:flex; align-items:center; gap:.4em; padding:.35em .7em; border-radius:7px; font-weight:700; white-space:nowrap; }
+  .tb.new { background:#eef3fb; }
+  .sep { width:1px; height:1.6em; background:#cfd6de; margin:0 .4em; }
+
+  /* Direcciones + búsqueda */
+  .addr-row { display:flex; gap:.7em; padding:.5em .8em; background:#f3f5f8; border-bottom:1px solid #dde2e8; }
+  #p-addr { --pc:var(--c6); flex:1; display:flex; align-items:center; gap:.7em; background:#fff; border:1px solid #cfd6de; border-radius:8px; padding:.45em .8em .45em 3em; font-weight:700; min-width:0; }
+  .arrows { color:#6b7587; letter-spacing:.35em; font-size:1.1em; }
+  .crumb { white-space:nowrap; }
+  .crumb:hover { background:#e6ecf4; border-radius:5px; }
+  .chev { color:#8a96a8; }
+  #p-search { --pc:var(--c7); width:26%; min-width:9em; display:flex; align-items:center; gap:.5em; background:#fff; border:1px solid #cfd6de; border-radius:8px; padding:.45em .8em .45em 3em; color:#7b8798; font-weight:600; }
+
+  /* Cuerpo */
+  .body { display:grid; grid-template-columns:22% 1fr 26%; height:clamp(300px,32vw,470px); background:#fff; }
+  #p-nav { --pc:var(--c1); background:#f3f5f8; border-right:1px solid #dde2e8; padding:3em .6em .6em; font-weight:700; overflow:hidden; }
+  #p-nav .it { padding:.5em .6em; border-radius:6px; display:flex; gap:.55em; align-items:center; }
+  #p-nav .it.act { background:#dbe7f7; }
+  #p-nav .it.sub { padding-left:1.8em; font-weight:600; color:#445; }
+  #p-folder { --pc:var(--c4); padding:3em 1em 1em; display:grid; grid-template-columns:repeat(auto-fill,minmax(5.2em,1fr)); gap:.4em; align-content:start; overflow:hidden; }
+  .fi { text-align:center; font-weight:700; font-size:.88em; padding:.5em .2em; border-radius:8px; }
+  .fi .ic { font-size:2.3em; line-height:1.1; }
+  .fi.on { background:#dbe7f7; }
+  #p-prev { --pc:var(--c3); border-left:1px solid #dde2e8; background:#fafbfc; padding:3em .9em .9em; text-align:center; overflow:hidden; }
+  .pic { height:42%; min-height:5em; border-radius:10px; background:linear-gradient(135deg,#6bb6ff,#25D366 70%,#FFD93D); display:grid; place-items:center; font-size:2.6em; margin-bottom:.7em; }
+  .pv-name { font-weight:800; }
+  .pv-sub { color:#6b7587; font-weight:600; font-size:.88em; }
+
+  /* ---------- Panel de información ---------- */
+  .side { position:sticky; top:14px; }
+  .info { background:var(--card); border:1px solid rgba(255,255,255,.07); border-left:8px solid var(--ic,var(--c6)); border-radius:24px; padding:26px 28px; min-height:360px; animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both; transition:border-color .3s; }
+  .info-num { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:50%; background:var(--ic,var(--c6)); color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .info h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,2.6vw,2.3rem); line-height:1.15; margin-bottom:12px; color:var(--ic,var(--c6)); }
+  .info p { font-size:clamp(1.05rem,1.5vw,1.35rem); font-weight:600; line-height:1.5; margin-bottom:14px; }
+  .info b { color:var(--c3); font-weight:800; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { background:rgba(255,255,255,.07); border-radius:100px; padding:6px 14px; font-weight:800; font-size:clamp(.95rem,1.3vw,1.15rem); }
+  .tip { background:rgba(255,217,61,.09); border-radius:14px; padding:12px 16px; color:var(--sub); font-weight:700; font-size:clamp(.95rem,1.3vw,1.15rem); }
+  .tip b { color:var(--c3); }
+  .hello { text-align:center; padding-top:30px; }
+  .hello .big { font-size:3.4rem; margin-bottom:8px; }
+  .hello h2 { color:var(--text); }
+
+  .quiz-q { font-family:'Fredoka One',cursive; font-size:clamp(1.5rem,2.6vw,2.2rem); line-height:1.2; margin-bottom:14px; }
+  .quiz-q span { color:var(--c3); }
+  .feedback { font-size:1.3rem; font-weight:800; min-height:2em; margin:6px 0 12px; }
+  .feedback.good { color:var(--c1); } .feedback.no { color:var(--c4); }
+  .btn { padding:12px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; transition:all .2s; }
+  .btn:hover { transform:scale(1.04); border-color:var(--c6); }
+  .btn.go { background:rgba(37,211,102,.18); border-color:var(--c1); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-12px) rotate(5deg);} }
+
+  .foot { text-align:center; margin-top:18px; }
+  .btn-reset { padding:10px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; cursor:pointer; }
+  .btn-reset:hover { color:var(--text); border-color:var(--c4); }
+
+  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .side { position:static; } .info { min-height:0; } .modes { margin-left:0; } }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">📁 Ordenador</span>
+    <h1>Descubre las partes del Explorador</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+
+  <div class="prog">
+    <span id="prog-txt">⭐ 0 de 6 partes descubiertas</span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div class="layout">
+    <!-- Ventana simulada -->
+    <div class="win" id="win">
+      <div class="titlebar">
+        <div class="tab">📁 Documentos <span style="color:#6b7587">✕</span></div>
+        <span class="tab-plus">＋</span>
+        <div class="ctrls"><span>—</span><span>☐</span><span>✕</span></div>
+      </div>
+
+      <div class="part" id="p-tools" data-part="tools">
+        <span class="pin">?</span>
+        <span class="tb new">➕ Nuevo ▾</span><span class="sep"></span>
+        <span class="tb">✂️</span><span class="tb">📄 Copiar</span><span class="tb">📋 Pegar</span><span class="tb">✏️</span><span class="tb">🗑️</span><span class="sep"></span>
+        <span class="tb">↕️ Ordenar</span><span class="tb">☰ Ver ▾</span><span class="tb">⋯</span>
+      </div>
+
+      <div class="addr-row">
+        <div class="part" id="p-addr" data-part="addr">
+          <span class="pin">?</span>
+          <span class="arrows">← → ↑</span>
+          <span class="crumb">💻 Este equipo</span><span class="chev">›</span><span class="crumb">Documentos</span><span class="chev">›</span><span class="crumb">Mis cosas</span>
+        </div>
+        <div class="part" id="p-search" data-part="search">
+          <span class="pin">?</span>🔍 Buscar
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="part" id="p-nav" data-part="nav">
+          <span class="pin">?</span>
+          <div class="it">⭐ Favoritos</div>
+          <div class="it">🖥️ Escritorio</div>
+          <div class="it">⬇️ Descargas</div>
+          <div class="it act">📄 Documentos</div>
+          <div class="it">💻 Este equipo</div>
+          <div class="it sub">💾 Disco local (C:)</div>
+          <div class="it">🌐 Red</div>
+        </div>
+        <div class="part" id="p-folder" data-part="folder">
+          <span class="pin">?</span>
+          <div class="fi"><div class="ic">📁</div>Fotos</div>
+          <div class="fi"><div class="ic">📁</div>Cartas</div>
+          <div class="fi on"><div class="ic">📁</div>Recetas</div>
+          <div class="fi"><div class="ic">📄</div>Lista</div>
+          <div class="fi"><div class="ic">🖼️</div>Playa</div>
+          <div class="fi"><div class="ic">📊</div>Gastos</div>
+        </div>
+        <div class="part" id="p-prev" data-part="prev">
+          <span class="pin">?</span>
+          <div class="pic">🏖️</div>
+          <div class="pv-name">Playa.jpg</div>
+          <div class="pv-sub">Imagen · 2,4 MB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel lateral -->
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+const PARTES = {
+  tools:  {n:1, nombre:"Barra de herramientas", color:"--c8", sitio:"Arriba del todo, encima de la barra de direcciones.",
+    texto:"Contiene los <b>botones para las acciones más comunes</b> con tus archivos y carpetas.",
+    chips:["➕ Nuevo","✂️ Cortar","📄 Copiar","📋 Pegar","🗑️ Eliminar","☰ Ver"],
+    tip:"<b>Prueba:</b> pulsa <b>Nuevo</b> para crear una carpeta."},
+  addr:   {n:2, nombre:"Barra de direcciones", color:"--c6", sitio:"Debajo de la barra de herramientas.",
+    texto:"Muestra la <b>ruta</b>: el camino de carpetas donde estás ahora. Puedes hacer clic en cualquier parte de la ruta para <b>volver rápidamente</b> a una carpeta anterior.",
+    chips:["← Atrás","→ Adelante","↑ Subir"],
+    tip:"<b>Prueba:</b> haz clic en <b>Este equipo</b> dentro de la ruta."},
+  search: {n:3, nombre:"Barra de búsqueda", color:"--c7", sitio:"Arriba a la derecha.",
+    texto:"Escribe aquí el <b>nombre del archivo o carpeta</b> que buscas y Windows te mostrará los que coincidan.",
+    chips:["🔍 Escribir nombre","📋 Ver resultados"],
+    tip:"<b>Prueba:</b> escribe <b>Recetas</b> y mira qué aparece."},
+  nav:    {n:4, nombre:"Barra de navegación", color:"--c1", sitio:"A la izquierda de la ventana.",
+    texto:"Te lleva a las <b>ubicaciones principales</b> de tu ordenador con un solo clic.",
+    chips:["🖥️ Escritorio","💻 Este equipo","🌐 Red"],
+    tip:"<b>Escritorio:</b> lo que ves al encender. <b>Este equipo:</b> discos y unidades. <b>Red:</b> otros equipos conectados."},
+  folder: {n:5, nombre:"Panel de carpeta", color:"--c4", sitio:"En el centro, la parte más grande.",
+    texto:"Muestra el <b>contenido de la carpeta</b> que has elegido: sus carpetas y archivos.",
+    chips:["📁 Carpetas","📄 Archivos"],
+    tip:"<b>Prueba:</b> haz <b>doble clic</b> en una carpeta para abrirla."},
+  prev:   {n:6, nombre:"Panel de vista previa", color:"--c3", sitio:"A la derecha, si está activado.",
+    texto:"Te enseña <b>cómo es el archivo seleccionado</b> (una foto o un documento) sin necesidad de abrirlo.",
+    chips:["🖼️ Imágenes","📄 Documentos"],
+    tip:"Se activa o desactiva en <b>Ver → Mostrar → Panel de vista previa</b>."}
+};
+const ORDEN = Object.keys(PARTES);
+const KEY = "partes-explorador-2026";
+let modo = "desc", sel = null, found = {}, pregunta = null, aciertos = 0, hechas = [];
+
+try { const g = JSON.parse(localStorage.getItem(KEY)); if (g && g.found) found = g.found; } catch(e){}
+const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify({found})); } catch(e){} };
+
+const $ = id => document.getElementById(id);
+const root = $("root"), win = $("win"), info = $("info");
+const el = k => document.querySelector('[data-part="'+k+'"]');
+ORDEN.forEach(k => el(k).style.setProperty("--pc", "var(" + PARTES[k].color + ")"));
+
+function pintarPins(){
+  ORDEN.forEach(k => {
+    const p = el(k), pin = p.querySelector(".pin");
+    const f = !!found[k];
+    p.classList.toggle("found", f);
+    pin.textContent = f ? PARTES[k].n : "?";
+  });
+  const n = Object.keys(found).length;
+  $("prog-fill").style.width = (n/6*100) + "%";
+  $("prog-txt").textContent = modo === "desc" ? "⭐ " + n + " de 6 partes descubiertas" : "🎯 " + aciertos + " de 6 aciertos";
+  if (modo === "prac") $("prog-fill").style.width = (aciertos/6*100) + "%";
+}
+
+function limpiar(){
+  document.querySelectorAll(".part").forEach(p => p.classList.remove("sel","ok","bad"));
+  win.classList.remove("focus");
+}
+
+/* ---------- Modo descubrir ---------- */
+function bienvenida(){
+  limpiar(); sel = null;
+  info.style.setProperty("--ic","var(--c6)");
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte de la ventana</h2><p>Hay <b>6 partes</b> con un <b>?</b>. Vamos a descubrirlas juntos.</p></div>';
+  restart(info);
+}
+function restart(e){ e.style.animation="none"; e.offsetHeight; e.style.animation=""; }
+
+function mostrar(k){
+  const d = PARTES[k];
+  limpiar(); sel = k;
+  el(k).classList.add("sel"); win.classList.add("focus");
+  found[k] = true; guardar(); pintarPins();
+  info.style.setProperty("--ic","var("+d.color+")");
+  info.innerHTML =
+    '<div class="info-num">'+d.n+'</div><h2>'+d.nombre+'</h2>' +
+    '<p>'+d.texto+'</p>' +
+    '<p style="color:var(--sub);font-size:1.05rem">📍 '+d.sitio+'</p>' +
+    '<div class="chips">'+d.chips.map(c=>'<span class="chip">'+c+'</span>').join("")+'</div>' +
+    '<div class="tip">'+d.tip+'</div>';
+  restart(info);
+  if (Object.keys(found).length === 6 && !info.dataset.fin) {
+    info.dataset.fin = "1";
+    info.insertAdjacentHTML("beforeend",'<div class="row"><button class="btn go" id="to-prac" type="button">🎯 ¡Ahora a practicar!</button></div>');
+    $("to-prac").onclick = () => setModo("prac");
+  }
+}
+
+/* ---------- Modo practicar ---------- */
+function nueva(){
+  limpiar();
+  const quedan = ORDEN.filter(k => !hechas.includes(k));
+  if (!quedan.length) return final();
+  pregunta = quedan[Math.floor(Math.random()*quedan.length)];
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="info-num">🎯</div><div class="quiz-q">Toca la<br><span>'+PARTES[pregunta].nombre+'</span></div><div class="feedback" id="fb"></div>';
+  restart(info);
+  pintarPins();
+}
+function responder(k){
+  if (!pregunta) return;
+  const fb = $("fb");
+  if (k === pregunta){
+    limpiar(); el(k).classList.add("ok");
+    hechas.push(k); aciertos++; pregunta = null; pintarPins();
+    fb.className = "feedback good"; fb.textContent = "✅ ¡Correcto! " + PARTES[k].nombre;
+    info.insertAdjacentHTML("beforeend",'<p style="color:var(--sub)">'+PARTES[k].texto+'</p><div class="row"><button class="btn go" id="sig" type="button">'+(hechas.length===6?"🏆 Terminar":"Siguiente ➜")+'</button></div>');
+    $("sig").onclick = nueva;
+  } else {
+    const p = el(k); p.classList.remove("bad"); p.offsetHeight; p.classList.add("bad");
+    setTimeout(()=>p.classList.remove("bad"),900);
+    fb.className = "feedback no"; fb.textContent = "❌ Eso es la " + PARTES[k].nombre.toLowerCase() + ". ¡Inténtalo otra vez!";
+  }
+}
+function final(){
+  limpiar();
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Ya conoces las <b>6 partes</b> del Explorador de Archivos.</p><div class="row" style="justify-content:center"><button class="btn go" id="otra" type="button">🔄 Practicar otra vez</button></div></div>';
+  restart(info);
+  $("otra").onclick = () => { hechas=[]; aciertos=0; nueva(); };
+}
+
+/* ---------- Cambio de modo ---------- */
+function setModo(m){
+  modo = m;
+  $("m-desc").classList.toggle("on", m==="desc");
+  $("m-prac").classList.toggle("on", m==="prac");
+  root.classList.toggle("mode-practica", m==="prac");
+  pregunta = null;
+  if (m==="desc"){ pintarPins(); bienvenida(); }
+  else { hechas=[]; aciertos=0; nueva(); }
+}
+
+document.querySelectorAll(".part").forEach(p => p.addEventListener("click", e => {
+  e.stopPropagation();
+  const k = p.dataset.part;
+  modo==="desc" ? mostrar(k) : responder(k);
+}));
+$("m-desc").onclick = () => setModo("desc");
+$("m-prac").onclick = () => setModo("prac");
+$("reset").onclick = () => { found = {}; delete info.dataset.fin; guardar(); setModo("desc"); };
+
+setModo("desc");
+</script>
+</body>
+</html>
