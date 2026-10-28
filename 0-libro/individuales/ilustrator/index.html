@@ -4,14 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Generador de prompts · Imágenes del libro</title>
-<link rel="icon" type="image/x-icon" href="favicon.ico?v=2">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-   <link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-1.png?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-2.png?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2">
-  <link rel="manifest" href="manifest.json?v=2">
-  <meta name="theme-color" content="#0f0c29">
+<link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-1.png?v=2">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-2.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2">
+<link rel="manifest" href="manifest.json?v=2">
+<meta name="theme-color" content="#0f0c29">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
@@ -548,6 +546,7 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
+
   /* === MODAL DE CLAVES === */
   .ia-modal-overlay {
     position: fixed; inset: 0;
@@ -565,6 +564,8 @@
     max-width: 480px;
     width: 100%;
     box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    max-height: 90vh;
+    overflow-y: auto;
   }
   .ia-modal h3 {
     font-family: 'Playfair Display', serif;
@@ -596,7 +597,7 @@
     border-color: #B89A5A;
     box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
   }
-  .ia-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .ia-modal-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
   .btn-modal-save {
     font-family: 'EB Garamond', serif;
     font-size: 14px;
@@ -620,7 +621,6 @@
     cursor: pointer;
   }
   .btn-modal-cancel:hover { border-color: #aaa; color: #555; }
-  .ia-modal { max-height: 90vh; overflow-y: auto; }
   .keyrow { display: grid; grid-template-columns: 95px 1fr; gap: 2px 10px; align-items: center; margin-bottom: 10px; }
   .keyrow label { font-size: 14px; color: #6a6258; }
   .keyrow .ia-modal-input { margin-bottom: 0; }
@@ -639,7 +639,6 @@
   .btn-ia-small:hover { border-color: #B89A5A; color: #B89A5A; }
   .ia-status { font-size: 12.5px; font-style: italic; margin-top: 6px; min-height: 0; }
   .ia-status.ok { color: #7a9a60; } .ia-status.err { color: #c0603a; }
-
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -673,7 +672,7 @@
     </button>
   </div>
 
-  <!-- NUEVO: Descripción asistida por IA -->
+  <!-- Descripción asistida por IA -->
   <div class="ai-assist-block" id="aiAssistBlock">
     <div class="ai-assist-header">
       <div class="section-label" style="margin-bottom:0;">Descripción rápida en español <span class="ai-badge">✦ IA</span></div>
@@ -782,14 +781,85 @@
 
 </div>
 
-<script>
+<!-- ══ MODAL DE CLAVES API ══ -->
+<div id="keysModal" class="ia-modal-overlay" style="display:none;">
+  <div class="ia-modal">
+    <h3>Configuración de Claves API</h3>
+    <p>Las claves se guardan localmente en tu navegador (<code>localStorage</code>) y se comparten automáticamente entre tus aplicaciones.</p>
+    
+    <div class="keyrow">
+      <label for="key-aistudio">AI Studio</label>
+      <input type="password" id="key-aistudio" class="ia-modal-input" placeholder="AIzaSy...">
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Obtener clave Google AI Studio</a>
+    </div>
 
+    <div class="keyrow">
+      <label for="key-groq">Groq</label>
+      <input type="password" id="key-groq" class="ia-modal-input" placeholder="gsk_...">
+      <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Obtener clave Groq</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-mistral">Mistral</label>
+      <input type="password" id="key-mistral" class="ia-modal-input" placeholder="...">
+      <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener">Obtener clave Mistral</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-openrouter">OpenRouter</label>
+      <input type="password" id="key-openrouter" class="ia-modal-input" placeholder="sk-or-v1-...">
+      <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Obtener clave OpenRouter</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-deepseek">DeepSeek</label>
+      <input type="password" id="key-deepseek" class="ia-modal-input" placeholder="sk-...">
+      <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Obtener clave DeepSeek</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-anthropic">Anthropic</label>
+      <input type="password" id="key-anthropic" class="ia-modal-input" placeholder="sk-ant-...">
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Obtener clave Anthropic</a>
+    </div>
+
+    <div class="ia-modal-actions" style="margin-top:16px;">
+      <label class="left">
+        <input type="checkbox" id="showKeysCheck" onchange="toggleShowKeys(this.checked)"> Mostrar claves
+      </label>
+      <button class="btn-modal-cancel" onclick="closeKeys()">Cancelar</button>
+      <button class="btn-modal-save" onclick="saveKeys()">Guardar claves</button>
+    </div>
+  </div>
+</div>
+
+<script>
   const ESTILO_BASE = `Oil painting in the 19th-century Romantic historicist tradition of Jean-Léon Gérôme and Lawrence Alma-Tadema. Strict historical accuracy in architecture, costume and objects. Balanced academic composition with clear narrative focus. Precise smooth brushwork with photographic detail in stone textures, fabrics and metals. Rich palette of ochres, siennas, deep blues and luminous whites. No fantasy elements. No modern anachronisms. Warm golden midday light, sun from a high angle, rich ochre and amber tones bathing the scene, deep but soft shadows. Wide establishing view, full scene visible, figures set within their architectural and landscape context, sense of place and scale. Mood: epic and monumental, historic narrative significance, dignified stillness, weight of tradition.`;
 
   const ANCHORING_CASTELLANO = `GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a scene set in Castile, Spain (the Cerrato Vallisoletano region). All visual elements must reflect the specific material culture of Castilian Spain for the depicted period. Clothing must follow Castilian and broader Iberian dress conventions — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, monastic habits of Castilian orders, military dress of Castilian nobles or frontier soldiers as appropriate. No English, French, Flemish or Northern European dress. No Anglo-Saxon, Tudor, Victorian or American colonial aesthetic in any detail. Architecture must be Romanesque, Mozarabic, Gothic or Mudéjar as appropriate to the period — stone construction typical of the Castilian meseta. Landscape when visible must suggest the dry plateau of the Castilian interior: ochre earth, limestone outcrops, holm oak, sparse scrubland. Faces and physical types should reflect the Mediterranean and Iberian world. No Northern European physiognomy.`;
 
   const STORAGE_KEY = 'prompt_historial_v3';
 
+  /* === AUXILIARES Y DUMMY SYNC === */
+  function closeSyncStatus() {
+    const el = document.getElementById('sync-status');
+    if (el) el.style.display = 'none';
+  }
+  function handleSync() {
+    const statusMsg = document.getElementById('sync-status-msg');
+    const statusEl = document.getElementById('sync-status');
+    if (statusEl && statusMsg) {
+      statusEl.style.display = 'flex';
+      statusMsg.textContent = 'Sincronización no configurada en este entorno.';
+    }
+  }
+  function fbSignOut() {
+    if (window.firebase && firebase.auth) {
+      firebase.auth().signOut().catch(console.error);
+    }
+  }
+
+  /* === HISTORIAL === */
   function loadHistorial() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
     catch(e) { return []; }
@@ -799,8 +869,10 @@
 
   function updateCount() {
     const n = loadHistorial().length;
-    document.getElementById('histCount').textContent = n;
-    document.getElementById('historialCount').textContent = n + (n === 1 ? ' entrada' : ' entradas');
+    const hCount = document.getElementById('histCount');
+    const hTotal = document.getElementById('historialCount');
+    if (hCount) hCount.textContent = n;
+    if (hTotal) hTotal.textContent = n + (n === 1 ? ' entrada' : ' entradas');
   }
 
   function formatDate(iso) {
@@ -810,7 +882,7 @@
   }
 
   function esc(str) {
-    return String(str)
+    return String(str || '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
@@ -826,8 +898,12 @@
     }
 
     const prompt =
-      scene + '\n\n' +
-      ESTILO_BASE + '\n\n' +
+      scene + '
+
+' +
+      ESTILO_BASE + '
+
+' +
       ANCHORING_CASTELLANO;
 
     document.getElementById('outputText').textContent = prompt;
@@ -998,11 +1074,33 @@
     if (lugar)      contextLines.push('Specific location: ' + lugar);
     if (personajes) contextLines.push('Main characters: ' + personajes);
     if (elementos)  contextLines.push('Key elements/objects: ' + elementos);
-    const context = contextLines.length ? '\n\nAdditional context provided by the author:\n' + contextLines.join('\n') : '';
+    const context = contextLines.length ? '
 
-    const systemPrompt = 'You are an expert art director specializing in 19th-century Romantic historicist illustration, working on a Spanish local history book about the Cerrato Vallisoletano region (Castile, Spain). Your task is to take a brief scene description written in Spanish (such as royal arrivals, open council meetings, signing of lordship documents, French troop looting during the Independence War, or land auctions during the Desamortización) and expand it into a rich, detailed scene description in English, suitable as the scene-setting portion of an image generation prompt for a painting in the style of Gerôme and Alma-Tadema.\n\nCRITICAL GEOGRAPHIC AND CULTURAL CONSTRAINT: Every scene takes place in Castile, Spain. All details you describe must reflect the specific material culture of Castilian Iberian Spain for the period given. This means:\n- Clothing: Castilian and Iberian dress only — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, Castilian monastic habits, frontier soldiers in Castilian military dress. NEVER describe English, French, Flemish, Tudor, Victorian, Anglo-Saxon or American colonial clothing.\n- Architecture: Romanesque, Mozarabic, Gothic or Mudéjar as appropriate — stone construction of the Castilian meseta. NO half-timbered English buildings, NO Norman French castles, NO Northern European church styles.\n- Landscape: the dry Castilian interior plateau — ochre earth, limestone outcrops, holm oak, sparse scrubland, wide skies. NOT green English countryside, NOT Northern European forests.\n- Faces and physical types: Mediterranean and Iberian — NOT Northern European physiognomy.\n- Objects and tools: consistent with Iberian craft traditions of the period.\n\nRULES:\n- Write ONLY in English.\n- Output ONLY the expanded scene description — no preamble, no commentary, no title.\n- Be specific about: architectural details (Romanesque, Mozarabic, Gothic as appropriate to the period), clothing and materials consistent with Castilian Spain, body language and spatial arrangement of figures, light sources, atmospheric conditions, foreground and background elements, textures of stone / wood / fabric / metal.\n- Keep strict historical accuracy for Castilian medieval and early modern contexts.\n- Length: 80-140 words. Dense, vivid, concrete. No vague adjectives.\n- Do not include style instructions (those are added separately). Only describe the scene itself.';
+Additional context provided by the author:
+' + contextLines.join('
+') : '';
 
-    const userPrompt = 'Scene description in Spanish (brief, to be expanded):\n"' + raw + '"' + context + '\n\nWrite the expanded scene description in English.';
+    const systemPrompt = 'You are an expert art director specializing in 19th-century Romantic historicist illustration, working on a Spanish local history book about the Cerrato Vallisoletano region (Castile, Spain). Your task is to take a brief scene description written in Spanish (such as royal arrivals, open council meetings, signing of lordship documents, French troop looting during the Independence War, or land auctions during the Desamortización) and expand it into a rich, detailed scene description in English, suitable as the scene-setting portion of an image generation prompt for a painting in the style of Gerôme and Alma-Tadema.
+
+CRITICAL GEOGRAPHIC AND CULTURAL CONSTRAINT: Every scene takes place in Castile, Spain. All details you describe must reflect the specific material culture of Castilian Iberian Spain for the period given. This means:
+- Clothing: Castilian and Iberian dress only — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, Castilian monastic habits, frontier soldiers in Castilian military dress. NEVER describe English, French, Flemish, Tudor, Victorian, Anglo-Saxon or American colonial clothing.
+- Architecture: Romanesque, Mozarabic, Gothic or Mudéjar as appropriate — stone construction of the Castilian meseta. NO half-timbered English buildings, NO Norman French castles, NO Northern European church styles.
+- Landscape: the dry Castilian interior plateau — ochre earth, limestone outcrops, holm oak, sparse scrubland, wide skies. NOT green English countryside, NOT Northern European forests.
+- Faces and physical types: Mediterranean and Iberian — NOT Northern European physiognomy.
+- Objects and tools: consistent with Iberian craft traditions of the period.
+
+RULES:
+- Write ONLY in English.
+- Output ONLY the expanded scene description — no preamble, no commentary, no title.
+- Be specific about: architectural details (Romanesque, Mozarabic, Gothic as appropriate to the period), clothing and materials consistent with Castilian Spain, body language and spatial arrangement of figures, light sources, atmospheric conditions, foreground and background elements, textures of stone / wood / fabric / metal.
+- Keep strict historical accuracy for Castilian medieval and early modern contexts.
+- Length: 80-140 words. Dense, vivid, concrete. No vague adjectives.
+- Do not include style instructions (those are added separately). Only describe the scene itself.';
+
+    const userPrompt = 'Scene description in Spanish (brief, to be expanded):
+"' + raw + '"' + context + '
+
+Write the expanded scene description in English.';
 
     try {
       const text = (await callModel({ provider: settings.provider, model: settings.model, system: systemPrompt, user: userPrompt })).trim();
@@ -1042,43 +1140,63 @@
     document.getElementById('expandResultText').textContent = '';
   }
 
-  /* ═══ PROVEEDORES Y MODELOS DE IA ═══ */
+  /* ═══ PROVEEDORES Y CONFIGURACIÓN DE APIS ═══ */
   const KEYS = [
     {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key',  url:'https://aistudio.google.com/apikey'},
     {id:'groq',       label:'Groq',       ls:'castroverde_groq_key',        url:'https://console.groq.com/keys'},
     {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key', url:'https://console.mistral.ai/api-keys'},
     {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key',          url:'https://openrouter.ai/settings/keys'},
+    {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key',    url:'https://platform.deepseek.com/api_keys'},
+    {id:'anthropic',  label:'Anthropic',  ls:'castroverde_anthropic_key',   url:'https://console.anthropic.com/settings/keys'}
   ];
-  const getKey   = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id).ls) || ''; } catch(e){ return ''; } };
-  const keyLabel = id => KEYS.find(k => k.id === id).label;
+
+  const getKey   = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id)?.ls) || ''; } catch(e){ return ''; } };
+  const keyLabel = id => KEYS.find(k => k.id === id)?.label || id;
 
   const PROVIDERS = {
-    aistudio:   {label:'Google AI Studio (Gemini) · gratis', models:[
+    aistudio:   {label:'Google AI Studio (Gemini)', models:[
+                   {id:'gemini-2.5-flash',         label:'Gemini 2.5 Flash'},
                    {id:'gemini-flash-latest',      label:'Gemini Flash (última)'},
-                   {id:'gemini-flash-lite-latest', label:'Gemini Flash-Lite (última)'},
-                   {id:'gemini-2.5-flash',         label:'Gemini 2.5 Flash'}]},
-    groq:       {label:'Groq · gratis', models:[
-                   {id:'openai/gpt-oss-120b',     label:'GPT-OSS 120B'},
-                   {id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
-    mistral:    {label:'Mistral (plan Experiment) · gratis', models:[
-                   {id:'mistral-medium-latest', label:'Mistral Medium'},
+                   {id:'gemini-flash-lite-latest', label:'Gemini Flash-Lite (última)'}]},
+    groq:       {label:'Groq', models:[
+                   {id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'},
+                   {id:'openai/gpt-oss-120b',     label:'GPT-OSS 120B'}]},
+    mistral:    {label:'Mistral', models:[
                    {id:'mistral-small-latest',  label:'Mistral Small'},
+                   {id:'mistral-medium-latest', label:'Mistral Medium'},
                    {id:'mistral-large-latest',  label:'Mistral Large'}]},
-    openrouter: {label:'OpenRouter (modelos :free) · gratis', models:[
-                   {id:'meta-llama/llama-3.3-70b-instruct:free', label:'meta-llama/llama-3.3-70b-instruct:free'}]},
+    openrouter: {label:'OpenRouter', models:[
+                   {id:'meta-llama/llama-3.3-70b-instruct:free', label:'Llama 3.3 70B (free)'},
+                   {id:'deepseek/deepseek-r1:free',               label:'DeepSeek R1 (free)'}]},
+    deepseek:   {label:'DeepSeek', models:[
+                   {id:'deepseek-chat',     label:'DeepSeek V3'},
+                   {id:'deepseek-reasoner', label:'DeepSeek R1'}]},
+    anthropic:  {label:'Anthropic Claude', models:[
+                   {id:'claude-3-5-sonnet-20241022', label:'Claude 3.5 Sonnet'},
+                   {id:'claude-3-5-haiku-20241022',  label:'Claude 3.5 Haiku'}]}
   };
-  const LIST_KEY = {aistudio:'ilustraciones_gemini_models', groq:'ilustraciones_groq_models', mistral:'ilustraciones_mistral_models', openrouter:'ilustraciones_or_free_models'};
+
+  const LIST_KEY = {
+    aistudio: 'ilustraciones_gemini_models',
+    groq: 'ilustraciones_groq_models',
+    mistral: 'ilustraciones_mistral_models',
+    openrouter: 'ilustraciones_or_models',
+    deepseek: 'ilustraciones_deepseek_models',
+    anthropic: 'ilustraciones_anthropic_models'
+  };
+
   const SETTINGS_KEY = 'ilustraciones_settings';
 
   function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
   function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
-  let settings = Object.assign({provider:'aistudio', model:'gemini-flash-latest'}, loadJSON(SETTINGS_KEY) || {});
-  if (!PROVIDERS[settings.provider]) { settings.provider = 'aistudio'; settings.model = 'gemini-flash-latest'; }
+  let settings = Object.assign({provider:'aistudio', model:'gemini-2.5-flash'}, loadJSON(SETTINGS_KEY) || {});
+  if (!PROVIDERS[settings.provider]) { settings.provider = 'aistudio'; settings.model = 'gemini-2.5-flash'; }
   function saveSettings(){ saveJSON(SETTINGS_KEY, settings); }
 
   function iaStatus(type, msg){
     const el = document.getElementById('iaStatus');
+    if (!el) return;
     el.className = 'ia-status ' + (type || '');
     el.textContent = msg || '';
     if (type === 'ok') setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
@@ -1088,23 +1206,38 @@
     const c = loadJSON(LIST_KEY[prov]);
     return (c && c.length) ? c : PROVIDERS[prov].models;
   }
+
   function renderModel(){
-    document.getElementById('prov').innerHTML = Object.entries(PROVIDERS)
+    const provSelect = document.getElementById('prov');
+    const modelSelect = document.getElementById('model');
+    if (!provSelect || !modelSelect) return;
+
+    provSelect.innerHTML = Object.entries(PROVIDERS)
       .map(([k, p]) => `<option value="${k}" ${k === settings.provider ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
+
     let list = modelList(settings.provider);
     if (!list.some(m => m.id === settings.model)) list = [{id:settings.model, label:settings.model}, ...list];
-    document.getElementById('model').innerHTML = list
-      .map(m => `<option value="${esc(m.id)}" ${m.id === settings.model ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
+
+    modelSelect.innerHTML = list
+      .map(m => `<option value="${esc(m.id)}" ${m.id === settings.model ? 'selected' : ''}>${esc(m.label || m.id)}</option>`).join('');
   }
+
   function changeProvider(){
     settings.provider = document.getElementById('prov').value;
     settings.model = modelList(settings.provider)[0].id;
-    saveSettings(); renderModel(); iaStatus('', '');
+    saveSettings();
+    renderModel();
+    iaStatus('', '');
     const p = settings.provider;
     if (!loadJSON(LIST_KEY[p]) && (p === 'openrouter' || getKey(p))) refreshModels(true);
   }
-  function changeModel(){ settings.model = document.getElementById('model').value; saveSettings(); }
 
+  function changeModel(){
+    settings.model = document.getElementById('model').value;
+    saveSettings();
+  }
+
+  /* === ACTUALIZACIÓN DINÁMICA DE MODELOS === */
   async function refreshModels(quiet){
     const prov = settings.provider;
     try {
@@ -1113,62 +1246,196 @@
         const r = await fetch('https://openrouter.ai/api/v1/models');
         if (!r.ok) throw new Error('OpenRouter ' + r.status);
         const data = (await r.json()).data || [];
-        list = data.filter(m => /:free$/.test(m.id) || (m.pricing && +m.pricing.prompt === 0 && +m.pricing.completion === 0 && !/^openrouter\/auto/.test(m.id)))
+        list = data.filter(m => /:free$/.test(m.id) || (m.pricing && +m.pricing.prompt === 0 && +m.pricing.completion === 0))
           .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
       } else {
         const key = getKey(prov);
         if (!key){ if (!quiet){ iaStatus('err', 'Falta la clave de ' + keyLabel(prov) + '.'); openKeys(prov); } return; }
+
         if (prov === 'aistudio'){
           const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
           if (!r.ok) throw new Error('AI Studio ' + r.status);
           const data = (await r.json()).models || [];
-          list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini|gemma/.test(m.name) && !/(embed|tts|image|live|audio|vision|robotics|computer)/.test(m.name))
+          list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini|gemma/.test(m.name) && !/(embed|tts|image|live|audio|vision)/.test(m.name))
             .map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, ''))}));
+        } else if (prov === 'anthropic'){
+          list = PROVIDERS.anthropic.models;
         } else {
-          const url = prov === 'groq' ? 'https://api.groq.com/openai/v1/models' : 'https://api.mistral.ai/v1/models';
-          const r = await fetch(url, {headers:{'Authorization':'Bearer ' + key}});
+          const endpoints = {
+            groq: 'https://api.groq.com/openai/v1/models',
+            mistral: 'https://api.mistral.ai/v1/models',
+            deepseek: 'https://api.deepseek.com/v1/models'
+          };
+          const r = await fetch(endpoints[prov], {headers:{'Authorization':'Bearer ' + key}});
           if (!r.ok) throw new Error(keyLabel(prov) + ' ' + r.status);
           const data = (await r.json()).data || [];
-          list = data.filter(m => m.active !== false && !/(whisper|tts|guard|embed|ocr|moderation|orpheus|playai|voxtral|transcri|safeguard)/i.test(m.id)
-                                && !(m.capabilities && m.capabilities.completion_chat === false))
+          list = data.filter(m => m.active !== false && !/(whisper|tts|guard|embed|ocr|moderation)/i.test(m.id))
             .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
-          list = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
         }
       }
-      if (!list.length) throw new Error('la lista ha llegado vacía');
+      if (!list.length) throw new Error('La lista ha llegado vacía.');
       saveJSON(LIST_KEY[prov], list);
       renderModel();
       if (!quiet) iaStatus('ok', 'Lista de modelos actualizada.');
-    } catch(e){ if (!quiet) iaStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+    } catch(e){
+      if (!quiet) iaStatus('err', 'No se pudo actualizar la lista: ' + e.message);
+    }
   }
 
-  /* ═══ LLAMADAS A LAS APIS ═══ */
+  /* === MODAL Y GESTIÓN DE CLAVES === */
+  function openKeys(highlightProv){
+    KEYS.forEach(k => {
+      const inp = document.getElementById('key-' + k.id);
+      if (inp) {
+        inp.value = getKey(k.id);
+        inp.type = 'password';
+      }
+    });
+    const chk = document.getElementById('showKeysCheck');
+    if (chk) chk.checked = false;
+
+    const modal = document.getElementById('keysModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      if (highlightProv) {
+        const target = document.getElementById('key-' + highlightProv);
+        if (target) setTimeout(() => target.focus(), 100);
+      }
+    }
+  }
+
+  function closeKeys(){
+    const modal = document.getElementById('keysModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function saveKeys(){
+    KEYS.forEach(k => {
+      const inp = document.getElementById('key-' + k.id);
+      if (inp) {
+        const val = inp.value.trim();
+        try {
+          if (val) localStorage.setItem(k.ls, val);
+          else localStorage.removeItem(k.ls);
+        } catch(e){}
+      }
+    });
+    closeKeys();
+    iaStatus('ok', 'Claves API guardadas correctamente.');
+    renderModel();
+  }
+
+  function toggleShowKeys(show){
+    KEYS.forEach(k => {
+      const inp = document.getElementById('key-' + k.id);
+      if (inp) inp.type = show ? 'text' : 'password';
+    });
+  }
+
+  /* === EJECUCIÓN UNIFICADA DE MODELOS === */
   async function httpError(resp, who){
     let detail = '';
     try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
     catch(e){ try { detail = await resp.text(); } catch(_){} }
     if (typeof detail === 'object') detail = JSON.stringify(detail);
-    return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+    return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 300)}`);
   }
+
   function needKey(id){
     const k = getKey(id);
     if (!k){ openKeys(id); throw new Error('Falta la clave de ' + keyLabel(id) + '.'); }
     return k;
   }
+
   function callModel(o){
     if (o.provider === 'aistudio') return callGemini(o);
-    const cfg = {
-      openrouter:{url:'https://openrouter.ai/api/v1/chat/completions',      who:'OpenRouter', max:null},
-      mistral:   {url:'https://api.mistral.ai/v1/chat/completions',         who:'Mistral',    max:4000},
-      groq:      {url:'https://api.groq.com/openai/v1/chat/completions',    who:'Groq',       max:4000},
-    }[o.provider];
-    return callOpenAICompat(o, cfg);
+    if (o.provider === 'anthropic') return callAnthropic(o);
+
+    const configs = {
+      openrouter: {url:'https://openrouter.ai/api/v1/chat/completions',   who:'OpenRouter', max:null},
+      mistral:    {url:'https://api.mistral.ai/v1/chat/completions',      who:'Mistral',    max:4000},
+      groq:       {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq',       max:4000},
+      deepseek:   {url:'https://api.deepseek.com/v1/chat/completions',    who:'DeepSeek',   max:4000}
+    };
+    return callOpenAICompat(o, configs[o.provider]);
   }
+
   async function callGemini({model, system, user}){
     const key = needKey('aistudio');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: user }] }]
+    };
+    if (system) body.systemInstruction = { parts: [{ text: system }] };
+
     const resp = await fetch(url, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        systemInstruction:{parts:[{text:system}]},
-        contents:
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw await httpError(resp, 'Google AI Studio');
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Respuesta vacía o formato no reconocido de Gemini.');
+    return text;
+  }
+
+  async function callOpenAICompat({provider, model, system, user}, cfg){
+    const key = needKey(provider);
+    const messages = [];
+    if (system) messages.push({ role: 'system', content: system });
+    messages.push({ role: 'user', content: user });
+
+    const payload = { model, messages };
+    if (cfg.max) payload.max_tokens = cfg.max;
+
+    const resp = await fetch(cfg.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+        ...(provider === 'openrouter' ? { 'HTTP-Referer': location.origin, 'X-Title': 'Ilustrador Prompts' } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw await httpError(resp, cfg.who);
+    const data = await resp.json();
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Respuesta vacía de ' + cfg.who);
+    return text;
+  }
+
+  async function callAnthropic({model, system, user}){
+    const key = needKey('anthropic');
+    const payload = {
+      model: model || 'claude-3-5-sonnet-20241022',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: user }]
+    };
+    if (system) payload.system = system;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'dangerously-allow-browser': 'true'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw await httpError(resp, 'Anthropic');
+    const data = await resp.json();
+    const text = data.content?.[0]?.text;
+    if (!text) throw new Error('Respuesta vacía de Anthropic');
+    return text;
+  }
+
+  /* === INICIALIZACIÓN === */
+  document.addEventListener('DOMContentLoaded', () => {
+    renderModel();
+    updateCount();
+  });
+</script>
+</body>
+</html>
