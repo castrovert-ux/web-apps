@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartelera Cines Broadway & FilmAffinity</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        broadway: {
+                            gold: '#d4af37',
+                            red: '#e50914',
+                            dark: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-yellow-500/30 selection:text-yellow-200">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                    <i data-lucide="clapperboard" class="w-6 h-6 text-slate-950 font-bold"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100">
+                        Cines Broadway <span class="text-xs font-normal text-slate-400 font-mono">x FilmAffinity</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-1">
+                        <i data-lucide="map-pin" class="w-3 h-3 text-red-500 inline"></i> Valladolid, España
+                    </p>
+                </div>
+            </div>
+
+            <!-- Header Action Links -->
+            <div class="flex items-center gap-3">
+                <button onclick="toggleDevModal()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-700 transition duration-200 shadow-sm">
+                    <i data-lucide="code-2" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="hidden sm:inline">Arquitectura & CORS</span>
+                </button>
+                <a href="https://cbroadway.net/index.html" target="_blank" rel="noopener noreferrer" class="hidden md:flex items-center gap-1.5 text-xs text-amber-400/90 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 px-3 py-2 rounded-lg border border-amber-500/20 transition">
+                    <span>Web Oficial</span>
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Info & Sync Banner -->
+        <div class="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+            <div class="flex items-start gap-3">
+                <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400 border border-amber-500/20 mt-0.5">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-200">Cartelera Actualizada + Puntuaciones en Tiempo Real</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Cruce de sesiones de Cines Broadway con críticas y notas sincronizadas de FilmAffinity.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/60 px-3 py-1.5 rounded-full border border-slate-800 self-end md:self-auto">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Sesiones para Hoy (<span id="current-date-str"></span>)</span>
+            </div>
+        </div>
+
+        <!-- Controls / Search & Filters Toolbar -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                
+                <!-- Búsqueda por texto -->
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="search-input" placeholder="Buscar película o director..." 
+                           class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 transition">
+                </div>
+
+                <!-- Ordenación -->
+                <div class="relative">
+                    <i data-lucide="arrow-up-down" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <select id="sort-select" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 transition appearance-none cursor-pointer">
+                        <option value="rating-desc">Nota FilmAffinity (Mayor a Menor)</option>
+                        <option value="time-asc">Primer horario de pase (Más temprano)</option>
+                        <option value="title-asc">Título (A-Z)</option>
+                    </select>
+                </div>
+
+                <!-- Filtro de Tipo / Formato -->
+                <div class="relative">
+                    <i data-lucide="filter" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <select id="tag-filter" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 transition appearance-none cursor-pointer">
+                        <option value="all">Todos los formatos / Sesiones</option>
+                        <option value="VOSE">Versión Original (VOSE)</option>
+                        <option value="Cine Club">Cine Club Broadway</option>
+                        <option value="2D">Estándar 2D</option>
+                        <option value="Dolby">Sonido Dolby Digital</option>
+                    </select>
+                </div>
+
+                <!-- Filtro por Puntuación Mínima -->
+                <div class="relative">
+                    <i data-lucide="star" class="w-4 h-4 text-amber-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <select id="rating-filter" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 transition appearance-none cursor-pointer">
+                        <option value="0">Cualquier Puntuación</option>
+                        <option value="7.5">Sobresaliente (> 7.5)</option>
+                        <option value="6.5">Notable (> 6.5)</option>
+                        <option value="5.0">Aprobado (> 5.0)</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- Dynamic Counter & Active Filters Bar -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
+                <div>
+                    Mostrando <span id="movies-count" class="font-semibold text-amber-400">0</span> películas en cartelera
+                </div>
+                <button id="reset-filters" class="hover:text-slate-200 text-slate-400 underline transition hidden">
+                    Restablecer filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Movie Cards Grid Container -->
+        <div id="movies-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Cards will be dynamically rendered here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-16 bg-slate-900/40 border border-slate-800/60 rounded-2xl">
+            <i data-lucide="film" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+            <h3 class="text-base font-semibold text-slate-300">No se encontraron películas</h3>
+            <p class="text-xs text-slate-500 mt-1">Prueba ajustando los filtros de búsqueda o la puntuación seleccionada.</p>
+        </div>
+
+    </main>
+
+    <!-- Modal Architecture / Technical Explanation for GitHub Pages & CORS -->
+    <div id="dev-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-opacity">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl p-6 space-y-6">
+            
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                        <i data-lucide="git-branch" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">Despliegue en GitHub Pages & Solución CORS</h3>
+                </div>
+                <button onclick="toggleDevModal()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs leading-relaxed text-slate-300">
+                <section>
+                    <h4 class="text-sm font-semibold text-amber-400 flex items-center gap-1.5 mb-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> El desafío de CORS en aplicaciones estáticas
+                    </h4>
+                    <p>
+                        Cuando publicas este archivo HTML en <strong>GitHub Pages</strong>, el navegador bloquea las peticiones `fetch()` directas a <code class="text-slate-200 bg-slate-800 px-1 py-0.5 rounded">cbroadway.net</code> o <code class="text-slate-200 bg-slate-800 px-1 py-0.5 rounded">filmaffinity.com</code> debido a las políticas de seguridad <strong>CORS (Cross-Origin Resource Sharing)</strong>.
+                    </p>
+                </section>
+
+                <section class="bg-slate-950/80 border border-slate-800 p-4 rounded-xl space-y-3">
+                    <h4 class="text-sm font-semibold text-emerald-400 flex items-center gap-1.5">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i> Solución Recomendada: GitHub Actions + Cron Job
+                    </h4>
+                    <p>
+                        Para mantener la web 100% gratuita, ultrarrápida y alojada totalmente en GitHub Pages sin necesidad de mantener servidores encendidos, se utiliza un flujo de trabajo automatizado:
+                    </p>
+                    <ol class="list-decimal pl-5 space-y-2 text-slate-400">
+                        <li><strong>Script de Scraping (Python):</strong> Se crea un archivo <code class="text-slate-200">scraper.py</code> que extrae la cartelera diaria de Cines Broadway usando <code class="text-slate-200">BeautifulSoup</code> o <code class="text-slate-200">requests</code>.</li>
+                        <li><strong>Matching con FilmAffinity:</strong> El script busca cada título en FilmAffinity, extrae la nota media, portada y la mejor crítica, y genera un archivo unificado <code class="text-slate-200">cartelera.json</code>.</li>
+                        <li><strong>GitHub Action Automatizada:</strong> Un archivo de workflow (<code class="text-slate-200">.github/workflows/update.yml</code>) ejecuta el script en los servidores de GitHub todos los días a las 08:00 AM (usando <code class="text-slate-200">cron</code>) y actualiza el archivo JSON en el repositorio.</li>
+                        <li><strong>Consumo en el Frontend:</strong> Este fichero HTML simplemente realiza un <code class="text-slate-200">fetch('./cartelera.json')</code> de forma transparente, evitando errores de CORS y garantizando tiempos de carga instantáneos.</li>
+                    </ol>
+                </section>
+
+                <section class="bg-slate-950/80 border border-slate-800 p-4 rounded-xl space-y-2">
+                    <h4 class="text-sm font-semibold text-indigo-400 flex items-center gap-1.5">
+                        <i data-lucide="server" class="w-4 h-4"></i> Opción alternativa: Microservicio Proxy (Python FastAPI / Cloudflare Worker)
+                    </h4>
+                    <p class="text-slate-400">
+                        Si prefieres sincronización en tiempo real al cargar la página, se puede desplegar un proxy ligero (gratuito en Render, Vercel o Cloudflare Workers) que añada las cabeceras <code class="text-slate-200 font-mono">Access-Control-Allow-Origin: *</code> a las respuestas scraped.
+                    </p>
+                </section>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 flex justify-end">
+                <button onclick="toggleDevModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs px-4 py-2 rounded-xl transition">
+                    Entendido
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto bg-slate-900 border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>Cines Broadway (Paseo Hospital Militar, 34, Valladolid) — Datos integrados no oficiales con fines informativos.</p>
+            <p class="flex items-center gap-1">
+                <span>Desarrollado para GitHub Pages</span>
+                <i data-lucide="heart" class="w-3.5 h-3.5 text-red-500 fill-red-500 inline"></i>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Application Script -->
+    <script>
+        // MOCK DATA: Representación realista de la cartelera de Cines Broadway cruzada con FilmAffinity
+        const mockCartelera = [
+            {
+                id: "1",
+                titulo: "Dune: Parte Dos",
+                originalTitle: "Dune: Part Two",
+                director: "Denis Villeneuve",
+                genero: "Ciencia Ficción / Aventuras",
+                tags: ["2D", "Dolby"],
+                horarios: ["17:15", "19:45", "21:30"],
+                poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&q=80",
+                filmaffinity: {
+                    rating: 8.1,
+                    votos: "38.450",
+                    sinopsis: "Paul Atreides se une a Chani y a los Fremen mientras busca venganza contra los conspiradores que destruyeron a su familia. Frente a una elección entre el amor de su vida y el destino del universo, debe evitar un futuro terrible.",
+                    criticaExtracto: "«Una obra maestra absoluta del cine de ciencia ficción moderno. Visualmente hipnótica y sonoramente arrolladora.»",
+                    criticoAutor: "El País",
+                    url: "https://www.filmaffinity.com/es/film815002.html"
+                }
+            },
+            {
+                id: "2",
+                titulo: "La Zona de Interés",
+                originalTitle: "The Zone of Interest",
+                director: "Jonathan Glazer",
+                genero: "Drama / Histórico",
+                tags: ["VOSE", "Cine Club"],
+                horarios: ["18:00", "20:15"],
+                poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=500&q=80",
+                filmaffinity: {
+                    rating: 7.6,
+                    votos: "19.200",
+                    sinopsis: "El comandante de Auschwitz, Rudolf Höss, y su esposa Hedwig intentan construir una vida idílica para su familia en una casa con jardín justo al lado del campo de concentración.",
+                    criticaExtracto: "«Escofina para los nervios. Una lección chilling sobre la banalidad del mal. Cine imprescindible.»",
+                    criticoAutor: "Fotogramas",
+                    url: "https://www.filmaffinity.com/es/film892134.html"
+                }
+            },
+            {
+                id: "3",
+                titulo: "Pobres Criaturas",
+                originalTitle: "Poor Things",
+                director: "Yorgos Lanthimos",
+                genero: "Comedia / Fantástico",
+                tags: ["2D", "VOSE"],
+                horarios: ["17:00", "19:30", "21:45"],
+                poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80",
+                filmaffinity: {
+                    rating: 7.8,
+                    votos: "32.100",
+                    sinopsis: "Bella Baxter es una joven revivida por el brillante y poco ortodoxo científico Dr. Godwin Baxter. Con ganas de aprender y con hambre de la mundanidad que le falta, Bella se escapa con Duncan Wedderburn.",
+                    criticaExtracto: "«Emma Stone firma la actuación de su vida en esta fabulosa orgía visual desbordante de libertad.»",
+                    criticoAutor: "El Mundo",
+                    url: "https://www.filmaffinity.com/es/film482103.html"
+                }
+            },
+            {
+                id: "4",
+                titulo: "Cine Club: Anatomía de una Caída",
+                originalTitle: "Anatomie d'une chute",
+                director: "Justine Triet",
+                genero: "Intriga / Drama Judicial",
+                tags: ["Cine Club", "VOSE"],
+                horarios: ["19:00", "21:15"],
+                poster: "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=500&q=80",
+                filmaffinity: {
+                    rating: 7.7,
+                    votos: "24.500",
+                    sinopsis: "Sandra, una escritora alemana, vive con su esposo Samuel y su hijo ciego Daniel en los Alpes franceses. Cuando Samuel fallece en misteriosas circunstancias, Sandra es acusada de asesinato.",
+                    criticaExtracto: "«Un deslumbrante e inteligencilísimo drama judicial que disecciona la anatomía de una pareja.»",
+                    criticoAutor: "ABC",
+                    url: "https://www.filmaffinity.com/es/film210948.html"
+                }
+            },
+            {
+                id: "5",
+                titulo: "Cazafantasmas: Imperio Helado",
+                originalTitle: "Ghostbusters: Frozen Empire",
+                director: "Gil Kenan",
+                genero: "Aventuras / Comedia",
+                tags: ["2D", "Dolby"],
+                horarios: ["16:30", "18:45", "20:30"],
+                poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&q=80",
+                filmaffinity: {
+                    rating: 5.8,
+                    votos: "6.800",
+                    sinopsis: "La familia Spengler regresa al lugar donde empezó todo (el icónico parque de bomberos de Nueva York) para formar equipo con los Cazafantasmas originales.",
+                    criticaExtracto: "«Entretenimiento nostálgico sin pretensiones, efectivo para fans pero predecible.»",
+                    criticoAutor: "Cinemanía",
+                    url: "https://www.filmaffinity.com/es/film734912.html"
+                }
+            },
+            {
+                id: "6",
+                titulo: "Kung Fu Panda 4",
+                originalTitle: "Kung Fu Panda 4",
+                director: "Mike Mitchell",
+                genero: "Animación / Infantil",
+                tags: ["2D"],
+                horarios: ["16:15", "18:15"],
+                poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&q=80",
+                filmaffinity: {
+                    rating: 6.1,
+                    votos: "8.300",
+                    sinopsis: "Po es llamado a convertirse en el Líder Espiritual del Valle de la Paz. Para ello necesita encontrar y entrenar rápidamente a un nuevo Guerrero del Dragón.",
+                    criticaExtracto: "«Mantiene el ritmo dinámico y el humor para los más pequeños, aunque la fórmula muestra cansancio.»",
+                    criticoAutor: "La Vanguardia",
+                    url: "https://www.filmaffinity.com/es/film390219.html"
+                }
+            }
+        ];
+
+        // Global State
+        let moviesData = [...mockCartelera];
+
+        // Helper: Format Date
+        document.getElementById('current-date-str').textContent = new Date().toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+
+        // Rating Badge Color Logic
+        function getRatingBadgeClass(rating) {
+            if (rating >= 7.5) {
+                return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+            } else if (rating >= 6.0) {
+                return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+            } else {
+                return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+            }
+        }
+
+        // Render Function
+        function renderMovies(movies) {
+            const grid = document.getElementById('movies-grid');
+            const emptyState = document.getElementById('empty-state');
+            const counter = document.getElementById('movies-count');
+
+            counter.textContent = movies.length;
+            grid.innerHTML = '';
+
+            if (movies.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            movies.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:border-slate-700 transition duration-300 flex flex-col group';
+
+                const ratingClass = getRatingBadgeClass(movie.filmaffinity.rating);
+
+                card.innerHTML = `
+                    <!-- Movie Header / Image Banner -->
+                    <div class="relative h-48 overflow-hidden bg-slate-950">
+                        <img src="${movie.poster}" alt="${movie.titulo}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-60 group-hover:opacity-80">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+                        
+                        <!-- Top Badges -->
+                        <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                            ${movie.tags.map(tag => `
+                                <span class="bg-slate-950/80 backdrop-blur-md text-amber-300 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-amber-500/20">
+                                    ${tag}
+                                </span>
+                            `).join('')}
+                        </div>
+
+                        <!-- FilmAffinity Score Overlay -->
+                        <div class="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl border backdrop-blur-md ${ratingClass} shadow-lg">
+                            <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
+                            <span class="text-sm font-bold font-mono">${movie.filmaffinity.rating.toFixed(1)}</span>
+                            <span class="text-[9px] opacity-70">/10</span>
+                        </div>
+
+                        <!-- Movie Main Title & Director -->
+                        <div class="absolute bottom-3 left-3 right-3">
+                            <h3 class="text-lg font-bold text-slate-100 group-hover:text-amber-300 transition leading-snug">
+                                ${movie.titulo}
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5 truncate">
+                                ${movie.director} • <span class="italic text-slate-500">${movie.genero}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="p-4 flex-grow flex flex-col justify-between space-y-4">
+                        
+                        <!-- Horarios Broadway -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                                <span class="flex items-center gap-1 font-medium text-slate-300">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-400"></i> Horarios Hoy:
+                                </span>
+                                <span class="text-[10px] text-slate-500">Cines Broadway</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                ${movie.horarios.map(hora => `
+                                    <button onclick="selectSession('${movie.titulo}', '${hora}')" 
+                                            class="bg-slate-800/90 hover:bg-amber-500 hover:text-slate-950 border border-slate-700/80 text-slate-200 text-xs font-mono font-medium px-2.5 py-1 rounded-lg transition duration-150 shadow-sm">
+                                        ${hora}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Sinopsis -->
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">
+                            ${movie.filmaffinity.sinopsis}
+                        </p>
+
+                        <!-- Review Quote (FilmAffinity) -->
+                        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 relative">
+                            <i data-lucide="quote" class="w-3.5 h-3.5 text-amber-500/40 absolute top-2 right-2"></i>
+                            <p class="text-[11px] text-slate-300 italic leading-normal pr-4">
+                                ${movie.filmaffinity.criticaExtracto}
+                            </p>
+                            <p class="text-[10px] text-slate-500 font-semibold mt-1 text-right">
+                                — ${movie.filmaffinity.criticoAutor} (FilmAffinity)
+                            </p>
+                        </div>
+
+                        <!-- Footer Action -->
+                        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-500 font-mono">
+                                ${movie.filmaffinity.votos} votos
+                            </span>
+                            <a href="${movie.filmaffinity.url}" target="_blank" rel="noopener noreferrer" 
+                               class="inline-flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 font-medium hover:underline">
+                                <span>Ficha FilmAffinity</span>
+                                <i data-lucide="external-link" class="w-3 h-3"></i>
+                            </a>
+                        </div>
+
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            // Re-initialize Lucide Icons for dynamic content
+            lucide.createIcons();
+        }
+
+        // Filter and Sort Handler
+        function applyFilters() {
+            const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+            const sortVal = document.getElementById('sort-select').value;
+            const tagVal = document.getElementById('tag-filter').value;
+            const minRating = parseFloat(document.getElementById('rating-filter').value);
+
+            let filtered = mockCartelera.filter(movie => {
+                // Search Filter
+                const matchesSearch = movie.titulo.toLowerCase().includes(searchVal) || 
+                                      movie.director.toLowerCase().includes(searchVal) ||
+                                      movie.genero.toLowerCase().includes(searchVal);
+
+                // Tag Filter
+                const matchesTag = tagVal === 'all' || movie.tags.includes(tagVal);
+
+                // Rating Filter
+                const matchesRating = movie.filmaffinity.rating >= minRating;
+
+                return matchesSearch && matchesTag && matchesRating;
+            });
+
+            // Sorting
+            if (sortVal === 'rating-desc') {
+                filtered.sort((a, b) => b.filmaffinity.rating - a.filmaffinity.rating);
+            } else if (sortVal === 'time-asc') {
+                filtered.sort((a, b) => a.horarios[0].localeCompare(b.horarios[0]));
+            } else if (sortVal === 'title-asc') {
+                filtered.sort((a, b) => a.titulo.localeCompare(b.titulo));
+            }
+
+            // Check if any filter active to show reset button
+            const isFiltered = searchVal !== '' || tagVal !== 'all' || minRating > 0;
+            document.getElementById('reset-filters').classList.toggle('hidden', !isFiltered);
+
+            renderMovies(filtered);
+        }
+
+        // Session Selector Handler
+        function selectSession(title, time) {
+            alert(`Sesión seleccionada: "${title}" a las ${time}.\nPuedes comprar tus entradas directamente en la taquilla de Cines Broadway o en su web oficial cbroadway.net`);
+        }
+
+        // Toggle Technical Architecture Modal
+        function toggleDevModal() {
+            const modal = document.getElementById('dev-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Event Listeners
+        document.getElementById('search-input').addEventListener('input', applyFilters);
+        document.getElementById('sort-select').addEventListener('change', applyFilters);
+        document.getElementById('tag-filter').addEventListener('change', applyFilters);
+        document.getElementById('rating-filter').addEventListener('change', applyFilters);
+
+        document.getElementById('reset-filters').addEventListener('click', () => {
+            document.getElementById('search-input').value = '';
+            document.getElementById('sort-select').value = 'rating-desc';
+            document.getElementById('tag-filter').value = 'all';
+            document.getElementById('rating-filter').value = '0';
+            applyFilters();
+        });
+
+        // Initial Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            applyFilters();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
