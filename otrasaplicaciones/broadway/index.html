@@ -42,68 +42,21 @@
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-        /* Panel FilmAffinity */
-        #fa-panel {
+        /* Panel desplegable FilmAffinity dentro de la tarjeta */
+        .fa-detail-panel {
             display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: #f1f5f9;
-            flex-direction: column;
+            animation: fadeIn 0.25s ease;
         }
-        #fa-panel.active {
-            display: flex;
-        }
-        #fa-iframe {
-            flex: 1;
-            border: none;
-            width: 100%;
-        }
-        #fa-topbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            background: #1e40af;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-        #fa-back-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: white;
-            color: #1e40af;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        #fa-back-btn:hover { background: #dbeafe; }
-        #fa-title-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        .fa-detail-panel.open { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Panel FilmAffinity (pantalla completa con botón volver) -->
-    <div id="fa-panel">
-        <div id="fa-topbar">
-            <button id="fa-back-btn" onclick="closeFaPanel()">
-                ← Volver a la cartelera
-            </button>
-            <span id="fa-title-text">FilmAffinity</span>
-        </div>
-        <iframe id="fa-iframe" src="" title="FilmAffinity"></iframe>
-    </div>
+
 
     <!-- Header Navigation -->
     <header class="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-md">
@@ -399,19 +352,20 @@
         ];
 
         // -------------------------------------------------------
-        // Panel FilmAffinity: abrir / cerrar dentro de la página
+        // Panel desplegable FilmAffinity dentro de la tarjeta
         // -------------------------------------------------------
-        function openFaPanel(url, titulo) {
-            document.getElementById('fa-iframe').src = url;
-            document.getElementById('fa-title-text').textContent = titulo + ' — FilmAffinity';
-            document.getElementById('fa-panel').classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeFaPanel() {
-            document.getElementById('fa-panel').classList.remove('active');
-            document.getElementById('fa-iframe').src = '';
-            document.body.style.overflow = '';
+        function toggleFaPanel(panelId) {
+            const panel = document.getElementById(panelId);
+            const movieId = panelId.replace('fa-', '');
+            const chevron = document.getElementById('fa-chevron-' + movieId);
+            const isOpen = panel.classList.contains('open');
+            panel.classList.toggle('open', !isOpen);
+            if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+            if (!isOpen) {
+                // Pequeño scroll para que el panel quede visible
+                setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+            }
+            lucide.createIcons();
         }
 
         // Global State
@@ -511,32 +465,55 @@
                             </div>
                         </div>
 
-                        <!-- Sinopsis -->
+                        <!-- Sinopsis (vista resumida) -->
                         <p class="text-sm text-slate-600 line-clamp-3 leading-relaxed">
                             ${movie.filmaffinity.sinopsis}
                         </p>
 
-                        <!-- Review Quote (FilmAffinity) -->
-                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 relative">
-                            <i data-lucide="quote" class="w-4 h-4 text-amber-400/60 absolute top-2 right-2"></i>
-                            <p class="text-sm text-slate-600 italic leading-normal pr-5">
-                                ${movie.filmaffinity.criticaExtracto}
-                            </p>
-                            <p class="text-xs text-slate-400 font-semibold mt-1 text-right">
-                                — ${movie.filmaffinity.criticoAutor} (FilmAffinity)
-                            </p>
+                        <!-- Botón Valoraciones -->
+                        <div class="pt-2 border-t border-slate-200">
+                            <button onclick="toggleFaPanel('fa-${movie.id}')"
+                               id="fa-btn-${movie.id}"
+                               class="w-full inline-flex items-center justify-center gap-2 text-base text-amber-700 font-semibold bg-amber-50 hover:bg-amber-100 px-4 py-3 rounded-xl border border-amber-200 transition">
+                                <i data-lucide="star" class="w-5 h-5 text-amber-500 fill-amber-400"></i>
+                                <span>Ver valoraciones de FilmAffinity</span>
+                                <i data-lucide="chevron-down" class="w-5 h-5 transition-transform" id="fa-chevron-${movie.id}"></i>
+                            </button>
                         </div>
 
-                        <!-- Footer Action -->
-                        <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
-                            <span class="text-sm text-slate-400">
-                                ${movie.filmaffinity.votos} votos
-                            </span>
-                            <button onclick="openFaPanel('${movie.filmaffinity.url}', '${movie.titulo.replace(/'/g, "\\'")}')"
-                               class="inline-flex items-center gap-1.5 text-base text-blue-600 hover:text-blue-800 font-semibold hover:underline bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition">
-                                <i data-lucide="star" class="w-4 h-4 text-amber-500 fill-amber-400"></i>
-                                <span>Valoraciones</span>
-                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        <!-- Panel desplegable FilmAffinity -->
+                        <div id="fa-${movie.id}" class="fa-detail-panel bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+
+                            <!-- Nota grande -->
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-1.5 bg-white border border-amber-300 rounded-xl px-4 py-2 shadow-sm">
+                                    <i data-lucide="star" class="w-6 h-6 text-amber-500 fill-amber-400"></i>
+                                    <span class="text-3xl font-bold text-amber-700 font-mono">${movie.filmaffinity.rating.toFixed(1)}</span>
+                                    <span class="text-base text-slate-400">/10</span>
+                                </div>
+                                <div class="text-sm text-slate-500 leading-snug">
+                                    <span class="font-semibold text-slate-700">${movie.filmaffinity.votos} votos</span><br>
+                                    en FilmAffinity
+                                </div>
+                            </div>
+
+                            <!-- Sinopsis completa -->
+                            <div>
+                                <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Sinopsis</p>
+                                <p class="text-sm text-slate-700 leading-relaxed">${movie.filmaffinity.sinopsis}</p>
+                            </div>
+
+                            <!-- Crítica -->
+                            <div class="bg-white border border-amber-200 rounded-xl p-3 relative">
+                                <i data-lucide="quote" class="w-4 h-4 text-amber-400 absolute top-2 right-2"></i>
+                                <p class="text-sm text-slate-600 italic leading-relaxed pr-5">${movie.filmaffinity.criticaExtracto}</p>
+                                <p class="text-xs text-slate-400 font-semibold mt-1.5 text-right">— ${movie.filmaffinity.criticoAutor}</p>
+                            </div>
+
+                            <!-- Cerrar -->
+                            <button onclick="toggleFaPanel('fa-${movie.id}')"
+                                class="w-full text-sm text-slate-500 hover:text-slate-700 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition font-medium">
+                                Cerrar ▲
                             </button>
                         </div>
 
