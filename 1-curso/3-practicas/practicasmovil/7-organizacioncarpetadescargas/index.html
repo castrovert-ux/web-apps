@@ -11,6 +11,136 @@ header,main,footer{position:relative;z-index:1}header{display:flex;align-items:c
 <div class="panel" id="listPanel" role="dialog" aria-modal="true" aria-labelledby="listTitle"><div class="panelbox"><div class="paneltop"><h2 id="listTitle">Todas las prácticas</h2><button data-close>Cerrar</button></div><div class="index" id="index"></div></div></div>
 <div class="panel" id="guidePanel" role="dialog" aria-modal="true" aria-labelledby="guideTitle"><div class="panelbox"><div class="paneltop"><h2 id="guideTitle">Guía rápida de archivos</h2><button data-close>Cerrar</button></div><ul><li><b>Mis Archivos:</b> Es la aplicación principal de tu móvil para ver y gestionar todo lo que hay guardado en la memoria.</li><li><b>Descargas:</b> Es la carpeta donde se guardan automáticamente los documentos, PDF o fotos que bajas de Internet.</li><li><b>Nueva Carpeta:</b> Sirve para crear cajones temáticos y que no esté todo mezclado.</li><li><b>Mover vs Copiar:</b> Al mover un archivo, lo quitas de un sitio para ponerlo en otro. Al copiarlo, dejas el original y creas un duplicado.</li></ul><p class="small">Los nombres (como "Mis Archivos" o "Gestor de archivos") y la posición de los controles pueden variar según la marca del móvil. Si te equivocas al mover algo, no te preocupes, siempre puedes volver a moverlo.</p></div></div>
 <script>
-const P=[
+var P=[
 {t:"Abre la aplicación de archivos",o:"Aprender a localizar la aplicación para gestionar los archivos descargados.",p:["Desbloquea tu teléfono.","Busca y abre la aplicación llamada Archivos o Mis Archivos.","Dentro de la aplicación, busca y toca en la carpeta Descargas.","Observa los archivos que has bajado de Internet."],f:"Según el modelo de tu teléfono, el nombre de la aplicación puede variar ligeramente (Mis Archivos, Gestor de archivos, Files...)."},
-{t:"Crea carpetas por temas",o:"Crear nuevas carpetas para poder organizar los documentos y fotos.",p:["Dentro de la aplicación de archivos, busca la opción para crear una Nueva Carpeta.","Generalmente aparece como un icono con el símbolo + o los tres puntos.","Escribe un nombre para la carpeta (por ejemplo: Bancos, Música, Fotos o Facturas).","Crea todas
+{t:"Crea carpetas por temas",o:"Crear nuevas carpetas para poder organizar los documentos y fotos.",p:["Dentro de la aplicación de archivos, busca la opción para crear una Nueva Carpeta.","Generalmente aparece como un icono con el símbolo + o los tres puntos.","Escribe un nombre para la carpeta (por ejemplo: Bancos, Música, Fotos o Facturas).","Crea todas las carpetas necesarias según tus necesidades."],f:"Piensa en categorías útiles que te ayuden a encontrar tus cosas más rápido en el futuro, igual que harías con cajones en casa."},
+{t:"Mueve los archivos a su sitio",o:"Reubicar los archivos desde Descargas a su carpeta correspondiente.",p:["En la carpeta Descargas, mantén presionado el archivo que deseas mover.","Aparecerán opciones en la pantalla. Toca la opción Mover o Mover a.","Navega por las carpetas hasta que llegues a la que creaste (por ejemplo, Bancos).","Toca Mover aquí o la opción equivalente para completar la acción.","Repite el proceso para todos los archivos que desees organizar."],f:"Mantener pulsado un elemento (sin levantar el dedo enseguida) es el gesto clave para que aparezcan las opciones de gestión."},
+{t:"Verifica el orden y borra lo que sobra",o:"Comprobar que todo está en su sitio y eliminar la basura digital.",p:["Vuelve al inicio de la aplicación de archivos y entra en cada carpeta creada.","Asegúrate de que los archivos están en el lugar correcto.","Si un archivo está en la carpeta equivocada, puedes repetir el proceso de moverlo.","Si encuentras archivos que ya no necesitas, mantenlos presionados y toca Eliminar."],f:"Borrar archivos descargados que ya no sirven (como menús viejos de restaurantes o billetes caducados) ayuda a liberar memoria en tu teléfono."}
+];
+
+var current = 0;
+var scale = 1;
+
+function $(id){ return document.getElementById(id); }
+
+function esc(s){ 
+    return String(s).replace(/[&<>"]/g, function(c){ 
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; 
+    }); 
+}
+
+function render(){
+    var x = P[current];
+    var stepsHTML = '';
+    
+    for(var i=0; i<x.p.length; i++){
+        var text = esc(x.p[i]).replace(/(Archivos|Mis Archivos|Descargas|Nueva Carpeta|Bancos|Música|Fotos|Facturas|Mover aquí|Mover a|Mover|Eliminar)/gi,'<kbd>$1</kbd>').replace('+','<kbd>+</kbd>');
+        stepsHTML += '<li>' + text + '</li>';
+    }
+
+    $('practice').innerHTML = '<div class="heading"><div class="num">'+(current+1)+'</div><div><h2>'+esc(x.t)+'</h2><p class="objective">'+esc(x.o)+'</p></div></div><ol class="steps">'+stepsHTML+'</ol><p class="tip"><strong>💡 Fíjate:</strong> '+esc(x.f)+'</p><section class="work"><h3>📱 Comprueba lo que has hecho</h3><p class="muted">Realiza los pasos en tu propio teléfono. Después marca la práctica como terminada.</p><label><input type="checkbox" id="done">He realizado los pasos de esta práctica.</label><div class="feedback" id="feedback" aria-live="polite"></div><div class="row"><button id="confirm">Confirmar práctica</button></div></section>';
+
+    $('count').textContent = 'Práctica '+(current+1)+' de '+P.length;
+    $('fill').style.width = (((current+1)/P.length)*100)+'%';
+    $('prev').disabled = (current===0);
+    $('next').disabled = (current===P.length-1);
+    $('main').scrollTop = 0;
+    document.title = (current+1)+'. '+x.t+' · Prácticas en el móvil';
+
+    $('confirm').onclick = function(){
+        if($('done').checked){
+            $('feedback').textContent = 'Práctica marcada como realizada. Puedes continuar.';
+            $('feedback').className = 'feedback ok';
+        }else{
+            $('feedback').textContent = 'Marca la casilla cuando hayas terminado los pasos.';
+            $('feedback').className = 'feedback';
+        }
+    };
+}
+
+function go(n){ 
+    current = Math.max(0, Math.min(P.length-1, n)); 
+    render(); 
+}
+
+function openPanel(id){ 
+    $(id).classList.add('open'); 
+    $(id).querySelector('button').focus(); 
+}
+
+function closePanels(){
+    var panels = document.querySelectorAll('.panel');
+    for(var i=0; i<panels.length; i++){
+        panels[i].classList.remove('open');
+    }
+}
+
+$('prev').onclick = function(){ go(current-1); };
+$('next').onclick = function(){ go(current+1); };
+
+$('all').onclick = function(){
+    var html = '';
+    for(var i=0; i<P.length; i++){
+        var isCurrent = (i===current) ? 'current' : '';
+        html += '<button data-go="'+i+'" class="'+isCurrent+'"><b>'+(i+1)+'</b>'+esc(P[i].t)+'</button>';
+    }
+    $('index').innerHTML = html;
+    openPanel('listPanel');
+};
+
+$('guide').onclick = function(){ openPanel('guidePanel'); };
+
+var closeBtns = document.querySelectorAll('[data-close]');
+for(var j=0; j<closeBtns.length; j++){
+    closeBtns[j].onclick = closePanels;
+}
+
+var panels = document.querySelectorAll('.panel');
+for(var k=0; k<panels.length; k++){
+    panels[k].addEventListener('click', function(e){
+        if(e.target === this) closePanels();
+        
+        var b = e.target;
+        while(b && b !== this){
+            if(b.getAttribute && b.getAttribute('data-go') !== null){
+                go(parseInt(b.getAttribute('data-go'), 10));
+                closePanels();
+                break;
+            }
+            b = b.parentNode;
+        }
+    });
+}
+
+$('smaller').onclick = function(){ 
+    scale = Math.max(0.75, scale-0.1); 
+    document.documentElement.style.setProperty('--scale', scale); 
+};
+
+$('bigger').onclick = function(){ 
+    scale = Math.min(1.5, scale+0.1); 
+    document.documentElement.style.setProperty('--scale', scale); 
+};
+
+$('full').onclick = function(){
+    if(document.fullscreenElement) { 
+        document.exitFullscreen(); 
+    } else if(document.documentElement.requestFullscreen) { 
+        document.documentElement.requestFullscreen(); 
+    }
+};
+
+document.addEventListener('fullscreenchange', function(){
+    $('full').textContent = document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
+});
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closePanels(); return; }
+    if(document.querySelector('.panel.open')) return;
+    if(e.target && e.target.nodeName === 'INPUT') return;
+    if(e.key === 'ArrowRight' || e.key === 'PageDown'){ e.preventDefault(); go(current+1); }
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); go(current-1); }
+});
+
+render();
+</script></body></html>
