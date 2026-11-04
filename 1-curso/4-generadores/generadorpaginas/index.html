@@ -2,1284 +2,392 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generador de páginas del curso</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Prácticas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   :root {
-    --fondo: #e9eff5;
-    --tinta: #14233b;
-    --suave: #3d4d66;
-    --azul: #245a9e;
-    --rojo: #c8283a;
-    --verde: #1f7a5c;
-    --blanco: #ffffff;
-    --borde: #b9c6d6;
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+    --line: rgba(255,255,255,0.08);
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 1.5rem;
-    font-family: "Segoe UI", Verdana, sans-serif;
-    font-size: 1rem;
-    line-height: 1.45;
-    color: var(--tinta);
-    background: var(--fondo);
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; animation: float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 36px 20px 60px; }
+  .header { text-align: center; margin-bottom: 30px; position: relative; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 14px;
   }
-  main { max-width: 1400px; margin: 0 auto; }
-  h1 { margin: 0 0 0.25rem; font-size: 2rem; }
-  h2 { margin: 0 0 0.75rem; font-size: 1.2rem; }
-  .intro { margin: 0 0 1.5rem; color: var(--suave); }
-  section {
-    background: var(--blanco);
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1.25rem;
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.6rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px;
   }
-  label { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.2rem; }
-  input, select, textarea {
-    width: 100%;
-    padding: 0.45rem 0.6rem;
-    border: 2px solid var(--borde);
-    border-radius: 8px;
-    font: inherit;
-    color: inherit;
-    background: #fff;
+  .lead { color: var(--sub); font-weight: 600; }
+
+  .card { background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sub); margin-bottom: 14px; font-weight: 800; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.78rem; font-weight: 700; color: var(--sub); }
+  select, input[type=number], input[type=text], input[type=password], textarea {
+    background: rgba(255,255,255,0.04); border: 2px solid var(--line); border-radius: 10px;
+    color: var(--text); font-family: inherit; font-size: 0.95rem; font-weight: 600; padding: 9px 12px;
   }
-  input:focus, select:focus, textarea:focus { outline: 3px solid var(--azul); outline-offset: 1px; }
-  input.mal { border-color: var(--rojo); background: #fdecee; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--c1); }
+  select option { background: var(--card); }
+  input[type=number] { width: 90px; }
 
-  .cursos { display: grid; grid-template-columns: 1fr 3fr; gap: 0.75rem 1rem; }
-  .ayuda { margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--suave); }
-
-  .barra { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.9rem; }
-  button {
-    padding: 0.6rem 1.1rem;
-    border: 2px solid var(--azul);
-    border-radius: 10px;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-    color: var(--azul);
-    background: var(--blanco);
+  .btn {
+    border: 2px solid var(--line); background: rgba(255,255,255,0.05); color: var(--text);
+    font-family: inherit; font-weight: 800; font-size: 0.9rem; padding: 10px 16px; border-radius: 12px; cursor: pointer; transition: 0.2s;
   }
-  button:hover { background: #eaf1fa; }
-  button:focus-visible { outline: 3px solid var(--rojo); outline-offset: 2px; }
-  button.principal { color: #fff; background: var(--azul); }
-  button.principal:hover { background: #1b4780; }
-  button.generar { font-size: 1.2rem; padding: 0.8rem 1.6rem; background: var(--verde); border-color: var(--verde); color: #fff; }
-  button.generar:hover { background: #135540; }
-  button.una { padding: 0.25rem 0.6rem; font-size: 0.85rem; white-space: nowrap; }
-  #mensajeTabla { margin: 0.6rem 0 0; min-height: 1.5rem; font-weight: 700; white-space: pre-line; }
-  button.quitar { padding: 0.2rem 0.55rem; border-color: var(--borde); color: var(--suave); }
+  .btn:hover:not(:disabled) { border-color: var(--c1); background: rgba(33,115,70,0.15); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn-main { background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; border: none; }
+  .btn-main:hover:not(:disabled) { background: linear-gradient(135deg, var(--c3), #f59e0b); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+  .btn-green { background: linear-gradient(135deg, var(--c1), var(--c2)); border: none; color: #fff; }
+  .btn-sm { padding: 6px 11px; font-size: 0.8rem; border-radius: 9px; }
+  .top-actions { position: absolute; top: 0; right: 0; display: flex; gap: 8px; }
 
-  details { margin-bottom: 0.9rem; }
-  summary { cursor: pointer; font-weight: 700; color: var(--azul); }
-  details textarea { height: 7rem; margin: 0.6rem 0; font-family: Consolas, monospace; font-size: 0.9rem; }
-  .pegar-fila { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-  .pegar-fila select { width: auto; }
-  label.check { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; font-size: 1rem; font-weight: 400; cursor: pointer; }
-  label.check input { width: 1.3rem; height: 1.3rem; margin: 0; }
-  #mensajeMenu { margin: 0.6rem 0 0; min-height: 1.5rem; font-weight: 700; white-space: pre-line; }
+  .drop {
+    border: 2px dashed rgba(255,255,255,0.18); border-radius: 16px; padding: 30px 20px; text-align: center;
+    cursor: pointer; transition: 0.2s; color: var(--sub); font-weight: 700;
+  }
+  .drop:hover, .drop.over { border-color: var(--c1); background: rgba(33,115,70,0.08); color: var(--text); }
+  .drop .big { font-size: 2.2rem; display: block; margin-bottom: 6px; }
 
-  .tabla-caja { max-height: 52vh; overflow: auto; border: 2px solid var(--borde); border-radius: 12px; }
-  table { border-collapse: collapse; width: 100%; }
-  #tabla tbody tr { cursor: pointer; }
-  #tabla tbody tr:hover { background: #f4f7fa; }
-  td.tit { font-weight: 700; }
-  td.tit.sin { font-weight: 400; font-style: italic; color: var(--suave); }
-  td.curso-c { white-space: nowrap; color: var(--suave); font-size: 0.9rem; }
-  .chips { display: flex; flex-wrap: nowrap; gap: 0.25rem; }
-  td.tit { width: 40%; }
-  .chip { padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; color: #fff; white-space: nowrap; }
-  .chip.doc { background: #245a9e; } .chip.cues { background: #1f7a5c; }
-  .chip.sim { background: #c8283a; } .chip.ejer { background: #9a6a00; }
-  .chip.nada { background: #eef2f6; color: var(--suave); }
-  .chip.mal { outline: 3px solid var(--rojo); outline-offset: 1px; }
-  td.acciones { white-space: nowrap; text-align: right; }
+  .files { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .file {
+    border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: rgba(255,255,255,0.02);
+    display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  }
+  .file .name { font-weight: 800; word-break: break-word; }
+  .file .meta { font-size: 0.82rem; color: var(--sub); font-weight: 600; margin-top: 3px; }
+  .file .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .file .edit { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .file .edit input[type=text] { flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.9rem; }
+  .file .edit input.emoji { width: 56px; flex: none; min-width: 0; text-align: center; }
+  .file .edit select { padding: 6px 10px; font-size: 0.9rem; }
+  .st { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; margin-left: 6px; vertical-align: middle; }
+  .st.wait { background: rgba(255,255,255,0.08); color: var(--sub); }
+  .st.run { background: rgba(255,217,61,0.15); color: var(--c3); }
+  .st.ok { background: rgba(33,115,70,0.25); color: #4ade80; }
+  .st.err { background: rgba(255,107,107,0.18); color: var(--c4); }
+  .errtxt { grid-column: 1 / -1; color: var(--c4); font-size: 0.85rem; font-weight: 600; }
 
-  /* Ventana de edición */
-  dialog#editor { width: min(1350px, 96vw); max-height: 94vh; padding: 0; border: 0; border-radius: 18px; color: var(--tinta); background: var(--fondo); }
-  dialog#editor::backdrop { background: rgba(20, 35, 59, 0.55); }
-  .ed-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.5rem 0; }
-  .ed-cab h2 { margin: 0; }
-  .ed-cols { display: grid; grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: 1.25rem; padding: 1rem 1.5rem 1.5rem; align-items: start; }
-  @media (max-width: 1000px) { .ed-cols { grid-template-columns: 1fr; } }
-  .ed-cols section { margin: 0; }
-  .campo { margin-bottom: 0.75rem; }
-  .tipo { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-bottom: 0.9rem; }
-  .tipo label { display: flex; align-items: center; gap: 0.45rem; margin: 0; font-size: 1rem; cursor: pointer; }
-  .tipo input { width: 1.2rem; height: 1.2rem; margin: 0; }
-  .marca { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 3px; margin-right: 0.3rem; vertical-align: -1px; }
-  .enlace-final { display: flex; gap: 0.5rem; margin-top: 0.2rem; }
-  .enlace-final input { font-family: Consolas, monospace; font-size: 0.9rem; background: #f4f7fa; }
-  .carpeta-ed { font-family: Consolas, monospace; color: var(--suave); }
-  #edMensaje { margin: 0.7rem 0 0; min-height: 1.4rem; font-weight: 700; white-space: pre-line; }
-  .marco-vista { position: relative; overflow: hidden; border: 2px solid var(--borde); border-radius: 12px; background: #e9eff5; }
-  .marco-vista iframe { position: absolute; top: 0; left: 0; width: 1366px; height: 768px; border: 0; transform-origin: 0 0; }
-  th, td { padding: 0.35rem 0.4rem; text-align: left; vertical-align: middle; border-bottom: 1px solid #e1e8f0; }
-  th { position: sticky; top: 0; z-index: 1; background: #f4f7fa; font-size: 0.85rem; }
-  td.num { width: 2.5rem; text-align: right; color: var(--suave); }
-  td.carpeta { font-family: Consolas, monospace; font-size: 0.85rem; color: var(--suave); white-space: nowrap; }
+  .bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 18px; }
+  .status { margin-top: 12px; font-weight: 700; font-size: 0.9rem; min-height: 1.2em; }
+  .status.ok { color: var(--c5); } .status.err { color: var(--c4); }
 
-  #mensaje { margin: 1rem 0 0; min-height: 1.5rem; font-weight: 700; white-space: pre-line; }
+  .overlay { position: fixed; inset: 0; background: rgba(5,10,20,0.75); z-index: 10; display: none; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 760px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal.sm { max-width: 480px; }
+  .modal-head { padding: 18px 22px 0; } .modal-head h3 { font-family: 'Fredoka One'; font-weight: 400; font-size: 1.4rem; }
+  .modal-body { padding: 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  /* Barras de desplazamiento visibles en el tema oscuro */
+  .modal-body, textarea { scrollbar-width: auto; scrollbar-color: #4a5b80 rgba(255,255,255,0.05); }
+  .modal-body::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 12px; }
+  .modal-body::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .modal-body::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background: #4a5b80; border-radius: 10px; border: 2px solid var(--card); }
+  .modal-body::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover { background: var(--c1); }
+  .keylink { font-size: 0.75rem; color: var(--c5); font-weight: 700; text-decoration: none; }
+  .keylink:hover { text-decoration: underline; }
+  .modal-foot { padding: 0 22px 18px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+  .modal-foot .left { margin-right: auto; display: flex; gap: 8px; align-items: center; }
+  .keyrow { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; align-items: center; margin-bottom: 12px; }
+  .keyrow .keylink { grid-column: 2; }
+  .keyrow label { font-weight: 700; color: var(--sub); font-size: 0.88rem; }
+  .keynote { color: var(--sub); font-size: 0.85rem; margin-bottom: 14px; }
+  textarea.big { width: 100%; height: 50vh; min-height: 200px; font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; font-weight: 400; line-height: 1.45; resize: vertical; }
+  .ptitle { font-size: 0.8rem; font-weight: 800; color: var(--sub); margin-bottom: 8px; }
+
+  @media (max-width: 600px) {
+    .top-actions { position: static; justify-content: center; margin-bottom: 14px; }
+    .file { grid-template-columns: 1fr; } .file .acts { justify-content: flex-start; }
+  }
+  /* ── Añadidos del generador de prácticas ── */
+  .container { max-width: 1000px; }
+  .row + .row { margin-top: 14px; }
+  .reftxt { font-weight: 700; padding: 9px 0; }
+  .reftxt small { color: var(--sub); font-weight: 600; }
+  details.extra { margin-top: 16px; }
+  details.extra summary { cursor: pointer; font-weight: 800; font-size: 0.88rem; color: var(--sub); }
+  details.extra[open] summary { margin-bottom: 10px; color: var(--text); }
+  details.extra p { color: var(--sub); font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; }
+  textarea.mid { width: 100%; min-height: 80px; resize: vertical; line-height: 1.4; }
+  .file .edit .title { flex: 1; min-width: 200px; }
+  .prog { grid-column: 1 / -1; color: var(--c3); font-size: 0.85rem; font-weight: 700; }
+  .okmsg { grid-column: 1 / -1; color: var(--c5); font-size: 0.85rem; font-weight: 700; }
+  .chg { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+  .chg .bar { margin-top: 0; }
+  .file.viewing { border-color: var(--c1); box-shadow: 0 0 0 1px var(--c1); }
+  .btn-stop { background: rgba(255,107,107,0.18); border-color: var(--c4); }
+  .pv-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .pv-head h2 { margin-bottom: 0; }
+  .pv-head .t { flex: 1; min-width: 0; font-family: 'Fredoka One'; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .jserr { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: rgba(255,107,107,0.12); border: 2px solid var(--c4); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-weight: 700; font-size: 0.9rem; }
+  .jserr[hidden] { display: none; }
+  .jserr span { flex: 1; min-width: 220px; }
+  .pv-box { position: relative; height: 78vh; min-height: 480px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+  .pv-box iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  .pv-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 30px; background: var(--card); color: var(--sub); font-weight: 700; line-height: 1.5; }
+  .pv-empty[hidden] { display: none; }
+  .pv-empty .big { font-size: 3rem; }
+  .pv-empty h3 { font-family: 'Fredoka One'; font-weight: 400; font-size: 1.5rem; color: var(--c3); }
+  .warn { grid-column: 1 / -1; color: var(--c3); font-size: 0.85rem; font-weight: 700; }
+  .review { grid-column: 1 / -1; background: rgba(255,217,61,0.07); border: 1px solid rgba(255,217,61,0.35); border-radius: 12px; padding: 10px 14px; font-size: 0.88rem; font-weight: 600; line-height: 1.45; }
+  .review .rt { white-space: pre-wrap; margin: 6px 0 10px; }
+  .review .bar { margin-top: 0; justify-content: flex-start; }
+  .review h4 { color: var(--c3); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+  .opt { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; margin-bottom: 8px; cursor: pointer; }
+  .opt input { margin-top: 4px; }
+  .opt small { display: block; color: var(--sub); font-weight: 600; }
+  .opt.off { opacity: 0.45; cursor: default; }
+  .pinfo { color: var(--sub); font-size: 0.85rem; font-weight: 600; line-height: 1.45; margin: 10px 0; }
+  .pinfo b { color: var(--text); }
+  .sep { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+  .side, .side * { scrollbar-width: auto; scrollbar-color: #4a5b80 rgba(255,255,255,0.05); }
+  .side::-webkit-scrollbar { width: 12px; }
+  .side::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 10px; }
+  .side::-webkit-scrollbar-thumb { background: #4a5b80; border-radius: 10px; border: 2px solid var(--bg); }
+
+  /* ── Todo a la vista en pantallas de ordenador: cada columna con su barra ── */
+  .main { display: grid; grid-template-columns: 1fr; gap: 0; }
+  @media (min-width: 1100px) and (min-height: 600px) {
+    body { height: 100vh; overflow: hidden; }
+    .container { max-width: 1800px; height: 100vh; display: flex; flex-direction: column; padding: 14px 20px 16px; }
+    .header { flex-shrink: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; text-align: left; margin-bottom: 12px; padding-right: 210px; }
+    .header .badge { margin-bottom: 0; }
+    .header h1 { margin-bottom: 0; font-size: clamp(1.5rem, 2.1vw, 2.1rem); }
+    .header .lead { font-size: 0.9rem; }
+    .top-actions { top: 50%; transform: translateY(-50%); }
+    .main { flex: 1; min-height: 0; grid-template-columns: minmax(400px, 34%) minmax(0, 1fr); gap: 18px; }
+    .side { min-height: 0; overflow-y: auto; padding-right: 8px; }
+    .side .card { padding: 18px 20px; margin-bottom: 14px; }
+    .side .card:last-child { margin-bottom: 0; }
+    .side .file { grid-template-columns: 1fr; }
+    .side .file .acts { justify-content: flex-start; }
+    .side .bar { justify-content: flex-start; }
+    .drop { padding: 18px 16px; }
+    .drop .big { font-size: 1.8rem; }
+    #pv-card { display: flex; flex-direction: column; min-height: 0; margin-bottom: 0; padding: 16px 18px; }
+    .pv-box { flex: 1; height: auto; min-height: 0; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <h1>Generador de páginas del curso</h1>
-  <p class="intro">Pulsa en un tema para rellenar sus enlaces y ver cómo queda su página. Con «Generar» descargas un ZIP con una carpeta por tema y el menú.</p>
 
-  <section>
-    <h2>1. Los dos cursos</h2>
-    <div class="cursos">
-      <div>
-        <label for="c1n">Curso 1 · dibujo de ordenador</label>
-        <input id="c1n">
-      </div>
-      <div>
-        <label for="c1u">Dirección de su página principal (a donde vuelve el alumno)</label>
-        <input id="c1u" type="url">
-      </div>
-      <div>
-        <label for="c2n">Curso 2 · dibujo de móvil</label>
-        <input id="c2n">
-      </div>
-      <div>
-        <label for="c2u">Dirección de su página principal (a donde vuelve el alumno)</label>
-        <input id="c2u" type="url">
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+  <div class="header">
+    <div class="top-actions">
+      <button class="btn btn-sm" onclick="openPrompt()">📝 Prompt</button>
+      <button class="btn btn-sm" onclick="openKeys()">🔑 Claves</button>
+    </div>
+    <div class="badge">🎬 Cruz Roja · Cursos</div>
+    <h1>Generador de Prácticas</h1>
+    <p class="lead">Carga los temas en Word o PDF y crea una práctica interactiva por cada uno.</p>
+  </div>
+
+  <div class="main">
+  <div class="side">
+  <div class="card">
+    <h2>Modelo y opciones</h2>
+    <div class="row">
+      <div class="field"><label for="prov">Proveedor</label><select id="prov" onchange="changeProvider()"></select></div>
+      <div class="field"><label for="model">Modelo</label><select id="model" onchange="changeModel()"></select></div>
+      <button class="btn btn-sm" id="refresh-btn" style="margin-bottom:4px" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1;min-width:240px"><label>Ejemplo de referencia (la IA copia su estilo y su forma de funcionar)</label><div class="reftxt" id="reftxt"></div></div>
+      <button class="btn btn-sm" style="margin-bottom:4px" onclick="$('reffile').click()">📂 Usar otro ejemplo</button>
+      <button class="btn btn-sm" style="margin-bottom:4px" id="btn-refreset" onclick="resetRef()">↩️ Volver al original</button>
+      <input type="file" id="reffile" accept=".html,.htm" hidden onchange="loadRef(this.files[0]); this.value=''">
+    </div>
+    <div class="row">
+      <div class="field"><label for="dif">Dificultad de la práctica</label>
+        <select id="dif">
+          <option value="basico">Básico · muy guiado</option>
+          <option value="medio" selected>Medio · como el ejemplo</option>
+          <option value="avanzado">Avanzado · con menos ayuda</option>
+        </select>
       </div>
     </div>
-  </section>
-
-  <section>
-    <h2>2. Los temas</h2>
-
-    <div class="barra">
-      <button type="button" class="principal" id="btnAnadir">Añadir tema</button>
-      <button type="button" id="btnTemas">Poner los temas de Google Sites</button>
-      <button type="button" id="btnGuardar">Guardar copia</button>
-      <button type="button" id="btnCargar">Cargar copia</button>
-      <input type="file" id="fichero" accept=".json" hidden>
-    </div>
-
-    <details>
-      <summary>Pegar muchas filas desde Excel o Sheets</summary>
-      <textarea id="pegado" aria-label="Filas pegadas" placeholder="Título  [tab]  Documentación  [tab]  Cuestionario  [tab]  Simulación  [tab]  Ejercicios"></textarea>
-      <div class="pegar-fila">
-        <label for="cursoPegado" style="margin:0">Curso de las filas pegadas:</label>
-        <select id="cursoPegado"><option value="1"></option><option value="2"></option></select>
-        <button type="button" class="principal" id="btnPegar">Añadir al final de la tabla</button>
-      </div>
-      <p class="ayuda">Copia cinco columnas, en este orden: Título, Documentación, Cuestionario, Simulación y Ejercicios. Las celdas vacías están permitidas.</p>
+    <details class="extra" id="extra-box">
+      <summary>➕ Indicaciones para todas las prácticas</summary>
+      <p>Opcional. Se añaden a cada tema; por ejemplo: «En Probar, que el alumno tenga que escribir algo con el teclado».</p>
+      <textarea class="mid" id="extra" placeholder="Escribe aquí lo que quieras pedir…"></textarea>
     </details>
-
-    <div class="tabla-caja">
-      <table id="tabla">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Curso</th>
-            <th>Título</th>
-            <th>Contenido</th>
-            <th>Carpeta</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p class="ayuda">Pulsa en un tema para abrirlo y rellenar o cambiar sus enlaces. Un enlace vacío hace que esa tarjeta no aparezca en la página; en rojo, los que no empiezan por http. Con «Descargar» bajas solo la carpeta de ese tema y con «+» añades uno nuevo justo debajo.</p>
-    <p id="mensajeTabla" role="status"></p>
-  </section>
-
-  <section>
-    <h2>3. Menú en GitHub</h2>
-    <div class="cursos" style="grid-template-columns: 1fr;">
-      <div>
-        <label for="menuTitulo">Título del menú</label>
-        <input id="menuTitulo" placeholder="Páginas del curso">
-      </div>
-    </div>
-    <label class="check"><input type="checkbox" id="menuVacios"> Mostrar también los temas que todavía no tienen ningún enlace</label>
-    <p style="margin: 1rem 0 0;"><button type="button" id="btnMenu">Descargar solo el menú</button></p>
-    <p class="ayuda">El menú es el fichero index.html que va suelto dentro de la carpeta de páginas en GitHub (no dentro de la carpeta de un tema). Se hace con lo que hay en la tabla: cuando añadas o cambies un tema, descárgalo otra vez y sustituye el anterior.</p>
-    <p id="mensajeMenu" role="status"></p>
-  </section>
-
-  <section>
-    <h2>4. Generar todo</h2>
-    <div class="cursos" style="grid-template-columns: 1fr;">
-      <div>
-        <label for="base">¿Dónde vas a subir estas páginas en GitHub? Con esta dirección, el ZIP incluye una lista con el enlace de cada tema, lista para pegar en Google Sites. Puedes dejarla vacía.</label>
-        <input id="base" type="url" placeholder="https://tu-usuario.github.io/nombre-del-repositorio/">
-      </div>
-    </div>
-    <p style="margin: 1rem 0 0;"><button type="button" class="generar" id="btnGenerar">Generar y descargar ZIP</button></p>
-    <p id="mensaje" role="status"></p>
-  </section>
-</main>
-
-<dialog id="editor" aria-labelledby="edCabecera">
-  <div class="ed-cab">
-    <h2 id="edCabecera"></h2>
-    <div class="barra" style="margin:0">
-      <button type="button" id="edAnterior">‹ Anterior</button>
-      <button type="button" id="edSiguiente">Siguiente ›</button>
-      <button type="button" class="principal" id="edCerrar">Cerrar</button>
-    </div>
   </div>
-  <div class="ed-cols">
-    <section>
-      <div class="tipo" role="radiogroup" aria-label="Curso del tema">
-        <label><input type="radio" name="edCurso" value="1"> <span id="edNombre1"></span></label>
-        <label><input type="radio" name="edCurso" value="2"> <span id="edNombre2"></span></label>
-      </div>
-      <div class="campo">
-        <label for="ed-titulo">Título</label>
-        <input id="ed-titulo" placeholder="Ej.: Uso del ratón">
-      </div>
-      <div class="campo">
-        <label for="ed-doc"><span class="marca" style="background:#245a9e"></span>Documentación</label>
-        <input id="ed-doc" type="url" placeholder="https://drive.google.com/…">
-      </div>
-      <div class="campo">
-        <label for="ed-cues"><span class="marca" style="background:#1f7a5c"></span>Cuestionario</label>
-        <input id="ed-cues" type="url" placeholder="https://…">
-      </div>
-      <div class="campo">
-        <label for="ed-sim"><span class="marca" style="background:#c8283a"></span>Simulación</label>
-        <input id="ed-sim" type="url" placeholder="https://…">
-      </div>
-      <div class="campo">
-        <label for="ed-ejer"><span class="marca" style="background:#9a6a00"></span>Prácticas en clase</label>
-        <input id="ed-ejer" type="url" placeholder="https://…">
-      </div>
-      <p class="ayuda" style="margin-top:0">El texto de debajo del título y «Volver al curso» salen del apartado 1. Carpeta: <span class="carpeta-ed" id="edCarpeta">—</span></p>
-      <label for="edFinal" style="margin-top:0.8rem">Enlace para Google Sites</label>
-      <div class="enlace-final">
-        <input id="edFinal" readonly>
-        <button type="button" id="edCopiar">Copiar</button>
-      </div>
-      <div class="barra" style="margin:1rem 0 0">
-        <button type="button" class="generar" id="edDescargar" style="font-size:1rem;padding:0.6rem 1.1rem">Descargar esta página</button>
-      </div>
-      <p id="edMensaje" role="status"></p>
-    </section>
-    <section>
+
+  <div class="card">
+    <h2>Documentos</h2>
+    <div class="drop" id="drop" onclick="document.getElementById('fileinput').click()">
+      <span class="big">📄</span>
+      Arrastra aquí los ficheros Word (.docx) o PDF, o haz clic para elegirlos
+    </div>
+    <input type="file" id="fileinput" accept=".docx,.pdf" multiple hidden onchange="addFiles(this.files); this.value=''">
+    <div class="files" id="files"></div>
+    <div class="bar">
+      <button class="btn" id="btn-clear" onclick="clearAll()">🗑️ Vaciar lista</button>
+      <button class="btn btn-green" id="btn-dlall" onclick="downloadAll()">⬇️ Descargar todas (ZIP)</button>
+      <button class="btn btn-main" id="btn-run" onclick="runAll()">✨ Generar prácticas</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+  </div>
+
+  <div class="card" id="pv-card">
+    <div class="pv-head">
       <h2>Vista previa</h2>
-      <div class="marco-vista" id="marcoVista"><iframe id="vista" title="Vista previa de la página" sandbox="allow-same-origin"></iframe></div>
-      <p class="ayuda">Así se verá en una pantalla de ordenador o en la pizarra.</p>
-    </section>
+      <span class="t" id="pv-title"></span>
+      <button class="btn btn-sm" id="btn-full" onclick="fullScreen()" disabled>⛶ Pantalla completa</button>
+    </div>
+    <div class="jserr" id="jserr" hidden>
+      <span id="jserr-txt"></span>
+      <button class="btn btn-sm" onclick="askFix()">🛠️ Pedir que lo arregle</button>
+      <button class="btn btn-sm" onclick="if(viewing) openOther(viewing,'fix')">📋 Otra IA</button>
+    </div>
+    <div class="pv-box"><iframe id="frame" title="Vista previa de la práctica"></iframe>
+      <div class="pv-empty" id="pv-empty"><span class="big">🎬</span><h3>Aquí verás la práctica</h3>
+        <p>Añade los temas, revisa el título y el curso, y pulsa «Generar». Cada práctica tarda unos minutos.<br>Pruébala entera antes de subirla y, si algo falla, usa «🔍 Revisar» o «📋 Prompt para otra IA».</p></div>
+    </div>
   </div>
-</dialog>
-
-<script>
-/* INICIO PURAS */
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-function slug(t) {
-  return String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
-}
-
-function calcularSlugs(filas) {
-  const usados = {};
-  return filas.map(f => {
-    const base = slug(f.titulo);
-    if (!base) return '';
-    usados[base] = (usados[base] || 0) + 1;
-    return usados[base] === 1 ? base : base + '-' + usados[base];
-  });
-}
-
-/* ---- ZIP sin compresión, sin librerías ---- */
-const TABLA_CRC = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-
-function crc32(buf) {
-  let crc = -1;
-  for (let i = 0; i < buf.length; i++) crc = TABLA_CRC[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
-  return (crc ^ -1) >>> 0;
-}
-
-function hacerZip(ficheros) {
-  const enc = new TextEncoder();
-  const partes = [], central = [];
-  let offset = 0;
-  const d = new Date();
-  const hora = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
-  const fecha = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
-
-  for (const f of ficheros) {
-    const nombre = enc.encode(f.name);
-    const datos = enc.encode(f.content);
-    const crc = crc32(datos);
-
-    const lh = new DataView(new ArrayBuffer(30));
-    lh.setUint32(0, 0x04034b50, true);
-    lh.setUint16(4, 20, true);
-    lh.setUint16(6, 0x0800, true);
-    lh.setUint16(8, 0, true);
-    lh.setUint16(10, hora, true);
-    lh.setUint16(12, fecha, true);
-    lh.setUint32(14, crc, true);
-    lh.setUint32(18, datos.length, true);
-    lh.setUint32(22, datos.length, true);
-    lh.setUint16(26, nombre.length, true);
-    lh.setUint16(28, 0, true);
-    partes.push(new Uint8Array(lh.buffer), nombre, datos);
-
-    const ch = new DataView(new ArrayBuffer(46));
-    ch.setUint32(0, 0x02014b50, true);
-    ch.setUint16(4, 20, true);
-    ch.setUint16(6, 20, true);
-    ch.setUint16(8, 0x0800, true);
-    ch.setUint16(10, 0, true);
-    ch.setUint16(12, hora, true);
-    ch.setUint16(14, fecha, true);
-    ch.setUint32(16, crc, true);
-    ch.setUint32(20, datos.length, true);
-    ch.setUint32(24, datos.length, true);
-    ch.setUint16(28, nombre.length, true);
-    ch.setUint16(30, 0, true);
-    ch.setUint16(32, 0, true);
-    ch.setUint16(34, 0, true);
-    ch.setUint16(36, 0, true);
-    ch.setUint32(38, 0, true);
-    ch.setUint32(42, offset, true);
-    central.push(new Uint8Array(ch.buffer), nombre);
-
-    offset += 30 + nombre.length + datos.length;
-  }
-
-  const tamCentral = central.reduce((a, p) => a + p.length, 0);
-  const fin = new DataView(new ArrayBuffer(22));
-  fin.setUint32(0, 0x06054b50, true);
-  fin.setUint16(4, 0, true);
-  fin.setUint16(6, 0, true);
-  fin.setUint16(8, ficheros.length, true);
-  fin.setUint16(10, ficheros.length, true);
-  fin.setUint32(12, tamCentral, true);
-  fin.setUint32(16, offset, true);
-  fin.setUint16(20, 0, true);
-
-  return new Blob([...partes, ...central, new Uint8Array(fin.buffer)], { type: 'application/zip' });
-}
-
-/* ---- La página de cada tema ---- */
-const ICONO = 'viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
-
-const TARJETAS = [
-  { k: 'doc', cls: 'documentacion', t: 'Documentación', p: 'El texto del tema en PDF.',
-    svg: `<svg ${ICONO}><path d="M14 6h26l12 12v40H14z"/><path d="M40 6v12h12"/><path d="M22 32h22M22 41h22M22 50h14"/></svg>` },
-  { k: 'cues', cls: 'cuestionario', t: 'Cuestionario', p: 'Comprueba lo que has aprendido.',
-    svg: `<svg ${ICONO}><rect x="10" y="8" width="44" height="48" rx="6"/><path d="M18 22l4 4 7-8M18 40l4 4 7-8"/><path d="M36 23h10M36 41h10"/></svg>` },
-  { k: 'sim', cls: 'simulacion', t: 'Simulación', p: 'Practica sin miedo a equivocarte.',
-    svg: `<svg ${ICONO}><rect x="6" y="10" width="52" height="36" rx="5"/><path d="M22 56h20M32 46v10"/><path d="M26 18l14 10-6 1 4 8-4 2-4-8-5 4z" fill="currentColor"/></svg>` },
-  { k: 'ejer', cls: 'ejercicios', t: 'Prácticas en clase', p: 'Ejercicios para hacer en el aula, con ayuda del profesor.',
-    svg: `<svg ${ICONO}><path d="M12 52l4-14L44 10l10 10-28 28z"/><path d="M38 16l10 10"/><path d="M12 52l14-4"/></svg>` }
-];
-
-const DIBUJOS = {
-  1: `<svg class="dibujo" viewBox="0 0 300 240" role="img" aria-label="Dibujo de un ordenador">
-      <rect x="20" y="10" width="260" height="165" rx="14" fill="#ffffff" stroke="#14233b" stroke-width="6"/>
-      <rect class="pantalla" x="40" y="30" width="220" height="125" rx="6" fill="#d6e4f2" stroke="#14233b" stroke-width="4"/>
-      <path d="M122 175L110 214H190L178 175" fill="#ffffff" stroke="#14233b" stroke-width="6" stroke-linejoin="round"/>
-      <rect x="80" y="214" width="140" height="16" rx="8" fill="#ffffff" stroke="#14233b" stroke-width="6"/>
-    </svg>`,
-  2: `<svg class="dibujo" viewBox="0 0 160 300" role="img" aria-label="Dibujo de un teléfono móvil">
-      <rect x="10" y="8" width="140" height="284" rx="26" fill="#ffffff" stroke="#14233b" stroke-width="6"/>
-      <rect class="pantalla" x="26" y="42" width="108" height="196" rx="8" fill="#d6e4f2" stroke="#14233b" stroke-width="4"/>
-      <rect x="62" y="21" width="36" height="7" rx="3.5" fill="#14233b"/>
-      <circle cx="80" cy="266" r="11" fill="#ffffff" stroke="#14233b" stroke-width="5"/>
-    </svg>`
-};
-
-const CSS_PAGINA = `
-  :root {
-    --fondo: #e9eff5;
-    --tinta: #14233b;
-    --tinta-suave: #3d4d66;
-    --rojo: #c8283a;
-    --verde: #1f7a5c;
-    --azul: #245a9e;
-    --ocre: #9a6a00;
-    --amarillo: #f2b640;
-    --blanco: #ffffff;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-    padding: clamp(1rem, 3vh, 2rem) clamp(1rem, 3vw, 2.5rem);
-    gap: clamp(1rem, 3vh, 2rem);
-    font-family: "Atkinson Hyperlegible", "Segoe UI", Verdana, sans-serif;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    color: var(--tinta);
-    background: var(--fondo);
-  }
-  header {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    max-width: 1300px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  header > div { min-width: 0; }
-  .volver {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    padding: 0.5rem 1.1rem 0.5rem 0.8rem;
-    border: 3px solid var(--tinta);
-    border-radius: 999px;
-    color: var(--tinta);
-    font-weight: 700;
-    font-size: 1.05rem;
-    text-decoration: none;
-    background: var(--blanco);
-  }
-  .volver svg { width: 22px; height: 22px; }
-  .volver:hover { background: var(--tinta); color: var(--blanco); }
-  .volver:focus-visible { outline: 4px solid var(--rojo); outline-offset: 3px; }
-  h1 {
-    margin: 0 0 0.4rem;
-    font-size: clamp(2rem, 5.5vw, 4.2rem);
-    line-height: 1.05;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    overflow-wrap: anywhere;
-  }
-  .subtitulo {
-    margin: 0;
-    font-size: clamp(1.05rem, 1.8vw, 1.35rem);
-    color: var(--tinta-suave);
-  }
-  .dibujo {
-    flex: none;
-    height: clamp(90px, 20vh, 170px);
-    width: auto;
-    filter: drop-shadow(0 10px 10px rgba(20, 35, 59, 0.22));
-  }
-  .pantalla { animation: encender 1.2s ease-out 0.6s 1 both; }
-  @keyframes encender {
-    0%   { fill: #d6e4f2; }
-    35%  { fill: var(--amarillo); }
-    100% { fill: #d6e4f2; }
-  }
-  main {
-    flex: 1;
-    display: flex;
-    max-width: 1300px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  .enlaces {
-    flex: 1;
-    display: grid;
-    gap: clamp(0.8rem, 1.6vw, 1.5rem);
-  }
-  .enlaces.n1 { grid-template-columns: minmax(0, 520px); justify-content: center; }
-  .enlaces.n2 { grid-template-columns: repeat(2, 1fr); }
-  .enlaces.n3 { grid-template-columns: repeat(3, 1fr); }
-  .enlaces.n4 { grid-template-columns: repeat(4, 1fr); }
-  .tarjeta {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    min-height: 220px;
-    padding: 1.5rem 1rem;
-    border-radius: 28px;
-    color: var(--blanco);
-    text-align: center;
-    text-decoration: none;
-    background: var(--color);
-    box-shadow: 0 6px 0 var(--sombra);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .tarjeta:hover { transform: translateY(-3px); box-shadow: 0 9px 0 var(--sombra); }
-  .tarjeta:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--sombra); }
-  .tarjeta:focus-visible { outline: 4px solid var(--tinta); outline-offset: 4px; }
-  .tarjeta svg {
-    flex: none;
-    width: clamp(56px, 8vw, 96px);
-    height: clamp(56px, 8vw, 96px);
-  }
-  .tarjeta h2 {
-    margin: 0 0 0.3rem;
-    font-size: clamp(1.4rem, 2.4vw, 2rem);
-    line-height: 1.1;
-    overflow-wrap: anywhere;
-  }
-  .tarjeta p { margin: 0; font-size: clamp(0.95rem, 1.3vw, 1.1rem); opacity: 0.95; }
-  .documentacion { --color: var(--azul);  --sombra: #173f70; }
-  .cuestionario  { --color: var(--verde); --sombra: #135540; }
-  .simulacion    { --color: var(--rojo);  --sombra: #8f1b29; }
-  .ejercicios    { --color: var(--ocre);  --sombra: #6b4900; }
-  .vacio { font-size: 1.3rem; color: var(--tinta-suave); }
-
-  @media (max-width: 800px) {
-    .enlaces.n2, .enlaces.n3, .enlaces.n4 { grid-template-columns: repeat(2, 1fr); }
-    .enlaces.n1 { grid-template-columns: 1fr; }
-    .enlaces.n3 .tarjeta:last-child { grid-column: 1 / -1; }
-    .tarjeta { min-height: 150px; padding: 1rem 0.6rem; border-radius: 22px; }
-    .tarjeta p { display: none; }
-    .dibujo { height: 80px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .pantalla { animation: none; }
-    .tarjeta { transition: none; }
-  }
-`;
-
-function pagina(f, curso, n) {
-  const usadas = TARJETAS.filter(x => (f[x.k] || '').trim());
-  const tarjetas = usadas.map(x => `    <a class="tarjeta ${x.cls}" href="${esc(f[x.k].trim())}">
-      ${x.svg}
-      <div>
-        <h2>${x.t}</h2>
-        <p>${x.p}</p>
-      </div>
-    </a>`).join('\n');
-  const cuerpo = usadas.length
-    ? `<nav class="enlaces n${usadas.length}" aria-label="Contenido del tema">\n${tarjetas}\n  </nav>`
-    : `<p class="vacio">Este tema todavía no tiene contenido.</p>`;
-  const titulo = esc(f.titulo.trim());
-
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${titulo}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<style>${CSS_PAGINA}</style>
-</head>
-<body>
-
-<header>
-  <div>
-    <a class="volver" href="${esc((curso.url || '').trim())}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-      Volver al curso
-    </a>
-    <h1>${titulo}</h1>
-    <p class="subtitulo">${esc((curso.nombre || '').trim())}</p>
   </div>
-  ${DIBUJOS[n]}
-</header>
-
-<main>
-  ${cuerpo}
-</main>
-
-</body>
-</html>
-`;
-}
-
-/* ---- El menú (index.html de la carpeta de páginas) ---- */
-const CSS_MENU = `
-  :root {
-    --fondo: #e9eff5;
-    --tinta: #14233b;
-    --tinta-suave: #3d4d66;
-    --rojo: #c8283a;
-    --verde: #1f7a5c;
-    --azul: #245a9e;
-    --ocre: #9a6a00;
-    --blanco: #ffffff;
-    --linea: #c5d2e0;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: clamp(1rem, 3vh, 2rem) clamp(1rem, 3vw, 2.5rem) 3rem;
-    font-family: "Atkinson Hyperlegible", "Segoe UI", Verdana, sans-serif;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    color: var(--tinta);
-    background: var(--fondo);
-  }
-  .marco { max-width: 900px; margin: 0 auto; }
-  h1 {
-    margin: 0 0 0.3rem;
-    font-size: clamp(2rem, 5.5vw, 3.6rem);
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-  }
-  .subtitulo { margin: 0 0 1.5rem; font-size: clamp(1.05rem, 1.8vw, 1.3rem); color: var(--tinta-suave); }
-  .buscador { position: relative; margin-bottom: 1rem; }
-  .buscador svg { position: absolute; left: 1.1rem; top: 50%; width: 28px; height: 28px; transform: translateY(-50%); pointer-events: none; }
-  .buscador input {
-    width: 100%;
-    padding: 0.85rem 1.2rem 0.85rem 3.4rem;
-    border: 3px solid var(--tinta);
-    border-radius: 999px;
-    font: inherit;
-    font-size: 1.35rem;
-    color: var(--tinta);
-    background: var(--blanco);
-  }
-  .buscador input:focus { outline: 4px solid var(--azul); outline-offset: 3px; }
-  .filtros { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem; }
-  .filtros button {
-    padding: 0.45rem 1.1rem;
-    border: 3px solid var(--tinta);
-    border-radius: 999px;
-    font: inherit;
-    font-weight: 700;
-    color: var(--tinta);
-    background: var(--blanco);
-    cursor: pointer;
-  }
-  .filtros button[aria-pressed="true"] { color: var(--blanco); background: var(--tinta); }
-  .filtros button:focus-visible { outline: 4px solid var(--rojo); outline-offset: 3px; }
-  #aviso { min-height: 1.6rem; margin: 0.6rem 0 0.4rem; font-weight: 700; color: var(--tinta-suave); }
-  .curso { margin-top: 1.6rem; }
-  .curso h2 {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    margin: 0 0 0.8rem;
-    font-size: clamp(1.4rem, 2.6vw, 1.9rem);
-  }
-  .curso h2 svg { flex: none; height: 52px; width: auto; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
-  li a {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-    padding: 0.9rem 1.2rem;
-    border: 3px solid transparent;
-    border-radius: 18px;
-    color: var(--tinta);
-    text-decoration: none;
-    background: var(--blanco);
-    box-shadow: 0 4px 0 var(--linea);
-  }
-  li a:hover { border-color: var(--tinta); }
-  li a:focus-visible { outline: 4px solid var(--rojo); outline-offset: 3px; }
-  .titulo { font-size: 1.25rem; font-weight: 700; overflow-wrap: anywhere; }
-  .recursos { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-  .recursos span { padding: 0.1rem 0.65rem; border-radius: 999px; font-size: 0.85rem; font-weight: 700; color: var(--blanco); }
-  .r-doc  { background: var(--azul); }
-  .r-cues { background: var(--verde); }
-  .r-sim  { background: var(--rojo); }
-  .r-ejer { background: var(--ocre); }
-  .recursos .r-vacio { color: var(--tinta-suave); background: var(--fondo); }
-  @media (max-width: 600px) {
-    .titulo { font-size: 1.15rem; }
-    .curso h2 svg { height: 40px; }
-  }
-`;
-
-const JS_MENU = String.raw`(function () {
-  var D = JSON.parse(document.getElementById('datos').textContent);
-  var NOMBRES = { doc: 'Documentación', cues: 'Cuestionario', sim: 'Simulación', ejer: 'Prácticas en clase' };
-  var buscar = document.getElementById('buscar');
-  var lista = document.getElementById('lista');
-  var aviso = document.getElementById('aviso');
-  var botones = document.querySelectorAll('.filtros button');
-  var filtro = 0;
-  function norm(t) { return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
-  D.temas.forEach(function (x) { x.n = norm(x.t); });
-
-  function pintar() {
-    var texto = buscar.value.trim();
-    var palabras = norm(texto).split(/\s+/).filter(Boolean);
-    lista.innerHTML = '';
-    var total = 0;
-    [1, 2].forEach(function (c) {
-      if (filtro && filtro !== c) return;
-      var temas = D.temas.filter(function (x) {
-        return x.c === c && palabras.every(function (p) { return x.n.indexOf(p) >= 0; });
-      });
-      if (!temas.length) return;
-      total += temas.length;
-      var sec = document.createElement('section');
-      sec.className = 'curso';
-      var h = document.createElement('h2');
-      h.innerHTML = D.dibujos[c - 1];
-      h.appendChild(document.createTextNode(D.cursos[c - 1]));
-      sec.appendChild(h);
-      var ul = document.createElement('ul');
-      temas.forEach(function (x) {
-        var a = document.createElement('a');
-        a.href = x.s + '/';
-        var t = document.createElement('span');
-        t.className = 'titulo';
-        t.textContent = x.t;
-        var r = document.createElement('span');
-        r.className = 'recursos';
-        (x.r.length ? x.r : ['vacio']).forEach(function (k) {
-          var p = document.createElement('span');
-          p.className = 'r-' + k;
-          p.textContent = NOMBRES[k] || 'Sin contenido todavía';
-          r.appendChild(p);
-        });
-        a.appendChild(t);
-        a.appendChild(r);
-        var li = document.createElement('li');
-        li.appendChild(a);
-        ul.appendChild(li);
-      });
-      sec.appendChild(ul);
-      lista.appendChild(sec);
-    });
-    if (!total) aviso.textContent = texto ? 'No hay ningún tema que contenga «' + texto + '».' : 'Este curso todavía no tiene temas.';
-    else aviso.textContent = texto ? (total === 1 ? '1 tema encontrado.' : total + ' temas encontrados.') : '';
-  }
-
-  buscar.addEventListener('input', pintar);
-  botones.forEach(function (b) {
-    b.addEventListener('click', function () {
-      filtro = Number(b.getAttribute('data-c'));
-      botones.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
-      pintar();
-    });
-  });
-  pintar();
-})();`;
-
-function menu(filas, slugs, cursos, conf) {
-  const temas = [];
-  filas.forEach((f, i) => {
-    if (!slugs[i]) return;
-    const r = TARJETAS.filter(x => (f[x.k] || '').trim()).map(x => x.k);
-    if (!r.length && !conf.vacios) return;
-    temas.push({ c: f.curso === '2' ? 2 : 1, t: f.titulo.trim(), s: slugs[i], r });
-  });
-  const nombres = [(cursos[0].nombre || '').trim() || 'Curso 1', (cursos[1].nombre || '').trim() || 'Curso 2'];
-  const datos = JSON.stringify({ temas, cursos: nombres, dibujos: [DIBUJOS[1], DIBUJOS[2]] }).replace(/</g, '\\u003c');
-  const titulo = esc((conf.titulo || '').trim() || 'Páginas del curso');
-  const cuenta = c => temas.filter(x => x.c === c).length;
-  const fin = '</' + 'script>';
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${titulo}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<style>${CSS_MENU}</style>
-</head>
-<body>
-<div class="marco">
-  <h1>${titulo}</h1>
-  <p class="subtitulo">Escribe una palabra del tema o elige un curso.</p>
-  <div class="buscador">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
-    <input id="buscar" type="search" placeholder="Por ejemplo: ratón, Gmail, fotos…" aria-label="Buscar un tema" autocomplete="off">
-  </div>
-  <div class="filtros" role="group" aria-label="Elegir curso">
-    <button type="button" data-c="0" aria-pressed="true">Todos (${temas.length})</button>
-    <button type="button" data-c="1" aria-pressed="false">${esc(nombres[0])} (${cuenta(1)})</button>
-    <button type="button" data-c="2" aria-pressed="false">${esc(nombres[1])} (${cuenta(2)})</button>
-  </div>
-  <p id="aviso" role="status"></p>
-  <div id="lista"></div>
 </div>
-<script type="application/json" id="datos">${datos}${fin}
-<script>${JS_MENU}${fin}
-</body>
-</html>
-`;
-}
-/* FIN PURAS */
 
-/* ---------------- Interfaz ---------------- */
-const URL_ORDENADOR = 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV';
-const URL_MOVIL = 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/Curso-tecnologia-personas-mayores-valladolid-ctpmv';
-const URL_ANTIGUA = 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/';
-const BASE_GITHUB = 'https://castrovert-ux.github.io/web-apps/1-curso/5-paginas-curso/';
-const CLAVE = 'generador-paginas-v1';
-const CAMPOS = [
-  ['titulo', 'Título', 'Ej.: Uso del ratón'],
-  ['doc', 'Documentación', 'https://drive.google.com/…'],
-  ['cues', 'Cuestionario', 'https://…'],
-  ['sim', 'Simulación', 'https://…'],
-  ['ejer', 'Ejercicios', 'https://…']
-];
+<!-- Modal: claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal sm">
+    <div class="modal-head"><h3>Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="left" style="font-weight:700;font-size:0.85rem;color:var(--sub)"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-main" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
 
-const filaVacia = (curso = '1') => ({ curso, titulo: '', doc: '', cues: '', sim: '', ejer: '' });
-const esVacia = f => !CAMPOS.some(([k]) => (f[k] || '').trim());
-/* Temas tal como aparecen en las páginas de Google Sites (octubre 2026).
-   Orden: curso, título, documentación, cuestionario, simulación, ejercicios */
-const TEMAS_SITES = [
-  ['1', 'Uso del ratón', 'https://drive.google.com/file/d/16qo3zvTWOLGnZ0_dRmykFr_YCtOf6NjW/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-ordenador/1usoraton/index.html', '', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-ordenador/1ejerciciosraton/index.html'],
-  ['1', 'Uso del teclado', 'https://drive.google.com/file/d/15kxnO85pkFEzuRraQ7wvUf9gyIWCZDmg/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-ordenador/2usoteclado/index.html', '', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-ordenador/2ejerciciosteclado/index.html'],
-  ['1', 'El Escritorio de Windows', 'https://drive.google.com/file/d/1GscIHW8MbE6c9rxYqXd5Z-WZqj6PFrfR/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-ordenador/3escritoriowindows/index.html', 'https://castrovert-ux.github.io/web-apps/presentaciones-interactivas/presentaciones-ordenador/escritorio/index.html', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-ordenador/3ejerciciosescritorio/index.html'],
-  ['1', 'Gestión de ventanas en Windows', 'https://drive.google.com/file/d/1YgHzA4q3Myhf_kmddQQaZGJmIWWjEco6/view?usp=sharing', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-ordenador/4gestorventanas/index.html', 'https://castrovert-ux.github.io/web-apps/presentaciones-interactivas/presentaciones-ordenador/ventanas/index.html', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-ordenador/4gestionventanas/index.html'],
-  ['1', 'El Explorador de Archivos', 'https://drive.google.com/file/d/1P68En3QRbMkMxVyKlmQJourzyuLPqeQG/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-ordenador/5exploradorarchivos/index.html', 'https://castrovert-ux.github.io/web-apps/presentaciones-interactivas/presentaciones-ordenador/explorador/index.html', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-ordenador/5exploradorarchivos/index.html'],
-  ['1', 'Copiar y Pegar', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV/prácticas-de-copiar-y-pegar', 'https://drive.google.com/file/d/162dNqa7SsGHcCN6p3rELuqZq_rcVVE_G/view?usp=drive_link', '', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV/prácticas-de-copiar-y-pegar'],
-  ['1', 'La memoria USB', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV/la-memoria-usb', '', '', ''],
-  ['1', 'Consejos básicos', 'https://drive.google.com/file/d/1xqs6G-kI4ELuPJxqEgsGxN8Bqx95mwHG/view?usp=drive_link', 'https://drive.google.com/file/d/1RPRnBIodngkBlkngZAx17jPoW3ZPqePF/view?usp=drive_link', '', 'https://drive.google.com/file/d/1KVOFfpt3qtdNgxl5W1VtTHVx13emYzBj/view?usp=drive_link'],
-  ['1', 'Repaso de primeros pasos', '', '', '', ''],
-  ['1', 'Contraseñas seguras y gestión sin complicaciones', '', '', '', ''],
-  ['1', 'Identificación en dos pasos (2FA) y control de acceso', '', '', '', ''],
-  ['1', 'Compras por Internet y banca electrónica', '', '', '', ''],
-  ['1', 'Detección de estafas cotidianas (Phishing, SMS y llamadas)', '', '', '', ''],
-  ['1', 'Entorno de Google', 'https://drive.google.com/file/d/1-oJIeQcOa6iS3UhVbETAyj-4WXHamKX7/view?usp=drive_link', '', '', ''],
-  ['1', 'Google Fotos', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV/google-fotos/google-fotos', '', '', ''],
-  ['1', 'Gmail', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV/gmail', '', '', ''],
-  ['1', 'Youtube', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/Curso-tecnologia-personas-mayores-valladolid-ctpmv/youtube', '', '', ''],
-  ['1', 'Crear evento en Google Calendar', 'https://drive.google.com/file/d/1SlqKQ5VzObm5YhzqhnegIp9oFdI4wRwh/view?usp=sharing', '', '', ''],
-  ['1', 'Crear nota en Google Keep', 'https://drive.google.com/file/d/1rsoccWdBFP6memdmMV3qgVfRFqhbH1VC/view?usp=drive_link', '', '', ''],
-  ['1', 'Declaración de la renta - con referencia', 'https://drive.google.com/file/d/1mt1ovwQFLy7x-cCvmprIANcqugsGe9Kj/view?usp=sharing', '', '', ''],
-  ['1', 'Clave móvil', 'https://drive.google.com/file/d/1wBAjnB24PhlUmIbYSsH2AejszGtCl3eR/view?usp=drive_link', '', '', ''],
-  ['1', 'Certificados', '', '', '', ''],
-  ['1', 'Cita', '', '', '', ''],
-  ['1', 'Herramientas de Inteligencia artificial', 'https://drive.google.com/file/d/1R0c_PoDU8cjOSdV04LxV08-yW-yXFzKd/view?usp=drive_link', '', '', ''],
-  ['1', 'Consulta de información', '', '', '', ''],
-  ['1', 'Edición y creación de imágenes', 'https://drive.google.com/file/d/18I9KjpDBgr7o2rwSBfcgRBRYeSevM1-l/view?usp=drive_link', '', '', ''],
-  ['1', 'Usar Whatsapp en el Ordenador', 'https://drive.google.com/file/d/1Xy1M31Ve4bmrHG9IrIeMoLSC-7B_bYCz/view?usp=drive_link', '', 'https://castrovert-ux.github.io/whatsappprogramme/', ''],
-  ['1', 'Guía de Facebook básica', 'https://drive.google.com/file/d/1kiAxRGx4AsDv5tfdXFt75U5vpFqvb1Hg/view?usp=sharing', '', '', ''],
-  ['1', 'Usar la TV en el Ordenador', 'https://drive.google.com/file/d/14a5cb8pW9qsea1PepKYv-tvH3AWM-vAa/view?usp=sharing', 'https://castrovert-ux.github.io/web-apps/cuestionarios/guiatv/index.html', '', ''],
-  ['1', 'Explorando Word', 'https://drive.google.com/file/d/1t_fwAy48hsq_P3PRmsgLV7ZoitnCqp5N/view?usp=drive_link', '', '', ''],
-  ['1', 'Mi primera práctica de Word - Receta de tortilla de patata', 'https://drive.google.com/file/d/1FQjJTbGLTHmODgUl71QqromTXUMKXshz/view?usp=drive_link', '', '', ''],
-  ['1', 'Mi segunda práctica de Word - Mi libro personal', 'https://drive.google.com/file/d/1h-cTer0AjXChLLTWRO2X1SAHAYhvsVd9/view?usp=drive_link', '', '', ''],
-  ['1', 'Mi tercera práctica de Word - Horario viaje a Croacia', 'https://drive.google.com/file/d/1EbGMrO-_uGy7sT_7Lxtj-Uco2ypwu8z8/view?usp=drive_link', '', '', ''],
-  ['1', 'Toma de contacto con Excel', 'https://drive.google.com/file/d/1JVwxXk3NpGyFAcuGs3bpNXWVSJxWFgIL/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/ExcelFilasyColumnas/index.html', '', ''],
-  ['1', 'Manejo de Columnas y Filas en Excel', 'https://drive.google.com/file/d/1ojUN_rDRRxkez-4EYQsj1gB-KIAKv3bU/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/ExcelFilasyColumnas/index.html', '', ''],
-  ['1', 'Lista de la compra', 'https://drive.google.com/file/d/1C0ZiW0uZUuge1Fj5wJMyBmFsv1nSaitL/view?usp=drive_link', '', '', ''],
-  ['1', 'Registro de gastos mensuales', 'https://drive.google.com/file/d/1rr7i2S8A9iDqC8hwNqCrbeMcxgc5y3iK/view?usp=drive_link', '', '', ''],
-  ['1', 'Test Final Año 2026', '', 'https://castrovert-ux.github.io/web-apps/cuestionarios/testanualordenador/index.html', '', ''],
+<!-- Modal: prompt -->
+<div class="overlay" id="ov-prompt">
+  <div class="modal">
+    <div class="modal-head"><h3>Prompt</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="ptitle"></div>
+      <textarea class="big" id="ptext" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-foot">
+      <div class="left"><button class="btn" onclick="restorePrompt()">Restaurar por defecto</button></div>
+      <button class="btn" onclick="closeOv('ov-prompt')">Cancelar</button>
+      <button class="btn btn-main" onclick="savePrompt()">Guardar</button>
+    </div>
+  </div>
+</div>
 
-  ['2', 'Introducción', 'https://drive.google.com/file/d/1TNY5GWOhh4KTW5jYSf11xrCpbj4pWPD8/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-movil/1introduccion/index.html', '', ''],
-  ['2', 'Funciones básicas importantes', 'https://drive.google.com/file/d/1H-84-FAz79dCqzxjOJNc2CoonezgioW_/view?usp=sharing', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-movil/funcionesbasicas/index.html', 'https://docs.google.com/presentation/d/1WcTiF7Q-uM4Km4askaesTqBuXTyoLCF-VvbucvZQzik/present?slide=id.p1', ''],
-  ['2', 'Pequeñas destrezas', 'https://drive.google.com/file/d/15KD7RpC11aO25eolnRfb5yCvV2tRxVMH/view?usp=sharing', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-movil/pequeniasdestrezas/index.html', '', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-movil/destrezasmovil/index.html'],
-  ['2', 'Captura y Edición de Fotografías', 'https://drive.google.com/file/d/11ffmWhEEbDZQ2ViCNXjYwFL-2l-zREFV/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/cuestionarios-movil/capturaedicionfotos/index.html', 'https://castrovert-ux.github.io/web-apps/presentaciones-interactivas/presentaciones-movil/fotos/index.html', 'https://castrovert-ux.github.io/web-apps/ejercicios/ejercicios-movil/fotoscapturaedicion/index.html'],
-  ['2', 'Teclado (gboard)', 'https://drive.google.com/file/d/1ZUNt1ZSNFIAHwyLxMcT86d2IVPeqbMz3/view?usp=drive_link', '', '', ''],
-  ['2', 'Funciones del reloj', 'https://drive.google.com/file/d/1nuJcmjyzkA9vwD27I9C_MdJtmXrc41lL/view?usp=drive_link', 'https://castrovert-ux.github.io/web-apps/cuestionarios/movil/alarmamovil/index.html', '', ''],
-  ['2', 'Gestor de Archivos - Organizar la carpeta descargas en el móvil', 'https://drive.google.com/file/d/1veGav6U9YmbNDAKdkZ1gSKSBYU2XtfwE/view?usp=drive_link', '', '', ''],
-  ['2', 'Repaso de primeros pasos', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/objetivos-iniciales-movil', '', '', ''],
-  ['2', 'Contraseñas seguras', '', '', '', ''],
-  ['2', 'Identificación en dos pasos (2FA) y control de acceso', '', '', '', ''],
-  ['2', 'Compras por Internet y banca electrónica', '', '', '', ''],
-  ['2', 'Detección de estafas cotidianas (Phishing, SMS y llamadas)', '', '', '', ''],
-  ['2', 'Teléfono', '', '', '', ''],
-  ['2', 'SMS', '', '', '', ''],
-  ['2', 'Whatsapp', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/whatsapp', '', '', ''],
-  ['2', 'Facebook', 'https://drive.google.com/file/d/1r2fCiJCoqyWcnmCwTEQEMDwXNY1z4p0T/view?usp=sharing', '', '', ''],
-  ['2', 'Introducción', 'https://drive.google.com/file/d/1sDsV545kMkdFdTCEw8onyefo8qOQJ7D-/view?usp=drive_link', '', '', ''],
-  ['2', 'Gmail', 'https://drive.google.com/file/d/1aewXtNwy-Mv5lud8KRJ0doafqrgEScbp/view?usp=sharing', 'https://castrovert-ux.github.io/web-apps/cuestionarios/movil/gmail/index.html', '', ''],
-  ['2', 'Play Store', 'https://drive.google.com/file/d/1Jb28zq570C8wvwTKJDkk4lZspT_zP0s9/view?usp=drive_link', '', '', ''],
-  ['2', 'Youtube', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/Curso-tecnologia-personas-mayores-valladolid-ctpmv/youtube-en-móvil', '', '', ''],
-  ['2', 'Google Chrome', 'https://drive.google.com/file/d/1qWIe2o2eNscKUaip-MLd7zTtcrMT-Fuw/view?usp=drive_link', '', '', ''],
-  ['2', 'Google Fotos', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/Curso-tecnologia-personas-mayores-valladolid-ctpmv/google-fotos-móvil', '', '', ''],
-  ['2', 'Google Calendar', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/Curso-tecnologia-personas-mayores-valladolid-ctpmv/google-calendar', '', '', ''],
-  ['2', 'Google Keep', 'https://sites.google.com/view/curso-tecnologia-valladolid/curso-tecnologia-personas-mayores-valladolid-CTPMV/innoveas-tecnologia-para-mayores-valladolid-CTPMV/keep', '', '', ''],
-  ['2', 'Herramientas de Inteligencia artificial', '', '', '', ''],
-  ['2', 'Consulta de información', '', '', '', ''],
-  ['2', 'Edición y creación de imágenes', 'https://drive.google.com/file/d/18I9KjpDBgr7o2rwSBfcgRBRYeSevM1-l/view?usp=drive_link', '', '', ''],
-  ['2', 'Aplicación AUVASAPAY', 'https://drive.google.com/file/d/1C8WPYOpJ_qlcv1uIXf6zKJVRN453eoUo/view?usp=drive_link', '', '', ''],
-  ['2', 'Aplicación SACYL CONECTA', '', '', '', ''],
-  ['2', 'Obtener tarjeta BUSCYL', 'https://drive.google.com/file/d/1etsjaVq29q7Zrzjo4yjVIweQ128hlVws/view?usp=drive_link', '', '', ''],
-  ['2', 'Compras Online', 'https://drive.google.com/file/d/11Siw5-DXJuht1Dv_4MheFGWA6TpvXu1w/view?usp=drive_link', '', '', ''],
-  ['2', 'Banca Online', '', '', '', ''],
-  ['2', 'Declaración de la renta - con referencia', 'https://drive.google.com/file/d/1V7oQw8uZcEwEuzovu6vYrrO4q-LqceZt/view?usp=sharing', '', '', ''],
-  ['2', 'Aplicación Cl@ve', 'https://drive.google.com/file/d/1eAwcCn1sFMu1_BmDbcVAR194jtZb0yZL/view?usp=drive_link', '', '', ''],
-  ['2', 'Test Fin de Curso', '', 'https://castrovert-ux.github.io/web-apps/cuestionarios/testanualmovil/index.html', '', '']
-];
-const temasSites = () => TEMAS_SITES.map(([curso, titulo, doc, cues, sim, ejer]) => ({ curso, titulo, doc, cues, sim, ejer }));
+<!-- Modal: prompt para otra IA -->
+<div class="overlay" id="ov-other">
+  <div class="modal">
+    <div class="modal-head"><h3>📋 Prompt para otra IA</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="o-title"></div>
+      <label class="opt" id="o-opt-new"><input type="radio" name="omode" value="new" checked onchange="buildOther()"><span>Crear la práctica desde cero<small>Lleva las instrucciones, el ejemplo de referencia y el tema. Es lo que haría este generador.</small></span></label>
+      <label class="opt" id="o-opt-fix"><input type="radio" name="omode" value="fix" onchange="buildOther()"><span>Corregir la práctica que ya hay<small>Lleva el tema, la práctica actual y los fallos que escribas abajo. Es más corto.</small></span></label>
+      <div class="field" id="o-fails-box"><label for="o-fails">Fallos que has visto (se añaden al prompt)</label>
+        <textarea class="mid" id="o-fails" oninput="buildOther()" placeholder="Por ejemplo: el clic derecho no abre ningún menú; el pendrive muestra los mismos archivos que Documentos."></textarea></div>
+      <p class="pinfo" id="o-info"></p>
+      <div class="bar" style="justify-content:flex-start;margin-top:0">
+        <button class="btn btn-main" onclick="copyOther()">📋 Copiar el prompt</button>
+        <button class="btn" onclick="downloadOther()">⬇️ Descargar como .txt</button>
+      </div>
+      <hr class="sep">
+      <div class="ptitle">Cuando la otra IA te dé la práctica, tráela aquí para verla, revisarla y descargarla con las demás</div>
+      <textarea class="mid" id="o-paste" placeholder="Pega aquí el código HTML que te ha dado la otra IA…"></textarea>
+      <div class="bar" style="justify-content:flex-start">
+        <button class="btn btn-green" onclick="importPasted()">✅ Usar el código pegado</button>
+        <button class="btn" onclick="$('o-file').click()">📂 Cargar un fichero .html</button>
+        <input type="file" id="o-file" accept=".html,.htm,.txt" hidden onchange="importFile(this.files[0]); this.value=''">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeOv('ov-other')">Cerrar</button>
+    </div>
+  </div>
+</div>
 
-const $ = id => document.getElementById(id);
+<!-- Prompt por defecto -->
+<textarea id="default-prompt" hidden>Eres un desarrollador web y profesor voluntario que da cursos de informática y de móvil a personas mayores en Cruz Roja. Creas simulaciones interactivas, de una sola página HTML, para que los alumnos practiquen el tema de un documento del curso.
 
-function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(estado)); } catch (e) {} }
-function cargar() {
-  try {
-    const e = JSON.parse(localStorage.getItem(CLAVE));
-    return valido(e) ? migrar(e) : null;
-  } catch (e) { return null; }
-}
-function migrar(e) {
-  e.cursos.forEach((c, i) => {
-    if (!(c.url || '').trim() || c.url === URL_ANTIGUA) c.url = i ? URL_MOVIL : URL_ORDENADOR;
-  });
-  if (e.filas.every(esVacia)) e.filas = temasSites();
-  if (!(e.base || '').trim()) e.base = BASE_GITHUB;
-  if (!e.menu) e.menu = { titulo: 'Páginas del curso', vacios: false };
-  return e;
-}
-function valido(e) {
-  return e && Array.isArray(e.cursos) && e.cursos.length === 2 && Array.isArray(e.filas) && e.filas.length > 0;
-}
+Recibirás:
+1. Un EJEMPLO DE REFERENCIA: una simulación terminada sobre OTRO tema.
+2. El TEMA: el contenido del documento del curso. Las tablas vienen fila a fila («| columna | columna |»): cada fila es una regla o un paso que hay que respetar.
+3. El TIPO DE DISPOSITIVO: Ordenador o Móvil.
 
-let estado = cargar() || {
-  cursos: [
-    { nombre: 'Curso de ordenador', url: URL_ORDENADOR },
-    { nombre: 'Curso de móvil', url: URL_MOVIL }
-  ],
-  base: BASE_GITHUB,
-  menu: { titulo: 'Páginas del curso', vacios: false },
-  filas: temasSites()
-};
+QUÉ TOMAR DEL EJEMPLO Y QUÉ NO
+- Del ejemplo toma SOLO el aspecto (fondo oscuro con manchas de color, fuentes Fredoka One y Nunito, paleta, insignia, barra de progreso, panel lateral, botón «Empezar de nuevo»), la idea de los tres modos y la calidad del código.
+- NO copies sus textos, partes, retos, explicaciones ni estados. Todo el contenido sale del TEMA. Antes de terminar, comprueba que no queda ninguna frase del ejemplo que no tenga que ver con el tema (por ejemplo, explicaciones sobre maximizar o minimizar ventanas si el tema no va de eso).
 
-function mensaje(t, donde = 'mensaje') { $(donde).textContent = t; }
+LOS TRES MODOS (botones arriba)
+- 🔎 Descubrir: una pantalla simulada, dibujada con HTML y CSS, con las partes o elementos que el TEMA explica marcados con un «?» que late. Al tocar uno, se numera y el panel lateral explica qué es, dónde está y para qué sirve, con etiquetas (chips) y un consejo. Elige partes que sirvan para el tema, no partes cualquiera de la pantalla. Si el tema es sobre todo un procedimiento, las partes pueden ser sus pasos o los botones que se usan en ellos.
+- 🛠️ Probar: una simulación que funciona de verdad, en la que el alumno hace las acciones del tema (abrir, pulsar, arrastrar, escribir, deslizar…) y una lista de retos se marca sola cuando las consigue. El panel lateral explica lo que va pasando, siempre en relación con el tema.
+- 🎯 Practicar: preguntas «Toca …» en orden aleatorio sobre la pantalla de Descubrir, con acierto o error y un trofeo al final.
 
-function marcar(inp) {
-  const v = inp.value.trim();
-  inp.classList.toggle('mal', v !== '' && !/^https?:\/\//i.test(v));
-}
+CONTENIDO
+- Recorre todos los apartados del TEMA. Si son demasiados para una sola simulación, prioriza los pasos prácticos y los errores frecuentes; lo que no quepa como reto, menciónalo en los consejos del panel.
+- Respeta exactamente los nombres, teclas, atajos, botones y pasos del documento. Si dice «Mayús», no pongas «Shift». Si dice cómo se abre algo, usa esa forma y no otra. No inventes funciones ni pasos que no aparezcan.
+- Español de España, frases cortas, vocabulario sencillo, trato de tú y ningún tecnicismo sin explicar.
+- Entre 5 y 8 partes en Descubrir y Practicar, y entre 6 y 12 retos en Probar.
 
-function refrescarSelects() {
-  document.querySelectorAll('#tabla select, #cursoPegado').forEach(s => {
-    s.options[0].textContent = estado.cursos[0].nombre || 'Curso 1';
-    s.options[1].textContent = estado.cursos[1].nombre || 'Curso 2';
-  });
-}
+DISPOSITIVO
+- Ordenador: simula Windows 11 (escritorio, ventanas, barra de tareas, programas) según lo que trate el tema. Insignia «🪟 Ordenador».
+- Móvil: simula un móvil Android (Xiaomi Redmi 9AT con MIUI) dentro de un marco de teléfono vertical. Insignia «📱 Móvil». La página se proyecta en la pantalla digital del aula mientras los alumnos repiten los pasos en su propio móvil, así que todo debe verse grande.
 
-function baseLimpia() {
-  let b = (estado.base || '').trim();
-  if (b && !b.endsWith('/')) b += '/';
-  return b;
-}
-const malEnlace = v => v.trim() !== '' && !/^https?:\/\//i.test(v.trim());
+QUE CADA RETO SE PUEDA CONSEGUIR
+- Cada reto se consigue haciendo exactamente lo que dice su pista, y se marca justo en ese momento. Comprueba en el código que la función que lo marca se llama de verdad desde esa acción.
+- Al empezar, ningún reto está hecho: si un reto es abrir algo, eso empieza cerrado.
+- Carpetas, unidades (por ejemplo un pendrive), documentos o pantallas tienen cada uno su propio contenido: lo que se pega en un sitio aparece solo allí, y lo que se corta desaparece de su origen.
+- Si hay portapapeles, simúlalo con una variable propia. No uses navigator.clipboard, que pide permisos y falla.
+- Si hay menú del clic derecho: ábrelo en el evento contextmenu con preventDefault y stopPropagation, ciérralo al hacer clic fuera o al elegir una opción, y nunca lo cierres con el mismo clic derecho que lo abre. En pantallas táctiles, ábrelo también con una pulsación larga.
+- Los atajos de teclado del tema deben funcionar con el teclado real y también con botones en pantalla (para la pantalla táctil del aula).
+- Arrastrar debe funcionar con ratón y con el dedo (eventos pointer, con setPointerCapture dentro de try/catch).
 
-function celda(clase, texto) {
-  const td = document.createElement('td');
-  if (clase) td.className = clase;
-  td.textContent = texto;
-  return td;
-}
+TÉCNICA
+- Un único fichero HTML autosuficiente. Solo puedes cargar las fuentes de Google Fonts: nada de imágenes externas ni librerías. Dibuja con HTML, CSS, SVG en línea y emojis.
+- Se adapta al tamaño de la ventana como el ejemplo.
+- Guarda el progreso en localStorage con una clave propia de este tema, siempre dentro de try/catch.
+- JavaScript sin errores: declara todo lo que uses, comprueba que cada id que buscas existe en el HTML y que todos los botones hacen algo.
+- Código compacto: genera con bucles lo que se repita. Que el fichero no pase de unos 80 KB.
 
-function boton(texto, titulo, clase, accion) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  if (clase) b.className = clase;
-  b.textContent = texto;
-  b.title = titulo;
-  b.setAttribute('aria-label', titulo);
-  b.onclick = e => { e.stopPropagation(); accion(); };
-  return b;
-}
+ANTES DE RESPONDER, repasa uno por uno los retos y las partes: qué hace el alumno, qué código lo detecta y si de verdad se ejecuta. Corrige lo que no funcione.
 
-function render() {
-  const tb = document.querySelector('#tabla tbody');
-  const slugs = calcularSlugs(estado.filas);
-  tb.innerHTML = '';
-  estado.filas.forEach((f, i) => {
-    const tr = document.createElement('tr');
-    tr.tabIndex = 0;
-    tr.title = 'Abrir este tema';
-    tr.onclick = () => abrir(i);
-    tr.onkeydown = e => { if (e.key === 'Enter' && e.target === tr) abrir(i); };
-    tr.appendChild(celda('num', String(i + 1)));
-    tr.appendChild(celda('curso-c', estado.cursos[f.curso === '2' ? 1 : 0].nombre || ('Curso ' + f.curso)));
-    const t = f.titulo.trim();
-    tr.appendChild(celda('tit' + (t ? '' : ' sin'), t || 'Sin título'));
+Responde SOLO con el código HTML completo, desde &lt;!DOCTYPE html&gt; hasta &lt;/html&gt;, sin explicaciones y sin bloques de código.</textarea>
 
-    const tdC = document.createElement('td');
-    const chips = document.createElement('div');
-    chips.className = 'chips';
-    const usadas = TARJETAS.filter(x => (f[x.k] || '').trim());
-    (usadas.length ? usadas : [null]).forEach(x => {
-      const c = document.createElement('span');
-      c.className = 'chip ' + (x ? x.k + (malEnlace(f[x.k]) ? ' mal' : '') : 'nada');
-      c.textContent = x ? x.t : 'Sin enlaces';
-      chips.appendChild(c);
-    });
-    tdC.appendChild(chips);
-    tr.appendChild(tdC);
+<!-- Prompt de revisión -->
+<textarea id="review-prompt" hidden>Eres un revisor exigente de simulaciones interactivas para cursos de informática y de móvil para personas mayores. Recibirás el TEMA (el documento del curso) y el CÓDIGO HTML de una simulación hecha a partir de él, con tres modos: Descubrir, Probar (con retos que se marcan solos) y Practicar.
 
-    tr.appendChild(celda('carpeta', slugs[i] || '—'));
+Revisa el código y busca solo problemas reales y concretos:
+1. Retos que no se pueden conseguir o que no se marcan: sigue en el código lo que hace el alumno hasta la función que marca el reto.
+2. Cosas que no funcionan: botones sin efecto, menús de clic derecho que se cierran solos, carpetas o pantallas que comparten el mismo contenido, arrastres que no responden, uso de navigator.clipboard, errores de JavaScript.
+3. Contenido que contradice el TEMA (teclas, nombres, pasos distintos de los del documento) o que viene de otra simulación y no tiene que ver con el tema.
+4. Apartados importantes del TEMA que no aparecen en ningún modo.
 
-    const tdB = document.createElement('td');
-    tdB.className = 'acciones';
-    tdB.appendChild(boton('Descargar', 'Descargar solo la carpeta del tema ' + (i + 1), 'una', () => descargarUna(i)));
-    tdB.appendChild(document.createTextNode(' '));
-    tdB.appendChild(boton('+', 'Añadir un tema nuevo debajo del ' + (i + 1), 'quitar', () => {
-      estado.filas.splice(i + 1, 0, filaVacia(f.curso));
-      guardar(); render(); abrir(i + 1);
-    }));
-    tdB.appendChild(document.createTextNode(' '));
-    tdB.appendChild(boton('✕', 'Quitar el tema ' + (i + 1), 'quitar', () => {
-      if (!esVacia(f) && !confirm('¿Quitar «' + (t || 'Sin título') + '»?')) return;
-      estado.filas.splice(i, 1);
-      if (!estado.filas.length) estado.filas.push(filaVacia());
-      guardar(); render();
-    }));
-    tr.appendChild(tdB);
-    tb.appendChild(tr);
-  });
-  refrescarSelects();
-}
+Responde en español, sin código, con una lista numerada de como máximo 10 puntos. En cada punto di qué falla y cómo arreglarlo, en una o dos frases. Ordénalos de más a menos importante. Si no encuentras ningún problema, responde solo: SIN PROBLEMAS.</textarea>
 
-/* ---------------- Ventana de edición ---------------- */
-const dlg = $('editor');
-let actual = -1;
-let espera;
-
-function escalar() {
-  const m = $('marcoVista');
-  const k = m.clientWidth / 1366;
-  if (!k) return;
-  $('vista').style.transform = 'scale(' + k + ')';
-  m.style.height = Math.round(768 * k) + 'px';
-}
-window.addEventListener('resize', () => { if (dlg.open) escalar(); });
-
-function abrir(i) {
-  actual = i;
-  llenarEditor();
-  if (!dlg.open) dlg.showModal();
-  escalar();
-  $('ed-titulo').focus();
-}
-
-function llenarEditor() {
-  const f = estado.filas[actual];
-  $('edCabecera').textContent = 'Tema ' + (actual + 1) + ' de ' + estado.filas.length;
-  $('edNombre1').textContent = estado.cursos[0].nombre || 'Curso 1';
-  $('edNombre2').textContent = estado.cursos[1].nombre || 'Curso 2';
-  document.querySelectorAll('input[name=edCurso]').forEach(r => { r.checked = r.value === (f.curso === '2' ? '2' : '1'); });
-  CAMPOS.forEach(([k]) => {
-    const inp = $('ed-' + k);
-    inp.value = f[k] || '';
-    if (k !== 'titulo') inp.classList.toggle('mal', malEnlace(inp.value));
-  });
-  $('edAnterior').disabled = actual === 0;
-  $('edSiguiente').disabled = actual === estado.filas.length - 1;
-  $('edMensaje').textContent = '';
-  refrescarEditor(true);
-}
-
-function refrescarEditor(yaMismo) {
-  const f = estado.filas[actual];
-  const s = calcularSlugs(estado.filas)[actual];
-  $('edCarpeta').textContent = s || '—';
-  $('edFinal').value = baseLimpia() && s ? baseLimpia() + s + '/' : '';
-  clearTimeout(espera);
-  const pintar = () => {
-    const n = f.curso === '2' ? 2 : 1;
-    $('vista').srcdoc = f.titulo.trim()
-      ? pagina(f, estado.cursos[n - 1], n)
-      : '<p style="font:1.6rem Segoe UI,sans-serif;padding:3rem;color:#3d4d66">Escribe un título para ver la página.</p>';
-  };
-  if (yaMismo) pintar(); else espera = setTimeout(pintar, 250);
-}
-
-CAMPOS.forEach(([k]) => {
-  const inp = $('ed-' + k);
-  inp.addEventListener('input', () => {
-    estado.filas[actual][k] = inp.value;
-    if (k !== 'titulo') inp.classList.toggle('mal', malEnlace(inp.value));
-    guardar();
-    refrescarEditor();
-  });
-});
-document.querySelectorAll('input[name=edCurso]').forEach(r => r.addEventListener('change', () => {
-  estado.filas[actual].curso = r.value;
-  guardar();
-  refrescarEditor(true);
-}));
-
-function irA(i) {
-  if (i < 0 || i >= estado.filas.length) return;
-  actual = i;
-  llenarEditor();
-  $('ed-titulo').focus();
-}
-$('edAnterior').onclick = () => irA(actual - 1);
-$('edSiguiente').onclick = () => irA(actual + 1);
-$('edCerrar').onclick = () => dlg.close();
-dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
-dlg.addEventListener('close', () => {
-  // Un tema nuevo que se ha dejado sin rellenar no se queda en la tabla
-  if (estado.filas.length > 1 && esVacia(estado.filas[actual])) { estado.filas.splice(actual, 1); guardar(); }
-  render();
-  const fila = document.querySelector('#tabla tbody tr:nth-child(' + (Math.min(actual, estado.filas.length - 1) + 1) + ')');
-  if (fila) { fila.focus(); fila.scrollIntoView({ block: 'nearest' }); }
-});
-
-$('edCopiar').onclick = async () => {
-  const v = $('edFinal').value;
-  if (!v) { $('edMensaje').textContent = 'Todavía no hay enlace: falta el título o la dirección de GitHub (apartado 4).'; return; }
-  try { await navigator.clipboard.writeText(v); $('edMensaje').textContent = 'Enlace copiado. Ya puedes pegarlo en Google Sites.'; }
-  catch (e) { $('edFinal').select(); $('edMensaje').textContent = 'Pulsa Ctrl+C para copiar el enlace.'; }
-};
-$('edDescargar').onclick = () => descargarUna(actual, 'edMensaje');
-
-function rellenarConfig() {
-  $('c1n').value = estado.cursos[0].nombre;
-  $('c1u').value = estado.cursos[0].url;
-  $('c2n').value = estado.cursos[1].nombre;
-  $('c2u').value = estado.cursos[1].url;
-  $('base').value = estado.base || '';
-  $('menuTitulo').value = estado.menu.titulo || '';
-  $('menuVacios').checked = !!estado.menu.vacios;
-}
-
-[['c1n', 0, 'nombre'], ['c1u', 0, 'url'], ['c2n', 1, 'nombre'], ['c2u', 1, 'url']].forEach(([id, i, campo]) => {
-  $(id).addEventListener('input', () => {
-    estado.cursos[i][campo] = $(id).value;
-    if (campo === 'nombre') render(); else refrescarSelects();
-    guardar();
-  });
-});
-$('base').addEventListener('input', () => { estado.base = $('base').value; guardar(); });
-$('menuTitulo').addEventListener('input', () => { estado.menu.titulo = $('menuTitulo').value; guardar(); });
-$('menuVacios').addEventListener('change', () => { estado.menu.vacios = $('menuVacios').checked; guardar(); });
-
-$('btnMenu').onclick = () => {
-  const html = menu(estado.filas, calcularSlugs(estado.filas), estado.cursos, estado.menu);
-  descargar(new Blob([html], { type: 'text/html' }), 'index.html');
-  let base = (estado.base || '').trim();
-  if (base && !base.endsWith('/')) base += '/';
-  mensaje('Descargado index.html. Súbelo suelto a la carpeta de páginas, sustituyendo el anterior.' + (base ? '\nDirección del menú: ' + base : ''), 'mensajeMenu');
-};
-
-$('btnAnadir').onclick = () => {
-  const ult = estado.filas[estado.filas.length - 1];
-  estado.filas.push(filaVacia(ult ? ult.curso : '1'));
-  guardar();
-  render();
-  abrir(estado.filas.length - 1);
-};
-
-$('btnPegar').onclick = () => {
-  const cursoDef = $('cursoPegado').value;
-  const nuevas = [];
-  $('pegado').value.split(/\r?\n/).forEach(linea => {
-    if (!linea.trim()) return;
-    let c = linea.split('\t');
-    let curso = cursoDef;
-    if (c.length >= 6 && /^[12]$/.test(c[0].trim())) { curso = c[0].trim(); c = c.slice(1); }
-    const [titulo, doc, cues, sim, ejer] = c.map(x => (x || '').trim());
-    nuevas.push({ curso, titulo: titulo || '', doc: doc || '', cues: cues || '', sim: sim || '', ejer: ejer || '' });
-  });
-  if (!nuevas.length) { mensaje('No hay nada que añadir: pega primero las filas.'); return; }
-  if (estado.filas.length === 1 && esVacia(estado.filas[0])) estado.filas = [];
-  estado.filas.push(...nuevas);
-  $('pegado').value = '';
-  guardar();
-  render();
-  mensaje('Añadidas ' + nuevas.length + ' filas.');
-};
-
-$('btnTemas').onclick = () => {
-  const hayDatos = !estado.filas.every(esVacia);
-  if (hayDatos && !confirm('Se cambiarán las filas actuales de la tabla por los ' + TEMAS_SITES.length + ' temas de las páginas del curso. ¿Seguir?')) return;
-  estado.filas = temasSites();
-  guardar();
-  render();
-  mensaje('Tabla rellenada con ' + TEMAS_SITES.length + ' temas.');
-};
-
-$('btnGuardar').onclick = () => {
-  const blob = new Blob([JSON.stringify(estado, null, 1)], { type: 'application/json' });
-  descargar(blob, 'copia-generador.json');
-  mensaje('Copia guardada en tu carpeta de descargas.');
-};
-
-$('btnCargar').onclick = () => $('fichero').click();
-$('fichero').onchange = () => {
-  const fich = $('fichero').files[0];
-  if (!fich) return;
-  const lector = new FileReader();
-  lector.onload = () => {
-    try {
-      const e = JSON.parse(lector.result);
-      if (!valido(e)) throw new Error('formato');
-      estado = migrar(e);
-      guardar();
-      rellenarConfig();
-      render();
-      mensaje('Copia cargada: ' + estado.filas.length + ' filas.');
-    } catch (err) {
-      mensaje('Ese fichero no es una copia de este generador.');
-    }
-    $('fichero').value = '';
-  };
-  lector.readAsText(fich);
-};
-
-function descargar(blob, nombre) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nombre;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-
-function descargarUna(i, donde = 'mensajeTabla') {
-  const f = estado.filas[i];
-  const slugs = calcularSlugs(estado.filas);
-  if (!slugs[i]) { mensaje('Tema ' + (i + 1) + ': ponle un título antes de descargarlo.', donde); return; }
-  const n = f.curso === '2' ? 2 : 1;
-  const avisos = [];
-  CAMPOS.slice(1).forEach(([k, etq]) => {
-    const v = (f[k] || '').trim();
-    if (v && !/^https?:\/\//i.test(v)) avisos.push('El enlace de ' + etq + ' no empieza por http.');
-  });
-  if (!(estado.cursos[n - 1].url || '').trim()) avisos.push('El curso no tiene dirección de página principal.');
-  descargar(hacerZip([{ name: slugs[i] + '/index.html', content: pagina(f, estado.cursos[n - 1], n) }]), slugs[i] + '.zip');
-  let base = (estado.base || '').trim();
-  if (base && !base.endsWith('/')) base += '/';
-  mensaje('Descargado ' + slugs[i] + '.zip (tema ' + (i + 1) + ': «' + f.titulo.trim() + '»).'
-    + (base ? '\nEnlace para Google Sites: ' + base + slugs[i] + '/' : '')
-    + '\nSi es un tema nuevo o le has cambiado el título, descarga también el menú (apartado 3).'
-    + (avisos.length ? '\n\nRevisa:\n' + avisos.join('\n') : ''), donde);
-}
-
-$('btnGenerar').onclick = () => {
-  const slugs = calcularSlugs(estado.filas);
-  const ficheros = [];
-  const avisos = [];
-  let lista = '';
-  let base = (estado.base || '').trim();
-  if (base && !base.endsWith('/')) base += '/';
-
-  estado.filas.forEach((f, i) => {
-    if (esVacia(f)) return;
-    if (!slugs[i]) { avisos.push('Fila ' + (i + 1) + ': sin título, no se ha generado.'); return; }
-    const n = f.curso === '2' ? 2 : 1;
-    CAMPOS.slice(1).forEach(([k, etq]) => {
-      const v = (f[k] || '').trim();
-      if (v && !/^https?:\/\//i.test(v)) avisos.push('Fila ' + (i + 1) + ': el enlace de ' + etq + ' no empieza por http.');
-    });
-    if (!(estado.cursos[n - 1].url || '').trim()) avisos.push('Fila ' + (i + 1) + ': el curso no tiene dirección de página principal.');
-    ficheros.push({ name: slugs[i] + '/index.html', content: pagina(f, estado.cursos[n - 1], n) });
-    if (base) lista += f.titulo.trim() + '\t' + base + slugs[i] + '/\n';
-  });
-
-  if (!ficheros.length) { mensaje('No hay ninguna fila con título. Rellena la tabla primero.'); return; }
-  ficheros.push({ name: 'index.html', content: menu(estado.filas, slugs, estado.cursos, estado.menu) });
-  if (lista) ficheros.push({ name: 'lista-enlaces.txt', content: lista });
-
-  descargar(hacerZip(ficheros), 'paginas-curso.zip');
-  const n = ficheros.length - 1 - (lista ? 1 : 0);
-  mensaje('Listo: ' + n + ' páginas y el menú (index.html) en paginas-curso.zip.' + (avisos.length ? '\n\nRevisa:\n' + avisos.join('\n') : ''));
-};
-
-rellenarConfig();
-render();
-</script>
-</body>
-</html>
+<script type="text/plain" id="ref-b64">PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVzIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+TGFzIHZlbnRhbmFzIGRlIFdpbmRvd3M8L3RpdGxlPgo8bGluayBocmVmPSJodHRwczovL2ZvbnRzLmdvb2dsZWFwaXMuY29tL2NzczI/ZmFtaWx5PUZyZWRva2ErT25lJmZhbWlseT1OdW5pdG86d2dodEA0MDA7NjAwOzcwMDs4MDAmZGlzcGxheT1zd2FwIiByZWw9InN0eWxlc2hlZXQiPgo8c3R5bGU+CiAgOnJvb3QgewogICAgLS1jMTojMjVEMzY2OyAtLWMzOiNGRkQ5M0Q7IC0tYzQ6I0ZGNkI2QjsgLS1jNTojNkJDQjc3OyAtLWM2OiM0REEzRkY7IC0tYzc6I0MzOEJGRjsgLS1jODojRkY5RjQzOwogICAgLS1iZzojMGExNjI4OyAtLWNhcmQ6IzExMWQzNTsgLS10ZXh0OiNGRkZGRkU7IC0tc3ViOiM4YTliYmY7CiAgICAtLXdpbjojZjNmNWY4OyAtLXdpbi1pbms6IzFiMjQzMzsKICB9CiAgKiB7IGJveC1zaXppbmc6Ym9yZGVyLWJveDsgbWFyZ2luOjA7IHBhZGRpbmc6MDsgfQogIGJvZHkgeyBmb250LWZhbWlseTonTnVuaXRvJyxzYW5zLXNlcmlmOyBiYWNrZ3JvdW5kOnZhcigtLWJnKTsgY29sb3I6dmFyKC0tdGV4dCk7IG1pbi1oZWlnaHQ6MTAwdmg7IG92ZXJmbG93LXg6aGlkZGVuOyB9CiAgYnV0dG9uIHsgZm9udC1mYW1pbHk6aW5oZXJpdDsgfQogIGJ1dHRvbjpmb2N1cy12aXNpYmxlIHsgb3V0bGluZTozcHggc29saWQgdmFyKC0tYzMpOyBvdXRsaW5lLW9mZnNldDoycHg7IH0KICBzdmcgeyBmaWxsOm5vbmU7IHN0cm9rZTpjdXJyZW50Q29sb3I7IHN0cm9rZS13aWR0aDoxLjI7IHN0cm9rZS1saW5lY2FwOnJvdW5kOyBzdHJva2UtbGluZWpvaW46cm91bmQ7IH0KCiAgLmJnLWJsb2JzIHsgcG9zaXRpb246Zml4ZWQ7IGluc2V0OjA7IHotaW5kZXg6MDsgcG9pbnRlci1ldmVudHM6bm9uZTsgb3ZlcmZsb3c6aGlkZGVuOyB9CiAgLmJsb2IgeyBwb3NpdGlvbjphYnNvbHV0ZTsgYm9yZGVyLXJhZGl1czo1MCU7IGZpbHRlcjpibHVyKDkwcHgpOyBvcGFjaXR5Oi4xNTsgYW5pbWF0aW9uOmZsb2F0IDE0cyBlYXNlLWluLW91dCBpbmZpbml0ZSBhbHRlcm5hdGU7IH0KICAuYmxvYjpudGgtY2hpbGQoMSl7IHdpZHRoOjU1MHB4OyBoZWlnaHQ6NTUwcHg7IGJhY2tncm91bmQ6dmFyKC0tYzYpOyB0b3A6LTEyMHB4OyBsZWZ0Oi0xMDBweDsgfQogIC5ibG9iOm50aC1jaGlsZCgyKXsgd2lkdGg6NDAwcHg7IGhlaWdodDo0MDBweDsgYmFja2dyb3VuZDp2YXIoLS1jNCk7IGJvdHRvbTotMTAwcHg7IHJpZ2h0Oi04MHB4OyBhbmltYXRpb24tZGVsYXk6LTVzOyB9CiAgLmJsb2I6bnRoLWNoaWxkKDMpeyB3aWR0aDozMjBweDsgaGVpZ2h0OjMyMHB4OyBiYWNrZ3JvdW5kOnZhcigtLWMzKTsgdG9wOjQ1JTsgbGVmdDo1NSU7IGFuaW1hdGlvbi1kZWxheTotOXM7IH0KICBAa2V5ZnJhbWVzIGZsb2F0IHsgZnJvbXt0cmFuc2Zvcm06dHJhbnNsYXRlKDAsMCkgc2NhbGUoMSk7fSB0b3t0cmFuc2Zvcm06dHJhbnNsYXRlKDI1cHgsMThweCkgc2NhbGUoMS4wNyk7fSB9CiAgQGtleWZyYW1lcyBwb3BJbiB7IGZyb217b3BhY2l0eTowOyB0cmFuc2Zvcm06c2NhbGUoLjk0KSB0cmFuc2xhdGVZKDE2cHgpO30gdG97b3BhY2l0eToxOyB0cmFuc2Zvcm06bm9uZTt9IH0KCiAgLmNvbnRhaW5lciB7IHBvc2l0aW9uOnJlbGF0aXZlOyB6LWluZGV4OjE7IG1heC13aWR0aDoxNTAwcHg7IG1hcmdpbjowIGF1dG87IHBhZGRpbmc6MjJweCAyNHB4IDMwcHg7IH0KCiAgLnRvcCB7IGRpc3BsYXk6ZmxleDsgYWxpZ24taXRlbXM6Y2VudGVyOyBnYXA6MThweDsgZmxleC13cmFwOndyYXA7IG1hcmdpbi1ib3R0b206MTRweDsgfQogIC5iYWRnZSB7IGJhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDEzNWRlZyx2YXIoLS1jNiksIzJhNmZkNik7IGNvbG9yOiNmZmY7IGZvbnQtd2VpZ2h0OjgwMDsgZm9udC1zaXplOi44cmVtOyBsZXR0ZXItc3BhY2luZzoycHg7IHRleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTsgcGFkZGluZzo2cHggMTZweDsgYm9yZGVyLXJhZGl1czoxMDBweDsgfQogIGgxIHsgZm9udC1mYW1pbHk6J0ZyZWRva2EgT25lJyxjdXJzaXZlOyBmb250LXdlaWdodDo0MDA7IGZvbnQtc2l6ZTpjbGFtcCgxLjZyZW0sMy4ydncsMi42cmVtKTsgbGluZS1oZWlnaHQ6MS4xOyBiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCgxMzVkZWcsdmFyKC0tYzYpLHZhcigtLWMxKSx2YXIoLS1jMykpOyAtd2Via2l0LWJhY2tncm91bmQtY2xpcDp0ZXh0OyBiYWNrZ3JvdW5kLWNsaXA6dGV4dDsgLXdlYmtpdC10ZXh0LWZpbGwtY29sb3I6dHJhbnNwYXJlbnQ7IH0KICAubW9kZXMgeyBtYXJnaW4tbGVmdDphdXRvOyBkaXNwbGF5OmZsZXg7IGdhcDo4cHg7IGZsZXgtd3JhcDp3cmFwOyB9CiAgLm1vZGUgeyBwYWRkaW5nOjEwcHggMjBweDsgYm9yZGVyLXJhZGl1czoxNHB4OyBib3JkZXI6MnB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsLjE1KTsgYmFja2dyb3VuZDp0cmFuc3BhcmVudDsgY29sb3I6dmFyKC0tc3ViKTsgZm9udC13ZWlnaHQ6ODAwOyBmb250LXNpemU6MXJlbTsgY3Vyc29yOnBvaW50ZXI7IHRyYW5zaXRpb246YWxsIC4yczsgfQogIC5tb2RlLm9uIHsgYmFja2dyb3VuZDpyZ2JhKDc3LDE2MywyNTUsLjE4KTsgYm9yZGVyLWNvbG9yOnZhcigtLWM2KTsgY29sb3I6dmFyKC0tdGV4dCk7IH0KICAubW9kZTpob3ZlciB7IGNvbG9yOnZhcigtLXRleHQpOyB9CgogIC5wcm9nIHsgZGlzcGxheTpmbGV4OyBhbGlnbi1pdGVtczpjZW50ZXI7IGdhcDoxNHB4OyBtYXJnaW4tYm90dG9tOjE2cHg7IGZvbnQtd2VpZ2h0OjgwMDsgY29sb3I6dmFyKC0tc3ViKTsgfQogIC5wcm9nLWJhciB7IGZsZXg6MTsgaGVpZ2h0OjEwcHg7IGJhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuMDgpOyBib3JkZXItcmFkaXVzOjEwcHg7IG92ZXJmbG93OmhpZGRlbjsgfQogIC5wcm9nLWZpbGwgeyBoZWlnaHQ6MTAwJTsgd2lkdGg6MDsgYmFja2dyb3VuZDpsaW5lYXItZ3JhZGllbnQoOTBkZWcsdmFyKC0tYzYpLHZhcigtLWMxKSx2YXIoLS1jMykpOyBib3JkZXItcmFkaXVzOjEwcHg7IHRyYW5zaXRpb246d2lkdGggLjVzOyB9CgogIC5sYXlvdXQgeyBkaXNwbGF5OmdyaWQ7IGdyaWQtdGVtcGxhdGUtY29sdW1uczptaW5tYXgoMCwxLjc1ZnIpIG1pbm1heCgzMzBweCwxZnIpOyBnYXA6MjJweDsgYWxpZ24taXRlbXM6c3RhcnQ7IH0KICAuc3RhZ2VbaGlkZGVuXSB7IGRpc3BsYXk6bm9uZTsgfQoKICAvKiAtLS0tLS0tLS0tIFBhbnRhbGxhIHNpbXVsYWRhIC0tLS0tLS0tLS0gKi8KICAuc2NyZWVuIHsgcG9zaXRpb246cmVsYXRpdmU7IHdpZHRoOjEwMCU7IGFzcGVjdC1yYXRpbzoxNi8xMDsgYm9yZGVyLXJhZGl1czoxOHB4OyBvdmVyZmxvdzpoaWRkZW47CiAgICBib3JkZXI6MXB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsLjEyKTsKICAgIGJhY2tncm91bmQ6IHJhZGlhbC1ncmFkaWVudChjaXJjbGUgYXQgMjUlIDMwJSwgcmdiYSg3NywxNjMsMjU1LC41NSksIHRyYW5zcGFyZW50IDU1JSksIHJhZGlhbC1ncmFkaWVudChjaXJjbGUgYXQgODAlIDcwJSwgcmdiYSgzNywyMTEsMTAyLC4zNSksIHRyYW5zcGFyZW50IDUwJSksIGxpbmVhci1ncmFkaWVudCgxMzVkZWcsIzEyMzM1ZiwjMGIxZDNhKTsKICAgIGJveC1zaGFkb3c6MCAyMHB4IDUwcHggcmdiYSgwLDAsMCwuNDUpOyBmb250LXNpemU6Y2xhbXAoLjc4cmVtLDEuMXZ3LDFyZW0pOyB1c2VyLXNlbGVjdDpub25lOyAtd2Via2l0LXVzZXItc2VsZWN0Om5vbmU7IH0KICAuZGVzayB7IHBvc2l0aW9uOmFic29sdXRlOyBsZWZ0OjA7IHRvcDowOyByaWdodDowOyBib3R0b206My4zZW07IG92ZXJmbG93OmhpZGRlbjsgfQogIC50YXNrYmFyIHsgcG9zaXRpb246YWJzb2x1dGU7IGxlZnQ6MDsgcmlnaHQ6MDsgYm90dG9tOjA7IGhlaWdodDozLjNlbTsgYmFja2dyb3VuZDpyZ2JhKDIzNSwyNDAsMjQ3LC45Mik7IGNvbG9yOnZhcigtLXdpbi1pbmspOyBkaXNwbGF5OmZsZXg7IGFsaWduLWl0ZW1zOmNlbnRlcjsganVzdGlmeS1jb250ZW50OmNlbnRlcjsgZ2FwOi40ZW07IGJhY2tkcm9wLWZpbHRlcjpibHVyKDEwcHgpOyBib3JkZXItdG9wOjFweCBzb2xpZCByZ2JhKDI1NSwyNTUsMjU1LC40KTsgei1pbmRleDo0MDsgfQogIC50ay1pYyB7IHdpZHRoOjIuNWVtOyBoZWlnaHQ6Mi41ZW07IGRpc3BsYXk6Z3JpZDsgcGxhY2UtaXRlbXM6Y2VudGVyOyBib3JkZXItcmFkaXVzOjhweDsgZm9udC1zaXplOjEuM2VtOyBiYWNrZ3JvdW5kOnRyYW5zcGFyZW50OyBib3JkZXI6MDsgY29sb3I6aW5oZXJpdDsgfQogIC50ay1pYy5idG4geyBjdXJzb3I6cG9pbnRlcjsgfSAudGstaWMuYnRuOmhvdmVyIHsgYmFja2dyb3VuZDpyZ2JhKDAsMCwwLC4wOCk7IH0KICAudGstc2VwIHsgd2lkdGg6MXB4OyBoZWlnaHQ6MS44ZW07IGJhY2tncm91bmQ6cmdiYSgwLDAsMCwuMTgpOyBtYXJnaW46MCAuM2VtOyB9CiAgLmNsb2NrIHsgcG9zaXRpb246YWJzb2x1dGU7IHJpZ2h0OjFlbTsgZm9udC13ZWlnaHQ6NzAwOyBmb250LXNpemU6Ljg1ZW07IHRleHQtYWxpZ246cmlnaHQ7IGxpbmUtaGVpZ2h0OjEuMjsgfQoKICAvKiBab25hcyBwdWxzYWJsZXMgKG1vZG8gZGVzY3VicmlyL3ByYWN0aWNhcikgKi8KICAucGFydCB7IGN1cnNvcjpwb2ludGVyOyB0cmFuc2l0aW9uOmJveC1zaGFkb3cgLjI1cywgYmFja2dyb3VuZCAuMjVzOyB9CiAgLnBhcnQ6OmFmdGVyIHsgY29udGVudDoiIjsgcG9zaXRpb246YWJzb2x1dGU7IGluc2V0OjA7IGJvcmRlci1yYWRpdXM6aW5oZXJpdDsgcG9pbnRlci1ldmVudHM6bm9uZTsgdHJhbnNpdGlvbjpiYWNrZ3JvdW5kIC4yNXM7IH0KICAucGFydDpob3Zlcjo6YWZ0ZXIgeyBiYWNrZ3JvdW5kOmNvbG9yLW1peChpbiBzcmdiLHZhcigtLXBjKSAyMiUsIHRyYW5zcGFyZW50KTsgfQogIC5waW4geyBwb3NpdGlvbjphYnNvbHV0ZTsgei1pbmRleDo4OyB3aWR0aDoyLjFlbTsgaGVpZ2h0OjIuMWVtOyBib3JkZXItcmFkaXVzOjUwJTsgYmFja2dyb3VuZDp2YXIoLS1wYyk7IGNvbG9yOiMwYTE2Mjg7IGZvbnQtd2VpZ2h0OjgwMDsgZGlzcGxheTpncmlkOyBwbGFjZS1pdGVtczpjZW50ZXI7IGZvbnQtc2l6ZToxLjA1ZW07IGJveC1zaGFkb3c6MCAycHggOHB4IHJnYmEoMCwwLDAsLjQpOyBhbmltYXRpb246cHVsc2UgMS44cyBlYXNlLWluLW91dCBpbmZpbml0ZTsgcG9pbnRlci1ldmVudHM6bm9uZTsgfQogIEBrZXlmcmFtZXMgcHVsc2UgeyAwJSwxMDAle3RyYW5zZm9ybTpzY2FsZSgxKTt9IDUwJXt0cmFuc2Zvcm06c2NhbGUoMS4xOCk7fSB9CiAgLnBhcnQuZm91bmQgPiAucGluLCAuZnIuZm91bmQgLnBpbiB7IGFuaW1hdGlvbjpub25lOyB9CiAgLnBhcnQuc2VsIHsgei1pbmRleDo1OyBib3gtc2hhZG93OjAgMCAwIDRweCB2YXIoLS1wYyksIDAgMCAyOHB4IGNvbG9yLW1peChpbiBzcmdiLHZhcigtLXBjKSA3NSUsIHRyYW5zcGFyZW50KTsgfQogIC5wYXJ0Lm9rIHsgYm94LXNoYWRvdzowIDAgMCA0cHggdmFyKC0tYzEpLCAwIDAgMjhweCByZ2JhKDM3LDIxMSwxMDIsLjc1KTsgei1pbmRleDo1OyB9CiAgLnBhcnQuYmFkIHsgYW5pbWF0aW9uOnNoYWtlIC40NXM7IGJveC1zaGFkb3c6MCAwIDAgNHB4IHZhcigtLWM0KTsgei1pbmRleDo1OyB9CiAgQGtleWZyYW1lcyBzaGFrZSB7IDAlLDEwMCV7dHJhbnNmb3JtOnRyYW5zbGF0ZVgoMCk7fSAyNSV7dHJhbnNmb3JtOnRyYW5zbGF0ZVgoLTdweCk7fSA3NSV7dHJhbnNmb3JtOnRyYW5zbGF0ZVgoN3B4KTt9IH0KICAubW9kZS1wcmFjdGljYSAucGluIHsgZGlzcGxheTpub25lOyB9CgogIC8qIFZlbnRhbmEgZGUgbXVlc3RyYSAqLwogIC5td2luIHsgcG9zaXRpb246YWJzb2x1dGU7IGxlZnQ6OSU7IHRvcDoxMCU7IHdpZHRoOjYyJTsgaGVpZ2h0OjcwJTsgfQogIC5tdy1pbiB7IHBvc2l0aW9uOmFic29sdXRlOyBpbnNldDowOyBiYWNrZ3JvdW5kOiNmZmY7IGNvbG9yOnZhcigtLXdpbi1pbmspOyBib3JkZXItcmFkaXVzOjEwcHg7IGJvcmRlcjoxcHggc29saWQgcmdiYSgwLDAsMCwuMyk7IGJveC1zaGFkb3c6MCAxNHB4IDM0cHggcmdiYSgwLDAsMCwuNDUpOyBkaXNwbGF5OmZsZXg7IGZsZXgtZGlyZWN0aW9uOmNvbHVtbjsgfQogIC5tdy10aXRsZSB7IHBvc2l0aW9uOnJlbGF0aXZlOyBoZWlnaHQ6M2VtOyBmbGV4LXNocmluazowOyBiYWNrZ3JvdW5kOiNmZmY7IGJvcmRlci1yYWRpdXM6MTBweCAxMHB4IDAgMDsgZGlzcGxheTpmbGV4OyBhbGlnbi1pdGVtczpjZW50ZXI7IGdhcDouNmVtOyBwYWRkaW5nLWxlZnQ6LjllbTsgZm9udC13ZWlnaHQ6NzAwOyBib3JkZXItYm90dG9tOjFweCBzb2xpZCAjZTNlOGVmOyB9CiAgLm13LXRpdGxlIC5waW4geyBsZWZ0OjU4JTsgdG9wOjUwJTsgbWFyZ2luLXRvcDotMS4wNWVtOyB9CiAgLm13LWN0cmxzIHsgbWFyZ2luLWxlZnQ6YXV0bzsgZGlzcGxheTpmbGV4OyBoZWlnaHQ6MTAwJTsgfQogIC5tdy1jIHsgcG9zaXRpb246cmVsYXRpdmU7IHdpZHRoOjMuNmVtOyBoZWlnaHQ6MTAwJTsgZGlzcGxheTpncmlkOyBwbGFjZS1pdGVtczpjZW50ZXI7IGNvbG9yOnZhcigtLXdpbi1pbmspOyB9CiAgLm13LWMuY2xvc2UgeyBib3JkZXItdG9wLXJpZ2h0LXJhZGl1czo5cHg7IH0KICAubXctYyBzdmcgeyB3aWR0aDouODVlbTsgaGVpZ2h0Oi44NWVtOyB9CiAgLm13LWMgLnBpbiB7IHRvcDoxMDAlOyBsZWZ0OmNhbGMoNTAlIC0gMS4wNWVtKTsgbWFyZ2luLXRvcDouNGVtOyB9CiAgLm13LWJvZHkgeyBmbGV4OjE7IHBhZGRpbmc6MS4xZW0gMS4zZW07IGRpc3BsYXk6ZmxleDsgZmxleC1kaXJlY3Rpb246Y29sdW1uOyBnYXA6LjdlbTsgYmFja2dyb3VuZDojZmZmOyBib3JkZXItcmFkaXVzOjAgMCAxMHB4IDEwcHg7IH0KICAubG4geyBoZWlnaHQ6LjdlbTsgYm9yZGVyLXJhZGl1czo2cHg7IGJhY2tncm91bmQ6I2UzZThlZjsgfQogIC5mciB7IHBvc2l0aW9uOmFic29sdXRlOyAtLXBjOnZhcigtLWM3KTsgYmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LC4xNCk7IGJvcmRlci1yYWRpdXM6NXB4OyB9CiAgLmZyOmhvdmVyIHsgYmFja2dyb3VuZDpyZ2JhKDE5NSwxMzksMjU1LC40KTsgfQogIC5mci5zZWwgeyBiYWNrZ3JvdW5kOnZhcigtLWM3KTsgYm94LXNoYWRvdzowIDAgMjJweCB2YXIoLS1jNyk7IHotaW5kZXg6NTsgfQogIC5mci5vayB7IGJhY2tncm91bmQ6dmFyKC0tYzEpOyBib3gtc2hhZG93OjAgMCAyMnB4IHZhcigtLWMxKTsgfQogIC5mci5iYWQgeyBiYWNrZ3JvdW5kOnZhcigtLWM0KTsgfQogIC5mcjo6YWZ0ZXIgeyBkaXNwbGF5Om5vbmU7IH0KICAuZnItbiB7IHRvcDotLjhlbTsgbGVmdDoxZW07IHJpZ2h0OjFlbTsgaGVpZ2h0Oi44ZW07IH0gLmZyLXMgeyBib3R0b206LS44ZW07IGxlZnQ6MWVtOyByaWdodDoxZW07IGhlaWdodDouOGVtOyB9CiAgLmZyLXcgeyBsZWZ0Oi0uOGVtOyB0b3A6MWVtOyBib3R0b206MWVtOyB3aWR0aDouOGVtOyB9IC5mci1lIHsgcmlnaHQ6LS44ZW07IHRvcDoxZW07IGJvdHRvbToxZW07IHdpZHRoOi44ZW07IH0KICAuZnItbncgeyBsZWZ0Oi0uOGVtOyB0b3A6LS44ZW07IHdpZHRoOjEuOGVtOyBoZWlnaHQ6MS44ZW07IH0gLmZyLW5lIHsgcmlnaHQ6LS44ZW07IHRvcDotLjhlbTsgd2lkdGg6MS44ZW07IGhlaWdodDoxLjhlbTsgfQogIC5mci1zdyB7IGxlZnQ6LS44ZW07IGJvdHRvbTotLjhlbTsgd2lkdGg6MS44ZW07IGhlaWdodDoxLjhlbTsgfSAuZnItc2UgeyByaWdodDotLjhlbTsgYm90dG9tOi0uOGVtOyB3aWR0aDoxLjhlbTsgaGVpZ2h0OjEuOGVtOyB9CiAgLmZyLXNlIC5waW4geyBsZWZ0OjEwMCU7IHRvcDoxMDAlOyBtYXJnaW46LjE1ZW0gMCAwIC4xNWVtOyB9CiAgLnNjLXN0YXRpYyAudGFza2Jhci5wYXJ0IHsgLS1wYzp2YXIoLS1jMyk7IH0KICAuc2Mtc3RhdGljIC50YXNrYmFyIC5waW4geyB0b3A6LTEuM2VtOyByaWdodDo2ZW07IH0KICAudGstb3BlbiB7IHBvc2l0aW9uOnJlbGF0aXZlOyB9CiAgLnRrLW9wZW46OmFmdGVyIHsgY29udGVudDoiIjsgcG9zaXRpb246YWJzb2x1dGU7IGJvdHRvbTouMWVtOyBsZWZ0OjMwJTsgcmlnaHQ6MzAlOyBoZWlnaHQ6M3B4OyBib3JkZXItcmFkaXVzOjNweDsgYmFja2dyb3VuZDojM2I4MmY2OyB9CgogIC8qIC0tLS0tLS0tLS0gRXNjcml0b3JpbyB2aXZvIC0tLS0tLS0tLS0gKi8KICAuZGljb24geyBwb3NpdGlvbjphYnNvbHV0ZTsgbGVmdDouN2VtOyB3aWR0aDo1LjhlbTsgZGlzcGxheTpmbGV4OyBmbGV4LWRpcmVjdGlvbjpjb2x1bW47IGFsaWduLWl0ZW1zOmNlbnRlcjsgZ2FwOi4yZW07IHBhZGRpbmc6LjRlbSAuMmVtOyBib3JkZXItcmFkaXVzOjhweDsgYm9yZGVyOjFweCBzb2xpZCB0cmFuc3BhcmVudDsgYmFja2dyb3VuZDp0cmFuc3BhcmVudDsgY29sb3I6I2ZmZjsgY3Vyc29yOmRlZmF1bHQ7IGZvbnQtc2l6ZTouNzVlbTsgZm9udC13ZWlnaHQ6NzAwOyB0ZXh0LXNoYWRvdzowIDFweCAzcHggcmdiYSgwLDAsMCwuNyk7IH0KICAuZGljb24gLmRpIHsgZm9udC1zaXplOjIuMmVtOyBsaW5lLWhlaWdodDoxOyB9CiAgLmRpY29uOmhvdmVyIHsgYmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LC4xMik7IH0KICAuZGljb24uc2VsIHsgYmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LC4yMik7IGJvcmRlci1jb2xvcjpyZ2JhKDI1NSwyNTUsMjU1LC40KTsgfQoKICAubHcgeyBwb3NpdGlvbjphYnNvbHV0ZTsgZGlzcGxheTpmbGV4OyBmbGV4LWRpcmVjdGlvbjpjb2x1bW47IGJhY2tncm91bmQ6dmFyKC0td2luKTsgY29sb3I6dmFyKC0td2luLWluayk7IGJvcmRlci1yYWRpdXM6MTBweDsgYm9yZGVyOjFweCBzb2xpZCByZ2JhKDAsMCwwLC4zKTsgYm94LXNoYWRvdzowIDE0cHggMzRweCByZ2JhKDAsMCwwLC40NSk7IHRyYW5zaXRpb246bGVmdCAuMjJzIGVhc2UsIHRvcCAuMjJzIGVhc2UsIHdpZHRoIC4yMnMgZWFzZSwgaGVpZ2h0IC4yMnMgZWFzZSwgdHJhbnNmb3JtIC4zcyBlYXNlLCBvcGFjaXR5IC4zcyBlYXNlOyB0cmFuc2Zvcm0tb3JpZ2luOjUwJSAxMDAlOyB9CiAgLmx3LmRyYWdnaW5nLCAubHcucmVzaXppbmcgeyB0cmFuc2l0aW9uOm5vbmU7IH0KICAubHcuY2xvc2VkIHsgZGlzcGxheTpub25lOyB9CiAgLmx3LmlzLW1pbiB7IG9wYWNpdHk6MDsgdHJhbnNmb3JtOnRyYW5zbGF0ZVkoNDUlKSBzY2FsZSguMik7IHBvaW50ZXItZXZlbnRzOm5vbmU7IH0KICAubHcuaXMtbWF4IHsgYm9yZGVyLXJhZGl1czowOyBib3JkZXItY29sb3I6dHJhbnNwYXJlbnQ7IH0KICAubHcub3BlbmluZyB7IGFuaW1hdGlvbjp3aW5PcGVuIC4yNXMgZWFzZTsgfQogIEBrZXlmcmFtZXMgd2luT3BlbiB7IGZyb217b3BhY2l0eTowOyB0cmFuc2Zvcm06c2NhbGUoLjkyKTt9IHRve29wYWNpdHk6MTsgdHJhbnNmb3JtOm5vbmU7fSB9CiAgLmx3LXRpdGxlIHsgaGVpZ2h0OjIuNWVtOyBmbGV4LXNocmluazowOyBkaXNwbGF5OmZsZXg7IGFsaWduLWl0ZW1zOmNlbnRlcjsgZ2FwOi42ZW07IHBhZGRpbmctbGVmdDouOGVtOyBiYWNrZ3JvdW5kOiNlM2U4ZWY7IGJvcmRlci1yYWRpdXM6MTBweCAxMHB4IDAgMDsgdG91Y2gtYWN0aW9uOm5vbmU7IGZvbnQtd2VpZ2h0OjcwMDsgfQogIC5sdy5pcy1tYXggLmx3LXRpdGxlIHsgYm9yZGVyLXJhZGl1czowOyB9CiAgLmx3LmFjdGl2ZSAubHctdGl0bGUgeyBiYWNrZ3JvdW5kOiNmZmY7IH0KICAubHctbmFtZSB7IGZsZXg6MTsgbWluLXdpZHRoOjA7IHdoaXRlLXNwYWNlOm5vd3JhcDsgb3ZlcmZsb3c6aGlkZGVuOyB0ZXh0LW92ZXJmbG93OmVsbGlwc2lzOyBjb2xvcjojNmI3NTg3OyBmb250LXNpemU6LjllbTsgfQogIC5sdy5hY3RpdmUgLmx3LW5hbWUgeyBjb2xvcjp2YXIoLS13aW4taW5rKTsgfQogIC5sdy1jdHJscyB7IGRpc3BsYXk6ZmxleDsgaGVpZ2h0OjEwMCU7IH0KICAud2MgeyBwb3NpdGlvbjpyZWxhdGl2ZTsgd2lkdGg6My40ZW07IGhlaWdodDoxMDAlOyBib3JkZXI6MDsgYmFja2dyb3VuZDp0cmFuc3BhcmVudDsgY29sb3I6dmFyKC0td2luLWluayk7IGRpc3BsYXk6Z3JpZDsgcGxhY2UtaXRlbXM6Y2VudGVyOyBjdXJzb3I6cG9pbnRlcjsgfQogIC53Yzpob3ZlciB7IGJhY2tncm91bmQ6cmdiYSgwLDAsMCwuMDkpOyB9CiAgLndjLmNsb3NlIHsgYm9yZGVyLXRvcC1yaWdodC1yYWRpdXM6OXB4OyB9IC5sdy5pcy1tYXggLndjLmNsb3NlIHsgYm9yZGVyLXJhZGl1czowOyB9CiAgLndjLmNsb3NlOmhvdmVyIHsgYmFja2dyb3VuZDojZTgxMTIzOyBjb2xvcjojZmZmOyB9CiAgLndjIHN2ZyB7IHdpZHRoOi44NWVtOyBoZWlnaHQ6Ljg1ZW07IHBvaW50ZXItZXZlbnRzOm5vbmU7IH0KICAubHctYm9keSB7IGZsZXg6MTsgbWluLWhlaWdodDowOyBvdmVyZmxvdzpoaWRkZW47IGJhY2tncm91bmQ6I2ZmZjsgYm9yZGVyLXJhZGl1czowIDAgMTBweCAxMHB4OyBwYWRkaW5nOi45ZW0gMS4xZW07IH0KICAubHcuaXMtbWF4IC5sdy1ib2R5IHsgYm9yZGVyLXJhZGl1czowOyB9CiAgLnJ6IHsgcG9zaXRpb246YWJzb2x1dGU7IHotaW5kZXg6MjsgdG91Y2gtYWN0aW9uOm5vbmU7IH0KICAubHcuaXMtbWF4IC5yeiB7IGRpc3BsYXk6bm9uZTsgfQogIC5yei1ue3RvcDotNXB4O2xlZnQ6MTJweDtyaWdodDoxMnB4O2hlaWdodDoxMHB4O2N1cnNvcjpucy1yZXNpemV9IC5yei1ze2JvdHRvbTotNXB4O2xlZnQ6MTJweDtyaWdodDoxMnB4O2hlaWdodDoxMHB4O2N1cnNvcjpucy1yZXNpemV9CiAgLnJ6LWV7cmlnaHQ6LTVweDt0b3A6MTJweDtib3R0b206MTJweDt3aWR0aDoxMHB4O2N1cnNvcjpldy1yZXNpemV9IC5yei13e2xlZnQ6LTVweDt0b3A6MTJweDtib3R0b206MTJweDt3aWR0aDoxMHB4O2N1cnNvcjpldy1yZXNpemV9CiAgLnJ6LW53e2xlZnQ6LTZweDt0b3A6LTZweDt3aWR0aDoxOHB4O2hlaWdodDoxOHB4O2N1cnNvcjpud3NlLXJlc2l6ZX0gLnJ6LW5le3JpZ2h0Oi02cHg7dG9wOi02cHg7d2lkdGg6MThweDtoZWlnaHQ6MThweDtjdXJzb3I6bmVzdy1yZXNpemV9CiAgLnJ6LXN3e2xlZnQ6LTZweDtib3R0b206LTZweDt3aWR0aDoxOHB4O2hlaWdodDoxOHB4O2N1cnNvcjpuZXN3LXJlc2l6ZX0gLnJ6LXNle3JpZ2h0Oi02cHg7Ym90dG9tOi02cHg7d2lkdGg6MThweDtoZWlnaHQ6MThweDtjdXJzb3I6bndzZS1yZXNpemV9CgogIC5zbmFwLXByZXYgeyBwb3NpdGlvbjphYnNvbHV0ZTsgei1pbmRleDozMDsgcG9pbnRlci1ldmVudHM6bm9uZTsgYm9yZGVyLXJhZGl1czoxMHB4OyBiYWNrZ3JvdW5kOnJnYmEoNzcsMTYzLDI1NSwuMjgpOyBib3JkZXI6MnB4IHNvbGlkIHJnYmEoMTYwLDIwNSwyNTUsLjkpOyBvcGFjaXR5OjA7IHRyYW5zaXRpb246YWxsIC4xNXMgZWFzZTsgfQogIC5zbmFwLXByZXYub24geyBvcGFjaXR5OjE7IH0KCiAgLyogQ29udGVuaWRvIGRlIGxhcyBhcGxpY2FjaW9uZXMgKi8KICAubnQtbG4geyBoZWlnaHQ6LjY1ZW07IGJvcmRlci1yYWRpdXM6NnB4OyBiYWNrZ3JvdW5kOiNlM2U4ZWY7IG1hcmdpbi1ib3R0b206LjY1ZW07IH0KICAuY2FsYy1kIHsgYmFja2dyb3VuZDojMWIyNDMzOyBjb2xvcjojZmZmOyBib3JkZXItcmFkaXVzOjhweDsgdGV4dC1hbGlnbjpyaWdodDsgcGFkZGluZzouNGVtIC43ZW07IGZvbnQtc2l6ZToxLjVlbTsgZm9udC13ZWlnaHQ6ODAwOyBtYXJnaW4tYm90dG9tOi42ZW07IH0KICAuY2FsYy1nIHsgZGlzcGxheTpncmlkOyBncmlkLXRlbXBsYXRlLWNvbHVtbnM6cmVwZWF0KDQsMWZyKTsgZ2FwOi40ZW07IH0KICAuY2FsYy1nIHNwYW4geyBiYWNrZ3JvdW5kOiNlOGVkZjQ7IGJvcmRlci1yYWRpdXM6N3B4OyBwYWRkaW5nOi41ZW0gMDsgdGV4dC1hbGlnbjpjZW50ZXI7IGZvbnQtd2VpZ2h0OjgwMDsgfQogIC5jYWxjLWcgc3Bhbi5vcCB7IGJhY2tncm91bmQ6I2RiZTdmNzsgY29sb3I6IzFkNGVkODsgfQogIC5waCB7IGhlaWdodDoxMDAlOyBtaW4taGVpZ2h0OjZlbTsgYm9yZGVyLXJhZGl1czoxMHB4OyBiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCgxMzVkZWcsIzZiYjZmZiwjMjVEMzY2IDcwJSwjRkZEOTNEKTsgZGlzcGxheTpncmlkOyBwbGFjZS1pdGVtczpjZW50ZXI7IGZvbnQtc2l6ZTozZW07IH0KCiAgLyogQmFycmEgZGUgdGFyZWFzIHZpdmEgKi8KICAudGItd3JhcCB7IHBvc2l0aW9uOnJlbGF0aXZlOyB9CiAgLnRiLWFwcCB7IHBvc2l0aW9uOnJlbGF0aXZlOyB3aWR0aDoyLjdlbTsgaGVpZ2h0OjIuNWVtOyBib3JkZXItcmFkaXVzOjhweDsgYm9yZGVyOjA7IGJhY2tncm91bmQ6dHJhbnNwYXJlbnQ7IGZvbnQtc2l6ZToxLjNlbTsgY3Vyc29yOnBvaW50ZXI7IH0KICAudGItYXBwOmhvdmVyIHsgYmFja2dyb3VuZDpyZ2JhKDAsMCwwLC4wOCk7IH0KICAudGItd3JhcC5pc29wZW4gLnRiLWFwcDo6YWZ0ZXIgeyBjb250ZW50OiIiOyBwb3NpdGlvbjphYnNvbHV0ZTsgYm90dG9tOi4wOGVtOyBsZWZ0OjM1JTsgcmlnaHQ6MzUlOyBoZWlnaHQ6M3B4OyBib3JkZXItcmFkaXVzOjNweDsgYmFja2dyb3VuZDojN2I4Nzk4OyB9CiAgLnRiLXdyYXAuaXNhY3RpdmUgLnRiLWFwcCB7IGJhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuOSk7IGJveC1zaGFkb3c6MCAwIDAgMXB4IHJnYmEoMCwwLDAsLjA4KTsgfQogIC50Yi13cmFwLmlzYWN0aXZlIC50Yi1hcHA6OmFmdGVyIHsgYmFja2dyb3VuZDojM2I4MmY2OyBsZWZ0OjI1JTsgcmlnaHQ6MjUlOyB9CiAgLnRiLXByZXYgeyBkaXNwbGF5Om5vbmU7IHBvc2l0aW9uOmFic29sdXRlOyBib3R0b206MTAwJTsgbGVmdDo1MCU7IHRyYW5zZm9ybTp0cmFuc2xhdGVYKC01MCUpOyBwYWRkaW5nLWJvdHRvbTouNmVtOyB6LWluZGV4OjYwOyB9CiAgLnRiLXdyYXAuaXNvcGVuOm5vdCgubm9ob3Zlcik6aG92ZXIgLnRiLXByZXYgeyBkaXNwbGF5OmJsb2NrOyBhbmltYXRpb246cG9wSW4gLjJzIGVhc2U7IH0KICAudGItY2FyZCB7IHdpZHRoOjExZW07IGJhY2tncm91bmQ6I2ZmZjsgYm9yZGVyLXJhZGl1czoxMHB4OyBib3gtc2hhZG93OjAgMTBweCAzMHB4IHJnYmEoMCwwLDAsLjQ1KTsgcGFkZGluZzouNWVtOyBjdXJzb3I6cG9pbnRlcjsgYm9yZGVyOjJweCBzb2xpZCB0cmFuc3BhcmVudDsgfQogIC50Yi1jYXJkOmhvdmVyIHsgYm9yZGVyLWNvbG9yOiMzYjgyZjY7IH0KICAudGItY2FyZCAudHQgeyBmb250LXNpemU6LjhlbTsgZm9udC13ZWlnaHQ6ODAwOyBtYXJnaW4tYm90dG9tOi4zNWVtOyB3aGl0ZS1zcGFjZTpub3dyYXA7IH0KICAudGItY2FyZCAudGggeyBoZWlnaHQ6NC42ZW07IGJvcmRlci1yYWRpdXM6NnB4OyBiYWNrZ3JvdW5kOiNlZWYyZjc7IGRpc3BsYXk6Z3JpZDsgcGxhY2UtaXRlbXM6Y2VudGVyOyBmb250LXNpemU6MmVtOyB9CiAgLnRiLXdyYXAuaXNtaW4gLnRiLWNhcmQgLnRoIHsgb3BhY2l0eTouNTsgfQoKICAuYnRuLXYgeyBwb3NpdGlvbjphYnNvbHV0ZTsgei1pbmRleDo0MTsgfQogIC5vdiB7IHBvc2l0aW9uOmFic29sdXRlOyBpbnNldDowOyB6LWluZGV4OjcwOyBiYWNrZ3JvdW5kOnJnYmEoOCwxNiwzMiwuNzgpOyBiYWNrZHJvcC1maWx0ZXI6Ymx1cig2cHgpOyBkaXNwbGF5OmZsZXg7IGZsZXgtZGlyZWN0aW9uOmNvbHVtbjsgYWxpZ24taXRlbXM6Y2VudGVyOyBqdXN0aWZ5LWNvbnRlbnQ6Y2VudGVyOyBnYXA6MWVtOyBhbmltYXRpb246cG9wSW4gLjI1cyBlYXNlOyBwYWRkaW5nOjFlbTsgfQogIC5vdiBoMyB7IGZvbnQtZmFtaWx5OidGcmVkb2thIE9uZScsY3Vyc2l2ZTsgZm9udC13ZWlnaHQ6NDAwOyBmb250LXNpemU6MS42ZW07IGNvbG9yOnZhcigtLWMzKTsgfQogIC5vdi1yb3cgeyBkaXNwbGF5OmZsZXg7IGdhcDoxZW07IGZsZXgtd3JhcDp3cmFwOyBqdXN0aWZ5LWNvbnRlbnQ6Y2VudGVyOyB9CiAgLnRoLWNhcmQgeyB3aWR0aDoxMWVtOyBiYWNrZ3JvdW5kOiNmZmY7IGNvbG9yOnZhcigtLXdpbi1pbmspOyBib3JkZXItcmFkaXVzOjEycHg7IHBhZGRpbmc6LjZlbTsgY3Vyc29yOnBvaW50ZXI7IGJvcmRlcjo0cHggc29saWQgdHJhbnNwYXJlbnQ7IHRyYW5zaXRpb246dHJhbnNmb3JtIC4xNXM7IH0KICAudGgtY2FyZDpob3ZlciB7IHRyYW5zZm9ybTpzY2FsZSgxLjA0KTsgfQogIC50aC1jYXJkLnNlbCB7IGJvcmRlci1jb2xvcjp2YXIoLS1jMyk7IGJveC1zaGFkb3c6MCAwIDI0cHggcmdiYSgyNTUsMjE3LDYxLC42KTsgfQogIC50aC1jYXJkIC50dCB7IGZvbnQtd2VpZ2h0OjgwMDsgZm9udC1zaXplOi44NWVtOyBtYXJnaW4tYm90dG9tOi40ZW07IH0KICAudGgtY2FyZCAudGggeyBoZWlnaHQ6NS41ZW07IGJvcmRlci1yYWRpdXM6OHB4OyBiYWNrZ3JvdW5kOiNlZWYyZjc7IGRpc3BsYXk6Z3JpZDsgcGxhY2UtaXRlbXM6Y2VudGVyOyBmb250LXNpemU6Mi40ZW07IH0KICAub3YtaGludCB7IGNvbG9yOiNjZmQ4ZTg7IGZvbnQtd2VpZ2h0OjcwMDsgdGV4dC1hbGlnbjpjZW50ZXI7IH0KICAub3YtYnRucyB7IGRpc3BsYXk6ZmxleDsgZ2FwOi43ZW07IH0KICAub3YtYnRuIHsgcGFkZGluZzouNmVtIDEuMmVtOyBib3JkZXItcmFkaXVzOjEycHg7IGJvcmRlcjoycHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwuMjUpOyBiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsLjA4KTsgY29sb3I6I2ZmZjsgZm9udC13ZWlnaHQ6ODAwOyBmb250LXNpemU6Ljk1ZW07IGN1cnNvcjpwb2ludGVyOyB9CiAgLm92LWJ0bjpob3ZlciB7IGJvcmRlci1jb2xvcjp2YXIoLS1jMyk7IH0KICAub3YtYnRuLmdvIHsgYmFja2dyb3VuZDpyZ2JhKDM3LDIxMSwxMDIsLjI1KTsgYm9yZGVyLWNvbG9yOnZhcigtLWMxKTsgfQogIGtiZCB7IGZvbnQtZmFtaWx5OmluaGVyaXQ7IGZvbnQtd2VpZ2h0OjgwMDsgZm9udC1zaXplOi45ZW07IGJhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuMTIpOyBib3JkZXI6MXB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsLjMpOyBib3JkZXItYm90dG9tLXdpZHRoOjNweDsgYm9yZGVyLXJhZGl1czo3cHg7IHBhZGRpbmc6MCA3cHg7IH0KCiAgLmxheW91dHMgeyBwb3NpdGlvbjphYnNvbHV0ZTsgei1pbmRleDo2NTsgYmFja2dyb3VuZDojZmZmOyBjb2xvcjp2YXIoLS13aW4taW5rKTsgYm9yZGVyLXJhZGl1czoxMnB4OyBwYWRkaW5nOi43ZW07IGJveC1zaGFkb3c6MCAxMnB4IDM0cHggcmdiYSgwLDAsMCwuNSk7IGRpc3BsYXk6bm9uZTsgZ2FwOi43ZW07IH0KICAubGF5b3V0cy5vbiB7IGRpc3BsYXk6ZmxleDsgYW5pbWF0aW9uOnBvcEluIC4ycyBlYXNlOyB9CiAgLmxheSB7IHdpZHRoOjUuNmVtOyBoZWlnaHQ6My42ZW07IGRpc3BsYXk6Z3JpZDsgZ2FwOjNweDsgYmFja2dyb3VuZDojY2ZkNmRlOyBwYWRkaW5nOjNweDsgYm9yZGVyLXJhZGl1czo2cHg7IH0KICAubGF5IGkgeyBiYWNrZ3JvdW5kOiNlZWYyZjc7IGJvcmRlci1yYWRpdXM6M3B4OyBjdXJzb3I6cG9pbnRlcjsgfQogIC5sYXkgaTpob3ZlciB7IGJhY2tncm91bmQ6IzREQTNGRjsgfQogIC5sYXkubDEgeyBncmlkLXRlbXBsYXRlLWNvbHVtbnM6MWZyIDFmcjsgfSAubGF5LmwyIHsgZ3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjJmciAxZnI7IH0gLmxheS5sMyB7IGdyaWQtdGVtcGxhdGUtY29sdW1uczoxZnIgMWZyOyBncmlkLXRlbXBsYXRlLXJvd3M6MWZyIDFmcjsgfQoKICAudG9hc3QgeyBwb3NpdGlvbjphYnNvbHV0ZTsgbGVmdDo1MCU7IGJvdHRvbTo0LjJlbTsgdHJhbnNmb3JtOnRyYW5zbGF0ZVgoLTUwJSk7IHotaW5kZXg6ODA7IGJhY2tncm91bmQ6cmdiYSgxMCwyMiw0MCwuOTUpOyBjb2xvcjojZmZmOyBwYWRkaW5nOi42ZW0gMS4yZW07IGJvcmRlci1yYWRpdXM6MTJweDsgZm9udC13ZWlnaHQ6ODAwOyBib3JkZXI6MXB4IHNvbGlkIHZhcigtLWMzKTsgb3BhY2l0eTowOyB0cmFuc2l0aW9uOm9wYWNpdHkgLjI1czsgcG9pbnRlci1ldmVudHM6bm9uZTsgd2hpdGUtc3BhY2U6bm93cmFwOyB9CiAgLnRvYXN0Lm9uIHsgb3BhY2l0eToxOyB9CgogIC50b29scyB7IGRpc3BsYXk6ZmxleDsgZ2FwOjEwcHg7IG1hcmdpbi10b3A6MTJweDsgZmxleC13cmFwOndyYXA7IH0KICAudGJ0biB7IHBhZGRpbmc6MTBweCAxOHB4OyBib3JkZXItcmFkaXVzOjE0cHg7IGJvcmRlcjoycHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwuMTgpOyBiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsLjA2KTsgY29sb3I6dmFyKC0tdGV4dCk7IGZvbnQtd2VpZ2h0OjgwMDsgZm9udC1zaXplOjFyZW07IGN1cnNvcjpwb2ludGVyOyB0cmFuc2l0aW9uOmFsbCAuMnM7IH0KICAudGJ0bjpob3ZlciB7IHRyYW5zZm9ybTpzY2FsZSgxLjA0KTsgYm9yZGVyLWNvbG9yOnZhcigtLWM2KTsgfQoKICAvKiAtLS0tLS0tLS0tIFBhbmVsIGRlIGluZm9ybWFjacOzbiAtLS0tLS0tLS0tICovCiAgLnNpZGUgeyBwb3NpdGlvbjpzdGlja3k7IHRvcDoxNHB4OyBtYXgtaGVpZ2h0OmNhbGMoMTAwdmggLSAyOHB4KTsgb3ZlcmZsb3c6YXV0bzsgYm9yZGVyLXJhZGl1czoyNHB4OyB9CiAgLmluZm8geyBiYWNrZ3JvdW5kOnZhcigtLWNhcmQpOyBib3JkZXI6MXB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsLjA3KTsgYm9yZGVyLWxlZnQ6OHB4IHNvbGlkIHZhcigtLWljLHZhcigtLWM2KSk7IGJvcmRlci1yYWRpdXM6MjRweDsgcGFkZGluZzoyNHB4IDI2cHg7IG1pbi1oZWlnaHQ6MzYwcHg7IGFuaW1hdGlvbjpwb3BJbiAuNDVzIGN1YmljLWJlemllciguMzQsMS41NiwuNjQsMSkgYm90aDsgdHJhbnNpdGlvbjpib3JkZXItY29sb3IgLjNzOyB9CiAgLmluZm8tbnVtIHsgZGlzcGxheTppbmxpbmUtZ3JpZDsgcGxhY2UtaXRlbXM6Y2VudGVyOyB3aWR0aDo0NnB4OyBoZWlnaHQ6NDZweDsgYm9yZGVyLXJhZGl1czo1MCU7IGJhY2tncm91bmQ6dmFyKC0taWMsdmFyKC0tYzYpKTsgY29sb3I6IzBhMTYyODsgZm9udC13ZWlnaHQ6ODAwOyBmb250LXNpemU6MS4zcmVtOyBtYXJnaW4tYm90dG9tOjEwcHg7IH0KICAuaW5mbyBoMiB7IGZvbnQtZmFtaWx5OidGcmVkb2thIE9uZScsY3Vyc2l2ZTsgZm9udC13ZWlnaHQ6NDAwOyBmb250LXNpemU6Y2xhbXAoMS42cmVtLDIuNnZ3LDIuM3JlbSk7IGxpbmUtaGVpZ2h0OjEuMTU7IG1hcmdpbi1ib3R0b206MTJweDsgY29sb3I6dmFyKC0taWMsdmFyKC0tYzYpKTsgfQogIC5pbmZvIGgzIHsgZm9udC1mYW1pbHk6J0ZyZWRva2EgT25lJyxjdXJzaXZlOyBmb250LXdlaWdodDo0MDA7IGZvbnQtc2l6ZToxLjI1cmVtOyBtYXJnaW46MTRweCAwIDhweDsgY29sb3I6dmFyKC0tYzMpOyB9CiAgLmluZm8gcCB7IGZvbnQtc2l6ZTpjbGFtcCgxLjA1cmVtLDEuNXZ3LDEuM3JlbSk7IGZvbnQtd2VpZ2h0OjYwMDsgbGluZS1oZWlnaHQ6MS41OyBtYXJnaW4tYm90dG9tOjE0cHg7IH0KICAuaW5mbyBiIHsgY29sb3I6dmFyKC0tYzMpOyBmb250LXdlaWdodDo4MDA7IH0KICAuY2hpcHMgeyBkaXNwbGF5OmZsZXg7IGZsZXgtd3JhcDp3cmFwOyBnYXA6OHB4OyBtYXJnaW4tYm90dG9tOjE0cHg7IH0KICAuY2hpcCB7IGJhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuMDcpOyBib3JkZXItcmFkaXVzOjEwMHB4OyBwYWRkaW5nOjZweCAxNHB4OyBmb250LXdlaWdodDo4MDA7IGZvbnQtc2l6ZTpjbGFtcCguOTVyZW0sMS4zdncsMS4xcmVtKTsgfQogIC50aXAgeyBiYWNrZ3JvdW5kOnJnYmEoMjU1LDIxNyw2MSwuMDkpOyBib3JkZXItcmFkaXVzOjE0cHg7IHBhZGRpbmc6MTJweCAxNnB4OyBjb2xvcjp2YXIoLS1zdWIpOyBmb250LXdlaWdodDo3MDA7IGZvbnQtc2l6ZTpjbGFtcCguOTVyZW0sMS4zdncsMS4xcmVtKTsgfQogIC50aXAgYiB7IGNvbG9yOnZhcigtLWMzKTsgfQogIC5oZWxsbyB7IHRleHQtYWxpZ246Y2VudGVyOyBwYWRkaW5nLXRvcDozMHB4OyB9CiAgLmhlbGxvIC5iaWcgeyBmb250LXNpemU6My40cmVtOyBtYXJnaW4tYm90dG9tOjhweDsgfQogIC5oZWxsbyBoMiB7IGNvbG9yOnZhcigtLXRleHQpOyB9CiAgLnF1aXotcSB7IGZvbnQtZmFtaWx5OidGcmVkb2thIE9uZScsY3Vyc2l2ZTsgZm9udC1zaXplOmNsYW1wKDEuNXJlbSwyLjZ2dywyLjJyZW0pOyBsaW5lLWhlaWdodDoxLjI7IG1hcmdpbi1ib3R0b206MTRweDsgfQogIC5xdWl6LXEgc3BhbiB7IGNvbG9yOnZhcigtLWMzKTsgfQogIC5mZWVkYmFjayB7IGZvbnQtc2l6ZToxLjNyZW07IGZvbnQtd2VpZ2h0OjgwMDsgbWluLWhlaWdodDoyZW07IG1hcmdpbjo2cHggMCAxMnB4OyB9CiAgLmZlZWRiYWNrLmdvb2QgeyBjb2xvcjp2YXIoLS1jMSk7IH0gLmZlZWRiYWNrLm5vIHsgY29sb3I6dmFyKC0tYzQpOyB9CiAgLmJ0biB7IHBhZGRpbmc6MTJweCAyNHB4OyBib3JkZXItcmFkaXVzOjE0cHg7IGJvcmRlcjoycHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwuMTgpOyBiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsLjA2KTsgY29sb3I6dmFyKC0tdGV4dCk7IGZvbnQtd2VpZ2h0OjgwMDsgZm9udC1zaXplOjEuMDVyZW07IGN1cnNvcjpwb2ludGVyOyB0cmFuc2l0aW9uOmFsbCAuMnM7IH0KICAuYnRuOmhvdmVyIHsgdHJhbnNmb3JtOnNjYWxlKDEuMDQpOyBib3JkZXItY29sb3I6dmFyKC0tYzYpOyB9CiAgLmJ0bi5nbyB7IGJhY2tncm91bmQ6cmdiYSgzNywyMTEsMTAyLC4xOCk7IGJvcmRlci1jb2xvcjp2YXIoLS1jMSk7IH0KICAucm93IHsgZGlzcGxheTpmbGV4OyBnYXA6MTBweDsgZmxleC13cmFwOndyYXA7IG1hcmdpbi10b3A6MTBweDsgfQogIC50cm9waHkgeyBmb250LXNpemU6NHJlbTsgYW5pbWF0aW9uOmJvdW5jZSAxcyBlYXNlIGluZmluaXRlIGFsdGVybmF0ZTsgfQogIEBrZXlmcmFtZXMgYm91bmNlIHsgZnJvbXt0cmFuc2Zvcm06dHJhbnNsYXRlWSgwKSByb3RhdGUoLTVkZWcpO30gdG97dHJhbnNmb3JtOnRyYW5zbGF0ZVkoLTEycHgpIHJvdGF0ZSg1ZGVnKTt9IH0KCiAgLmxoIHsgZGlzcGxheTpmbGV4OyBhbGlnbi1pdGVtczpjZW50ZXI7IGdhcDoxNHB4OyBtYXJnaW4tYm90dG9tOjEwcHg7IH0KICAubGggLmljbyB7IGZvbnQtc2l6ZToyLjRyZW07IH0KICAubGggLm5tIHsgZm9udC1mYW1pbHk6J0ZyZWRva2EgT25lJyxjdXJzaXZlOyBmb250LXNpemU6MS41cmVtOyBsaW5lLWhlaWdodDoxLjE7IH0KICAuc3RhdGUgeyBkaXNwbGF5OmlubGluZS1ibG9jazsgbWFyZ2luLXRvcDo0cHg7IHBhZGRpbmc6M3B4IDE0cHg7IGJvcmRlci1yYWRpdXM6MTAwcHg7IGZvbnQtd2VpZ2h0OjgwMDsgZm9udC1zaXplOjFyZW07IGNvbG9yOiMwYTE2Mjg7IH0KICAucy1ub3JtYWwgeyBiYWNrZ3JvdW5kOnZhcigtLWMxKTsgfSAucy1tYXggeyBiYWNrZ3JvdW5kOnZhcigtLWM2KTsgfSAucy1taW4geyBiYWNrZ3JvdW5kOnZhcigtLWMzKTsgfSAucy1jbG9zZWQgeyBiYWNrZ3JvdW5kOnZhcigtLWM0KTsgfSAucy1ub25lIHsgYmFja2dyb3VuZDojOGE5YmJmOyB9CiAgLnJldG9zIHsgbGlzdC1zdHlsZTpub25lOyBkaXNwbGF5OmZsZXg7IGZsZXgtZGlyZWN0aW9uOmNvbHVtbjsgZ2FwOjZweDsgfQogIC5yZXRvcyBsaSB7IGRpc3BsYXk6ZmxleDsgZ2FwOjEwcHg7IGFsaWduLWl0ZW1zOmZsZXgtc3RhcnQ7IHBhZGRpbmc6OHB4IDEycHg7IGJvcmRlci1yYWRpdXM6MTJweDsgYmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LC4wNCk7IGJvcmRlcjoycHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwuMDcpOyBmb250LXdlaWdodDo3MDA7IGZvbnQtc2l6ZToxcmVtOyBsaW5lLWhlaWdodDoxLjM7IHRyYW5zaXRpb246YWxsIC4yNXM7IH0KICAucmV0b3MgLnJiIHsgd2lkdGg6MjRweDsgaGVpZ2h0OjI0cHg7IGJvcmRlci1yYWRpdXM6N3B4OyBmbGV4LXNocmluazowOyBiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsLjEpOyBkaXNwbGF5OmdyaWQ7IHBsYWNlLWl0ZW1zOmNlbnRlcjsgZm9udC13ZWlnaHQ6ODAwOyBmb250LXNpemU6Ljg1cmVtOyB9CiAgLnJldG9zIGxpIHNtYWxsIHsgZGlzcGxheTpibG9jazsgY29sb3I6dmFyKC0tc3ViKTsgZm9udC13ZWlnaHQ6NjAwOyBmb250LXNpemU6Ljg1cmVtOyB9CiAgLnJldG9zIGxpLm9uIHsgYmFja2dyb3VuZDpyZ2JhKDM3LDIxMSwxMDIsLjEzKTsgYm9yZGVyLWNvbG9yOnZhcigtLWMxKTsgfQogIC5yZXRvcyBsaS5vbiAucmIgeyBiYWNrZ3JvdW5kOnZhcigtLWMxKTsgY29sb3I6IzBhMTYyODsgfQogIC5yZXRvcyBsaS5vbiBzcGFuLnJ0IHsgb3BhY2l0eTouNzU7IH0KICAud2luLWFsbCB7IHRleHQtYWxpZ246Y2VudGVyOyBiYWNrZ3JvdW5kOnJnYmEoMjU1LDIxNyw2MSwuMSk7IGJvcmRlcjoycHggc29saWQgdmFyKC0tYzMpOyBib3JkZXItcmFkaXVzOjE2cHg7IHBhZGRpbmc6MTBweDsgbWFyZ2luLWJvdHRvbToxMnB4OyBmb250LXdlaWdodDo4MDA7IGNvbG9yOnZhcigtLWMzKTsgZm9udC1zaXplOjEuMTVyZW07IH0KCiAgLmZvb3QgeyB0ZXh0LWFsaWduOmNlbnRlcjsgbWFyZ2luLXRvcDoxOHB4OyB9CiAgLmJ0bi1yZXNldCB7IHBhZGRpbmc6MTBweCAyNHB4OyBib3JkZXItcmFkaXVzOjE0cHg7IGJvcmRlcjoycHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwuMTUpOyBiYWNrZ3JvdW5kOnRyYW5zcGFyZW50OyBjb2xvcjp2YXIoLS1zdWIpOyBmb250LXdlaWdodDo4MDA7IGN1cnNvcjpwb2ludGVyOyB9CiAgLmJ0bi1yZXNldDpob3ZlciB7IGNvbG9yOnZhcigtLXRleHQpOyBib3JkZXItY29sb3I6dmFyKC0tYzQpOyB9CgogIEBtZWRpYSAobWF4LXdpZHRoOjk4MHB4KSB7IC5sYXlvdXQgeyBncmlkLXRlbXBsYXRlLWNvbHVtbnM6MWZyOyB9IC5zaWRlIHsgcG9zaXRpb246c3RhdGljOyBtYXgtaGVpZ2h0Om5vbmU7IH0gLmluZm8geyBtaW4taGVpZ2h0OjA7IH0gLm1vZGVzIHsgbWFyZ2luLWxlZnQ6MDsgfSB9CiAgQG1lZGlhIChwcmVmZXJzLXJlZHVjZWQtbW90aW9uOnJlZHVjZSkgeyAqLCo6OmJlZm9yZSwqOjphZnRlciB7IGFuaW1hdGlvbjpub25lICFpbXBvcnRhbnQ7IHRyYW5zaXRpb246bm9uZSAhaW1wb3J0YW50OyB9IH0KPC9zdHlsZT4KPC9oZWFkPgo8Ym9keT4KPGRpdiBjbGFzcz0iYmctYmxvYnMiPjxkaXYgY2xhc3M9ImJsb2IiPjwvZGl2PjxkaXYgY2xhc3M9ImJsb2IiPjwvZGl2PjxkaXYgY2xhc3M9ImJsb2IiPjwvZGl2PjwvZGl2PgoKPGRpdiBjbGFzcz0iY29udGFpbmVyIiBpZD0icm9vdCI+CiAgPGRpdiBjbGFzcz0idG9wIj4KICAgIDxzcGFuIGNsYXNzPSJiYWRnZSI+8J+qnyBPcmRlbmFkb3I8L3NwYW4+CiAgICA8aDE+TGFzIHZlbnRhbmFzIGRlIFdpbmRvd3M8L2gxPgogICAgPGRpdiBjbGFzcz0ibW9kZXMiPgogICAgICA8YnV0dG9uIGNsYXNzPSJtb2RlIG9uIiBpZD0ibS1kZXNjIiB0eXBlPSJidXR0b24iPvCflI4gRGVzY3VicmlyPC9idXR0b24+CiAgICAgIDxidXR0b24gY2xhc3M9Im1vZGUiIGlkPSJtLWxpdmUiIHR5cGU9ImJ1dHRvbiI+8J+boO+4jyBQcm9iYXI8L2J1dHRvbj4KICAgICAgPGJ1dHRvbiBjbGFzcz0ibW9kZSIgaWQ9Im0tcHJhYyIgdHlwZT0iYnV0dG9uIj7wn46vIFByYWN0aWNhcjwvYnV0dG9uPgogICAgPC9kaXY+CiAgPC9kaXY+CgogIDxkaXYgY2xhc3M9InByb2ciPgogICAgPHNwYW4gaWQ9InByb2ctdHh0Ij48L3NwYW4+CiAgICA8ZGl2IGNsYXNzPSJwcm9nLWJhciI+PGRpdiBjbGFzcz0icHJvZy1maWxsIiBpZD0icHJvZy1maWxsIj48L2Rpdj48L2Rpdj4KICA8L2Rpdj4KCiAgPGRpdiBjbGFzcz0ibGF5b3V0Ij4KICAgIDxkaXY+CiAgICAgIDwhLS0gUGFudGFsbGEgcGFyYSBkZXNjdWJyaXIgcHJhY3RpY2FyIGxhcyBwYXJ0ZXMgLS0+CiAgICAgIDxkaXYgY2xhc3M9InN0YWdlIiBpZD0ic3RhZ2UtcGFydHMiPgogICAgICAgIDxkaXYgY2xhc3M9InNjcmVlbiBzYy1zdGF0aWMiIGlkPSJzYzEiPgogICAgICAgICAgPGRpdiBjbGFzcz0iZGVzayI+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9Im13aW4iPgogICAgICAgICAgICAgIDxkaXYgY2xhc3M9InBhcnQgZnIgZnItbiIgZGF0YS1wYXJ0PSJmcmFtZSI+PC9kaXY+PGRpdiBjbGFzcz0icGFydCBmciBmci1zIiBkYXRhLXBhcnQ9ImZyYW1lIj48L2Rpdj4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwYXJ0IGZyIGZyLXciIGRhdGEtcGFydD0iZnJhbWUiPjwvZGl2PjxkaXYgY2xhc3M9InBhcnQgZnIgZnItZSIgZGF0YS1wYXJ0PSJmcmFtZSI+PC9kaXY+CiAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icGFydCBmciBmci1udyIgZGF0YS1wYXJ0PSJmcmFtZSI+PC9kaXY+PGRpdiBjbGFzcz0icGFydCBmciBmci1uZSIgZGF0YS1wYXJ0PSJmcmFtZSI+PC9kaXY+CiAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icGFydCBmciBmci1zdyIgZGF0YS1wYXJ0PSJmcmFtZSI+PC9kaXY+CiAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icGFydCBmciBmci1zZSIgZGF0YS1wYXJ0PSJmcmFtZSI+PHNwYW4gY2xhc3M9InBpbiI+Pzwvc3Bhbj48L2Rpdj4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJtdy1pbiI+CiAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwYXJ0IG13LXRpdGxlIiBkYXRhLXBhcnQ9InRpdGxlIj48c3BhbiBjbGFzcz0icGluIj4/PC9zcGFuPgogICAgICAgICAgICAgICAgICA8c3Bhbj7wn5OdPC9zcGFuPjxzcGFuPkRvY3VtZW50byAtIEJsb2IgZGUgbm90YXM8L3NwYW4+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9Im13LWN0cmxzIj4KICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwYXJ0IG13LWMiIGRhdGEtcGFydD0ibWluIj48c3BhbiBjbGFzcz0icGluIj4/PC9zcGFuPjxzdmcgdmlld0JveD0iMCAwIDEyIDEyIj48cGF0aCBkPSJNMS41IDZoOSIvPjwvc3ZnPjwvZGl2PgogICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InBhcnQgbXctYyIgZGF0YS1wYXJ0PSJtYXgiPjxzcGFuIGNsYXNzPSJwaW4iPj88L3NwYW4+PHN2ZyB2aWV3Qm94PSIwIDAgMTIgMTIiPjxyZWN0IHg9IjEuNSIgeT0iMS41IiB3aWR0aD0iOSIgaGVpZ2h0PSI5IiByeD0iMS4yIi8+PC9zdmc+PC9kaXY+CiAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icGFydCBtdy1jIGNsb3NlIiBkYXRhLXBhcnQ9ImNsb3NlIj48c3BhbiBjbGFzcz0icGluIj4/PC9zcGFuPjxzdmcgdmlld0JveD0iMCAwIDEyIDEyIj48cGF0aCBkPSJNMiAybDggOE0xMCAybC04IDgiLz48L3N2Zz48L2Rpdj4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9Im13LWJvZHkiPgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJsbiIgc3R5bGU9IndpZHRoOjkyJSI+PC9kaXY+PGRpdiBjbGFzcz0ibG4iIHN0eWxlPSJ3aWR0aDo3OCUiPjwvZGl2PjxkaXYgY2xhc3M9ImxuIiBzdHlsZT0id2lkdGg6ODUlIj48L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ibG4iIHN0eWxlPSJ3aWR0aDo2MCUiPjwvZGl2PjxkaXYgY2xhc3M9ImxuIiBzdHlsZT0id2lkdGg6ODglIj48L2Rpdj48ZGl2IGNsYXNzPSJsbiIgc3R5bGU9IndpZHRoOjcwJSI+PC9kaXY+CiAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9InRhc2tiYXIgcGFydCIgZGF0YS1wYXJ0PSJ0YXNrIj48c3BhbiBjbGFzcz0icGluIj4/PC9zcGFuPgogICAgICAgICAgICA8c3BhbiBjbGFzcz0idGstaWMiPvC+qp88L3NwYW4+PHNwYW4gY2xhc3M9InRrLWljIj7wn5INPC9zcGFuPjxzcGFuIGNsYXNzPSJ0ay1pYyI+8J+Xlzwvc3Bhbj48c3BhbiBjbGFzcz0idGstc2VwIj48L3NwYW4+CiAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJ0ay1pYyB0ay1vcGVuIj7wn5OdPC9zcGFuPjxzcGFuIGNsYXNzPSJ0ay1pYyI+8J+nrjwvc3Bhbj48c3BhbiBjbGFzcz0idGstaWMiPvCflrzvuI88L3NwYW

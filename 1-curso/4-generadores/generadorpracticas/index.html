@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de Simulaciones</title>
+<title>Generador de Prácticas</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -47,6 +47,7 @@
   select, input[type=number], input[type=text], input[type=password], textarea {
     background: rgba(255,255,255,0.04); border: 2px solid var(--line); border-radius: 10px;
     color: var(--text); font-family: inherit; font-size: 0.95rem; font-weight: 600; padding: 9px 12px;
+    min-width: 150px; /* Evita que se vean como cuadrados vacíos si tardan en cargar */
   }
   select:focus, input:focus, textarea:focus { outline: none; border-color: var(--c1); }
   select option { background: var(--card); }
@@ -81,7 +82,6 @@
   .file .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .file .edit { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .file .edit input[type=text] { flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.9rem; }
-  .file .edit input.emoji { width: 56px; flex: none; min-width: 0; text-align: center; }
   .file .edit select { padding: 6px 10px; font-size: 0.9rem; }
   .st { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; margin-left: 6px; vertical-align: middle; }
   .st.wait { background: rgba(255,255,255,0.08); color: var(--sub); }
@@ -121,7 +121,7 @@
     .top-actions { position: static; justify-content: center; margin-bottom: 14px; }
     .file { grid-template-columns: 1fr; } .file .acts { justify-content: flex-start; }
   }
-  /* ── Añadidos del generador de simulaciones ── */
+  /* ── Añadidos del generador de prácticas ── */
   .container { max-width: 1000px; }
   .row + .row { margin-top: 14px; }
   .reftxt { font-weight: 700; padding: 9px 0; }
@@ -202,8 +202,8 @@
       <button class="btn btn-sm" onclick="openKeys()">🔑 Claves</button>
     </div>
     <div class="badge">🎬 Cruz Roja · Cursos</div>
-    <h1>Generador de Simulaciones</h1>
-    <p class="lead">Carga los temas en Word o PDF y crea una simulación interactiva por cada uno.</p>
+    <h1>Generador de Prácticas</h1>
+    <p class="lead">Carga los temas en Word o PDF y crea una práctica interactiva por cada uno.</p>
   </div>
 
   <div class="main">
@@ -222,7 +222,7 @@
       <input type="file" id="reffile" accept=".html,.htm" hidden onchange="loadRef(this.files[0]); this.value=''">
     </div>
     <div class="row">
-      <div class="field"><label for="dif">Dificultad de la simulación</label>
+      <div class="field"><label for="dif">Dificultad de la práctica</label>
         <select id="dif">
           <option value="basico">Básico · muy guiado</option>
           <option value="medio" selected>Medio · como el ejemplo</option>
@@ -231,7 +231,7 @@
       </div>
     </div>
     <details class="extra" id="extra-box">
-      <summary>➕ Indicaciones para todas las simulaciones</summary>
+      <summary>➕ Indicaciones para todas las prácticas</summary>
       <p>Opcional. Se añaden a cada tema; por ejemplo: «En Probar, que el alumno tenga que escribir algo con el teclado».</p>
       <textarea class="mid" id="extra" placeholder="Escribe aquí lo que quieras pedir…"></textarea>
     </details>
@@ -248,7 +248,7 @@
     <div class="bar">
       <button class="btn" id="btn-clear" onclick="clearAll()">🗑️ Vaciar lista</button>
       <button class="btn btn-green" id="btn-dlall" onclick="downloadAll()">⬇️ Descargar todas (ZIP)</button>
-      <button class="btn btn-main" id="btn-run" onclick="runAll()">✨ Generar simulaciones</button>
+      <button class="btn btn-main" id="btn-run" onclick="runAll()">✨ Generar prácticas</button>
     </div>
     <div class="status" id="status"></div>
   </div>
@@ -265,9 +265,9 @@
       <button class="btn btn-sm" onclick="askFix()">🛠️ Pedir que lo arregle</button>
       <button class="btn btn-sm" onclick="if(viewing) openOther(viewing,'fix')">📋 Otra IA</button>
     </div>
-    <div class="pv-box"><iframe id="frame" title="Vista previa de la simulación"></iframe>
-      <div class="pv-empty" id="pv-empty"><span class="big">🎬</span><h3>Aquí verás la simulación</h3>
-        <p>Añade los temas, revisa el título y el curso, y pulsa «Generar». Cada simulación tarda unos minutos.<br>Pruébala entera antes de subirla y, si algo falla, usa «🔍 Revisar» o «📋 Prompt para otra IA».</p></div>
+    <div class="pv-box"><iframe id="frame" title="Vista previa de la práctica"></iframe>
+      <div class="pv-empty" id="pv-empty"><span class="big">🎬</span><h3>Aquí verás la práctica</h3>
+        <p>Añade los temas, revisa el título y el curso, y pulsa «Generar». Cada práctica tarda unos minutos.<br>Pruébala entera antes de subirla y, si algo falla, usa «🔍 Revisar» o «📋 Prompt para otra IA».</p></div>
     </div>
   </div>
   </div>
@@ -308,8 +308,8 @@
     <div class="modal-head"><h3>📋 Prompt para otra IA</h3></div>
     <div class="modal-body">
       <div class="ptitle" id="o-title"></div>
-      <label class="opt" id="o-opt-new"><input type="radio" name="omode" value="new" checked onchange="buildOther()"><span>Crear la simulación desde cero<small>Lleva las instrucciones, el ejemplo de referencia y el tema. Es lo que haría este generador.</small></span></label>
-      <label class="opt" id="o-opt-fix"><input type="radio" name="omode" value="fix" onchange="buildOther()"><span>Corregir la simulación que ya hay<small>Lleva el tema, la simulación actual y los fallos que escribas abajo. Es más corto.</small></span></label>
+      <label class="opt" id="o-opt-new"><input type="radio" name="omode" value="new" checked onchange="buildOther()"><span>Crear la práctica desde cero<small>Lleva las instrucciones, el ejemplo de referencia y el tema. Es lo que haría este generador.</small></span></label>
+      <label class="opt" id="o-opt-fix"><input type="radio" name="omode" value="fix" onchange="buildOther()"><span>Corregir la práctica que ya hay<small>Lleva el tema, la práctica actual y los fallos que escribas abajo. Es más corto.</small></span></label>
       <div class="field" id="o-fails-box"><label for="o-fails">Fallos que has visto (se añaden al prompt)</label>
         <textarea class="mid" id="o-fails" oninput="buildOther()" placeholder="Por ejemplo: el clic derecho no abre ningún menú; el pendrive muestra los mismos archivos que Documentos."></textarea></div>
       <p class="pinfo" id="o-info"></p>
@@ -318,7 +318,7 @@
         <button class="btn" onclick="downloadOther()">⬇️ Descargar como .txt</button>
       </div>
       <hr class="sep">
-      <div class="ptitle">Cuando la otra IA te dé la simulación, tráela aquí para verla, revisarla y descargarla con las demás</div>
+      <div class="ptitle">Cuando la otra IA te dé la práctica, tráela aquí para verla, revisarla y descargarla con las demás</div>
       <textarea class="mid" id="o-paste" placeholder="Pega aquí el código HTML que te ha dado la otra IA…"></textarea>
       <div class="bar" style="justify-content:flex-start">
         <button class="btn btn-green" onclick="importPasted()">✅ Usar el código pegado</button>
@@ -332,7 +332,7 @@
   </div>
 </div>
 
-<!-- Prompt por defecto (sin cambios) -->
+<!-- Prompt por defecto -->
 <textarea id="default-prompt" hidden>Eres un desarrollador web y profesor voluntario que da cursos de informática y de móvil a personas mayores en Cruz Roja. Creas simulaciones interactivas, de una sola página HTML, para que los alumnos practiquen el tema de un documento del curso.
 
 Recibirás:
@@ -379,7 +379,7 @@ ANTES DE RESPONDER, repasa uno por uno los retos y las partes: qué hace el alum
 
 Responde SOLO con el código HTML completo, desde &lt;!DOCTYPE html&gt; hasta &lt;/html&gt;, sin explicaciones y sin bloques de código.</textarea>
 
-<!-- Prompt de revisión (sin cambios) -->
+<!-- Prompt de revisión -->
 <textarea id="review-prompt" hidden>Eres un revisor exigente de simulaciones interactivas para cursos de informática y de móvil para personas mayores. Recibirás el TEMA (el documento del curso) y el CÓDIGO HTML de una simulación hecha a partir de él, con tres modos: Descubrir, Probar (con retos que se marcan solos) y Practicar.
 
 Revisa el código y busca solo problemas reales y concretos:
@@ -390,17 +390,15 @@ Revisa el código y busca solo problemas reales y concretos:
 
 Responde en español, sin código, con una lista numerada de como máximo 10 puntos. En cada punto di qué falla y cómo arreglarlo, en una o dos frases. Ordénalos de más a menos importante. Si no encuentras ningún problema, responde solo: SIN PROBLEMAS.</textarea>
 
-<!-- (El bloque <script type="text/plain" id="ref-b64">… se mantiene igual; no lo repito aquí para no alargar la respuesta. Cópialo tal cual del fichero original.) -->
-
 <script>
 'use strict';
 // ═════════════════════════════════════════════
 //  CONFIGURACIÓN
 // ═════════════════════════════════════════════
 const LS = {
-  settings:'simulaciones_settings', prompt:'simulaciones_prompt', ref:'simulaciones_ref', extra:'simulaciones_extra'
+  settings:'practicas_settings', prompt:'practicas_prompt', ref:'practicas_ref', extra:'practicas_extra'
 };
-// Mismas claves que el resto de la suite. Claude y DeepSeek requieren saldo; el resto tiene plan gratuito.
+// Claude y DeepSeek requieren saldo; el resto tienen plan gratuito. Mismas claves que el resto de la suite.
 const KEYS = [
   {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key',  url:'https://console.anthropic.com/settings/keys'},
   {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key',  url:'https://aistudio.google.com/apikey'},
@@ -436,11 +434,11 @@ const PROVIDERS = {
                  {id:'meta-llama/llama-3.3-70b-instruct:free', label:'meta-llama/llama-3.3-70b-instruct:free'}]},
 };
 const LIST_KEY = {
-  aistudio:'simulaciones_gemini_models',
-  deepseek:'simulaciones_deepseek_models',
-  groq:'simulaciones_groq_models',
-  mistral:'simulaciones_mistral_models',
-  openrouter:'simulaciones_or_free_models'
+  aistudio:'practicas_gemini_models',
+  deepseek:'practicas_deepseek_models',
+  groq:'practicas_groq_models',
+  mistral:'practicas_mistral_models',
+  openrouter:'practicas_or_free_models'
 };
 
 // Modelos antiguos que redirigimos al modelo vigente cuando se carga la app
@@ -543,34 +541,32 @@ async function refreshModels(quiet){
 // ═════════════════════════════════════════════
 //  EJEMPLO DE REFERENCIA E INDICACIONES
 // ═════════════════════════════════════════════
-const DEFAULT_REF = (() => {
-  try { return new TextDecoder().decode(Uint8Array.from(atob($('ref-b64').textContent.trim()), c => c.charCodeAt(0))); }
-  catch(e){ return ''; }
-})();
+// Ejemplo básico integrado para no sobrecargar el archivo
+const DEFAULT_REF = `<!DOCTYPE html><html><head><title>Ejemplo de Referencia Básico</title><style>body{font-family:sans-serif;background:#0a1628;color:#fff;padding:20px;} h1{color:#FFD93D;}</style></head><body><h1>Simulación de Ejemplo</h1><p>Este es un ejemplo básico de referencia. El generador usará esto para copiar el estilo visual.</p><button>Botón de Ejemplo</button></body></html>`;
 let customRef = loadJSON(LS.ref);   // {name, html} o null
 const refHtml = () => (customRef && customRef.html) || DEFAULT_REF;
 function renderRef(){
   const h = refHtml();
   const t = (h.match(/<title>([^<]*)<\/title>/i) || [])[1] || (customRef && customRef.name) || 'Sin título';
-  $('reftxt').innerHTML = '📄 ' + esc(t) + ' <small>(' + kb(h.length) + (customRef ? ', ejemplo tuyo' : ', ejemplo original') + ')</small>';
+  $('reftxt').innerHTML = '📄 ' + esc(t) + ' <small>(' + kb(h.length) + (customRef ? ', ejemplo tuyo' : ', ejemplo básico') + ')</small>';
   $('btn-refreset').disabled = !customRef;
 }
 async function loadRef(f){
   if (!f) return;
   const h = await f.text();
-  if (!/<html/i.test(h) || !/<script/i.test(h)) return showStatus('err', 'Ese fichero no parece una simulación HTML.');
+  if (!/<html/i.test(h) || !/<script/i.test(h)) return showStatus('err', 'Ese fichero no parece una práctica HTML.');
   customRef = {name:f.name, html:h};
   if (!saveJSON(LS.ref, customRef)) showStatus('err', 'El ejemplo se usará ahora, pero es demasiado grande para guardarlo en el navegador.');
   else showStatus('ok', 'Ejemplo de referencia cambiado.');
   renderRef();
 }
-function resetRef(){ customRef = null; try { localStorage.removeItem(LS.ref); } catch(e){} renderRef(); showStatus('ok', 'Vuelve a usarse el ejemplo original.'); }
+function resetRef(){ customRef = null; try { localStorage.removeItem(LS.ref); } catch(e){} renderRef(); showStatus('ok', 'Vuelve a usarse el ejemplo básico.'); }
 
 const extraT = $('extra');
 try { extraT.value = localStorage.getItem(LS.extra) || ''; if (extraT.value) $('extra-box').open = true; } catch(e){}
 extraT.addEventListener('input', () => { try { localStorage.setItem(LS.extra, extraT.value); } catch(e){} });
 
-const DIF_KEY = 'simulaciones_dif';
+const DIF_KEY = 'practicas_dif';
 const DIFICULTAD = {
   basico:
     'BÁSICO. Simulación muy guiada, para quien da sus primeros pasos.\n' +
@@ -597,7 +593,7 @@ difSel.addEventListener('change', () => { try { localStorage.setItem(DIF_KEY, di
 // ═════════════════════════════════════════════
 //  FICHEROS
 // ═════════════════════════════════════════════
-let items = [];
+let items = [];   // {id, file, text, title, dev, hits, status:'wait'|'run'|'ok'|'err', error, html, prevHtml, firstMsg, saved, chgOpen, chgText, note}
 let busy = false, ctrl = null, viewing = null;
 let nextId = 1;
 
@@ -645,14 +641,14 @@ async function addFiles(fileList){
 }
 function removeItem(id){
   const it = items.find(x => x.id === id); if (!it) return;
-  if (it.html && !it.saved && !confirm('La simulación de «' + it.file.name + '» no se ha descargado. ¿Quitarla igualmente?')) return;
+  if (it.html && !it.saved && !confirm('La práctica de «' + it.file.name + '» no se ha descargado. ¿Quitarla igualmente?')) return;
   items = items.filter(x => x !== it);
   if (viewing === id) hidePreview();
   renderFiles();
 }
 function clearAll(){
   if (busy) return;
-  if (items.some(it => it.html && !it.saved) && !confirm('Hay simulaciones sin descargar. ¿Vaciar la lista igualmente?')) return;
+  if (items.some(it => it.html && !it.saved) && !confirm('Hay prácticas sin descargar. ¿Vaciar la lista igualmente?')) return;
   items = []; hidePreview(); renderFiles(); showStatus('');
 }
 
@@ -679,9 +675,9 @@ function fileHTML(it){
         <option value="ordenador" ${it.dev !== 'movil' ? 'selected' : ''}>Curso de Ordenador</option>
         <option value="movil" ${it.dev === 'movil' ? 'selected' : ''}>Curso de Móvil</option>
       </select>
-      <input type="text" class="title" value="${esc(it.title)}" title="Título de la simulación" ${run ? 'disabled' : ''} onchange="editItem(${it.id},'title',this.value)">
+      <input type="text" class="title" value="${esc(it.title)}" title="Título de la práctica" ${run ? 'disabled' : ''} onchange="editItem(${it.id},'title',this.value)">
     </div>
-    ${it.long && !it.html ? `<div class="warn">⚠️ Tema largo (${it.long.sections} apartados): la simulación saldrá más completa si lo divides en dos documentos.</div>` : ''}
+    ${it.long && !it.html ? `<div class="warn">⚠️ Tema largo (${it.long.sections} apartados): la práctica saldrá más completa si lo divides en dos documentos.</div>` : ''}
     ${it.review && !run ? reviewHTML(it) : ''}
     ${run ? `<div class="prog" id="prog-${it.id}">${esc(it.note || 'Preparando…')}</div>` : ''}
     ${!run && it.note ? `<div class="okmsg">${esc(it.note)}</div>` : ''}
@@ -713,7 +709,7 @@ function renderFiles(){
   const todo = items.filter(it => it.status === 'wait' || it.status === 'err').length;
   const b = $('btn-run');
   if (busy && ctrl){ b.textContent = '⏹ Detener'; b.className = 'btn btn-stop'; b.disabled = false; }
-  else { b.textContent = '✨ Generar ' + (todo === 1 ? 'simulación' : 'simulaciones'); b.className = 'btn btn-main'; b.disabled = busy || !todo; }
+  else { b.textContent = '✨ Generar ' + (todo === 1 ? 'práctica' : 'prácticas'); b.className = 'btn btn-main'; b.disabled = busy || !todo; }
   $('btn-dlall').disabled = busy || !done;
   $('btn-clear').disabled = busy || !items.length;
 }
@@ -802,17 +798,17 @@ async function extractText(file){
 function buildUserMsg(it){
   const extra = extraT.value.trim();
   return 'TIPO DE DISPOSITIVO: ' + (it.dev === 'movil' ? 'Móvil' : 'Ordenador') + '\n' +
-    'TÍTULO DE LA SIMULACIÓN: ' + it.title.trim() + '\n\n' +
+    'TÍTULO DE LA PRÁCTICA: ' + it.title.trim() + '\n\n' +
     '<ejemplo_de_referencia>\n' + refHtml() + '\n</ejemplo_de_referencia>\n\n' +
     '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n' +
     'NIVEL DE DIFICULTAD (cumple además todas las demás instrucciones):\n' + DIFICULTAD[difSel.value] + '\n\n' +
     (extra ? 'INDICACIONES ADICIONALES DEL PROFESOR:\n' + extra + '\n\n' : '') +
-    'Crea ahora la simulación completa sobre este tema. Responde solo con el HTML.';
+    'Crea ahora la práctica completa sobre este tema. Responde solo con el HTML.';
 }
 function friendly(e){
   const m = e.message || String(e);
   if (/Failed to fetch|NetworkError|CORS/i.test(m)) return 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m;
-  if (e.status === 413 || /\(413\)/.test(m)) return 'La petición es demasiado grande para el plan gratuito de este proveedor (el ejemplo de referencia ya ocupa mucho). Cambia de proveedor. ' + m;
+  if (e.status === 413 || /\(413\)/.test(m)) return 'La petición es demasiado grande para el plan gratuito de este proveedor. Cambia de proveedor. ' + m;
   if (e.status === 429 || /\(429\)/.test(m)) return 'Se ha superado el límite del plan gratuito. Espera un poco y pulsa «Rehacer», o cambia de proveedor. ' + m;
   return m;
 }
@@ -827,7 +823,7 @@ async function generate(it, change){
     try {
       const messages = change
         ? [{role:'user', content:it.firstMsg}, {role:'assistant', content:it.html},
-           {role:'user', content:'Haz estos cambios en la simulación y devuelve el fichero HTML completo, sin explicaciones:\n' + change}]
+           {role:'user', content:'Haz estos cambios en la práctica y devuelve el fichero HTML completo, sin explicaciones:\n' + change}]
         : [{role:'user', content:(it.firstMsg = buildUserMsg(it))}];
       const raw = await callModel({provider:settings.provider, model:settings.model, system:getPrompt(), messages, onProgress:n => { got = n; }, signal:ctrl.signal});
       return extractHTML(raw);
@@ -860,11 +856,11 @@ async function runAll(){
   let n = 0, stopped = false;
   for (const it of todo){
     if (!items.includes(it)) continue;
-    n++; showStatus('', `Generando ${n} de ${todo.length}: ${it.file.name}. Cada simulación tarda unos minutos.`);
+    n++; showStatus('', `Generando ${n} de ${todo.length}: ${it.file.name}. Cada práctica tarda unos minutos.`);
     const r = await processItem(it);
     if (r === 'stop'){ stopped = true; break; }
     if (r === 'fatal') break;
-    if (n < todo.length){ await sleep(settings.provider === 'groq' ? 6000 : 3000); if (ctrl.signal.aborted){ stopped = true; break; } }
+    if (n < todo.length){ await sleep(settings.provider === 'groq' ? 6000 : 3000); if (ctrl.signal.aborted){ stopped = true; break; } }   // respiro para los límites por minuto
   }
   busy = false; ctrl = null;
   const ok = items.filter(it => it.status === 'ok').length, err = items.filter(it => it.status === 'err').length;
@@ -873,13 +869,13 @@ async function runAll(){
 }
 async function regenerate(id){
   const it = items.find(x => x.id === id); if (!it || busy) return;
-  if (it.html && !it.saved && !confirm('Se sustituirá la simulación actual de «' + it.file.name + '». ¿Rehacerla?')) return;
+  if (it.html && !it.saved && !confirm('Se sustituirá la práctica actual de «' + it.file.name + '». ¿Rehacerla?')) return;
   if (!getKey(settings.provider)){ openKeys(settings.provider); return; }
   busy = true; ctrl = new AbortController();
   showStatus('', 'Rehaciendo: ' + it.file.name + '. Tarda unos minutos.');
   await processItem(it);
   busy = false; ctrl = null;
-  showStatus(it.status === 'ok' ? 'ok' : 'err', it.status === 'ok' ? 'Simulación rehecha.' : 'No se ha podido rehacer.');
+  showStatus(it.status === 'ok' ? 'ok' : 'err', it.status === 'ok' ? 'Práctica rehecha.' : 'No se ha podido rehacer.');
   renderFiles();
 }
 async function processItem(it){
@@ -921,7 +917,7 @@ async function applyChange(id){
 }
 
 // ═════════════════════════════════════════════
-//  REVISIÓN
+//  REVISIÓN CON LA IA (lista de fallos, sin código)
 // ═════════════════════════════════════════════
 async function reviewItem(id){
   const it = items.find(x => x.id === id); if (!it || !it.html || busy) return;
@@ -930,8 +926,8 @@ async function reviewItem(id){
   it.status = 'run'; it.error = ''; it.note = ''; it.review = ''; renderFiles();
   showStatus('', 'Revisando: ' + it.file.name + '. Tarda uno o dos minutos.');
   const t0 = Date.now();
-  const timer = setInterval(() => setNote(it, 'Revisando la simulación… ' + mmss(Date.now() - t0)), 1000);
-  setNote(it, 'Revisando la simulación…');
+  const timer = setInterval(() => setNote(it, 'Revisando la práctica… ' + mmss(Date.now() - t0)), 1000);
+  setNote(it, 'Revisando la práctica…');
   try {
     const user = '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n<codigo>\n' + it.html + '\n</codigo>' +
       (it.jsErr ? '\n\nAl abrirla en el navegador ha aparecido este error de JavaScript: ' + it.jsErr : '') +
@@ -978,14 +974,14 @@ function buildOther(){
       '\n\nSi puedes, entrégalo como un fichero o artefacto HTML que se pueda descargar.';
   } else {
     const fails = $('o-fails').value.trim();
-    otherText = 'Tengo una simulación interactiva en HTML, hecha a partir del tema que te paso, que tiene fallos. Corrígela y devuélvemela completa.\n\n' +
+    otherText = 'Tengo una práctica interactiva en HTML, hecha a partir del tema que te paso, que tiene fallos. Corrígela y devuélvemela completa.\n\n' +
       'FALLOS QUE HE VISTO:\n' + (fails || '(no los he apuntado: búscalos tú)') + '\n\n' +
       'Además de esos fallos, comprueba uno por uno que cada reto de «Probar» se pueda conseguir haciendo lo que dice su pista, y que nada contradiga el tema.\n\n' +
       'REQUISITOS QUE DEBE CUMPLIR (son las instrucciones con las que se creó; el ejemplo de referencia que mencionan no hace falta aquí):\n' + getPrompt() + '\n\n' +
       '════════════════════════════════════════\n\n' +
       'TIPO DE DISPOSITIVO: ' + (it.dev === 'movil' ? 'Móvil' : 'Ordenador') + '\n\n' +
       '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n' +
-      '<simulacion_actual>\n' + it.html + '\n</simulacion_actual>\n\n' +
+      '<practica_actual>\n' + it.html + '\n</practica_actual>\n\n' +
       'Devuelve el fichero HTML completo corregido, desde <!DOCTYPE html> hasta </html>. Si puedes, entrégalo como un fichero o artefacto HTML que se pueda descargar.';
   }
   const tokens = Math.round(otherText.length / 3.5 / 1000);
@@ -1007,7 +1003,7 @@ function downloadOther(){
   download(new Blob([otherText], {type:'text/plain;charset=utf-8'}), 'prompt-' + slug(it.file.name) + '.txt');
 }
 function slug(name){
-  return name.replace(/\.[^.]+$/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'simulacion';
+  return name.replace(/\.[^.]+$/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'practica';
 }
 function useForeignHtml(raw){
   const it = items.find(x => x.id === otherId); if (!it) return;
@@ -1020,13 +1016,13 @@ function useForeignHtml(raw){
   it.note = 'Traída de otra IA. Pruébala entera; si no te convence, pulsa «Anterior».';
   if (!it.firstMsg) it.firstMsg = buildUserMsg(it);
   closeOv('ov-other'); renderFiles(); showPreview(it.id);
-  showStatus('ok', 'Simulación de la otra IA cargada.');
+  showStatus('ok', 'Práctica de la otra IA cargada.');
 }
 function importPasted(){ const v = $('o-paste').value.trim(); if (!v) return $('o-paste').focus(); useForeignHtml(v); }
 async function importFile(f){ if (f) useForeignHtml(await f.text()); }
 
 // ═════════════════════════════════════════════
-//  APIs (con streaming para ver el avance)
+//  LLAMADAS A LAS APIS (con streaming para ver el avance)
 // ═════════════════════════════════════════════
 async function httpError(resp, who){
   let detail = '';
@@ -1066,9 +1062,9 @@ function callModel(o){
   if (o.provider === 'aistudio') return callGemini(o);
   const cfg = {
     openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
-    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
-    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:32000},
-    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions',     who:'DeepSeek',   max:32768},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions',    who:'Mistral',    max:32000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq',     max:null},
   }[o.provider];
   return callOpenAICompat(o, cfg);
 }
@@ -1111,4 +1107,148 @@ async function callGemini({model, system, messages, onProgress, signal}){
   await readStream(resp, j => {
     if (j.error) throw new Error('AI Studio: ' + (j.error.message || JSON.stringify(j.error)));
     const c = j.candidates && j.candidates[0];
-    if (!c){ if (j.promptFeedback && j.promptFeedback.blockReason) throw new Error
+    if (!c){ if (j.promptFeedback && j.promptFeedback.blockReason) throw new Error('AI Studio: petición bloqueada (' + j.promptFeedback.blockReason + ').'); return; }
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) s.text += p.text; });
+    if (c.finishReason) s.stop = c.finishReason;
+  }, onProgress, s);
+  if (s.stop === 'MAX_TOKENS') throw new Error('AI Studio: la respuesta se cortó por longitud. Prueba a «Rehacer» o cambia de modelo.');
+  if (!s.text) throw new Error('AI Studio: respuesta vacía.');
+  return s.text;
+}
+async function callOpenAICompat({provider, model, system, messages, onProgress, signal}, cfg){
+  const key = needKey(provider);
+  const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+  if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Generador de Prácticas'; }
+  const body = {model, stream:true, messages:[{role:'system', content:system}, ...messages]};
+  if (cfg.max) body.max_tokens = cfg.max;
+  const resp = await fetch(cfg.url, {method:'POST', headers, body:JSON.stringify(body), signal});
+  if (!resp.ok) throw await httpError(resp, cfg.who);
+  const s = {text:'', stop:null};
+  await readStream(resp, j => {
+    if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+    const ch = j.choices && j.choices[0];
+    if (!ch) return;
+    if (ch.delta && typeof ch.delta.content === 'string') s.text += ch.delta.content;
+    if (ch.finish_reason) s.stop = ch.finish_reason;
+  }, onProgress, s);
+  if (s.stop === 'length') throw new Error(cfg.who + ': la respuesta se cortó por longitud. Prueba a «Rehacer» o cambia de modelo.');
+  if (!s.text) throw new Error(cfg.who + ': respuesta vacía.');
+  return s.text;
+}
+
+// ═════════════════════════════════════════════
+//  VISTA PREVIA (avisa de los fallos de JavaScript)
+// ═════════════════════════════════════════════
+const frame = $('frame');
+const CATCHER = '<script>(function(){function s(m){try{parent.postMessage({__simErr:String(m)},"*")}catch(e){}}' +
+  'window.addEventListener("error",function(e){s((e.message||"Error")+(e.lineno?" (línea "+e.lineno+")":""))});' +
+  'window.addEventListener("unhandledrejection",function(e){s((e.reason&&e.reason.message)||e.reason)});' +
+  'var ce=console.error;console.error=function(){s([].map.call(arguments,String).join(" "));return ce.apply(console,arguments)}})();<\/script>';
+function showPreview(id){
+  const it = items.find(x => x.id === id); if (!it || !it.html) return;
+  viewing = id; it.jsErr = '';
+  $('pv-empty').hidden = true; $('btn-full').disabled = false; $('jserr').hidden = true;
+  $('pv-title').textContent = it.title;
+  frame.srcdoc = /<head[^>]*>/i.test(it.html) ? it.html.replace(/<head[^>]*>/i, m => m + CATCHER) : CATCHER + it.html;
+  document.querySelectorAll('.file').forEach(f => f.classList.toggle('viewing', +f.dataset.id === id));
+}
+function hidePreview(){ viewing = null; frame.srcdoc = ''; $('pv-empty').hidden = false; $('btn-full').disabled = true; $('jserr').hidden = true; $('pv-title').textContent = ''; }
+window.addEventListener('message', e => {
+  if (e.source !== frame.contentWindow || !e.data || !e.data.__simErr) return;
+  const it = items.find(x => x.id === viewing);
+  if (!it || it.jsErr) return;
+  it.jsErr = e.data.__simErr;
+  $('jserr-txt').textContent = '⚠️ La práctica tiene un fallo de programación: ' + it.jsErr;
+  $('jserr').hidden = false;
+});
+function askFix(){
+  const it = items.find(x => x.id === viewing); if (!it) return;
+  it.chgOpen = true;
+  it.chgText = 'Al usar la práctica aparece este error de JavaScript: «' + it.jsErr + '». Corrígelo y revisa que todos los modos y botones funcionen, sin cambiar nada más.';
+  renderFiles();
+  const el = document.querySelector('.file[data-id="' + it.id + '"]');
+  if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function fullScreen(){ if (frame.requestFullscreen) frame.requestFullscreen(); }
+
+// ═════════════════════════════════════════════
+//  DESCARGAS
+// ═════════════════════════════════════════════
+function download(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function downloadItem(id){
+  const it = items.find(x => x.id === id); if (!it || !it.html) return;
+  download(new Blob([it.html], {type:'text/html;charset=utf-8'}), 'index.html');
+  it.saved = true;
+}
+async function downloadAll(){
+  const ready = items.filter(it => it.html);
+  if (!ready.length) return;
+  if (typeof JSZip === 'undefined') return showStatus('err', 'No se ha cargado la librería ZIP (¿sin conexión?).');
+  const zip = new JSZip(), used = {};
+  ready.forEach(it => {
+    let f = baseName(it.file.name).replace(/[\\/:*?"<>|]+/g, '').trim() || 'practica';
+    if (used[f]) f += ' (' + (++used[f]) + ')'; else used[f] = 1;
+    zip.file(f + '/index.html', it.html);
+    it.saved = true;
+  });
+  download(await zip.generateAsync({type:'blob'}), 'practicas.zip');
+  showStatus('ok', 'ZIP descargado: una carpeta por tema con su index.html dentro.');
+}
+window.addEventListener('beforeunload', e => {
+  if (busy || items.some(it => it.html && !it.saved)){ e.preventDefault(); e.returnValue = ''; }
+});
+
+// ═════════════════════════════════════════════
+//  CLAVES
+// ═════════════════════════════════════════════
+function openOv(id){ $(id).classList.add('open'); }
+function closeOv(id){ $(id).classList.remove('open'); }
+function openKeys(focusId){
+  $('keys-body').innerHTML = '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones. Todas tienen plan gratuito (sin tarjeta).</p>' +
+    KEYS.map(k => `<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"><a class="keylink" href="${k.url}" target="_blank" rel="noopener">Conseguir clave gratuita ↗</a></div>`).join('');
+  $('showkeys').checked = false;
+  openOv('ov-keys');
+  setTimeout(() => { const el = $('key-' + (typeof focusId === 'string' ? focusId : settings.provider)); if (el) el.focus(); }, 60);
+}
+function toggleShowKeys(){ const t = $('showkeys').checked ? 'text' : 'password'; KEYS.forEach(k => $('key-' + k.id).type = t); }
+function saveKeys(){
+  KEYS.forEach(k => { const v = $('key-' + k.id).value.trim(); try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){} });
+  closeOv('ov-keys'); showStatus('ok', 'Claves guardadas.');
+}
+
+// ═════════════════════════════════════════════
+//  PROMPT
+// ═════════════════════════════════════════════
+const defaultPrompt = () => $('default-prompt').value;
+function getPrompt(){ try { return localStorage.getItem(LS.prompt) || defaultPrompt(); } catch(e){ return defaultPrompt(); } }
+function setPtitle(){ $('ptitle').textContent = ($('ptext').value.trim() === defaultPrompt().trim() ? 'Versión por defecto' : 'Versión modificada') + ' · el ejemplo de referencia y el tema se añaden solos'; }
+function openPrompt(){ $('ptext').value = getPrompt(); setPtitle(); openOv('ov-prompt'); }
+function restorePrompt(){ $('ptext').value = defaultPrompt(); setPtitle(); }
+function savePrompt(){
+  const v = $('ptext').value;
+  try { (v.trim() === defaultPrompt().trim()) ? localStorage.removeItem(LS.prompt) : localStorage.setItem(LS.prompt, v); } catch(e){}
+  closeOv('ov-prompt'); showStatus('ok', 'Prompt guardado.');
+}
+$('ptext').addEventListener('input', setPtitle);
+
+// ═════════════════════════════════════════════
+//  INICIO
+// ═════════════════════════════════════════════
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('mousedown', e => { if (e.target === ov) ov.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); });
+
+renderModel();
+renderRef();
+renderFiles();
+</script>
+</body>
+</html>

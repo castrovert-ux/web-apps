@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Simulaciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+    --line: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; animation: float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 36px 20px 60px; }
+  .header { text-align: center; margin-bottom: 30px; position: relative; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 100px; margin-bottom: 14px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.8rem, 5vw, 2.6rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px;
+  }
+  .lead { color: var(--sub); font-weight: 600; }
+
+  .card { background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sub); margin-bottom: 14px; font-weight: 800; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.78rem; font-weight: 700; color: var(--sub); }
+  select, input[type=number], input[type=text], input[type=password], textarea {
+    background: rgba(255,255,255,0.04); border: 2px solid var(--line); border-radius: 10px;
+    color: var(--text); font-family: inherit; font-size: 0.95rem; font-weight: 600; padding: 9px 12px;
+  }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--c1); }
+  select option { background: var(--card); }
+  input[type=number] { width: 90px; }
+
+  .btn {
+    border: 2px solid var(--line); background: rgba(255,255,255,0.05); color: var(--text);
+    font-family: inherit; font-weight: 800; font-size: 0.9rem; padding: 10px 16px; border-radius: 12px; cursor: pointer; transition: 0.2s;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--c1); background: rgba(33,115,70,0.15); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn-main { background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; border: none; }
+  .btn-main:hover:not(:disabled) { background: linear-gradient(135deg, var(--c3), #f59e0b); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+  .btn-green { background: linear-gradient(135deg, var(--c1), var(--c2)); border: none; color: #fff; }
+  .btn-sm { padding: 6px 11px; font-size: 0.8rem; border-radius: 9px; }
+  .top-actions { position: absolute; top: 0; right: 0; display: flex; gap: 8px; }
+
+  .drop {
+    border: 2px dashed rgba(255,255,255,0.18); border-radius: 16px; padding: 30px 20px; text-align: center;
+    cursor: pointer; transition: 0.2s; color: var(--sub); font-weight: 700;
+  }
+  .drop:hover, .drop.over { border-color: var(--c1); background: rgba(33,115,70,0.08); color: var(--text); }
+  .drop .big { font-size: 2.2rem; display: block; margin-bottom: 6px; }
+
+  .files { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .file {
+    border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: rgba(255,255,255,0.02);
+    display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  }
+  .file .name { font-weight: 800; word-break: break-word; }
+  .file .meta { font-size: 0.82rem; color: var(--sub); font-weight: 600; margin-top: 3px; }
+  .file .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .file .edit { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .file .edit input[type=text] { flex: 1; min-width: 200px; padding: 6px 10px; font-size: 0.9rem; }
+  .file .edit input.emoji { width: 56px; flex: none; min-width: 0; text-align: center; }
+  .file .edit select { padding: 6px 10px; font-size: 0.9rem; }
+  .st { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; margin-left: 6px; vertical-align: middle; }
+  .st.wait { background: rgba(255,255,255,0.08); color: var(--sub); }
+  .st.run { background: rgba(255,217,61,0.15); color: var(--c3); }
+  .st.ok { background: rgba(33,115,70,0.25); color: #4ade80; }
+  .st.err { background: rgba(255,107,107,0.18); color: var(--c4); }
+  .errtxt { grid-column: 1 / -1; color: var(--c4); font-size: 0.85rem; font-weight: 600; }
+
+  .bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 18px; }
+  .status { margin-top: 12px; font-weight: 700; font-size: 0.9rem; min-height: 1.2em; }
+  .status.ok { color: var(--c5); } .status.err { color: var(--c4); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(5,10,20,0.75); z-index: 10; display: none; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 760px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal.sm { max-width: 480px; }
+  .modal-head { padding: 18px 22px 0; } .modal-head h3 { font-family: 'Fredoka One'; font-weight: 400; font-size: 1.4rem; }
+  .modal-body { padding: 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  /* Barras de desplazamiento visibles en el tema oscuro */
+  .modal-body, textarea { scrollbar-width: auto; scrollbar-color: #4a5b80 rgba(255,255,255,0.05); }
+  .modal-body::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 12px; }
+  .modal-body::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .modal-body::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background: #4a5b80; border-radius: 10px; border: 2px solid var(--card); }
+  .modal-body::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover { background: var(--c1); }
+  .keylink { font-size: 0.75rem; color: var(--c5); font-weight: 700; text-decoration: none; }
+  .keylink:hover { text-decoration: underline; }
+  .modal-foot { padding: 0 22px 18px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+  .modal-foot .left { margin-right: auto; display: flex; gap: 8px; align-items: center; }
+  .keyrow { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; align-items: center; margin-bottom: 12px; }
+  .keyrow .keylink { grid-column: 2; }
+  .keyrow label { font-weight: 700; color: var(--sub); font-size: 0.88rem; }
+  .keynote { color: var(--sub); font-size: 0.85rem; margin-bottom: 14px; }
+  textarea.big { width: 100%; height: 50vh; min-height: 200px; font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; font-weight: 400; line-height: 1.45; resize: vertical; }
+  .ptitle { font-size: 0.8rem; font-weight: 800; color: var(--sub); margin-bottom: 8px; }
+
+  @media (max-width: 600px) {
+    .top-actions { position: static; justify-content: center; margin-bottom: 14px; }
+    .file { grid-template-columns: 1fr; } .file .acts { justify-content: flex-start; }
+  }
+  /* ── Añadidos del generador de simulaciones ── */
+  .container { max-width: 1000px; }
+  .row + .row { margin-top: 14px; }
+  .reftxt { font-weight: 700; padding: 9px 0; }
+  .reftxt small { color: var(--sub); font-weight: 600; }
+  details.extra { margin-top: 16px; }
+  details.extra summary { cursor: pointer; font-weight: 800; font-size: 0.88rem; color: var(--sub); }
+  details.extra[open] summary { margin-bottom: 10px; color: var(--text); }
+  details.extra p { color: var(--sub); font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; }
+  textarea.mid { width: 100%; min-height: 80px; resize: vertical; line-height: 1.4; }
+  .file .edit .title { flex: 1; min-width: 200px; }
+  .prog { grid-column: 1 / -1; color: var(--c3); font-size: 0.85rem; font-weight: 700; }
+  .okmsg { grid-column: 1 / -1; color: var(--c5); font-size: 0.85rem; font-weight: 700; }
+  .chg { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+  .chg .bar { margin-top: 0; }
+  .file.viewing { border-color: var(--c1); box-shadow: 0 0 0 1px var(--c1); }
+  .btn-stop { background: rgba(255,107,107,0.18); border-color: var(--c4); }
+  .pv-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .pv-head h2 { margin-bottom: 0; }
+  .pv-head .t { flex: 1; min-width: 0; font-family: 'Fredoka One'; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .jserr { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: rgba(255,107,107,0.12); border: 2px solid var(--c4); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-weight: 700; font-size: 0.9rem; }
+  .jserr[hidden] { display: none; }
+  .jserr span { flex: 1; min-width: 220px; }
+  .pv-box { position: relative; height: 78vh; min-height: 480px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+  .pv-box iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  .pv-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 30px; background: var(--card); color: var(--sub); font-weight: 700; line-height: 1.5; }
+  .pv-empty[hidden] { display: none; }
+  .pv-empty .big { font-size: 3rem; }
+  .pv-empty h3 { font-family: 'Fredoka One'; font-weight: 400; font-size: 1.5rem; color: var(--c3); }
+  .warn { grid-column: 1 / -1; color: var(--c3); font-size: 0.85rem; font-weight: 700; }
+  .review { grid-column: 1 / -1; background: rgba(255,217,61,0.07); border: 1px solid rgba(255,217,61,0.35); border-radius: 12px; padding: 10px 14px; font-size: 0.88rem; font-weight: 600; line-height: 1.45; }
+  .review .rt { white-space: pre-wrap; margin: 6px 0 10px; }
+  .review .bar { margin-top: 0; justify-content: flex-start; }
+  .review h4 { color: var(--c3); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+  .opt { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; margin-bottom: 8px; cursor: pointer; }
+  .opt input { margin-top: 4px; }
+  .opt small { display: block; color: var(--sub); font-weight: 600; }
+  .opt.off { opacity: 0.45; cursor: default; }
+  .pinfo { color: var(--sub); font-size: 0.85rem; font-weight: 600; line-height: 1.45; margin: 10px 0; }
+  .pinfo b { color: var(--text); }
+  .sep { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+  .side, .side * { scrollbar-width: auto; scrollbar-color: #4a5b80 rgba(255,255,255,0.05); }
+  .side::-webkit-scrollbar { width: 12px; }
+  .side::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 10px; }
+  .side::-webkit-scrollbar-thumb { background: #4a5b80; border-radius: 10px; border: 2px solid var(--bg); }
+
+  /* ── Todo a la vista en pantallas de ordenador: cada columna con su barra ── */
+  .main { display: grid; grid-template-columns: 1fr; gap: 0; }
+  @media (min-width: 1100px) and (min-height: 600px) {
+    body { height: 100vh; overflow: hidden; }
+    .container { max-width: 1800px; height: 100vh; display: flex; flex-direction: column; padding: 14px 20px 16px; }
+    .header { flex-shrink: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; text-align: left; margin-bottom: 12px; padding-right: 210px; }
+    .header .badge { margin-bottom: 0; }
+    .header h1 { margin-bottom: 0; font-size: clamp(1.5rem, 2.1vw, 2.1rem); }
+    .header .lead { font-size: 0.9rem; }
+    .top-actions { top: 50%; transform: translateY(-50%); }
+    .main { flex: 1; min-height: 0; grid-template-columns: minmax(400px, 34%) minmax(0, 1fr); gap: 18px; }
+    .side { min-height: 0; overflow-y: auto; padding-right: 8px; }
+    .side .card { padding: 18px 20px; margin-bottom: 14px; }
+    .side .card:last-child { margin-bottom: 0; }
+    .side .file { grid-template-columns: 1fr; }
+    .side .file .acts { justify-content: flex-start; }
+    .side .bar { justify-content: flex-start; }
+    .drop { padding: 18px 16px; }
+    .drop .big { font-size: 1.8rem; }
+    #pv-card { display: flex; flex-direction: column; min-height: 0; margin-bottom: 0; padding: 16px 18px; }
+    .pv-box { flex: 1; height: auto; min-height: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+  <div class="header">
+    <div class="top-actions">
+      <button class="btn btn-sm" onclick="openPrompt()">📝 Prompt</button>
+      <button class="btn btn-sm" onclick="openKeys()">🔑 Claves</button>
+    </div>
+    <div class="badge">🎬 Cruz Roja · Cursos</div>
+    <h1>Generador de Simulaciones</h1>
+    <p class="lead">Carga los temas en Word o PDF y crea una simulación interactiva por cada uno.</p>
+  </div>
+
+  <div class="main">
+  <div class="side">
+  <div class="card">
+    <h2>Modelo y opciones</h2>
+    <div class="row">
+      <div class="field"><label for="prov">Proveedor</label><select id="prov" onchange="changeProvider()"></select></div>
+      <div class="field"><label for="model">Modelo</label><select id="model" onchange="changeModel()"></select></div>
+      <button class="btn btn-sm" id="refresh-btn" style="margin-bottom:4px" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1;min-width:240px"><label>Ejemplo de referencia (la IA copia su estilo y su forma de funcionar)</label><div class="reftxt" id="reftxt"></div></div>
+      <button class="btn btn-sm" style="margin-bottom:4px" onclick="$('reffile').click()">📂 Usar otro ejemplo</button>
+      <button class="btn btn-sm" style="margin-bottom:4px" id="btn-refreset" onclick="resetRef()">↩️ Volver al original</button>
+      <input type="file" id="reffile" accept=".html,.htm" hidden onchange="loadRef(this.files[0]); this.value=''">
+    </div>
+    <div class="row">
+      <div class="field"><label for="dif">Dificultad de la simulación</label>
+        <select id="dif">
+          <option value="basico">Básico · muy guiado</option>
+          <option value="medio" selected>Medio · como el ejemplo</option>
+          <option value="avanzado">Avanzado · con menos ayuda</option>
+        </select>
+      </div>
+    </div>
+    <details class="extra" id="extra-box">
+      <summary>➕ Indicaciones para todas las simulaciones</summary>
+      <p>Opcional. Se añaden a cada tema; por ejemplo: «En Probar, que el alumno tenga que escribir algo con el teclado».</p>
+      <textarea class="mid" id="extra" placeholder="Escribe aquí lo que quieras pedir…"></textarea>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Documentos</h2>
+    <div class="drop" id="drop" onclick="document.getElementById('fileinput').click()">
+      <span class="big">📄</span>
+      Arrastra aquí los ficheros Word (.docx) o PDF, o haz clic para elegirlos
+    </div>
+    <input type="file" id="fileinput" accept=".docx,.pdf" multiple hidden onchange="addFiles(this.files); this.value=''">
+    <div class="files" id="files"></div>
+    <div class="bar">
+      <button class="btn" id="btn-clear" onclick="clearAll()">🗑️ Vaciar lista</button>
+      <button class="btn btn-green" id="btn-dlall" onclick="downloadAll()">⬇️ Descargar todas (ZIP)</button>
+      <button class="btn btn-main" id="btn-run" onclick="runAll()">✨ Generar simulaciones</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+  </div>
+
+  <div class="card" id="pv-card">
+    <div class="pv-head">
+      <h2>Vista previa</h2>
+      <span class="t" id="pv-title"></span>
+      <button class="btn btn-sm" id="btn-full" onclick="fullScreen()" disabled>⛶ Pantalla completa</button>
+    </div>
+    <div class="jserr" id="jserr" hidden>
+      <span id="jserr-txt"></span>
+      <button class="btn btn-sm" onclick="askFix()">🛠️ Pedir que lo arregle</button>
+      <button class="btn btn-sm" onclick="if(viewing) openOther(viewing,'fix')">📋 Otra IA</button>
+    </div>
+    <div class="pv-box"><iframe id="frame" title="Vista previa de la simulación"></iframe>
+      <div class="pv-empty" id="pv-empty"><span class="big">🎬</span><h3>Aquí verás la simulación</h3>
+        <p>Añade los temas, revisa el título y el curso, y pulsa «Generar». Cada simulación tarda unos minutos.<br>Pruébala entera antes de subirla y, si algo falla, usa «🔍 Revisar» o «📋 Prompt para otra IA».</p></div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- Modal: claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal sm">
+    <div class="modal-head"><h3>Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="left" style="font-weight:700;font-size:0.85rem;color:var(--sub)"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-main" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompt -->
+<div class="overlay" id="ov-prompt">
+  <div class="modal">
+    <div class="modal-head"><h3>Prompt</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="ptitle"></div>
+      <textarea class="big" id="ptext" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-foot">
+      <div class="left"><button class="btn" onclick="restorePrompt()">Restaurar por defecto</button></div>
+      <button class="btn" onclick="closeOv('ov-prompt')">Cancelar</button>
+      <button class="btn btn-main" onclick="savePrompt()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompt para otra IA -->
+<div class="overlay" id="ov-other">
+  <div class="modal">
+    <div class="modal-head"><h3>📋 Prompt para otra IA</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="o-title"></div>
+      <label class="opt" id="o-opt-new"><input type="radio" name="omode" value="new" checked onchange="buildOther()"><span>Crear la simulación desde cero<small>Lleva las instrucciones, el ejemplo de referencia y el tema. Es lo que haría este generador.</small></span></label>
+      <label class="opt" id="o-opt-fix"><input type="radio" name="omode" value="fix" onchange="buildOther()"><span>Corregir la simulación que ya hay<small>Lleva el tema, la simulación actual y los fallos que escribas abajo. Es más corto.</small></span></label>
+      <div class="field" id="o-fails-box"><label for="o-fails">Fallos que has visto (se añaden al prompt)</label>
+        <textarea class="mid" id="o-fails" oninput="buildOther()" placeholder="Por ejemplo: el clic derecho no abre ningún menú; el pendrive muestra los mismos archivos que Documentos."></textarea></div>
+      <p class="pinfo" id="o-info"></p>
+      <div class="bar" style="justify-content:flex-start;margin-top:0">
+        <button class="btn btn-main" onclick="copyOther()">📋 Copiar el prompt</button>
+        <button class="btn" onclick="downloadOther()">⬇️ Descargar como .txt</button>
+      </div>
+      <hr class="sep">
+      <div class="ptitle">Cuando la otra IA te dé la simulación, tráela aquí para verla, revisarla y descargarla con las demás</div>
+      <textarea class="mid" id="o-paste" placeholder="Pega aquí el código HTML que te ha dado la otra IA…"></textarea>
+      <div class="bar" style="justify-content:flex-start">
+        <button class="btn btn-green" onclick="importPasted()">✅ Usar el código pegado</button>
+        <button class="btn" onclick="$('o-file').click()">📂 Cargar un fichero .html</button>
+        <input type="file" id="o-file" accept=".html,.htm,.txt" hidden onchange="importFile(this.files[0]); this.value=''">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeOv('ov-other')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt por defecto (sin cambios) -->
+<textarea id="default-prompt" hidden>Eres un desarrollador web y profesor voluntario que da cursos de informática y de móvil a personas mayores en Cruz Roja. Creas simulaciones interactivas, de una sola página HTML, para que los alumnos practiquen el tema de un documento del curso.
+
+Recibirás:
+1. Un EJEMPLO DE REFERENCIA: una simulación terminada sobre OTRO tema.
+2. El TEMA: el contenido del documento del curso. Las tablas vienen fila a fila («| columna | columna |»): cada fila es una regla o un paso que hay que respetar.
+3. El TIPO DE DISPOSITIVO: Ordenador o Móvil.
+
+QUÉ TOMAR DEL EJEMPLO Y QUÉ NO
+- Del ejemplo toma SOLO el aspecto (fondo oscuro con manchas de color, fuentes Fredoka One y Nunito, paleta, insignia, barra de progreso, panel lateral, botón «Empezar de nuevo»), la idea de los tres modos y la calidad del código.
+- NO copies sus textos, partes, retos, explicaciones ni estados. Todo el contenido sale del TEMA. Antes de terminar, comprueba que no queda ninguna frase del ejemplo que no tenga que ver con el tema (por ejemplo, explicaciones sobre maximizar o minimizar ventanas si el tema no va de eso).
+
+LOS TRES MODOS (botones arriba)
+- 🔎 Descubrir: una pantalla simulada, dibujada con HTML y CSS, con las partes o elementos que el TEMA explica marcados con un «?» que late. Al tocar uno, se numera y el panel lateral explica qué es, dónde está y para qué sirve, con etiquetas (chips) y un consejo. Elige partes que sirvan para el tema, no partes cualquiera de la pantalla. Si el tema es sobre todo un procedimiento, las partes pueden ser sus pasos o los botones que se usan en ellos.
+- 🛠️ Probar: una simulación que funciona de verdad, en la que el alumno hace las acciones del tema (abrir, pulsar, arrastrar, escribir, deslizar…) y una lista de retos se marca sola cuando las consigue. El panel lateral explica lo que va pasando, siempre en relación con el tema.
+- 🎯 Practicar: preguntas «Toca …» en orden aleatorio sobre la pantalla de Descubrir, con acierto o error y un trofeo al final.
+
+CONTENIDO
+- Recorre todos los apartados del TEMA. Si son demasiados para una sola simulación, prioriza los pasos prácticos y los errores frecuentes; lo que no quepa como reto, menciónalo en los consejos del panel.
+- Respeta exactamente los nombres, teclas, atajos, botones y pasos del documento. Si dice «Mayús», no pongas «Shift». Si dice cómo se abre algo, usa esa forma y no otra. No inventes funciones ni pasos que no aparezcan.
+- Español de España, frases cortas, vocabulario sencillo, trato de tú y ningún tecnicismo sin explicar.
+- Entre 5 y 8 partes en Descubrir y Practicar, y entre 6 y 12 retos en Probar.
+
+DISPOSITIVO
+- Ordenador: simula Windows 11 (escritorio, ventanas, barra de tareas, programas) según lo que trate el tema. Insignia «🪟 Ordenador».
+- Móvil: simula un móvil Android (Xiaomi Redmi 9AT con MIUI) dentro de un marco de teléfono vertical. Insignia «📱 Móvil». La página se proyecta en la pantalla digital del aula mientras los alumnos repiten los pasos en su propio móvil, así que todo debe verse grande.
+
+QUE CADA RETO SE PUEDA CONSEGUIR
+- Cada reto se consigue haciendo exactamente lo que dice su pista, y se marca justo en ese momento. Comprueba en el código que la función que lo marca se llama de verdad desde esa acción.
+- Al empezar, ningún reto está hecho: si un reto es abrir algo, eso empieza cerrado.
+- Carpetas, unidades (por ejemplo un pendrive), documentos o pantallas tienen cada uno su propio contenido: lo que se pega en un sitio aparece solo allí, y lo que se corta desaparece de su origen.
+- Si hay portapapeles, simúlalo con una variable propia. No uses navigator.clipboard, que pide permisos y falla.
+- Si hay menú del clic derecho: ábrelo en el evento contextmenu con preventDefault y stopPropagation, ciérralo al hacer clic fuera o al elegir una opción, y nunca lo cierres con el mismo clic derecho que lo abre. En pantallas táctiles, ábrelo también con una pulsación larga.
+- Los atajos de teclado del tema deben funcionar con el teclado real y también con botones en pantalla (para la pantalla táctil del aula).
+- Arrastrar debe funcionar con ratón y con el dedo (eventos pointer, con setPointerCapture dentro de try/catch).
+
+TÉCNICA
+- Un único fichero HTML autosuficiente. Solo puedes cargar las fuentes de Google Fonts: nada de imágenes externas ni librerías. Dibuja con HTML, CSS, SVG en línea y emojis.
+- Se adapta al tamaño de la ventana como el ejemplo.
+- Guarda el progreso en localStorage con una clave propia de este tema, siempre dentro de try/catch.
+- JavaScript sin errores: declara todo lo que uses, comprueba que cada id que buscas existe en el HTML y que todos los botones hacen algo.
+- Código compacto: genera con bucles lo que se repita. Que el fichero no pase de unos 80 KB.
+
+ANTES DE RESPONDER, repasa uno por uno los retos y las partes: qué hace el alumno, qué código lo detecta y si de verdad se ejecuta. Corrige lo que no funcione.
+
+Responde SOLO con el código HTML completo, desde &lt;!DOCTYPE html&gt; hasta &lt;/html&gt;, sin explicaciones y sin bloques de código.</textarea>
+
+<!-- Prompt de revisión (sin cambios) -->
+<textarea id="review-prompt" hidden>Eres un revisor exigente de simulaciones interactivas para cursos de informática y de móvil para personas mayores. Recibirás el TEMA (el documento del curso) y el CÓDIGO HTML de una simulación hecha a partir de él, con tres modos: Descubrir, Probar (con retos que se marcan solos) y Practicar.
+
+Revisa el código y busca solo problemas reales y concretos:
+1. Retos que no se pueden conseguir o que no se marcan: sigue en el código lo que hace el alumno hasta la función que marca el reto.
+2. Cosas que no funcionan: botones sin efecto, menús de clic derecho que se cierran solos, carpetas o pantallas que comparten el mismo contenido, arrastres que no responden, uso de navigator.clipboard, errores de JavaScript.
+3. Contenido que contradice el TEMA (teclas, nombres, pasos distintos de los del documento) o que viene de otra simulación y no tiene que ver con el tema.
+4. Apartados importantes del TEMA que no aparecen en ningún modo.
+
+Responde en español, sin código, con una lista numerada de como máximo 10 puntos. En cada punto di qué falla y cómo arreglarlo, en una o dos frases. Ordénalos de más a menos importante. Si no encuentras ningún problema, responde solo: SIN PROBLEMAS.</textarea>
+
+<!-- (El bloque <script type="text/plain" id="ref-b64">… se mantiene igual; no lo repito aquí para no alargar la respuesta. Cópialo tal cual del fichero original.) -->
+
+<script>
+'use strict';
+// ═════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ═════════════════════════════════════════════
+const LS = {
+  settings:'simulaciones_settings', prompt:'simulaciones_prompt', ref:'simulaciones_ref', extra:'simulaciones_extra'
+};
+// Mismas claves que el resto de la suite. Claude y DeepSeek requieren saldo; el resto tiene plan gratuito.
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key',  url:'https://console.anthropic.com/settings/keys'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key',  url:'https://aistudio.google.com/apikey'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key',    url:'https://platform.deepseek.com/api_keys'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key',        url:'https://console.groq.com/keys'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key', url:'https://console.mistral.ai/api-keys'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key',          url:'https://openrouter.ai/settings/keys'},
+];
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id).ls) || ''; } catch(e){ return ''; } };
+
+const PROVIDERS = {
+  claude:     {label:'Claude (Anthropic)', dynamic:false, models:[
+                 {id:'claude-opus-5-5',  label:'Opus 5.5'},
+                 {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
+  aistudio:   {label:'Google AI Studio (Gemini) · gratis', dynamic:true, models:[
+                 {id:'gemini-flash-latest',      label:'Gemini Flash (última)'},
+                 {id:'gemini-flash-lite-latest', label:'Gemini Flash-Lite (última)'},
+                 {id:'gemini-2.5-flash',         label:'Gemini 2.5 Flash'}]},
+  deepseek:   {label:'DeepSeek', dynamic:true, models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  groq:       {label:'Groq · gratis', dynamic:true, models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'}]},
+  mistral:    {label:'Mistral (plan Experiment) · gratis', dynamic:true, models:[
+                 {id:'mistral-large-latest', label:'Mistral Large'},
+                 {id:'mistral-medium-latest',label:'Mistral Medium'},
+                 {id:'mistral-small-latest', label:'Mistral Small'}]},
+  openrouter: {label:'OpenRouter (modelos :free) · gratis', dynamic:true, models:[
+                 {id:'meta-llama/llama-3.3-70b-instruct:free', label:'meta-llama/llama-3.3-70b-instruct:free'}]},
+};
+const LIST_KEY = {
+  aistudio:'simulaciones_gemini_models',
+  deepseek:'simulaciones_deepseek_models',
+  groq:'simulaciones_groq_models',
+  mistral:'simulaciones_mistral_models',
+  openrouter:'simulaciones_or_free_models'
+};
+
+// Modelos antiguos que redirigimos al modelo vigente cuando se carga la app
+const RETIRED = {
+  'claude-sonnet-4-5':'claude-sonnet-4-6',
+  'claude-opus-4-5':'claude-opus-5-5',
+  'deepseek-chat':'deepseek-v4-flash',
+  'deepseek-reasoner':'deepseek-v4-pro',
+  'gemini-2.0-flash':'gemini-flash-latest',
+  'gemini-2.5-pro':'gemini-flash-latest',
+  'llama-3.1-8b-instant':'openai/gpt-oss-120b'
+};
+
+const $ = id => document.getElementById(id);
+function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } }
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const kb = n => (n / 1024).toFixed(n < 10240 ? 1 : 0).replace('.', ',') + ' KB';
+const mmss = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const baseName = n => n.replace(/\.[^.]+$/, '');
+
+let settings = Object.assign({provider:'aistudio', model:'gemini-flash-latest'}, loadJSON(LS.settings) || {});
+if (!PROVIDERS[settings.provider]) { settings.provider = 'aistudio'; settings.model = 'gemini-flash-latest'; }
+if (RETIRED[settings.model]) settings.model = RETIRED[settings.model];
+function saveSettings(){ saveJSON(LS.settings, settings); }
+function showStatus(type, msg){ const s = $('status'); s.className = 'status ' + (type || ''); s.textContent = msg || ''; }
+
+// ═════════════════════════════════════════════
+//  MODELO
+// ═════════════════════════════════════════════
+function modelList(prov){
+  const c = loadJSON(LIST_KEY[prov]);
+  return (c && c.length) ? c : PROVIDERS[prov].models;
+}
+function renderModel(){
+  $('prov').innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === settings.provider ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
+  let list = modelList(settings.provider);
+  if (!list.some(m => m.id === settings.model)) list = [{id:settings.model, label:settings.model}, ...list];
+  $('model').innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === settings.model ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
+  const rb = $('refresh-btn');
+  if (rb) rb.style.display = PROVIDERS[settings.provider].dynamic ? '' : 'none';
+}
+function changeProvider(){
+  settings.provider = $('prov').value;
+  settings.model = modelList(settings.provider)[0].id;
+  saveSettings(); renderModel();
+  const p = settings.provider;
+  if (PROVIDERS[p].dynamic && !loadJSON(LIST_KEY[p]) && (p === 'openrouter' || getKey(p))) refreshModels(true);
+}
+function changeModel(){ settings.model = $('model').value; saveSettings(); }
+
+async function refreshModels(quiet){
+  const prov = settings.provider;
+  if (prov === 'claude'){
+    if (!quiet) showStatus('ok', 'Claude usa una lista de modelos fija.');
+    return;
+  }
+  try {
+    let list = [];
+    if (prov === 'openrouter'){
+      // Solo los modelos gratuitos (terminan en «:free» o tienen precio 0)
+      const r = await fetch('https://openrouter.ai/api/v1/models');
+      if (!r.ok) throw new Error('OpenRouter ' + r.status);
+      const data = (await r.json()).data || [];
+      list = data.filter(m => /:free$/.test(m.id) || (m.pricing && +m.pricing.prompt === 0 && +m.pricing.completion === 0 && !/^openrouter\/auto/.test(m.id)))
+        .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+    } else {
+      const key = getKey(prov);
+      if (!key){ if (!quiet){ showStatus('err', 'Falta la clave de ' + KEYS.find(k => k.id === prov).label + '.'); openKeys(prov); } return; }
+      if (prov === 'aistudio'){
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+        if (!r.ok) throw new Error('AI Studio ' + r.status);
+        const data = (await r.json()).models || [];
+        list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini|gemma/.test(m.name) && !/(embed|tts|image|live|audio|vision|robotics|computer)/.test(m.name))
+          .map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, ''))}));
+      } else if (prov === 'deepseek'){
+        const r = await fetch('https://api.deepseek.com/models', {headers:{'Authorization':'Bearer ' + key}});
+        if (!r.ok) throw new Error('DeepSeek ' + r.status);
+        const data = (await r.json()).data || [];
+        list = data.filter(m => m.object === 'model').map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      } else {
+        const url = prov === 'groq' ? 'https://api.groq.com/openai/v1/models' : 'https://api.mistral.ai/v1/models';
+        const r = await fetch(url, {headers:{'Authorization':'Bearer ' + key}});
+        if (!r.ok) throw new Error(KEYS.find(k => k.id === prov).label + ' ' + r.status);
+        const data = (await r.json()).data || [];
+        list = data.filter(m => m.active !== false && !/(whisper|tts|guard|embed|ocr|moderation|orpheus|playai|voxtral|transcri|safeguard)/i.test(m.id)
+                              && !(m.capabilities && m.capabilities.completion_chat === false))
+          .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+        list = list.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i);
+      }
+    }
+    if (!list.length) throw new Error('la lista ha llegado vacía');
+    saveJSON(LIST_KEY[prov], list);
+    renderModel();
+    if (!quiet) showStatus('ok', 'Lista de modelos actualizada.');
+  } catch(e){ if (!quiet) showStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+}
+
+// ═════════════════════════════════════════════
+//  EJEMPLO DE REFERENCIA E INDICACIONES
+// ═════════════════════════════════════════════
+const DEFAULT_REF = (() => {
+  try { return new TextDecoder().decode(Uint8Array.from(atob($('ref-b64').textContent.trim()), c => c.charCodeAt(0))); }
+  catch(e){ return ''; }
+})();
+let customRef = loadJSON(LS.ref);   // {name, html} o null
+const refHtml = () => (customRef && customRef.html) || DEFAULT_REF;
+function renderRef(){
+  const h = refHtml();
+  const t = (h.match(/<title>([^<]*)<\/title>/i) || [])[1] || (customRef && customRef.name) || 'Sin título';
+  $('reftxt').innerHTML = '📄 ' + esc(t) + ' <small>(' + kb(h.length) + (customRef ? ', ejemplo tuyo' : ', ejemplo original') + ')</small>';
+  $('btn-refreset').disabled = !customRef;
+}
+async function loadRef(f){
+  if (!f) return;
+  const h = await f.text();
+  if (!/<html/i.test(h) || !/<script/i.test(h)) return showStatus('err', 'Ese fichero no parece una simulación HTML.');
+  customRef = {name:f.name, html:h};
+  if (!saveJSON(LS.ref, customRef)) showStatus('err', 'El ejemplo se usará ahora, pero es demasiado grande para guardarlo en el navegador.');
+  else showStatus('ok', 'Ejemplo de referencia cambiado.');
+  renderRef();
+}
+function resetRef(){ customRef = null; try { localStorage.removeItem(LS.ref); } catch(e){} renderRef(); showStatus('ok', 'Vuelve a usarse el ejemplo original.'); }
+
+const extraT = $('extra');
+try { extraT.value = localStorage.getItem(LS.extra) || ''; if (extraT.value) $('extra-box').open = true; } catch(e){}
+extraT.addEventListener('input', () => { try { localStorage.setItem(LS.extra, extraT.value); } catch(e){} });
+
+const DIF_KEY = 'simulaciones_dif';
+const DIFICULTAD = {
+  basico:
+    'BÁSICO. Simulación muy guiada, para quien da sus primeros pasos.\n' +
+    '- Descubrir y Practicar: 5 partes, solo las esenciales del tema, con explicaciones muy cortas y sencillas. Lo que no quepa, va en los consejos del panel.\n' +
+    '- Probar: entre 6 y 8 retos sencillos, de lo más fácil a lo más difícil. La pista de cada reto dice con claridad qué hacer y dónde, y el panel lateral va explicando paso a paso lo que ocurre.\n' +
+    '- Practicar: preguntas «Toca …» con el nombre claro de cada parte. Si el alumno falla, el mensaje le dice dónde estaba.\n' +
+    '- Prioriza acciones sencillas (tocar o hacer clic); usa arrastrar o atajos de teclado solo si el tema lo exige.',
+  medio:
+    'MEDIO. Simulación equilibrada, como pide el prompt.\n' +
+    '- Entre 5 y 8 partes en Descubrir y Practicar y entre 6 y 12 retos en Probar.\n' +
+    '- Las pistas indican qué hacer y casi siempre dónde; de vez en cuando un reto pide encontrar el sitio por uno mismo.\n' +
+    '- Practicar mezcla preguntas sobre el nombre de las partes con otras sobre para qué sirven.',
+  avanzado:
+    'AVANZADO. Simulación con menos ayuda, para quien ya domina lo básico.\n' +
+    '- Descubrir y Practicar: entre 6 y 8 partes, incluyendo los detalles, matices y excepciones que explique el tema y las diferencias entre elementos parecidos.\n' +
+    '- Probar: entre 8 y 12 retos; los últimos combinan varias acciones del tema en una tarea completa. Las pistas dicen qué hay que conseguir y no siempre dónde pulsar (por ejemplo «Mueve el archivo a la carpeta Documentos»). Incluye como retos los errores frecuentes que mencione el tema.\n' +
+    '- Practicar: en lugar del nombre de la parte, pregunta por su función («Toca lo que usarías para…») y no des pistas en la pregunta.\n' +
+    '- Aun así, cada reto debe poder conseguirse con las acciones del tema, el lenguaje debe seguir siendo sencillo y todo debe salir solo del TEMA.'
+};
+const difSel = $('dif');
+try { const d = localStorage.getItem(DIF_KEY); if (DIFICULTAD[d]) difSel.value = d; } catch(e){}
+difSel.addEventListener('change', () => { try { localStorage.setItem(DIF_KEY, difSel.value); } catch(e){} });
+
+// ═════════════════════════════════════════════
+//  FICHEROS
+// ═════════════════════════════════════════════
+let items = [];
+let busy = false, ctrl = null, viewing = null;
+let nextId = 1;
+
+const KW = {
+  ordenador: ['ordenador','ratón','raton','clic','doble clic','windows','escritorio','teclado','ventana','ventanas','explorador','carpeta','carpetas','portátil','pc','barra de tareas','menú inicio','botón inicio','word','excel','cursor','usb','pendrive','archivo','archivos'],
+  movil: ['móvil','movil','android','xiaomi','redmi','miui','deslizar','desliza','toque','toca','pulsación','whatsapp','app','apps','notificaciones','táctil','smartphone','cobertura','sms','play store','pantalla de inicio','llamada','llamadas','contactos','teléfono','gesto','gestos']
+};
+function detectDevice(text, fname){
+  const t = text.toLowerCase(), n = fname.toLowerCase();
+  const score = {ordenador:0, movil:0}, hits = {ordenador:{}, movil:{}};
+  for (const dev in KW) KW[dev].forEach(w => {
+    const re = new RegExp('(^|[^\\p{L}])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=[^\\p{L}]|$)', 'giu');
+    const c = (t.match(re) || []).length + 5 * (n.match(re) || []).length;
+    if (c){ score[dev] += c; hits[dev][w] = c; }
+  });
+  const dev = score.movil > score.ordenador ? 'movil' : 'ordenador';
+  return {dev, hits:Object.entries(hits[dev]).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0])};
+}
+function guessTitle(text, fname){
+  const noNum = s => s.replace(/^\s*(tema\s*)?\d+[\s.):-]*/i, '').trim();
+  const h = text.split('\n').map(s => s.trim()).find(s => /^#{1,3}\s/.test(s));
+  if (h){ const t = h.replace(/^#+\s*/, ''); return (noNum(t) || t).slice(0, 90); }
+  return noNum(baseName(fname).replace(/[_-]+/g, ' ')) || baseName(fname);
+}
+
+async function addFiles(fileList){
+  const ok = [...fileList].filter(f => /\.(docx|pdf)$/i.test(f.name)).sort((a, b) => a.name.localeCompare(b.name, 'es', {numeric:true}));
+  const skipped = fileList.length - ok.length;
+  const bad = [];
+  for (const f of ok){
+    if (items.some(it => it.file.name === f.name && it.file.size === f.size)) continue;
+    try {
+      const text = await extractText(f);
+      if (text.length < 80) throw new Error('no se ha podido extraer texto (¿es un PDF escaneado?)');
+      const d = detectDevice(text, f.name);
+      items.push({id:nextId++, file:f, text, title:guessTitle(text, f.name), dev:d.dev, hits:d.hits, autoDev:d.dev,
+                  status:'wait', error:'', html:'', prevHtml:'', firstMsg:'', saved:true, chgOpen:false, chgText:'', note:'', review:'', long:longInfo(text)});
+    } catch(e){ bad.push(f.name + ': ' + e.message); }
+  }
+  renderFiles();
+  const msgs = [];
+  if (skipped) msgs.push(`Se han ignorado ${skipped} fichero(s): solo se admiten .docx y .pdf (los .doc antiguos hay que guardarlos antes como .docx).`);
+  if (bad.length) msgs.push('No se han podido leer: ' + bad.join(' · '));
+  showStatus(msgs.length ? 'err' : '', msgs.join(' '));
+}
+function removeItem(id){
+  const it = items.find(x => x.id === id); if (!it) return;
+  if (it.html && !it.saved && !confirm('La simulación de «' + it.file.name + '» no se ha descargado. ¿Quitarla igualmente?')) return;
+  items = items.filter(x => x !== it);
+  if (viewing === id) hidePreview();
+  renderFiles();
+}
+function clearAll(){
+  if (busy) return;
+  if (items.some(it => it.html && !it.saved) && !confirm('Hay simulaciones sin descargar. ¿Vaciar la lista igualmente?')) return;
+  items = []; hidePreview(); renderFiles(); showStatus('');
+}
+
+const STATUS_LABEL = {wait:'Pendiente', run:'Trabajando…', ok:'Lista', err:'Error'};
+function fileHTML(it){
+  const run = it.status === 'run';
+  const meta = (it.dev === 'movil' ? '📱 Curso de Móvil' : '💻 Curso de Ordenador') +
+    (it.hits.length && it.dev === it.autoDev ? ' · detectado por: ' + it.hits.join(', ') : '') +
+    (it.html ? ' · ' + kb(it.html.length) : '');
+  return `<div class="file${viewing === it.id ? ' viewing' : ''}" data-id="${it.id}">
+    <div><div class="name">${esc(it.file.name)}<span class="st ${it.status}">${STATUS_LABEL[it.status]}</span></div><div class="meta">${esc(meta)}</div></div>
+    <div class="acts">
+      ${it.html && !run ? `<button class="btn btn-sm" onclick="showPreview(${it.id})">👁️ Ver</button>
+        <button class="btn btn-sm btn-green" onclick="downloadItem(${it.id})">⬇️ Descargar</button>
+        <button class="btn btn-sm" ${busy ? 'disabled' : ''} onclick="toggleChange(${it.id})">✏️ Cambios</button>
+        <button class="btn btn-sm" ${busy ? 'disabled' : ''} onclick="reviewItem(${it.id})" title="Pedir a la IA que busque fallos">🔍 Revisar</button>
+        ${it.prevHtml ? `<button class="btn btn-sm" onclick="undoItem(${it.id})" title="Volver a la versión anterior">↩️ Anterior</button>` : ''}` : ''}
+      ${(it.status === 'ok' || it.status === 'err') ? `<button class="btn btn-sm" ${busy ? 'disabled' : ''} onclick="regenerate(${it.id})">🔄 Rehacer</button>` : ''}
+      ${!run ? `<button class="btn btn-sm" onclick="openOther(${it.id})" title="Preparar un prompt para hacerla con otra IA">📋 Otra IA</button>` : ''}
+      <button class="btn btn-sm" ${run ? 'disabled' : ''} onclick="removeItem(${it.id})" title="Quitar de la lista">✕</button>
+    </div>
+    <div class="edit">
+      <select ${run ? 'disabled' : ''} onchange="editItem(${it.id},'dev',this.value)">
+        <option value="ordenador" ${it.dev !== 'movil' ? 'selected' : ''}>Curso de Ordenador</option>
+        <option value="movil" ${it.dev === 'movil' ? 'selected' : ''}>Curso de Móvil</option>
+      </select>
+      <input type="text" class="title" value="${esc(it.title)}" title="Título de la simulación" ${run ? 'disabled' : ''} onchange="editItem(${it.id},'title',this.value)">
+    </div>
+    ${it.long && !it.html ? `<div class="warn">⚠️ Tema largo (${it.long.sections} apartados): la simulación saldrá más completa si lo divides en dos documentos.</div>` : ''}
+    ${it.review && !run ? reviewHTML(it) : ''}
+    ${run ? `<div class="prog" id="prog-${it.id}">${esc(it.note || 'Preparando…')}</div>` : ''}
+    ${!run && it.note ? `<div class="okmsg">${esc(it.note)}</div>` : ''}
+    ${it.status === 'err' || (it.error && !run) ? `<div class="errtxt">${esc(it.error)}</div>` : ''}
+    ${it.chgOpen && !run ? `<div class="chg">
+      <textarea class="mid" id="chg-${it.id}" placeholder="Por ejemplo: que los botones sean más grandes y añade un reto para cerrar la ventana." oninput="setChg(${it.id},this.value)">${esc(it.chgText)}</textarea>
+      <div class="bar"><button class="btn btn-sm" onclick="toggleChange(${it.id})">Cancelar</button><button class="btn btn-sm btn-main" ${busy ? 'disabled' : ''} onclick="applyChange(${it.id})">✨ Aplicar cambios</button></div>
+    </div>` : ''}
+  </div>`;
+}
+function reviewHTML(it){
+  if (/^\s*SIN PROBLEMAS/i.test(it.review)) return `<div class="okmsg">🔍 La revisión no ha encontrado fallos. Pruébala igualmente antes de subirla.</div>`;
+  return `<div class="review"><h4>🔍 Fallos que ha encontrado la revisión</h4><div class="rt">${esc(it.review)}</div>
+    <div class="bar">
+      <button class="btn btn-sm btn-main" ${busy ? 'disabled' : ''} onclick="fixReview(${it.id})">✨ Corregir estos fallos</button>
+      <button class="btn btn-sm" onclick="openOther(${it.id}, 'fix')">📋 Pasárselos a otra IA</button>
+      <button class="btn btn-sm" onclick="hideReview(${it.id})">Ocultar</button>
+    </div></div>`;
+}
+function hideReview(id){ const it = items.find(x => x.id === id); if (it){ it.review = ''; renderFiles(); } }
+function fixReview(id){
+  const it = items.find(x => x.id === id); if (!it || !it.review) return;
+  it.chgText = 'Una revisión ha encontrado estos fallos. Corrígelos todos sin estropear lo que ya funciona:\n' + it.review;
+  applyChange(id);
+}
+function renderFiles(){
+  $('files').innerHTML = items.map(fileHTML).join('');
+  const done = items.filter(it => it.html).length;
+  const todo = items.filter(it => it.status === 'wait' || it.status === 'err').length;
+  const b = $('btn-run');
+  if (busy && ctrl){ b.textContent = '⏹ Detener'; b.className = 'btn btn-stop'; b.disabled = false; }
+  else { b.textContent = '✨ Generar ' + (todo === 1 ? 'simulación' : 'simulaciones'); b.className = 'btn btn-main'; b.disabled = busy || !todo; }
+  $('btn-dlall').disabled = busy || !done;
+  $('btn-clear').disabled = busy || !items.length;
+}
+function setNote(it, msg){ it.note = msg; const el = $('prog-' + it.id); if (el) el.textContent = msg; }
+function editItem(id, field, value){
+  const it = items.find(x => x.id === id); if (!it) return;
+  if (field === 'title'){ it.title = value.trim() || it.title; if (viewing === id) $('pv-title').textContent = it.title; return; }
+  it.dev = value;
+  if (it.html){ it.note = 'Has cambiado el curso: pulsa «Rehacer» para crearla de nuevo.'; }
+  renderFiles();
+}
+function toggleChange(id){
+  const it = items.find(x => x.id === id); if (!it) return;
+  it.chgOpen = !it.chgOpen; renderFiles();
+  if (it.chgOpen){ const t = $('chg-' + id); if (t) t.focus(); }
+}
+function setChg(id, v){ const it = items.find(x => x.id === id); if (it) it.chgText = v; }
+function undoItem(id){
+  const it = items.find(x => x.id === id); if (!it || !it.prevHtml) return;
+  [it.html, it.prevHtml] = [it.prevHtml, it.html]; it.saved = false; it.note = 'Recuperada la versión anterior.';
+  renderFiles(); showPreview(id);
+}
+
+function docHtmlToText(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const out = [];
+  const clean = s => s.replace(/\s+/g, ' ').trim();
+  function list(el, depth){
+    [...el.children].forEach((li, i) => {
+      const own = [...li.childNodes].filter(n => !(n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName))).map(n => n.textContent).join('');
+      if (clean(own)) out.push('  '.repeat(depth) + (el.tagName === 'OL' ? (i + 1) + '. ' : '- ') + clean(own));
+      li.querySelectorAll(':scope > ul, :scope > ol').forEach(sub => list(sub, depth + 1));
+    });
+  }
+  function table(el){
+    const rows = [...el.querySelectorAll('tr')].map(tr => [...tr.children].map(c => clean(c.textContent).replace(/\|/g, '/')));
+    if (!rows.length) return;
+    out.push('');
+    rows.forEach((r, i) => {
+      out.push('| ' + r.join(' | ') + ' |');
+      if (i === 0 && rows.length > 1) out.push('|' + r.map(() => ' --- ').join('|') + '|');
+    });
+    out.push('');
+  }
+  function walk(node){
+    for (const el of node.children){
+      const tg = el.tagName;
+      if (/^H[1-6]$/.test(tg)){ const s = clean(el.textContent); if (s) out.push('\n' + '#'.repeat(+tg[1]) + ' ' + s); }
+      else if (tg === 'P'){ const s = clean(el.textContent); if (s) out.push(s); }
+      else if (tg === 'UL' || tg === 'OL') list(el, 0);
+      else if (tg === 'TABLE') table(el);
+      else walk(el);
+    }
+  }
+  walk(doc.body);
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+function longInfo(text){
+  const sections = text.split('\n').filter(l => /^#{2,3}\s/.test(l)).length;
+  return (text.length > 9000 || sections >= 8) ? {sections, chars:text.length} : null;
+}
+
+async function extractText(file){
+  const buf = await file.arrayBuffer();
+  if (/\.docx$/i.test(file.name)){
+    if (typeof mammoth === 'undefined') throw new Error('No se ha cargado la librería para leer Word (¿sin conexión?).');
+    const res = await mammoth.convertToHtml({arrayBuffer:buf});
+    return docHtmlToText(res.value);
+  }
+  if (typeof pdfjsLib === 'undefined') throw new Error('No se ha cargado la librería para leer PDF (¿sin conexión?).');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  const pages = [];
+  for (let p = 1; p <= pdf.numPages; p++){
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    let line = '', text = '';
+    tc.items.forEach(i => { line += i.str; if (i.hasEOL){ text += line + '\n'; line = ''; } });
+    pages.push((text + line).trim());
+  }
+  return pages.join('\n\n').trim();
+}
+
+// ═════════════════════════════════════════════
+//  GENERACIÓN
+// ═════════════════════════════════════════════
+function buildUserMsg(it){
+  const extra = extraT.value.trim();
+  return 'TIPO DE DISPOSITIVO: ' + (it.dev === 'movil' ? 'Móvil' : 'Ordenador') + '\n' +
+    'TÍTULO DE LA SIMULACIÓN: ' + it.title.trim() + '\n\n' +
+    '<ejemplo_de_referencia>\n' + refHtml() + '\n</ejemplo_de_referencia>\n\n' +
+    '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n' +
+    'NIVEL DE DIFICULTAD (cumple además todas las demás instrucciones):\n' + DIFICULTAD[difSel.value] + '\n\n' +
+    (extra ? 'INDICACIONES ADICIONALES DEL PROFESOR:\n' + extra + '\n\n' : '') +
+    'Crea ahora la simulación completa sobre este tema. Responde solo con el HTML.';
+}
+function friendly(e){
+  const m = e.message || String(e);
+  if (/Failed to fetch|NetworkError|CORS/i.test(m)) return 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m;
+  if (e.status === 413 || /\(413\)/.test(m)) return 'La petición es demasiado grande para el plan gratuito de este proveedor (el ejemplo de referencia ya ocupa mucho). Cambia de proveedor. ' + m;
+  if (e.status === 429 || /\(429\)/.test(m)) return 'Se ha superado el límite del plan gratuito. Espera un poco y pulsa «Rehacer», o cambia de proveedor. ' + m;
+  return m;
+}
+
+async function generate(it, change){
+  for (let attempt = 0; attempt < 2; attempt++){
+    const t0 = Date.now();
+    let got = 0;
+    const tick = () => setNote(it, got ? `Recibidos ${kb(got)} en ${mmss(Date.now() - t0)}…` : `Esperando a la IA… ${mmss(Date.now() - t0)}`);
+    tick();
+    const timer = setInterval(tick, 1000);
+    try {
+      const messages = change
+        ? [{role:'user', content:it.firstMsg}, {role:'assistant', content:it.html},
+           {role:'user', content:'Haz estos cambios en la simulación y devuelve el fichero HTML completo, sin explicaciones:\n' + change}]
+        : [{role:'user', content:(it.firstMsg = buildUserMsg(it))}];
+      const raw = await callModel({provider:settings.provider, model:settings.model, system:getPrompt(), messages, onProgress:n => { got = n; }, signal:ctrl.signal});
+      return extractHTML(raw);
+    } catch(e){
+      clearInterval(timer);
+      const fatal = e.name === 'AbortError' || [400,401,403,404,413].includes(e.status) || /^Falta la clave/.test(e.message);
+      if (fatal || attempt === 1) throw e;
+      for (let s = e.status === 429 ? 40 : 8; s > 0; s--){
+        setNote(it, 'Ha fallado (' + (e.message || '').slice(0, 90) + '). Reintento en ' + s + ' s…');
+        await sleep(1000);
+        if (ctrl.signal.aborted) throw new DOMException('', 'AbortError');
+      }
+    } finally { clearInterval(timer); }
+  }
+}
+function extractHTML(raw){
+  let s = String(raw || '').trim().replace(/^```(?:html)?\s*/i, '').replace(/\s*```\s*$/, '');
+  const a = s.search(/<!DOCTYPE html|<html[\s>]/i), b = s.toLowerCase().lastIndexOf('</html>');
+  if (a < 0) throw new Error('El modelo no ha devuelto una página HTML. Prueba a «Rehacer» o cambia de modelo.');
+  if (b < a) throw new Error('La respuesta se cortó antes de terminar la página. Prueba a «Rehacer» o cambia de modelo.');
+  return s.slice(a, b + 7);
+}
+
+async function runAll(){
+  if (busy){ if (ctrl) ctrl.abort(); return; }
+  const todo = items.filter(it => it.status === 'wait' || it.status === 'err');
+  if (!todo.length) return;
+  if (!getKey(settings.provider)){ showStatus('err', 'Falta la clave de ' + KEYS.find(k => k.id === settings.provider).label + '.'); openKeys(settings.provider); return; }
+  busy = true; ctrl = new AbortController();
+  let n = 0, stopped = false;
+  for (const it of todo){
+    if (!items.includes(it)) continue;
+    n++; showStatus('', `Generando ${n} de ${todo.length}: ${it.file.name}. Cada simulación tarda unos minutos.`);
+    const r = await processItem(it);
+    if (r === 'stop'){ stopped = true; break; }
+    if (r === 'fatal') break;
+    if (n < todo.length){ await sleep(settings.provider === 'groq' ? 6000 : 3000); if (ctrl.signal.aborted){ stopped = true; break; } }
+  }
+  busy = false; ctrl = null;
+  const ok = items.filter(it => it.status === 'ok').length, err = items.filter(it => it.status === 'err').length;
+  showStatus(err ? 'err' : 'ok', (stopped ? 'Detenido. ' : 'Terminado: ') + `${ok} lista(s)` + (err ? `, ${err} con error (pulsa «Rehacer» o vuelve a «Generar»).` : '.'));
+  renderFiles();
+}
+async function regenerate(id){
+  const it = items.find(x => x.id === id); if (!it || busy) return;
+  if (it.html && !it.saved && !confirm('Se sustituirá la simulación actual de «' + it.file.name + '». ¿Rehacerla?')) return;
+  if (!getKey(settings.provider)){ openKeys(settings.provider); return; }
+  busy = true; ctrl = new AbortController();
+  showStatus('', 'Rehaciendo: ' + it.file.name + '. Tarda unos minutos.');
+  await processItem(it);
+  busy = false; ctrl = null;
+  showStatus(it.status === 'ok' ? 'ok' : 'err', it.status === 'ok' ? 'Simulación rehecha.' : 'No se ha podido rehacer.');
+  renderFiles();
+}
+async function processItem(it){
+  const old = it.html;
+  it.status = 'run'; it.error = ''; it.note = ''; it.chgOpen = false; renderFiles();
+  try {
+    const html = await generate(it, null);
+    if (old) it.prevHtml = old;
+    it.html = html; it.saved = false; it.status = 'ok'; it.review = ''; it.note = 'Pruébala entera en la vista previa (o pulsa «🔍 Revisar») antes de subirla.';
+    renderFiles(); showPreview(it.id);
+    return 'ok';
+  } catch(e){
+    if (e.name === 'AbortError'){ it.status = old ? 'ok' : 'wait'; it.note = 'Detenida.'; renderFiles(); return 'stop'; }
+    it.status = 'err'; it.note = ''; it.error = friendly(e); renderFiles();
+    return [400,401,403,404,413].includes(e.status) || /^Falta la clave/.test(e.message) ? 'fatal' : 'err';
+  }
+}
+async function applyChange(id){
+  const it = items.find(x => x.id === id); if (!it || busy) return;
+  const text = (it.chgText || '').trim();
+  if (!text){ const t = $('chg-' + id); if (t) t.focus(); return; }
+  if (!getKey(settings.provider)){ openKeys(settings.provider); return; }
+  if (!it.firstMsg) it.firstMsg = buildUserMsg(it);
+  busy = true; ctrl = new AbortController();
+  it.status = 'run'; it.error = ''; it.note = ''; renderFiles();
+  showStatus('', 'Aplicando cambios en: ' + it.file.name);
+  try {
+    const html = await generate(it, text);
+    it.prevHtml = it.html; it.html = html; it.saved = false; it.chgText = ''; it.chgOpen = false; it.review = '';
+    it.note = 'Cambios hechos. Si no te convencen, pulsa «Anterior».';
+    showStatus('ok', 'Cambios aplicados.');
+  } catch(e){
+    it.note = '';
+    it.error = e.name === 'AbortError' ? '' : 'No se han podido aplicar los cambios: ' + friendly(e);
+    showStatus(e.name === 'AbortError' ? '' : 'err', e.name === 'AbortError' ? 'Cambios cancelados.' : 'No se han podido aplicar los cambios.');
+  }
+  it.status = 'ok'; busy = false; ctrl = null;
+  renderFiles(); showPreview(id);
+}
+
+// ═════════════════════════════════════════════
+//  REVISIÓN
+// ═════════════════════════════════════════════
+async function reviewItem(id){
+  const it = items.find(x => x.id === id); if (!it || !it.html || busy) return;
+  if (!getKey(settings.provider)){ openKeys(settings.provider); return; }
+  busy = true; ctrl = new AbortController();
+  it.status = 'run'; it.error = ''; it.note = ''; it.review = ''; renderFiles();
+  showStatus('', 'Revisando: ' + it.file.name + '. Tarda uno o dos minutos.');
+  const t0 = Date.now();
+  const timer = setInterval(() => setNote(it, 'Revisando la simulación… ' + mmss(Date.now() - t0)), 1000);
+  setNote(it, 'Revisando la simulación…');
+  try {
+    const user = '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n<codigo>\n' + it.html + '\n</codigo>' +
+      (it.jsErr ? '\n\nAl abrirla en el navegador ha aparecido este error de JavaScript: ' + it.jsErr : '') +
+      '\n\nHaz la revisión.';
+    const raw = await callModel({provider:settings.provider, model:settings.model, system:$('review-prompt').value,
+                                 messages:[{role:'user', content:user}], onProgress:() => {}, signal:ctrl.signal});
+    it.review = raw.replace(/^```\w*\s*|```\s*$/g, '').trim() || 'SIN PROBLEMAS';
+    showStatus('ok', 'Revisión terminada.');
+  } catch(e){
+    if (e.name !== 'AbortError'){ it.error = 'No se ha podido revisar: ' + friendly(e); showStatus('err', 'No se ha podido revisar.'); }
+    else showStatus('', 'Revisión cancelada.');
+  }
+  clearInterval(timer);
+  it.status = 'ok'; it.note = ''; busy = false; ctrl = null;
+  renderFiles();
+}
+
+// ═════════════════════════════════════════════
+//  PROMPT PARA OTRA IA
+// ═════════════════════════════════════════════
+let otherId = null, otherText = '';
+function openOther(id, mode){
+  const it = items.find(x => x.id === id); if (!it) return;
+  otherId = id;
+  $('o-title').textContent = it.title + ' · ' + (it.dev === 'movil' ? 'Curso de Móvil' : 'Curso de Ordenador');
+  const canFix = !!it.html;
+  $('o-opt-fix').classList.toggle('off', !canFix);
+  document.querySelector('input[name=omode][value=fix]').disabled = !canFix;
+  document.querySelector('input[name=omode][value=' + (mode === 'fix' && canFix ? 'fix' : (canFix && (it.review || it.jsErr) ? 'fix' : 'new')) + ']').checked = true;
+  const fails = [];
+  if (it.jsErr) fails.push('Al abrirla aparece este error de JavaScript: ' + it.jsErr);
+  if (it.review && !/^\s*SIN PROBLEMAS/i.test(it.review)) fails.push(it.review);
+  $('o-fails').value = fails.join('\n');
+  $('o-paste').value = '';
+  buildOther();
+  openOv('ov-other');
+}
+function buildOther(){
+  const it = items.find(x => x.id === otherId); if (!it) return;
+  const fix = document.querySelector('input[name=omode]:checked').value === 'fix' && it.html;
+  $('o-fails-box').style.display = fix ? '' : 'none';
+  if (!fix){
+    otherText = getPrompt() + '\n\n════════════════════════════════════════\n\n' + buildUserMsg(it) +
+      '\n\nSi puedes, entrégalo como un fichero o artefacto HTML que se pueda descargar.';
+  } else {
+    const fails = $('o-fails').value.trim();
+    otherText = 'Tengo una simulación interactiva en HTML, hecha a partir del tema que te paso, que tiene fallos. Corrígela y devuélvemela completa.\n\n' +
+      'FALLOS QUE HE VISTO:\n' + (fails || '(no los he apuntado: búscalos tú)') + '\n\n' +
+      'Además de esos fallos, comprueba uno por uno que cada reto de «Probar» se pueda conseguir haciendo lo que dice su pista, y que nada contradiga el tema.\n\n' +
+      'REQUISITOS QUE DEBE CUMPLIR (son las instrucciones con las que se creó; el ejemplo de referencia que mencionan no hace falta aquí):\n' + getPrompt() + '\n\n' +
+      '════════════════════════════════════════\n\n' +
+      'TIPO DE DISPOSITIVO: ' + (it.dev === 'movil' ? 'Móvil' : 'Ordenador') + '\n\n' +
+      '<tema documento="' + it.file.name + '">\n' + it.text + '\n</tema>\n\n' +
+      '<simulacion_actual>\n' + it.html + '\n</simulacion_actual>\n\n' +
+      'Devuelve el fichero HTML completo corregido, desde <!DOCTYPE html> hasta </html>. Si puedes, entrégalo como un fichero o artefacto HTML que se pueda descargar.';
+  }
+  const tokens = Math.round(otherText.length / 3.5 / 1000);
+  $('o-info').innerHTML = 'Tamaño: <b>' + kb(otherText.length) + '</b> (unos ' + tokens + ' mil tokens). ' +
+    'Va bien con <b>Claude</b>, <b>ChatGPT</b> o <b>Gemini</b> en su página web. Si al pegarlo la web lo corta o lo convierte en un adjunto, también vale; si da problemas, descarga el .txt y adjúntalo.';
+}
+function copyOther(){
+  const done = () => showStatus('ok', 'Prompt copiado: pégalo en la otra IA.');
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = otherText; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch(e){ showStatus('err', 'No se ha podido copiar. Usa «Descargar como .txt».'); }
+    ta.remove();
+  };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(otherText).then(done, fallback); else fallback();
+  closeOv('ov-other');
+}
+function downloadOther(){
+  const it = items.find(x => x.id === otherId); if (!it) return;
+  download(new Blob([otherText], {type:'text/plain;charset=utf-8'}), 'prompt-' + slug(it.file.name) + '.txt');
+}
+function slug(name){
+  return name.replace(/\.[^.]+$/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'simulacion';
+}
+function useForeignHtml(raw){
+  const it = items.find(x => x.id === otherId); if (!it) return;
+  let html;
+  try { html = extractHTML(raw); }
+  catch(e){ alert('Ese código no parece una página HTML completa (tiene que ir desde <!DOCTYPE html> hasta </html>).'); return; }
+  if (busy && it.status === 'run'){ alert('Espera a que termine lo que se está haciendo con este tema.'); return; }
+  if (it.html) it.prevHtml = it.html;
+  it.html = html; it.saved = false; it.status = 'ok'; it.error = ''; it.review = '';
+  it.note = 'Traída de otra IA. Pruébala entera; si no te convence, pulsa «Anterior».';
+  if (!it.firstMsg) it.firstMsg = buildUserMsg(it);
+  closeOv('ov-other'); renderFiles(); showPreview(it.id);
+  showStatus('ok', 'Simulación de la otra IA cargada.');
+}
+function importPasted(){ const v = $('o-paste').value.trim(); if (!v) return $('o-paste').focus(); useForeignHtml(v); }
+async function importFile(f){ if (f) useForeignHtml(await f.text()); }
+
+// ═════════════════════════════════════════════
+//  APIs (con streaming para ver el avance)
+// ═════════════════════════════════════════════
+async function httpError(resp, who){
+  let detail = '';
+  try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+  catch(e){ try { detail = await resp.text(); } catch(_){} }
+  if (typeof detail === 'object') detail = JSON.stringify(detail);
+  const err = new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+  err.status = resp.status;
+  return err;
+}
+function needKey(id){
+  const k = getKey(id);
+  if (!k){ openKeys(id); throw new Error('Falta la clave de ' + KEYS.find(x => x.id === id).label + '.'); }
+  return k;
+}
+async function readStream(resp, onEvent, onProgress, s){
+  const reader = resp.body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;){
+    const {value, done} = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, {stream:true});
+    const lines = buf.split('\n'); buf = lines.pop();
+    for (const line of lines){
+      const l = line.trim();
+      if (!l.startsWith('data:')) continue;
+      const data = l.slice(5).trim();
+      if (!data || data === '[DONE]') continue;
+      let o; try { o = JSON.parse(data); } catch(e){ continue; }
+      onEvent(o);
+    }
+    onProgress(s.text.length);
+  }
+}
+function callModel(o){
+  if (o.provider === 'claude') return callClaude(o);
+  if (o.provider === 'aistudio') return callGemini(o);
+  const cfg = {
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:32000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:null},
+  }[o.provider];
+  return callOpenAICompat(o, cfg);
+}
+async function callClaude({model, system, messages, onProgress, signal}){
+  const key = needKey('claude');
+  const msgs = messages.map((m, i) => {
+    const cache = (i === 0) || (i === messages.length - 1 && m.role === 'user');
+    return {role:m.role, content:[cache ? {type:'text', text:m.content, cache_control:{type:'ephemeral'}} : {type:'text', text:m.content}]};
+  });
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', signal,
+    headers:{'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:32000, stream:true,
+      system:[{type:'text', text:system, cache_control:{type:'ephemeral'}}], messages:msgs})
+  });
+  if (!resp.ok) throw await httpError(resp, 'Claude');
+  const s = {text:'', stop:null};
+  await readStream(resp, j => {
+    if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') s.text += j.delta.text;
+    else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason) s.stop = j.delta.stop_reason;
+    else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
+  }, onProgress, s);
+  if (s.stop === 'max_tokens') throw new Error('Claude: la respuesta se cortó por longitud. Prueba a «Rehacer» o cambia de modelo.');
+  if (!s.text) throw new Error('Claude: respuesta vacía.');
+  return s.text;
+}
+async function callGemini({model, system, messages, onProgress, signal}){
+  const key = needKey('aistudio');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+  const resp = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'}, signal,
+    body:JSON.stringify({
+      systemInstruction:{parts:[{text:system}]},
+      contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.content}]})),
+      generationConfig:{maxOutputTokens:65536}
+    })
+  });
+  if (!resp.ok) throw await httpError(resp, 'AI Studio');
+  const s = {text:'', stop:null};
+  await readStream(resp, j => {
+    if (j.error) throw new Error('AI Studio: ' + (j.error.message || JSON.stringify(j.error)));
+    const c = j.candidates && j.candidates[0];
+    if (!c){ if (j.promptFeedback && j.promptFeedback.blockReason) throw new Error
