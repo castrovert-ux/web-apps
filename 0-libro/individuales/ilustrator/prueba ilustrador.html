@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de prompts · Imágenes del libro</title>
+<link rel="icon" type="image/x-icon" href="icons/favicon.ico?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-1.png?v=2">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-2.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2">
+<link rel="manifest" href="manifest.json?v=2">
+<meta name="theme-color" content="#0f0c29">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: #faf8f4;
+    color: #1a1814;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e8e2d8;
+    padding: 2.5rem 2.25rem 2.5rem;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+  }
+
+  .app-header {
+    border-bottom: 1px solid #e8e2d8;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .app-header-left h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+    color: #1a1814;
+    margin-bottom: 4px;
+  }
+
+  .app-header-left p {
+    font-size: 15px;
+    color: #777060;
+    font-style: italic;
+  }
+
+  .btn-historial-toggle {
+    font-family: 'EB Garamond', serif;
+    font-size: 13px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd8ce;
+    background: #faf7f2;
+    color: #6a6258;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .btn-historial-toggle:hover { border-color: #B89A5A; color: #B89A5A; background: #fff; }
+  .btn-historial-toggle.active { border-color: #B89A5A; color: #B89A5A; background: rgba(184,154,90,0.06); }
+
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #999080;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 1px;
+    background: #B89A5A;
+  }
+
+  textarea {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 13px 15px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #1a1814;
+    background: #fff;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+
+  textarea::placeholder { color: #bbb5a8; font-style: italic; }
+
+  .note-tip {
+    font-size: 12.5px;
+    color: #aaa496;
+    font-style: italic;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .fields-grid { grid-template-columns: 1fr; }
+    .app-header { flex-direction: column; }
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+  select {
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 32px 9px 12px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14.5px;
+    color: #1a1814;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23999' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  select:focus { outline: none; border-color: #B89A5A; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #eee8df;
+    margin: 1.5rem 0;
+  }
+
+  .fixed-block {
+    background: #faf7f2;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 7px 7px 0;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: #6a6258;
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  .fixed-block .fixed-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #B89A5A;
+    font-style: normal;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-generate {
+    width: 100%;
+    padding: 13px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.07);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-generate:hover { background: rgba(184,154,90,0.14); }
+  .btn-generate:active { transform: scale(0.99); }
+
+  .ornament {
+    text-align: center;
+    color: #B89A5A;
+    font-size: 20px;
+    opacity: 0.4;
+    letter-spacing: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .output-area {
+    border: 1px solid #ddd8ce;
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+  }
+  .output-area.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #f7f4ef;
+    border-bottom: 1px solid #e8e2d8;
+  }
+
+  .output-title {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999080;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-copy {
+    font-family: 'EB Garamond', serif;
+    font-size: 13.5px;
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: transparent;
+    color: #B89A5A;
+    cursor: pointer;
+    transition: background 0.12s;
+    letter-spacing: 0.02em;
+  }
+  .btn-copy:hover { background: rgba(184,154,90,0.1); }
+  .btn-copy.copied { background: rgba(184,154,90,0.18); color: #8a6e2f; border-color: #8a6e2f; }
+
+  .output-text {
+    padding: 16px 18px;
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: #1a1814;
+    font-family: 'EB Garamond', Georgia, serif;
+    white-space: pre-wrap;
+    background: #fff;
+    word-break: break-word;
+  }
+
+  /* HISTORIAL */
+  .historial-panel { margin-top: 2rem; display: none; }
+  .historial-panel.visible { display: block; }
+
+  .historial-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border-top: 1px solid #eee8df;
+    padding-top: 1.5rem;
+  }
+
+  .historial-header-left { display: flex; align-items: center; gap: 10px; }
+
+  .historial-count {
+    font-size: 11px;
+    background: rgba(184,154,90,0.12);
+    color: #8a6e2f;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-family: 'EB Garamond', serif;
+  }
+
+  .btn-clear-all {
+    font-family: 'EB Garamond', serif;
+    font-size: 12.5px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #e0cfc0;
+    background: transparent;
+    color: #b09070;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-clear-all:hover { background: #fff0e8; color: #c0603a; border-color: #c0603a; }
+
+  .historial-empty {
+    text-align: center;
+    font-style: italic;
+    color: #bbb5a8;
+    font-size: 14px;
+    padding: 2rem 0;
+  }
+
+  .historial-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .hist-item {
+    border: 1px solid #e8e2d8;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .hist-item:hover { border-color: #c8b898; }
+
+  .hist-item-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #faf7f2;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .hist-item-header:hover { background: #f5f0e8; }
+
+  .hist-meta { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+
+  .hist-scene-preview {
+    font-size: 14px;
+    color: #3a3530;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hist-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+
+  .hist-date { font-size: 11px; color: #b0a898; font-style: italic; white-space: nowrap; }
+
+  .hist-actions { display: flex; gap: 5px; }
+
+  .btn-hist-action {
+    font-family: 'EB Garamond', serif;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd8ce;
+    background: #fff;
+    color: #6a6258;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-hist-action:hover { border-color: #B89A5A; color: #B89A5A; }
+  .btn-hist-action.danger:hover { border-color: #c0603a; color: #c0603a; }
+
+  .hist-item-body {
+    display: none;
+    padding: 14px 16px;
+    background: #fff;
+    border-top: 1px solid #eee8df;
+  }
+  .hist-item-body.open { display: block; }
+
+  .hist-scene-full {
+    font-size: 13.5px;
+    color: #3a3530;
+    line-height: 1.65;
+    margin-bottom: 10px;
+    padding: 10px 13px;
+    background: #faf8f4;
+    border-radius: 6px;
+    border: 1px solid #e8e2d8;
+  }
+
+  .hist-prompt-full {
+    background: #faf8f4;
+    border: 1px solid #e8e2d8;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 13px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #5a5248;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-style: italic;
+    margin-top: 10px;
+  }
+
+  .hist-body-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .scene-header { margin-bottom: 8px; }
+
+  /* === AI ASSIST BLOCK === */
+  .ai-assist-block {
+    background: linear-gradient(135deg, #fdf9f2 0%, #f9f5ec 100%);
+    border: 1px solid #ddd0b0;
+    border-left: 3px solid #B89A5A;
+    border-radius: 0 8px 8px 0;
+    padding: 16px 18px;
+    margin-bottom: 1.5rem;
+  }
+  .ai-assist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .ai-badge {
+    display: inline-block;
+    background: rgba(184,154,90,0.15);
+    color: #8a6e2f;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    border: 1px solid rgba(184,154,90,0.3);
+    font-style: normal;
+    letter-spacing: 0.05em;
+    text-transform: none;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-family: 'EB Garamond', serif;
+  }
+  .btn-collapse {
+    font-size: 11px;
+    color: #b0a080;
+    background: none;
+    border: 1px solid #ddd0b0;
+    border-radius: 5px;
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .btn-collapse:hover { color: #B89A5A; border-color: #B89A5A; }
+  .assist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  @media (max-width: 580px) { .assist-grid { grid-template-columns: 1fr; } }
+  .assist-input {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14.5px;
+    color: #1a1814;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .assist-input::placeholder { color: #bbb5a8; font-style: italic; }
+  .assist-input:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+  .btn-expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px;
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-style: italic;
+    border-radius: 7px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.08);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.15s;
+    letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
+  .btn-expand:hover { background: rgba(184,154,90,0.16); }
+  .btn-expand:disabled { opacity: 0.6; cursor: not-allowed; }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(184,154,90,0.3);
+    border-top-color: #B89A5A;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .expand-result {
+    margin-top: 14px;
+    background: #fff;
+    border: 1px solid #e0d8c8;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .expand-result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: #f7f4ef;
+    border-bottom: 1px solid #e8e2d8;
+    gap: 10px;
+  }
+  .expand-result-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999080;
+    font-family: 'EB Garamond', serif;
+  }
+  .btn-use-expanded {
+    font-family: 'EB Garamond', serif;
+    font-size: 12.5px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.08);
+    color: #8a6e2f;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .btn-use-expanded:hover { background: rgba(184,154,90,0.18); }
+  .expand-result-text {
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #3a3530;
+    font-family: 'EB Garamond', Georgia, serif;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* === MODAL DE CLAVES === */
+  .ia-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,24,20,0.55);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .ia-modal {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0d8c8;
+    padding: 24px 26px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .ia-modal h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-style: italic;
+    font-weight: 500;
+    color: #1a1814;
+    margin-bottom: 8px;
+  }
+  .ia-modal p {
+    font-size: 13.5px;
+    color: #6a6258;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .ia-modal-input {
+    width: 100%;
+    border: 1px solid #ddd8ce;
+    border-radius: 7px;
+    padding: 9px 13px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14px;
+    color: #1a1814;
+    margin-bottom: 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ia-modal-input:focus {
+    outline: none;
+    border-color: #B89A5A;
+    box-shadow: 0 0 0 3px rgba(184,154,90,0.12);
+  }
+  .ia-modal-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+  .btn-modal-save {
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    padding: 7px 20px;
+    border-radius: 6px;
+    border: 1px solid #B89A5A;
+    background: rgba(184,154,90,0.09);
+    color: #1a1814;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .btn-modal-save:hover { background: rgba(184,154,90,0.18); }
+  .btn-modal-cancel {
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd8ce;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+  }
+  .btn-modal-cancel:hover { border-color: #aaa; color: #555; }
+  .keyrow { display: grid; grid-template-columns: 95px 1fr; gap: 2px 10px; align-items: center; margin-bottom: 10px; }
+  .keyrow label { font-size: 14px; color: #6a6258; }
+  .keyrow .ia-modal-input { margin-bottom: 0; }
+  .keyrow a { grid-column: 2; font-size: 12px; color: #B89A5A; font-style: italic; text-decoration: none; }
+  .keyrow a:hover { text-decoration: underline; }
+  .ia-modal-actions .left { margin-right: auto; font-size: 13px; color: #888; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .ia-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
+  .ia-row .field-group { flex: 1 1 200px; min-width: 0; }
+  .ia-row select { width: 100%; font-size: 13.5px; padding: 7px 30px 7px 10px; }
+  .btn-ia-small {
+    font-family: 'EB Garamond', serif; font-size: 13.5px;
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd8ce;
+    background: #fff; color: #6a6258; cursor: pointer; white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-ia-small:hover { border-color: #B89A5A; color: #B89A5A; }
+  .ia-status { font-size: 12.5px; font-style: italic; margin-top: 6px; min-height: 0; }
+  .ia-status.ok { color: #7a9a60; } .ia-status.err { color: #c0603a; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- ══ SYNC BAR ══ -->
+<div id="sync-bar" style="background:#1a1814;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 20px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:0;">
+  <span id="sync-user-text" style="display:none;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px;font-family:monospace"></span>
+  <button id="btn-signout" onclick="fbSignOut()" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.25);padding:2px 6px;border-radius:3px;text-transform:uppercase;font-family:monospace">Cerrar sesión</button>
+  <button id="btn-sync" onclick="handleSync()" style="background:none;border:1px solid rgba(184,154,90,0.5);color:#c9a96e;padding:4px 11px;border-radius:20px;cursor:pointer;font-size:10px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:5px;font-family:monospace;transition:all .2s">
+    <span id="sync-icon">☁</span>
+    <span id="sync-label">Sincronizar historial</span>
+  </button>
+</div>
+<div id="sync-status" style="display:none;padding:5px 20px;font-size:10px;letter-spacing:1px;text-transform:uppercase;align-items:center;justify-content:space-between;gap:10px;">
+  <span id="sync-status-msg"></span>
+  <button onclick="closeSyncStatus()" style="background:none;border:none;cursor:pointer;opacity:.6;font-size:12px;padding:0 3px">✕</button>
+</div>
+
+<div class="container">
+
+  <div class="app-header">
+    <div class="app-header-left">
+      <h1>Generador de prompts · Ilustraciones del libro</h1>
+      <p>Describe la escena. El estilo pictórico historicista y la atmósfera de la obra se aplicarán automáticamente.</p>
+    </div>
+    <button class="btn-historial-toggle" id="btnToggleHistorial" onclick="toggleHistorial()">
+      Historial (<span id="histCount">0</span>)
+    </button>
+  </div>
+
+  <!-- Descripción asistida por IA -->
+  <div class="ai-assist-block" id="aiAssistBlock">
+    <div class="ai-assist-header">
+      <div class="section-label" style="margin-bottom:0;">Descripción rápida en español <span class="ai-badge">✦ IA</span></div>
+      <button class="btn-collapse" id="btnCollapse" onclick="toggleAssist()" title="Contraer">▲</button>
+    </div>
+    <p class="note-tip" style="margin-bottom:6px;">Describe brevemente la escena histórica en español. La IA la expandirá con todo el detalle necesario y la traducirá al inglés lista para usar.</p>
+    <div class="ia-row">
+      <div class="field-group">
+        <div class="section-label">Proveedor</div>
+        <select id="prov" onchange="changeProvider()"></select>
+      </div>
+      <div class="field-group">
+        <div class="section-label">Modelo</div>
+        <select id="model" onchange="changeModel()"></select>
+      </div>
+      <button class="btn-ia-small" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+      <button class="btn-ia-small" onclick="openKeys()">🔑 Claves</button>
+    </div>
+    <div class="ia-status" id="iaStatus"></div>
+
+    <textarea id="sceneRaw" rows="3" placeholder="Ej: Concejo abierto de vecinos reunidos en la plaza ante la iglesia a campana tañida..." style="margin-top:10px;"></textarea>
+
+    <div class="assist-grid">
+      <div class="field-group">
+        <div class="section-label">Año aproximado</div>
+        <input type="text" id="anio" placeholder="Ej: 1450, siglo XV, hacia 1808…" class="assist-input">
+      </div>
+      <div class="field-group">
+        <div class="section-label">Personajes principales</div>
+        <input type="text" id="personajes" placeholder="Ej: El rey Juan II, vecinos, milicia…" class="assist-input">
+      </div>
+      <div class="field-group">
+        <div class="section-label">Lugar concreto</div>
+        <input type="text" id="lugar" placeholder="Ej: Plaza mayor de la villa, atrio de la iglesia…" class="assist-input">
+      </div>
+      <div class="field-group">
+        <div class="section-label">Elementos destacados</div>
+        <input type="text" id="elementos" placeholder="Ej: Estandartes, pergaminos, campana, aperos…" class="assist-input">
+      </div>
+    </div>
+
+    <button class="btn-expand" id="btnExpand" onclick="expandWithAI()">
+      <span id="expandBtnText">✦ Expandir descripción con IA</span>
+      <span id="expandSpinner" class="spinner" style="display:none;"></span>
+    </button>
+
+    <div class="expand-result" id="expandResult" style="display:none;">
+      <div class="expand-result-header">
+        <span class="expand-result-label">Descripción expandida (en inglés)</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-use-expanded" onclick="useExpanded()">Usar como descripción de escena ↓</button>
+          <button class="btn-hist-action" onclick="clearExpanded()" title="Limpiar">✕</button>
+        </div>
+      </div>
+      <div class="expand-result-text" id="expandResultText"></div>
+    </div>
+  </div>
+
+  <!-- Escena -->
+  <div class="scene-header">
+    <div class="section-label">Descripción de la escena <span style="color:#aaa496;font-style:italic;font-size:11px;text-transform:none;letter-spacing:0;">(en inglés · se incluirá en el prompt final)</span></div>
+  </div>
+  <textarea id="scene" rows="6" placeholder="Aquí aparecerá la descripción expandida en inglés, o escribe directamente tu descripción en inglés."></textarea>
+  <p class="note-tip">Puedes usar el asistente de arriba para generar esta descripción automáticamente, o escribirla tú directamente.</p>
+
+  <div class="divider"></div>
+
+  <!-- Estilo base fijo e unificado -->
+  <div class="section-label">Estilo pictórico y atmósfera maestra (aplicado a todas las ilustraciones)</div>
+  <div class="fixed-block">
+    <div class="fixed-label">Fijo · Romántico historicista · Gérôme / Alma-Tadema · Consistencia visual unificada</div>
+    Oil painting in the 19th-century Romantic historicist tradition of Jean-Léon Gérôme and Lawrence Alma-Tadema. Strict historical accuracy in architecture, costume and objects. Balanced academic composition with clear narrative focus. Precise smooth brushwork with photographic detail in stone textures, fabrics and metals. Rich palette of ochres, siennas, deep blues and luminous whites. No fantasy elements. No modern anachronisms. Warm golden midday light, sun from a high angle, rich ochre and amber tones bathing the scene, deep but soft shadows. Wide establishing view, full scene visible, figures set within their architectural and landscape context, sense of place and scale. Mood: epic and monumental, historic narrative significance, dignified stillness, weight of tradition.
+  </div>
+
+  <!-- Estilo geográfico y cultural fijo -->
+  <div class="fixed-block" style="margin-top: -0.75rem;">
+    <div class="fixed-label">Fijo · Anclaje geográfico e histórico castellano</div>
+    GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a scene set in Castile, Spain (the Cerrato Vallisoletano region). All visual elements must reflect the specific material culture of Castilian Spain for the depicted period. Clothing must follow Castilian and broader Iberian dress conventions — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, monastic habits of Castilian orders, military dress of Castilian nobles or frontier soldiers as appropriate. No English, French, Flemish or Northern European dress. No Anglo-Saxon, Tudor, Victorian or American colonial aesthetic in any detail. Architecture must be Romanesque, Mozarabic, Gothic or Mudéjar as appropriate to the period — stone construction typical of the Castilian meseta. Landscape when visible must suggest the dry plateau of the Castilian interior: ochre earth, limestone outcrops, holm oak, sparse scrubland. Faces and physical types should reflect the Mediterranean and Iberian world. No Northern European physiognomy.
+  </div>
+
+  <!-- Botón generar -->
+  <button class="btn-generate" onclick="buildPrompt()">✦ Generar prompt completo</button>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- Output -->
+  <div class="output-area" id="outputArea">
+    <div class="output-header">
+      <span class="output-title">Prompt generado</span>
+      <button class="btn-copy" id="copyBtn" onclick="copyPrompt()">Copiar</button>
+    </div>
+    <div class="output-text" id="outputText"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="historial-panel" id="historialPanel">
+    <div class="historial-header">
+      <div class="historial-header-left">
+        <div class="section-label" style="margin-bottom:0;">Historial de prompts</div>
+        <span class="historial-count" id="historialCount">0 entradas</span>
+      </div>
+      <button class="btn-clear-all" onclick="clearAll()">Borrar todo</button>
+    </div>
+    <div id="historialList"></div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL DE CLAVES API ══ -->
+<div id="keysModal" class="ia-modal-overlay" style="display:none;">
+  <div class="ia-modal">
+    <h3>Configuración de Claves API</h3>
+    <p>Las claves se guardan localmente en tu navegador (<code>localStorage</code>) y se comparten automáticamente entre tus aplicaciones.</p>
+    
+    <div class="keyrow">
+      <label for="key-aistudio">AI Studio</label>
+      <input type="password" id="key-aistudio" class="ia-modal-input" placeholder="AIzaSy...">
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Obtener clave Google AI Studio</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-groq">Groq</label>
+      <input type="password" id="key-groq" class="ia-modal-input" placeholder="gsk_...">
+      <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Obtener clave Groq</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-mistral">Mistral</label>
+      <input type="password" id="key-mistral" class="ia-modal-input" placeholder="...">
+      <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener">Obtener clave Mistral</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-openrouter">OpenRouter</label>
+      <input type="password" id="key-openrouter" class="ia-modal-input" placeholder="sk-or-v1-...">
+      <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Obtener clave OpenRouter</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-deepseek">DeepSeek</label>
+      <input type="password" id="key-deepseek" class="ia-modal-input" placeholder="sk-...">
+      <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Obtener clave DeepSeek</a>
+    </div>
+
+    <div class="keyrow">
+      <label for="key-anthropic">Anthropic</label>
+      <input type="password" id="key-anthropic" class="ia-modal-input" placeholder="sk-ant-...">
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Obtener clave Anthropic</a>
+    </div>
+
+    <div class="ia-modal-actions" style="margin-top:16px;">
+      <label class="left">
+        <input type="checkbox" id="showKeysCheck" onchange="toggleShowKeys(this.checked)"> Mostrar claves
+      </label>
+      <button class="btn-modal-cancel" onclick="closeKeys()">Cancelar</button>
+      <button class="btn-modal-save" onclick="saveKeys()">Guardar claves</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ESTILO_BASE = `Oil painting in the 19th-century Romantic historicist tradition of Jean-Léon Gérôme and Lawrence Alma-Tadema. Strict historical accuracy in architecture, costume and objects. Balanced academic composition with clear narrative focus. Precise smooth brushwork with photographic detail in stone textures, fabrics and metals. Rich palette of ochres, siennas, deep blues and luminous whites. No fantasy elements. No modern anachronisms. Warm golden midday light, sun from a high angle, rich ochre and amber tones bathing the scene, deep but soft shadows. Wide establishing view, full scene visible, figures set within their architectural and landscape context, sense of place and scale. Mood: epic and monumental, historic narrative significance, dignified stillness, weight of tradition.`;
+
+  const ANCHORING_CASTELLANO = `GEOGRAPHIC AND CULTURAL ANCHORING — STRICTLY ENFORCED: This image depicts a scene set in Castile, Spain (the Cerrato Vallisoletano region). All visual elements must reflect the specific material culture of Castilian Spain for the depicted period. Clothing must follow Castilian and broader Iberian dress conventions — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, monastic habits of Castilian orders, military dress of Castilian nobles or frontier soldiers as appropriate. No English, French, Flemish or Northern European dress. No Anglo-Saxon, Tudor, Victorian or American colonial aesthetic in any detail. Architecture must be Romanesque, Mozarabic, Gothic or Mudéjar as appropriate to the period — stone construction typical of the Castilian meseta. Landscape when visible must suggest the dry plateau of the Castilian interior: ochre earth, limestone outcrops, holm oak, sparse scrubland. Faces and physical types should reflect the Mediterranean and Iberian world. No Northern European physiognomy.`;
+
+  const STORAGE_KEY = 'prompt_historial_v3';
+
+  /* === AUXILIARES Y DUMMY SYNC === */
+  function closeSyncStatus() {
+    const el = document.getElementById('sync-status');
+    if (el) el.style.display = 'none';
+  }
+  function handleSync() {
+    const statusMsg = document.getElementById('sync-status-msg');
+    const statusEl = document.getElementById('sync-status');
+    if (statusEl && statusMsg) {
+      statusEl.style.display = 'flex';
+      statusMsg.textContent = 'Sincronización no configurada en este entorno.';
+    }
+  }
+  function fbSignOut() {
+    if (window.firebase && firebase.auth) {
+      firebase.auth().signOut().catch(console.error);
+    }
+  }
+
+  /* === HISTORIAL === */
+  function loadHistorial() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch(e) { return []; }
+  }
+
+  function saveHistorial(list) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+
+  function updateCount() {
+    const n = loadHistorial().length;
+    const hCount = document.getElementById('histCount');
+    const hTotal = document.getElementById('historialCount');
+    if (hCount) hCount.textContent = n;
+    if (hTotal) hTotal.textContent = n + (n === 1 ? ' entrada' : ' entradas');
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+           + ' · ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildPrompt() {
+    const scene = document.getElementById('scene').value.trim();
+    if (!scene) {
+      const ta = document.getElementById('scene');
+      ta.focus();
+      ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+      return;
+    }
+
+    const prompt =
+      scene + '
+
+' +
+      ESTILO_BASE + '
+
+' +
+      ANCHORING_CASTELLANO;
+
+    document.getElementById('outputText').textContent = prompt;
+    const area = document.getElementById('outputArea');
+    area.classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
+
+    const sceneRawVal = document.getElementById('sceneRaw') ? document.getElementById('sceneRaw').value.trim() : '';
+    const entry = { id: Date.now(), date: new Date().toISOString(), scene, sceneRaw: sceneRawVal, prompt };
+    const list = loadHistorial();
+    list.unshift(entry);
+    saveHistorial(list);
+    updateCount();
+    if (document.getElementById('historialPanel').classList.contains('visible')) renderHistorial();
+    setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+  }
+
+  function copyPrompt() {
+    const text = document.getElementById('outputText').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2200);
+    });
+  }
+
+  function toggleHistorial() {
+    const panel = document.getElementById('historialPanel');
+    const btn   = document.getElementById('btnToggleHistorial');
+    const open  = panel.classList.toggle('visible');
+    btn.classList.toggle('active', open);
+    if (open) {
+      renderHistorial();
+      setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    }
+  }
+
+  function renderHistorial() {
+    const list = loadHistorial();
+    const container = document.getElementById('historialList');
+    updateCount();
+
+    if (!list.length) {
+      container.innerHTML = '<p class="historial-empty">Todavía no hay prompts guardados.<br>Genera el primero arriba.</p>';
+      return;
+    }
+
+    container.innerHTML = '<div class="historial-list">' + list.map(e => {
+      const preview = e.scene.length > 95 ? e.scene.slice(0, 95) + '…' : e.scene;
+      return `
+      <div class="hist-item" id="hitem-${e.id}">
+        <div class="hist-item-header" onclick="toggleItem(${e.id})">
+          <div class="hist-meta">
+            <div class="hist-scene-preview">${esc(preview)}</div>
+          </div>
+          <div class="hist-right">
+            <span class="hist-date">${formatDate(e.date)}</span>
+            <div class="hist-actions" onclick="event.stopPropagation()">
+              <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar</button>
+              <button class="btn-hist-action danger" onclick="deleteEntry(${e.id})">Borrar</button>
+            </div>
+          </div>
+        </div>
+        <div class="hist-item-body" id="hbody-${e.id}">
+          <div class="hist-field" style="margin-bottom:6px;">
+            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Escena descrita</span>
+            <div class="hist-scene-full">${esc(e.scene)}</div>
+          </div>
+          ${e.sceneRaw ? `<div class="hist-field" style="margin-bottom:6px;">
+            <span class="hist-field-label" style="margin-bottom:4px;display:block;">Descripción original en español</span>
+            <div class="hist-scene-full" style="font-style:italic;color:#6a6258;">${esc(e.sceneRaw)}</div>
+          </div>` : ''}
+          <div class="hist-prompt-full">${esc(e.prompt)}</div>
+          <div class="hist-body-actions">
+            <button class="btn-hist-action" onclick="copyEntry(${e.id}, this)">Copiar prompt</button>
+            <button class="btn-hist-action" onclick="restoreEntry(${e.id})">Restaurar en el formulario ↑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  function toggleItem(id) {
+    const body = document.getElementById('hbody-' + id);
+    if (body) body.classList.toggle('open');
+  }
+
+  function restoreEntry(id) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    document.getElementById('scene').value = entry.scene;
+    if (entry.sceneRaw && document.getElementById('sceneRaw')) {
+      document.getElementById('sceneRaw').value = entry.sceneRaw;
+    }
+    document.getElementById('outputText').textContent = entry.prompt;
+    document.getElementById('outputArea').classList.add('visible');
+    document.getElementById('copyBtn').textContent = 'Copiar';
+    document.getElementById('copyBtn').classList.remove('copied');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function copyEntry(id, btn) {
+    const entry = loadHistorial().find(e => e.id === id);
+    if (!entry) return;
+    navigator.clipboard.writeText(entry.prompt).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+  }
+
+  function deleteEntry(id) {
+    saveHistorial(loadHistorial().filter(e => e.id !== id));
+    renderHistorial();
+  }
+
+  function clearAll() {
+    if (!confirm('¿Borrar todo el historial? Esta acción no se puede deshacer.')) return;
+    saveHistorial([]);
+    renderHistorial();
+  }
+
+  /* === AI EXPAND === */
+  let expandedText = '';
+
+  function toggleAssist() {
+    const block = document.getElementById('aiAssistBlock');
+    const btn = document.getElementById('btnCollapse');
+    const isCollapsed = block.dataset.collapsed === '1';
+    if (isCollapsed) {
+      block.dataset.collapsed = '0';
+      btn.textContent = '▲';
+      [...block.children].forEach((c,i) => { if(i>0) c.style.display = ''; });
+    } else {
+      block.dataset.collapsed = '1';
+      btn.textContent = '▼';
+      [...block.children].forEach((c,i) => { if(i>0) c.style.display = 'none'; });
+    }
+  }
+
+  async function expandWithAI() {
+    const raw = document.getElementById('sceneRaw').value.trim();
+    if (!raw) {
+      const ta = document.getElementById('sceneRaw');
+      ta.focus(); ta.style.borderColor = '#B89A5A';
+      ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+      setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+      return;
+    }
+    if (!getKey(settings.provider)) { iaStatus('err', 'Falta la clave de ' + keyLabel(settings.provider) + '.'); openKeys(settings.provider); return; }
+
+    const anio       = document.getElementById('anio').value.trim();
+    const personajes = document.getElementById('personajes').value.trim();
+    const lugar      = document.getElementById('lugar').value.trim();
+    const elementos  = document.getElementById('elementos').value.trim();
+
+    const btn = document.getElementById('btnExpand');
+    btn.disabled = true;
+    document.getElementById('expandBtnText').textContent = 'Expandiendo…';
+    document.getElementById('expandSpinner').style.display = 'inline-block';
+    document.getElementById('expandResult').style.display = 'none';
+
+    const contextLines = [];
+    if (anio)       contextLines.push('Approximate period: ' + anio);
+    if (lugar)      contextLines.push('Specific location: ' + lugar);
+    if (personajes) contextLines.push('Main characters: ' + personajes);
+    if (elementos)  contextLines.push('Key elements/objects: ' + elementos);
+    const context = contextLines.length ? '
+
+Additional context provided by the author:
+' + contextLines.join('
+') : '';
+
+    const systemPrompt = 'You are an expert art director specializing in 19th-century Romantic historicist illustration, working on a Spanish local history book about the Cerrato Vallisoletano region (Castile, Spain). Your task is to take a brief scene description written in Spanish (such as royal arrivals, open council meetings, signing of lordship documents, French troop looting during the Independence War, or land auctions during the Desamortización) and expand it into a rich, detailed scene description in English, suitable as the scene-setting portion of an image generation prompt for a painting in the style of Gerôme and Alma-Tadema.
+
+CRITICAL GEOGRAPHIC AND CULTURAL CONSTRAINT: Every scene takes place in Castile, Spain. All details you describe must reflect the specific material culture of Castilian Iberian Spain for the period given. This means:
+- Clothing: Castilian and Iberian dress only — wool cloaks, linen shirts, leather sandals or boots, Mudéjar-influenced textiles, Castilian monastic habits, frontier soldiers in Castilian military dress. NEVER describe English, French, Flemish, Tudor, Victorian, Anglo-Saxon or American colonial clothing.
+- Architecture: Romanesque, Mozarabic, Gothic or Mudéjar as appropriate — stone construction of the Castilian meseta. NO half-timbered English buildings, NO Norman French castles, NO Northern European church styles.
+- Landscape: the dry Castilian interior plateau — ochre earth, limestone outcrops, holm oak, sparse scrubland, wide skies. NOT green English countryside, NOT Northern European forests.
+- Faces and physical types: Mediterranean and Iberian — NOT Northern European physiognomy.
+- Objects and tools: consistent with Iberian craft traditions of the period.
+
+RULES:
+- Write ONLY in English.
+- Output ONLY the expanded scene description — no preamble, no commentary, no title.
+- Be specific about: architectural details (Romanesque, Mozarabic, Gothic as appropriate to the period), clothing and materials consistent with Castilian Spain, body language and spatial arrangement of figures, light sources, atmospheric conditions, foreground and background elements, textures of stone / wood / fabric / metal.
+- Keep strict historical accuracy for Castilian medieval and early modern contexts.
+- Length: 80-140 words. Dense, vivid, concrete. No vague adjectives.
+- Do not include style instructions (those are added separately). Only describe the scene itself.';
+
+    const userPrompt = 'Scene description in Spanish (brief, to be expanded):
+"' + raw + '"' + context + '
+
+Write the expanded scene description in English.';
+
+    try {
+      const text = (await callModel({ provider: settings.provider, model: settings.model, system: systemPrompt, user: userPrompt })).trim();
+      if (!text) throw new Error('El modelo ha devuelto una respuesta vacía.');
+      expandedText = text;
+      document.getElementById('expandResultText').textContent = text;
+      document.getElementById('expandResult').style.display = 'block';
+      setTimeout(() => document.getElementById('expandResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    } catch(e) {
+      expandedText = '';
+      const m = e.message || String(e);
+      document.getElementById('expandResultText').textContent =
+        /Failed to fetch|NetworkError|CORS/i.test(m) ? 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m
+        : /\((429|413)\)/.test(m) ? 'Se ha superado el límite del plan gratuito. Espera un minuto e inténtalo de nuevo, o cambia de proveedor. ' + m
+        : 'Error: ' + m;
+      document.getElementById('expandResult').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      document.getElementById('expandBtnText').textContent = '✦ Expandir descripción con IA';
+      document.getElementById('expandSpinner').style.display = 'none';
+    }
+  }
+
+  function useExpanded() {
+    if (!expandedText) return;
+    document.getElementById('scene').value = expandedText;
+    const ta = document.getElementById('scene');
+    ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ta.style.borderColor = '#B89A5A';
+    ta.style.boxShadow = '0 0 0 3px rgba(184,154,90,0.2)';
+    setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1400);
+  }
+
+  function clearExpanded() {
+    expandedText = '';
+    document.getElementById('expandResult').style.display = 'none';
+    document.getElementById('expandResultText').textContent = '';
+  }
+
+  /* ═══ PROVEEDORES Y CONFIGURACIÓN DE APIS ═══ */
+  const KEYS = [
+    {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key',  url:'https://aistudio.google.com/apikey'},
+    {id:'groq',       label:'Groq',       ls:'castroverde_groq_key',        url:'https://console.groq.com/keys'},
+    {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key', url:'https://console.mistral.ai/api-keys'},
+    {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key',          url:'https://openrouter.ai/settings/keys'},
+    {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key',    url:'https://platform.deepseek.com/api_keys'},
+    {id:'anthropic',  label:'Anthropic',  ls:'castroverde_anthropic_key',   url:'https://console.anthropic.com/settings/keys'}
+  ];
+
+  const getKey   = id => { try { return localStorage.getItem(KEYS.find(k => k.id === id)?.ls) || ''; } catch(e){ return ''; } };
+  const keyLabel = id => KEYS.find(k => k.id === id)?.label || id;
+
+  const PROVIDERS = {
+    aistudio:   {label:'Google AI Studio (Gemini)', models:[
+                   {id:'gemini-2.5-flash',         label:'Gemini 2.5 Flash'},
+                   {id:'gemini-flash-latest',      label:'Gemini Flash (última)'},
+                   {id:'gemini-flash-lite-latest', label:'Gemini Flash-Lite (última)'}]},
+    groq:       {label:'Groq', models:[
+                   {id:'llama-3.3-70b-versatile', label:'Llama 3.3 70B'},
+                   {id:'openai/gpt-oss-120b',     label:'GPT-OSS 120B'}]},
+    mistral:    {label:'Mistral', models:[
+                   {id:'mistral-small-latest',  label:'Mistral Small'},
+                   {id:'mistral-medium-latest', label:'Mistral Medium'},
+                   {id:'mistral-large-latest',  label:'Mistral Large'}]},
+    openrouter: {label:'OpenRouter', models:[
+                   {id:'meta-llama/llama-3.3-70b-instruct:free', label:'Llama 3.3 70B (free)'},
+                   {id:'deepseek/deepseek-r1:free',               label:'DeepSeek R1 (free)'}]},
+    deepseek:   {label:'DeepSeek', models:[
+                   {id:'deepseek-chat',     label:'DeepSeek V3'},
+                   {id:'deepseek-reasoner', label:'DeepSeek R1'}]},
+    anthropic:  {label:'Anthropic Claude', models:[
+                   {id:'claude-3-5-sonnet-20241022', label:'Claude 3.5 Sonnet'},
+                   {id:'claude-3-5-haiku-20241022',  label:'Claude 3.5 Haiku'}]}
+  };
+
+  const LIST_KEY = {
+    aistudio: 'ilustraciones_gemini_models',
+    groq: 'ilustraciones_groq_models',
+    mistral: 'ilustraciones_mistral_models',
+    openrouter: 'ilustraciones_or_models',
+    deepseek: 'ilustraciones_deepseek_models',
+    anthropic: 'ilustraciones_anthropic_models'
+  };
+
+  const SETTINGS_KEY = 'ilustraciones_settings';
+
+  function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+  function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+  let settings = Object.assign({provider:'aistudio', model:'gemini-2.5-flash'}, loadJSON(SETTINGS_KEY) || {});
+  if (!PROVIDERS[settings.provider]) { settings.provider = 'aistudio'; settings.model = 'gemini-2.5-flash'; }
+  function saveSettings(){ saveJSON(SETTINGS_KEY, settings); }
+
+  function iaStatus(type, msg){
+    const el = document.getElementById('iaStatus');
+    if (!el) return;
+    el.className = 'ia-status ' + (type || '');
+    el.textContent = msg || '';
+    if (type === 'ok') setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  }
+
+  function modelList(prov){
+    const c = loadJSON(LIST_KEY[prov]);
+    return (c && c.length) ? c : PROVIDERS[prov].models;
+  }
+
+  function renderModel(){
+    const provSelect = document.getElementById('prov');
+    const modelSelect = document.getElementById('model');
+    if (!provSelect || !modelSelect) return;
+
+    provSelect.innerHTML = Object.entries(PROVIDERS)
+      .map(([k, p]) => `<option value="${k}" ${k === settings.provider ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
+
+    let list = modelList(settings.provider);
+    if (!list.some(m => m.id === settings.model)) list = [{id:settings.model, label:settings.model}, ...list];
+
+    modelSelect.innerHTML = list
+      .map(m => `<option value="${esc(m.id)}" ${m.id === settings.model ? 'selected' : ''}>${esc(m.label || m.id)}</option>`).join('');
+  }
+
+  function changeProvider(){
+    settings.provider = document.getElementById('prov').value;
+    settings.model = modelList(settings.provider)[0].id;
+    saveSettings();
+    renderModel();
+    iaStatus('', '');
+    const p = settings.provider;
+    if (!loadJSON(LIST_KEY[p]) && (p === 'openrouter' || getKey(p))) refreshModels(true);
+  }
+
+  function changeModel(){
+    settings.model = document.getElementById('model').value;
+    saveSettings();
+  }
+
+  /* === ACTUALIZACIÓN DINÁMICA DE MODELOS === */
+  async function refreshModels(quiet){
+    const prov = settings.provider;
+    try {
+      let list = [];
+      if (prov === 'openrouter'){
+        const r = await fetch('https://openrouter.ai/api/v1/models');
+        if (!r.ok) throw new Error('OpenRouter ' + r.status);
+        const data = (await r.json()).data || [];
+        list = data.filter(m => /:free$/.test(m.id) || (m.pricing && +m.pricing.prompt === 0 && +m.pricing.completion === 0))
+          .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      } else {
+        const key = getKey(prov);
+        if (!key){ if (!quiet){ iaStatus('err', 'Falta la clave de ' + keyLabel(prov) + '.'); openKeys(prov); } return; }
+
+        if (prov === 'aistudio'){
+          const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+          if (!r.ok) throw new Error('AI Studio ' + r.status);
+          const data = (await r.json()).models || [];
+          list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini|gemma/.test(m.name) && !/(embed|tts|image|live|audio|vision)/.test(m.name))
+            .map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, ''))}));
+        } else if (prov === 'anthropic'){
+          list = PROVIDERS.anthropic.models;
+        } else {
+          const endpoints = {
+            groq: 'https://api.groq.com/openai/v1/models',
+            mistral: 'https://api.mistral.ai/v1/models',
+            deepseek: 'https://api.deepseek.com/v1/models'
+          };
+          const r = await fetch(endpoints[prov], {headers:{'Authorization':'Bearer ' + key}});
+          if (!r.ok) throw new Error(keyLabel(prov) + ' ' + r.status);
+          const data = (await r.json()).data || [];
+          list = data.filter(m => m.active !== false && !/(whisper|tts|guard|embed|ocr|moderation)/i.test(m.id))
+            .map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+        }
+      }
+      if (!list.length) throw new Error('La lista ha llegado vacía.');
+      saveJSON(LIST_KEY[prov], list);
+      renderModel();
+      if (!quiet) iaStatus('ok', 'Lista de modelos actualizada.');
+    } catch(e){
+      if (!quiet) iaStatus('err', 'No se pudo actualizar la lista: ' + e.message);
+    }
+  }
+
+  /* === MODAL Y GESTIÓN DE CLAVES === */
+  function openKeys(highlightProv){
+    KEYS.forEach(k => {
+      const inp = document.getElementById('key-' + k.id);
+      if (inp) {
+        inp.value = getKey(k.id);
+        inp.type = 'password';
+      }
+    });
+    const chk = document.getElementById('showKeysCheck');
+    if (chk) chk.checked = false;
+
+    const modal = document.getElementById('keysModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      if (highlightProv) {
+        const target = document.getElementById('key-' + highlightProv);
+        if (target) setTimeout(() => target.focus(), 100);
+      }
+    }
+  }
+
+  function closeKeys(){
+    const modal = document.getElementById('keysModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function saveKeys(){
+    KEYS.forEach(k => {
+      const inp = document.getElementById('key-' + k.id);
+      if (inp) {
+        const val = inp.value.trim();
+        try {
+          if (val) localStorage.setItem(k.ls, val);
+          else localStorage.removeItem(k.ls);
+        } catch(e){}
+      }
+    });
+    closeKeys();
+    iaStatus('ok', 'Claves API guardadas correctamente.');
+    renderModel();
+  }
+
+  function toggleShowKeys(show){
+    KEYS.forEach(k => {
+      const inp = document.getElementById('key-' + k.id);
+      if (inp) inp.type = show ? 'text' : 'password';
+    });
+  }
+
+  /* === EJECUCIÓN UNIFICADA DE MODELOS === */
+  async function httpError(resp, who){
+    let detail = '';
+    try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+    catch(e){ try { detail = await resp.text(); } catch(_){} }
+    if (typeof detail === 'object') detail = JSON.stringify(detail);
+    return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 300)}`);
+  }
+
+  function needKey(id){
+    const k = getKey(id);
+    if (!k){ openKeys(id); throw new Error('Falta la clave de ' + keyLabel(id) + '.'); }
+    return k;
+  }
+
+  function callModel(o){
+    if (o.provider === 'aistudio') return callGemini(o);
+    if (o.provider === 'anthropic') return callAnthropic(o);
+
+    const configs = {
+      openrouter: {url:'https://openrouter.ai/api/v1/chat/completions',   who:'OpenRouter', max:null},
+      mistral:    {url:'https://api.mistral.ai/v1/chat/completions',      who:'Mistral',    max:4000},
+      groq:       {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq',       max:4000},
+      deepseek:   {url:'https://api.deepseek.com/v1/chat/completions',    who:'DeepSeek',   max:4000}
+    };
+    return callOpenAICompat(o, configs[o.provider]);
+  }
+
+  async function callGemini({model, system, user}){
+    const key = needKey('aistudio');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: user }] }]
+    };
+    if (system) body.systemInstruction = { parts: [{ text: system }] };
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw await httpError(resp, 'Google AI Studio');
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Respuesta vacía o formato no reconocido de Gemini.');
+    return text;
+  }
+
+  async function callOpenAICompat({provider, model, system, user}, cfg){
+    const key = needKey(provider);
+    const messages = [];
+    if (system) messages.push({ role: 'system', content: system });
+    messages.push({ role: 'user', content: user });
+
+    const payload = { model, messages };
+    if (cfg.max) payload.max_tokens = cfg.max;
+
+    const resp = await fetch(cfg.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+        ...(provider === 'openrouter' ? { 'HTTP-Referer': location.origin, 'X-Title': 'Ilustrador Prompts' } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw await httpError(resp, cfg.who);
+    const data = await resp.json();
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Respuesta vacía de ' + cfg.who);
+    return text;
+  }
+
+  async function callAnthropic({model, system, user}){
+    const key = needKey('anthropic');
+    const payload = {
+      model: model || 'claude-3-5-sonnet-20241022',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: user }]
+    };
+    if (system) payload.system = system;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'dangerously-allow-browser': 'true'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw await httpError(resp, 'Anthropic');
+    const data = await resp.json();
+    const text = data.content?.[0]?.text;
+    if (!text) throw new Error('Respuesta vacía de Anthropic');
+    return text;
+  }
+
+  /* === INICIALIZACIÓN === */
+  document.addEventListener('DOMContentLoaded', () => {
+    renderModel();
+    updateCount();
+  });
+</script>
+</body>
+</html>

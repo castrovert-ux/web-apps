@@ -233,14 +233,14 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y s
 }
 "correct" es la posición de la opción correcta empezando en 0. Las de Verdadero/Falso llevan "type": "boolean" y siempre las opciones ["Verdadero", "Falso"].</textarea>
 
-<!-- Plantilla del cuestionario (mismo estilo que el modelo) -->
+<!-- NUEVA PLANTILLA: Diseño 100vh flexbox con clamp + Función Fit -->
 <textarea id="quiz-template" hidden><!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quiz: {{TITLE}}</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
@@ -248,11 +248,11 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y s
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  /* Todo el tamaño se calcula a partir de la ventana: el cuestionario siempre cabe, sin Ctrl - */
-  html { height: 100%; font-size: calc(clamp(13px, min(2.3vh, 2.8vw), 24px) * var(--k, 1)); }
+  /* La escala se controla con --k a través de la función fit() */
+  html { font-size: calc(16px * var(--k, 1)); }
   body {
     font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
-    height: 100%; overflow: hidden;
+    height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;
   }
 
   .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
@@ -266,95 +266,100 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y s
 
   @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
 
-  .container {
-    position: relative; z-index: 1; max-width: 50rem; margin: 0 auto; padding: 1rem 1.2rem;
-    height: 100vh; height: 100dvh; display: flex; flex-direction: column; gap: 0.8rem;
+  .container { 
+    position: relative; z-index: 1; 
+    width: 100%; max-width: 800px; 
+    height: 100vh; max-height: 100vh; 
+    display: flex; flex-direction: column; 
+    padding: 2vh 20px; 
   }
 
-  .header { text-align: center; flex: 0 0 auto; }
+  .header { text-align: center; margin-bottom: 2vh; flex-shrink: 0; }
   .badge {
     display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
-    color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.12rem;
-    text-transform: uppercase; padding: 0.35rem 1.1rem; border-radius: 100px; margin-bottom: 0.4rem;
+    color: #fff; font-weight: 800; font-size: clamp(0.7rem, 1.5vh, 0.8rem); letter-spacing: 2px;
+    text-transform: uppercase; padding: 0.6vh 12px; border-radius: 100px; margin-bottom: 1vh;
   }
   h1 {
-    font-family: 'Fredoka One', cursive; font-size: 1.9rem; line-height: 1.2; padding-bottom: 0.1rem;
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.4rem, 4vh, 2.2rem);
     background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5vh;
   }
 
-  #quiz-area { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+  #quiz-area { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
-  .progress-wrap { flex: 0 0 auto; }
-  .progress-label { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 700; color: var(--sub); margin-bottom: 0.35rem; }
-  .progress-bar { height: 0.5rem; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-wrap { margin-bottom: 2vh; flex-shrink: 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
 
   .question-card {
-    flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto;
     background: var(--card); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 1.4rem; padding: 1.4rem 1.6rem;
+    border-radius: 20px; padding: 3vh; margin-bottom: 2vh;
     animation: fadeIn 0.35s ease;
+    display: flex; flex-direction: column; flex: 1; min-height: 0;
   }
 
   .q-type-badge {
-    display: inline-flex; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
-    padding: 0.25rem 0.8rem; border-radius: 100px; margin-bottom: 0.7rem;
-    background: rgba(33,115,70,0.2); color: #4ade80;
+    display: inline-flex; font-size: clamp(0.65rem, 1.2vh, 0.75rem); font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 1vh;
+    background: rgba(33,115,70,0.2); color: #4ade80; flex-shrink: 0; align-self: flex-start;
   }
 
-  .q-number { font-size: 0.85rem; color: var(--sub); font-weight: 700; margin-bottom: 0.3rem; }
-  .q-text { font-size: 1.3rem; font-weight: 700; line-height: 1.4; margin-bottom: 0.9rem; }
+  .q-number { font-size: clamp(0.75rem, 1.5vh, 0.85rem); color: var(--sub); font-weight: 700; margin-bottom: 0.5vh; flex-shrink: 0; }
+  .q-text { font-size: clamp(1rem, 2.2vh, 1.2rem); font-weight: 700; line-height: 1.3; margin-bottom: 2vh; flex-shrink: 0; }
 
-  .options { display: flex; flex-direction: column; gap: 0.6rem; }
+  .options { 
+    display: flex; flex-direction: column; gap: 1vh; 
+    overflow-y: auto; flex: 1; padding-right: 10px; 
+  }
+  
+  .options::-webkit-scrollbar { width: 6px; }
+  .options::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .options::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+  .options::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
   .option-btn {
     background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
-    border-radius: 0.9rem; padding: 0.65rem 1rem; color: var(--text);
-    font-family: inherit; font-size: 1.05rem; font-weight: 600; line-height: 1.3; text-align: left; cursor: pointer;
-    display: flex; align-items: center; gap: 0.8rem; transition: 0.2s;
+    border-radius: 12px; padding: 1.5vh 15px; color: var(--text);
+    font-size: clamp(0.9rem, 2vh, 1rem); font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 10px; transition: 0.2s; flex-shrink: 0;
   }
-  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(4px); }
+  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
   .option-btn:disabled { cursor: default; }
   .option-letter {
-    width: 2rem; height: 2rem; border-radius: 0.5rem; background: rgba(255,255,255,0.08);
-    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 6px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
   }
 
   .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
   .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
 
-  .feedback { display: none; margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 0.8rem; font-size: 1rem; font-weight: 700; line-height: 1.4; animation: fadeIn 0.3s ease; }
+  .feedback { display: none; margin-top: 1.5vh; padding: 1.5vh; border-radius: 12px; font-weight: 700; font-size: clamp(0.85rem, 1.8vh, 0.95rem); line-height: 1.4; animation: fadeIn 0.3s ease; flex-shrink: 0; }
   .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
   .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* El botón ocupa siempre su sitio (solo se oculta), así nada salta ni se desplaza */
   .btn-next {
-    flex: 0 0 auto; visibility: hidden; width: 100%; max-width: 14rem; margin: 0 0 0 auto;
-    padding: 0.75rem; border-radius: 0.9rem; border: none; font-size: 1rem; font-weight: 800; font-family: inherit;
+    display: none; width: 100%; max-width: 220px; margin: 0 0 0 auto;
+    padding: 1.5vh; border-radius: 12px; border: none; font-weight: 800; font-family: inherit;
     background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
-    transition: 0.2s;
+    transition: 0.2s; flex-shrink: 0; font-size: clamp(0.9rem, 2vh, 1rem);
   }
   .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
 
-  .results {
-    display: none; flex: 1 1 auto; min-height: 0; overflow-y: auto;
-    flex-direction: column; align-items: center; justify-content: center; text-align: center;
-    animation: fadeIn 0.4s ease;
-  }
-  .result-emoji { font-size: 3.5rem; line-height: 1.1; }
-  .results h2 { font-size: 1.6rem; }
+  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; flex-direction: column; justify-content: center; align-items: center; flex: 1; }
   .score-circle {
-    width: 8rem; height: 8rem; border-radius: 50%; border: 0.5rem solid var(--c1);
-    display: flex; align-items: center; justify-content: center; margin: 0.8rem auto;
-    font-size: 1.9rem; font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
+    width: clamp(110px, 20vh, 150px); height: clamp(110px, 20vh, 150px); border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 2vh auto;
+    font-size: clamp(1.8rem, 4vh, 2.2rem); font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
   }
-  .score-circle small { font-family: 'Nunito'; font-size: 0.85rem; color: var(--sub); font-weight: 700; }
+  .score-circle small { font-family: 'Nunito'; font-size: clamp(0.7rem, 1.5vh, 0.9rem); color: var(--sub); font-weight: 700; }
   .hidden { display: none !important; }
 
-  .result-sub { color: var(--sub); font-size: 1rem; font-weight: 700; margin-top: 0.4rem; }
-  .btn-restart { margin-top: 1.2rem; cursor: pointer; border: none; font-family: inherit; font-size: 0.9rem; }
+  .result-sub { color: var(--sub); font-weight: 700; margin-top: 1vh; font-size: clamp(0.85rem, 1.8vh, 1rem); }
+  .btn-restart { margin-top: 3vh; cursor: pointer; border: none; font-family: inherit; font-size: clamp(0.9rem, 2vh, 1rem); padding: 1.5vh 20px; }
 </style>
 </head>
 <body>
@@ -365,8 +370,8 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y s
 
 <div class="container">
   <div class="header">
-    <div class="badge">{{BADGE}}</div>
-    <h1>{{TITLE}}</h1>
+    <div class="badge" id="quiz-badge">{{BADGE}}</div>
+    <h1 id="quiz-title">{{TITLE}}</h1>
   </div>
 
   <div id="quiz-area">
@@ -389,7 +394,7 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y s
   </div>
 
   <div class="results" id="results">
-    <div class="result-emoji" id="result-emoji">🏆</div>
+    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
     <div class="score-circle" id="score-num">0/{{COUNT}}</div>
     <h2 id="result-msg"></h2>
     <p class="result-sub" id="result-sub"></p>
@@ -399,11 +404,11 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y s
 
 <script>
 const questions = {{QUESTIONS}};
+const TOTAL = questions.length;
 
 let currentIdx = 0;
 let score = 0;
 let answered = false;
-const TOTAL = questions.length;
 
 function loadQuestion() {
   answered = false;
@@ -413,7 +418,7 @@ function loadQuestion() {
     qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
   document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
   document.getElementById('q-text').textContent = qData.q;
-  document.getElementById('btn-next').style.visibility = 'hidden';
+  document.getElementById('btn-next').style.display = 'none';
 
   const fb = document.getElementById('q-feedback');
   fb.style.display = 'none';
@@ -435,6 +440,7 @@ function loadQuestion() {
   document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
   document.getElementById('btn-next').textContent =
     currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
+    
   fit(true);
 }
 
@@ -462,7 +468,7 @@ function checkAnswer(idx) {
 
   document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
   fb.style.display = 'block';
-  document.getElementById('btn-next').style.visibility = 'visible';
+  document.getElementById('btn-next').style.display = 'block';
   fit(false);
 }
 
@@ -485,10 +491,10 @@ function showResults() {
 
   let emoji, msg, sub;
   if (pct === 100)    { emoji = '🏆'; msg = {{PERFECT}};  sub = 'Respondiste todo correctamente.'; }
-  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';       sub = 'Solo te faltaron unos detalles.'; }
-  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';               sub = 'Vas por buen camino, repasa lo fallado.'; }
-  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';           sub = 'Vuelve a leer el material y reinténtalo.'; }
-  else                { emoji = '💪'; msg = '¡No te rindas!';               sub = 'Revisa el tema desde el principio.'; }
+  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';     sub = 'Solo te faltó un detalle.'; }
+  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';             sub = 'Vas por buen camino, repasa lo fallado.'; }
+  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';         sub = 'Vuelve a leer el material y reinténtalo.'; }
+  else                { emoji = '💪'; msg = '¡No te rindas!';             sub = 'Revisa el tema desde el principio.'; }
 
   document.getElementById('result-emoji').textContent = emoji;
   document.getElementById('result-msg').textContent = msg;
@@ -504,14 +510,13 @@ function restartQuiz() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('quiz-area').classList.remove('hidden');
   loadQuestion();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Ajusta el tamaño del texto para que la pregunta, las opciones y la explicación quepan sin desplazarse
+/* Función que se encarga de reducir la escala si la pregunta es excesivamente grande */
 function fit(reset) {
   const root = document.documentElement;
   const card = document.querySelector('.question-card');
-  if (!card.clientHeight) return;
+  if (!card || !card.clientHeight) return;
   let k = reset ? 1 : (parseFloat(root.style.getPropertyValue('--k')) || 1);
   root.style.setProperty('--k', k);
   while (k > 0.55 && card.scrollHeight > card.clientHeight + 1) {
@@ -525,8 +530,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fit(
 window.onload = loadQuestion;
 </script>
 </body>
-</html>
-</textarea>
+</html></textarea>
 
 <script>
 'use strict';

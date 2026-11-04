@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lo esencial · Castroverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#f0fdf4; --surface:#e4f5e9; --card:#d2eeda; --border:#a8d4b4;
+  --text:#1a3a22; --muted:#4a7a58; --accent:#1e6b3a; --accent2:#2d9055;
+  --on-accent:#f0fdf4; --red:#b04a2c; --cloud:#3a7ab0;
+  --bubble-user:#ffffff; --bar:#1a3a22; --bar-text:rgba(240,253,244,.75);
+  --font-h:'Playfair Display',Georgia,serif;
+  --font-body:'Source Serif 4',Georgia,serif;
+  --font-ui:'DM Mono',ui-monospace,monospace;
+  --radius:3px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c13; --surface:#152619; --card:#1d3324; --border:#2f5038;
+    --text:#d9efdf; --muted:#8db89a; --accent:#5fbf83; --accent2:#7ad19b;
+    --on-accent:#0f1c13; --red:#e08a6c; --cloud:#7eb8f0;
+    --bubble-user:#1a2e20; --bar:#0a140d; --bar-text:rgba(217,239,223,.65);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c13; --surface:#152619; --card:#1d3324; --border:#2f5038;
+  --text:#d9efdf; --muted:#8db89a; --accent:#5fbf83; --accent2:#7ad19b;
+  --on-accent:#0f1c13; --red:#e08a6c; --cloud:#7eb8f0;
+  --bubble-user:#1a2e20; --bar:#0a140d; --bar-text:rgba(217,239,223,.65);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.65;display:flex;flex-direction:column;overflow:hidden;}
+button,input,select,textarea{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+#sync-bar{flex-shrink:0;background:var(--bar);display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:5px 18px;}
+.bar-btn{background:none;border:1px solid rgba(255,255,255,.18);color:var(--bar-text);padding:3px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:10px;letter-spacing:.5px;}
+.bar-btn:hover{border-color:var(--accent2);color:#fff;}
+.bar-btn.synced{border-color:rgba(122,209,155,.5);color:#9fe0b6;}
+.bar-btn.busy{opacity:.6;pointer-events:none;}
+#sync-user{font-family:var(--font-ui);font-size:10px;color:var(--bar-text);display:none;}
+#sync-status{flex-shrink:0;display:none;align-items:center;justify-content:space-between;padding:5px 18px;font-family:var(--font-ui);font-size:11px;}
+#sync-status.visible{display:flex;}
+#sync-status.ok{background:rgba(42,122,74,.14);color:var(--accent);}
+#sync-status.err{background:rgba(176,74,44,.12);color:var(--red);}
+#sync-status.info{background:rgba(58,122,176,.12);color:var(--cloud);}
+#sync-status button{background:none;border:none;cursor:pointer;color:inherit;font-size:14px;}
+
+header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:22px;}
+.logo{font-family:var(--font-h);font-size:21px;font-weight:700;line-height:1.1;white-space:nowrap;}
+.logo small{display:block;font-family:var(--font-ui);font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.5px;margin-top:3px;}
+.chapter{display:flex;align-items:center;gap:10px;flex:1;max-width:520px;}
+.chapter label{font-family:var(--font-ui);font-size:11px;color:var(--muted);white-space:nowrap;}
+.chapter input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-ui);font-size:13px;}
+.head-actions{margin-left:auto;display:flex;gap:8px;}
+.btn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:var(--radius);padding:6px 13px;cursor:pointer;font-family:var(--font-ui);font-size:11px;white-space:nowrap;}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.btn:disabled{opacity:.4;cursor:default;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.btn-primary:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);color:var(--on-accent);}
+.btn-danger:hover:not(:disabled){border-color:var(--red);color:var(--red);}
+.btn-sm{padding:3px 9px;font-size:10px;}
+
+main{flex:1;min-height:0;display:flex;flex-direction:column;}
+.step-top{flex-shrink:0;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);display:grid;grid-template-columns:1fr auto;gap:12px 28px;align-items:start;}
+.slots{display:flex;flex-wrap:wrap;gap:10px;}
+.slot{border:1px solid var(--border);background:var(--card);border-radius:var(--radius);padding:7px 11px;min-width:230px;}
+.slot .lbl{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.slot .fname{font-family:var(--font-ui);font-size:12px;margin:2px 0 5px;word-break:break-all;}
+.slot .fname.empty{color:var(--red);}
+.slot .sbtns{display:flex;gap:5px;}
+.side{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.model{display:flex;gap:6px;align-items:center;}
+.model label{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.freetick{font-family:var(--font-ui);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;}
+.model select{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font-family:var(--font-ui);font-size:11px;max-width:260px;}
+.model select:disabled{opacity:.7;}
+.side-actions{display:flex;gap:6px;}
+.prompt-line{grid-column:1 / -1;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.lock-note{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+
+.chat{flex:1;min-height:0;overflow-y:auto;padding:22px 24px 10px;}
+.chat-inner{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.empty-state{max-width:560px;margin:40px auto;color:var(--muted);font-size:15px;}
+.empty-state h2{font-family:var(--font-h);font-size:24px;color:var(--text);margin-bottom:10px;font-weight:400;}
+.empty-state p{margin-bottom:8px;}
+.msg{border-radius:var(--radius);padding:12px 16px;}
+.msg.user{align-self:flex-end;max-width:78%;background:var(--bubble-user);border:1px solid var(--border);white-space:pre-wrap;}
+.msg.files{align-self:flex-end;font-family:var(--font-ui);font-size:11px;color:var(--muted);background:none;border:1px dashed var(--border);}
+.msg.assistant{background:var(--surface);border-left:3px solid var(--accent);}
+.msg.assistant .who{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;}
+.msg.assistant .who button{background:none;border:none;color:var(--muted);cursor:pointer;font-family:var(--font-ui);font-size:10px;}
+.msg.assistant .who button:hover{color:var(--accent);}
+.md h1,.md h2,.md h3,.md h4{font-family:var(--font-h);font-weight:700;line-height:1.3;margin:14px 0 6px;}
+.md h1{font-size:20px}.md h2{font-size:18px}.md h3{font-size:16px}.md h4{font-size:15px}
+.md p{margin:0 0 9px;}
+.md ul,.md ol{margin:0 0 9px 22px;}
+.md li{margin-bottom:3px;}
+.md blockquote{border-left:3px solid var(--border);padding-left:12px;color:var(--muted);margin:0 0 9px;}
+.md code{font-family:var(--font-ui);font-size:12.5px;background:var(--card);padding:1px 4px;border-radius:2px;}
+.md pre{font-family:var(--font-ui);font-size:12px;background:var(--card);padding:10px;border-radius:var(--radius);overflow-x:auto;white-space:pre-wrap;margin:0 0 9px;}
+.md hr{border:none;border-top:1px solid var(--border);margin:12px 0;}
+.md > :first-child{margin-top:0;}
+.thinking{font-family:var(--font-ui);font-size:11px;color:var(--muted);font-style:italic;}
+.cursor::after{content:'▍';color:var(--accent);animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.cursor::after{animation:none}}
+
+.filecard{display:flex;align-items:center;gap:14px;border:1px solid var(--accent);background:var(--bg);border-radius:var(--radius);padding:10px 14px;margin:6px 0 10px;}
+.filecard .ico{font-family:var(--font-h);font-size:22px;color:var(--accent);line-height:1;}
+.filecard .fn{font-family:var(--font-ui);font-size:13px;font-weight:500;word-break:break-all;}
+.filecard .meta{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.filecard .fbtns{margin-left:auto;display:flex;gap:6px;}
+.filecard.writing{border-style:dashed;}
+
+.error-box{border:1px solid var(--red);color:var(--red);border-radius:var(--radius);padding:10px 14px;font-size:14px;display:flex;gap:12px;align-items:center;}
+.error-box .btn{margin-left:auto;}
+
+.composer{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:12px 24px 14px;}
+.composer-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;}
+.composer textarea{flex:1;resize:none;min-height:46px;max-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-body);font-size:15px;line-height:1.5;}
+.composer textarea:disabled{opacity:.6;}
+.sugs{max-width:860px;margin:0 auto 8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.sugs:empty{display:none;}
+.sugs .lbl{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-right:2px;}
+.sug{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:14px;padding:3px 11px;cursor:pointer;font-family:var(--font-body);font-size:13px;line-height:1.4;}
+.sug:hover{border-color:var(--muted);}
+.sug.on{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--card);}
+.composer .hint{max-width:860px;margin:5px auto 0;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,30,16,.55);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:820px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+.modal.sm{width:520px;}
+.modal-head{padding:18px 22px 10px;display:flex;align-items:baseline;gap:12px;}
+.modal-head h3{font-family:var(--font-h);font-size:20px;}
+.modal-head .sub{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.modal-body{padding:4px 22px 12px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;}
+.modal-foot{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.modal-foot .left{margin-right:auto;display:flex;gap:8px;}
+.modal textarea.big{width:100%;flex:1;min-height:52vh;resize:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:var(--font-ui);font-size:12.5px;line-height:1.55;}
+.ptitle{font-family:var(--font-ui);font-size:11px;color:var(--muted);}
+.keyrow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;}
+.keyrow label{font-family:var(--font-ui);font-size:12px;}
+.keyrow input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 9px;font-family:var(--font-ui);font-size:12px;}
+.keynote{font-size:13px;color:var(--muted);}
+.showkeys{font-family:var(--font-ui);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;}
+</style>
+</head>
+<body>
+
+<div id="sync-bar">
+  <span id="sync-user"></span>
+  <button class="bar-btn" id="btn-signout" style="display:none" onclick="fbSignOut()">Cerrar sesión</button>
+  <button class="bar-btn" onclick="openKeys()">Claves</button>
+  <button class="bar-btn" id="btn-sync" onclick="handleSync()">Sincronizar prompt</button>
+</div>
+<div id="sync-status"><span id="sync-msg"></span><button onclick="hideStatus()" aria-label="Cerrar aviso">×</button></div>
+
+<header>
+  <div class="logo">Lo esencial<small>Historia de Castroverde de Cerrato</small></div>
+  <div class="chapter">
+    <label for="chapter">Capítulo (nombre corto)</label>
+    <input id="chapter" type="text" placeholder="por ejemplo, prehistoria" maxlength="60" autocomplete="off">
+  </div>
+  <div class="head-actions">
+    <button class="btn" onclick="openPrompts()">Prompt</button>
+    <button class="btn btn-danger" onclick="newChapter()">Nuevo capítulo</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="step-top">
+    <div class="slots" id="slots-esencial"></div>
+    <div class="side">
+      <div class="model">
+        <label for="prov-esencial">Modelo</label>
+        <select id="prov-esencial" onchange="changeProvider()"></select>
+        <select id="model-esencial" title="(g) = modelo con uso gratuito" onchange="changeModel()"></select>
+        <button class="btn btn-sm" id="refresh-esencial" title="Actualizar la lista de modelos" onclick="refreshModels()">↻</button>
+        <label class="freetick" id="freetick-esencial" title="Mostrar solo los modelos gratuitos de OpenRouter"><input type="checkbox" onchange="toggleOnlyFree(this.checked)">Solo gratuitos</label>
+      </div>
+      <div class="side-actions" id="actions-esencial"></div>
+    </div>
+    <div class="prompt-line" id="pline-esencial"></div>
+  </div>
+  <div class="chat" id="chat-esencial"><div class="chat-inner" id="chatin-esencial"></div></div>
+  <div class="composer">
+    <div class="sugs" id="sugs-esencial"></div>
+    <div class="composer-inner">
+      <textarea id="input-esencial" rows="1" placeholder="Escribe aquí tu respuesta…" oninput="autoGrow(this);markSugs()" onkeydown="composerKey(event)"></textarea>
+      <button class="btn btn-primary" id="send-esencial" onclick="sendUser()">Enviar</button>
+    </div>
+    <div class="hint">Ctrl + Intro para enviar.</div>
+  </div>
+</main>
+
+<!-- Modal: claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal sm" role="dialog" aria-labelledby="keys-title">
+    <div class="modal-head"><h3 id="keys-title">Claves de API</h3></div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys left"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompt -->
+<div class="overlay" id="ov-prompts">
+  <div class="modal" role="dialog" aria-labelledby="prompts-title">
+    <div class="modal-head"><h3 id="prompts-title">Prompt — Lo esencial</h3></div>
+    <div class="modal-body">
+      <div class="ptitle" id="ptitle"></div>
+      <textarea class="big" id="ptext" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-foot">
+      <div class="left">
+        <label class="btn">Cargar desde .md<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="importPrompt(this)"></label>
+        <button class="btn btn-danger" onclick="restorePrompt()">Restaurar por defecto</button>
+      </div>
+      <button class="btn" onclick="closeOv('ov-prompts')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePrompts()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ver / editar fichero -->
+<div class="overlay" id="ov-file">
+  <div class="modal" role="dialog" aria-labelledby="file-title">
+    <div class="modal-head"><h3 id="file-title"></h3><span class="sub" id="file-sub"></span></div>
+    <div class="modal-body"><textarea class="big" id="file-text" spellcheck="false"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="copyFileModal()">Copiar</button>
+      <button class="btn" id="file-dl" onclick="downloadFileModal()">Descargar</button>
+      <button class="btn btn-primary" onclick="closeFileModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt por defecto -->
+<script type="text/plain" id="default-esencial"># PROMPT — LO ESENCIAL DEL CAPÍTULO
+## Historia de Castroverde de Cerrato
+### Entrevista al autor antes de la planificación editorial
+
+> **Cómo usarlo:** pega este prompt y adjunta o pega el capítulo en bruto. Al terminar obtendrás `ESENCIAL_[capítulo].md`, que se entrega al Editor Jefe junto con el bruto.
+
+---
+
+## 1. TU PAPEL
+
+Eres un editor que entrevista al autor sobre un capítulo de su libro de historia local sobre Castroverde de Cerrato. El lector del libro es un lector general, sobre todo un vecino de Castroverde que conoce el pueblo pero no necesariamente su historia.
+
+Tu objetivo **no es decidir qué es lo importante**, sino averiguar qué cree **el autor** que es lo importante, y dejarlo por escrito para que el Editor Jefe lo tenga en cuenta al planificar el capítulo.
+
+No propones estructura ni redactas nada del capítulo. Solo preguntas, escuchas y recoges.
+
+---
+
+## 2. LA ENTREVISTA
+
+**Antes de empezar:** lee el capítulo entero. Escribe un resumen de 3-4 líneas y pregunta al autor si es correcto. No sigas hasta que lo confirme o lo corrija.
+
+**Después, haz estas preguntas de una en una**, esperando la respuesta antes de pasar a la siguiente. Adáptalas al contenido del capítulo:
+
+1. **La pregunta del capítulo.** Si el capítulo respondiera a una sola pregunta sobre Castroverde, ¿cuál sería?
+2. **Lo más valioso.** ¿Qué es lo que más te interesa o te parece más valioso de este capítulo? (Un hallazgo, un dato, una historia, algo que te costó encontrar…)
+3. **Lo que no puede faltar.** ¿Qué personas, fechas, lugares, documentos o datos tienen que aparecer sí o sí?
+4. **Lo que puede recortarse.** ¿Qué partes te parecen secundarias, que podrían resumirse, ir a nota o quitarse?
+5. **Lo que debe llevarse el lector.** Cuando un vecino de Castroverde acabe de leer el capítulo, ¿qué te gustaría que recordara o que le sorprendiera?
+6. **Dudas.** ¿Hay algo en el capítulo que no esté del todo claro, que sea una hipótesis o que sepas que habría que comprobar?
+7. **Tus frases.** ¿Hay frases tuyas que quieras conservar tal cual? Propón 2-3 frases del bruto que te parezcan especialmente personales y pregunta cuáles quiere conservar y si añade otras.
+8. **Principio y final.** ¿Tienes alguna idea de cómo debería empezar o terminar el capítulo, o de cómo enlaza con el siguiente?
+
+**Reglas para las preguntas:**
+
+- Breves y claras. Puedes sugerir 2-3 opciones sacadas del capítulo, dejando claro que el autor puede responder otra cosa.
+- No opines ni corrijas. Si una respuesta es ambigua, haz como mucho una repregunta.
+- Si el autor responde «pasa» o «no sé», sigue con la siguiente.
+- Si el autor da un dato que no está en el bruto (una fecha, un nombre, una corrección), anótalo: irá en el fichero como **APORTADO POR EL AUTOR**.
+
+**Pregunta final (obligatoria).** Haz un repaso de 4-5 líneas de lo que ha dicho el autor y pregúntale:
+
+> **«Después de todo esto, ¿qué es exactamente lo más importante de este capítulo? Dímelo en una o dos frases.»**
+
+---
+
+## 3. EL FICHERO FINAL
+
+Con las respuestas, genera **`ESENCIAL_[capítulo].md`** (sustituye `[capítulo]` por un nombre corto, el mismo que se usará en `PLAN_` y `CONTROL_`).
+
+Si puedes crear ficheros, créalo. Si no, entrégalo en un bloque de código ```markdown precedido del nombre del fichero.
+
+**Reglas:**
+
+- Usa las palabras del autor siempre que puedas. La respuesta a la pregunta final va **literal**.
+- Recoge **todo lo que el autor ha destacado durante la entrevista**, no solo la respuesta final.
+- No añadas nada que el autor no haya dicho. Lo que sea tuyo (por ejemplo, localizar un pasaje en el bruto) márcalo como *(nota del entrevistador)*.
+- Las frases que el autor quiera conservar se copian **literalmente del bruto**.
+- Si un apartado no tiene nada, escribe «Nada».
+
+**Estructura:**
+
+```markdown
+# LO ESENCIAL SEGÚN EL AUTOR — [capítulo]
+
+> Documento de prioridades del autor. Acompaña al texto en bruto; no lo sustituye.
+> Los hechos siguen saliendo del bruto, salvo los marcados como APORTADO POR EL AUTOR.
+
+## 1. Lo más importante, en palabras del autor
+> [respuesta literal a la pregunta final]
+
+## 2. Compendio
+[1-2 párrafos que reúnan todo lo que el autor ha destacado en la entrevista:
+qué le interesa, qué quiere resaltar y por qué.]
+
+## 3. La pregunta del capítulo, según el autor
+[...]
+
+## 4. Lo más valioso para el autor
+- ...
+
+## 5. Lo que no puede faltar
+- Personas: ...
+- Fechas: ...
+- Lugares: ...
+- Documentos o datos: ...
+
+## 6. Lo que puede recortarse, resumirse o ir a nota
+- ...
+
+## 7. Lo que debe llevarse el lector
+[...]
+
+## 8. Dudas e hipótesis señaladas por el autor
+- ...
+
+## 9. Frases del autor que deben conservarse
+- «...» [si el autor lo indicó: dónde debe ir]
+
+## 10. Principio, final y enlace con el capítulo siguiente
+[...]
+
+## 11. Datos APORTADOS POR EL AUTOR
+- [dato] — [a qué parte del bruto afecta]
+
+## 12. Respuestas del autor, pregunta por pregunta
+- **La pregunta del capítulo:** ...
+- **Lo más valioso:** ...
+- **Lo que no puede faltar:** ...
+- **Lo que puede recortarse:** ...
+- **Lo que debe llevarse el lector:** ...
+- **Dudas:** ...
+- **Sus frases:** ...
+- **Principio y final:** ...
+(omite las respondidas con «pasa» o «no sé»)
+
+## 13. Para el Editor Jefe
+- Usa este documento para decidir qué destacar, qué recortar y cómo terminar el capítulo.
+- En cuanto a qué es importante, la opinión del autor prevalece sobre tu propio criterio.
+- Pero no cambia las reglas de rigor: una duda o hipótesis sigue siéndolo aunque el autor la considere importante.
+- Las frases del apartado 9 se tratan como FRASE DE AUTOR — PRESERVAR.
+- Si algo de este documento choca con el bruto, no lo resuelvas tú: plantéalo al autor.
+```
+
+Empieza cuando recibas el capítulo.
+
+**CAPÍTULO:**
+[pega aquí el capítulo o adjúntalo]
+</script>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════
+//  CONFIGURACIÓN
+// ═══════════════════════════════════════
+const LS = {
+  state:'castroverde_esencial_state', prompt:'castroverde_esencial_prompt', models:'castroverde_esencial_models',
+  orList:'castroverde_plan_or_models', gemList:'castroverde_plan_gemini_models', dskList:'castroverde_plan_deepseek_models'
+};
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key'},
+  {id:'firebase',   label:'Firebase',   ls:'castroverde_fb_key'},
+];
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k=>k.id===id).ls) || ''; } catch(e){ return ''; } };
+
+const PROVIDERS = {
+  claude:     {label:'Claude', models:[
+                 {id:'claude-opus-5-5',  label:'Opus 5.5'},
+                 {id:'claude-sonnet-5-5',label:'Sonnet 5.5'},
+                 {id:'claude-sonnet-4-6',label:'Sonnet 4.6'},
+                 {id:'claude-haiku-5-5', label:'Haiku 5.5'},
+                 {id:'claude-fable-5-1', label:'Fable 5.1'}]},
+  aistudio:   {label:'AI Studio (Gemini)', dynamic:true, models:[
+                 {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash'},
+                 {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+                 {id:'gemini-4-argon',         label:'Gemini 4 Argon'},
+                 {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite'}]},
+  deepseek:   {label:'DeepSeek', dynamic:true, models:[
+                 {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+                 {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'}]},
+  openrouter: {label:'OpenRouter', dynamic:true, models:[
+                 {id:'nvidia/nemotron-3-ultra-550b-a55b:free', label:'nvidia/nemotron-3-ultra-550b-a55b:free'},
+                 {id:'nvidia/nemotron-3-super-120b-a12b:free', label:'nvidia/nemotron-3-super-120b-a12b:free'},
+                 {id:'minimax/minimax-m3.1-flash:free', label:'minimax/minimax-m3.1-flash:free'},
+                 {id:'thinkingmachines/inkling:free', label:'thinkingmachines/inkling:free'},
+                 {id:'google/gemini-3.8-flash',     label:'google/gemini-3.8-flash'},
+                 {id:'anthropic/claude-sonnet-5.5', label:'anthropic/claude-sonnet-5.5'},
+                 {id:'anthropic/claude-opus-5.5',   label:'anthropic/claude-opus-5.5'},
+                 {id:'qwen/qwen3.8-27b:free',       label:'qwen/qwen3.8-27b:free'},
+                 {id:'openrouter/free',             label:'openrouter/free (gratuito automático)'}]},
+  mistral:    {label:'Mistral', models:[
+                 {id:'mistral-large-latest', label:'Mistral Large'},
+                 {id:'mistral-medium-latest',label:'Mistral Medium'},
+                 {id:'mistral-small-latest', label:'Mistral Small'},
+                 {id:'magistral-medium-latest', label:'Magistral Medium (razonamiento)'}]},
+  groq:       {label:'Groq', models:[
+                 {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B'},
+                 {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B'},
+                 {id:'qwen/qwen3.8-27b',    label:'Qwen 3.8 27B (preview)'}]},
+};
+const FREE = {
+  aistudio:['gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite',
+            'gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'],
+  mistral: ['mistral-small-latest','mistral-medium-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'],
+};
+function isFree(prov, m){
+  if (m.free) return true;
+  if (prov === 'openrouter') return /:free$/.test(m.id) || m.id === 'openrouter/free';
+  return (FREE[prov] || []).includes(m.id);
+}
+const RETIRED = {
+  'llama-3.3-70b-versatile':'openai/gpt-oss-120b', 'llama-3.1-8b-instant':'openai/gpt-oss-20b',
+  'gemini-2.0-flash':'gemini-3.8-flash', 'gemini-2.5-flash':'gemini-3.8-flash', 'gemini-2.5-pro':'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview':'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite':'gemini-3.5-flash-lite',
+  'google/gemini-2.5-flash':'google/gemini-3.8-flash', 'google/gemini-2.5-pro':'google/gemini-3.8-flash',
+  'deepseek-chat':'deepseek-v4-flash', 'deepseek-reasoner':'deepseek-v4-pro',
+};
+
+// ═══════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════
+function loadJSON(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+function saveJSON(k, v){
+  try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+  catch(e){ showStatus('err', 'No se ha podido guardar en el navegador (¿espacio lleno?). Descarga tus documentos.'); return false; }
+}
+function blankState(){ return {chapter:'', files:{}, messages:[], locked:null}; }
+let state = loadJSON(LS.state) || blankState();
+if (!state.files) state.files = {};
+if (!state.messages) state.messages = [];
+if (state.locked && RETIRED[state.locked.model]) state.locked.model = RETIRED[state.locked.model];
+
+const DEFAULT_MODEL = {provider:'openrouter', model:'nvidia/nemotron-3-ultra-550b-a55b:free'};
+const DEFAULT_TAG = 'nemotron-3-ultra-2';
+let modelChoice = loadJSON(LS.models) || {};
+if (localStorage.getItem(LS.models + '_default') !== DEFAULT_TAG){
+  modelChoice = {...DEFAULT_MODEL};
+  try { localStorage.setItem(LS.models + '_default', DEFAULT_TAG); saveJSON(LS.models, modelChoice); } catch(e){}
+}
+if (!modelChoice.provider) modelChoice = {...DEFAULT_MODEL};
+else if (RETIRED[modelChoice.model]) modelChoice.model = RETIRED[modelChoice.model];
+
+let promptCustom = loadJSON(LS.prompt) || null;
+let saveTimer = null;
+function saveState(){ clearTimeout(saveTimer); saveTimer = setTimeout(() => saveJSON(LS.state, state), 300); }
+function saveModels(){ saveJSON(LS.models, modelChoice); }
+function getPrompt(){ return promptCustom || document.getElementById('default-esencial').textContent.trim(); }
+function promptTitle(){
+  const line = getPrompt().split('\n').find(l => /^#\s/.test(l));
+  return line ? line.replace(/^#\s*/, '').trim() : '(prompt sin título)';
+}
+let running = null; // AbortController o null
+
+// ═══════════════════════════════════════
+//  UTILIDADES
+// ═══════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const kb = t => (new Blob([t]).size / 1024).toFixed(1).replace('.', ',') + ' kB';
+const safeName = n => n.replace(/[\\/:*?"<>|]/g, '_').trim() || 'documento.md';
+function download(name, text){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'text/markdown;charset=utf-8'}));
+  a.download = safeName(name);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function copyText(t){ try { await navigator.clipboard.writeText(t); showStatus('ok', 'Copiado.'); } catch(e){ showStatus('err', 'No se ha podido copiar.'); } }
+function readFile(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file, 'utf-8'); }); }
+function showStatus(type, msg){
+  const el = $('sync-status'); $('sync-msg').textContent = msg; el.className = 'visible ' + type;
+  clearTimeout(showStatus.t); if (type === 'ok') showStatus.t = setTimeout(hideStatus, 3500);
+}
+function hideStatus(){ $('sync-status').className = ''; }
+function openOv(id){ $(id).classList.add('visible'); }
+function closeOv(id){ $(id).classList.remove('visible'); }
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  closeOv('ov-keys'); closeOv('ov-prompts');
+  if ($('ov-file').classList.contains('visible')) closeFileModal();
+});
+
+// ═══════════════════════════════════════
+//  DETECCIÓN DE FICHEROS EN RESPUESTAS
+// ═══════════════════════════════════════
+function parseSegments(text, streaming){
+  const lines = text.split('\n');
+  const segs = []; let buf = []; let i = 0; let fileIdx = 0;
+  const flush = () => { if (buf.length){ segs.push({type:'text', text:buf.join('\n')}); buf = []; } };
+  while (i < lines.length){
+    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)[^`]*$/);
+    if (!m){ buf.push(lines[i]); i++; continue; }
+    const fence = m[1], lang = (m[2]||'').toLowerCase();
+    let name = null;
+    for (let k = buf.length - 1, seen = 0; k >= 0 && seen < 3; k--){
+      if (!buf[k].trim()) continue; seen++;
+      const nm = buf[k].match(/([\wÀ-ÿ.\-]+\.md)\b/g);
+      if (nm){ name = nm[nm.length - 1]; break; }
+    }
+    let j = i + 1; const body = [];
+    const closeRe = new RegExp('^\\s{0,3}' + fence[0].replace('`','\\`') + '{' + fence.length + ',}\\s*$');
+    while (j < lines.length && !closeRe.test(lines[j])){ body.push(lines[j]); j++; }
+    const closed = j < lines.length;
+    let byContent = false;
+    if (!name){
+      const all = body.join('\n'); const chap = (state.chapter || 'capitulo').trim().replace(/\s+/g, '_');
+      if (/LO ESENCIAL|Lo m[aá]s importante, en palabras del autor/i.test(all)) name = 'ESENCIAL_' + chap + '.md';
+      byContent = !!name;
+    }
+    flush();
+    const isFile = name && (byContent || lang === 'markdown' || lang === 'md' || lang === '' || lang === 'text' || lang === 'txt');
+    if (isFile) segs.push({type:'file', name, body:body.join('\n'), idx:fileIdx++, writing: !closed && streaming});
+    else segs.push({type:'code', body:body.join('\n')});
+    i = closed ? j + 1 : j;
+  }
+  flush();
+  return segs;
+}
+function msgFiles(msg){
+  return parseSegments(msg.content, false).filter(s => s.type === 'file' && !s.writing)
+    .map(s => ({name:s.name, idx:s.idx, text:(msg.edits && msg.edits[s.idx] != null) ? msg.edits[s.idx] : s.body}));
+}
+function allOutputs(){
+  const out = [];
+  state.messages.forEach((m, mi) => { if (m.role === 'assistant') msgFiles(m).forEach(f => out.push({...f, mi})); });
+  return out;
+}
+
+// ═══════════════════════════════════════
+//  MARKDOWN → HTML
+// ═══════════════════════════════════════
+function inlineMd(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+}
+function mdToHtml(text){
+  const lines = text.split('\n'); let html = ''; let list = null; let para = [];
+  const endPara = () => { if (para.length){ html += '<p>' + para.map(inlineMd).join('<br>') + '</p>'; para = []; } };
+  const endList = () => { if (list){ html += '</' + list + '>'; list = null; } };
+  for (const raw of lines){
+    const l = raw.replace(/\s+$/, '');
+    let m;
+    if (!l.trim()){ endPara(); endList(); continue; }
+    if ((m = l.match(/^(#{1,6})\s+(.*)$/))){ endPara(); endList(); const n = Math.min(4, m[1].length); html += `<h${n}>${inlineMd(m[2])}</h${n}>`; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endPara(); endList(); html += '<hr>'; continue; }
+    if ((m = l.match(/^\s*>\s?(.*)$/))){ endPara(); endList(); html += '<blockquote>' + inlineMd(m[1]) + '</blockquote>'; continue; }
+    if ((m = l.match(/^\s*[-*+]\s+(.*)$/))){ endPara(); if (list !== 'ul'){ endList(); html += '<ul>'; list = 'ul'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+    if ((m = l.match(/^\s*\d+[.)]\s+(.*)$/))){ endPara(); if (list !== 'ol'){ endList(); html += '<ol>'; list = 'ol'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+    endList(); para.push(l);
+  }
+  endPara(); endList();
+  return html;
+}
+
+// ═══════════════════════════════════════
+//  SUGERENCIAS DE OPCIONES
+// ═══════════════════════════════════════
+const SUG_RE = /\[\[\s*opciones\s*:([^\]]*)\]\]/gi;
+const SUG_NOTE = `
+
+---
+
+## NOTA DE LA APLICACIÓN: OPCIONES SUGERIDAS
+
+Cuando hagas una pregunta al autor y el texto que tienes delante ofrezca respuestas candidatas razonables (personas, fechas, lugares, parajes, documentos, datos, frases del bruto…), añade al final del mensaje, en una línea aparte, esta marca:
+
+[[opciones: Opción 1 | Opción 2 | Opción 3]]
+
+- Entre 2 y 8 opciones, breves (unas pocas palabras cada una), sacadas del texto y escritas tal como aparecen en él.
+- La aplicación las muestra en gris como botones que el autor puede pulsar para añadirlas a su respuesta; no hace falta que las repitas en el cuerpo del mensaje.
+- Ponla solo si viene a cuento. Si la pregunta es abierta y el texto no da candidatos claros, no la pongas.
+- Una sola marca por mensaje, y nunca dentro de un fichero ni de un bloque de código.`;
+function stripSugs(text, streaming){
+  let t = text.replace(SUG_RE, '');
+  if (streaming) t = t.replace(/\[\[[^\]]*$/, '').replace(/\[$/, '');
+  return t.replace(/\s+$/, '');
+}
+function msgSugs(m){
+  let out = []; let x; SUG_RE.lastIndex = 0;
+  while ((x = SUG_RE.exec(m.content || ''))) out = x[1].split('|').map(o => o.trim()).filter(Boolean);
+  return [...new Set(out)].slice(0, 12);
+}
+function currentSugs(){
+  const last = state.messages[state.messages.length - 1];
+  if (!last || last.role !== 'assistant' || last.streaming || running) return [];
+  return msgSugs(last);
+}
+function renderSugs(){
+  const box = $('sugs-esencial'); if (!box) return;
+  const opts = currentSugs();
+  box.innerHTML = opts.length ? '<span class="lbl">Opciones:</span>' + opts.map((o, i) =>
+    `<button class="sug" data-i="${i}" title="Pulsa para añadirlo a tu respuesta (o quitarlo)" onclick="toggleSug(${i})">${esc(o)}</button>`).join('') : '';
+  markSugs();
+}
+function sugParts(v){ return v.split(/\s*[,;\n]\s*/).map(x => x.trim()).filter(Boolean); }
+function markSugs(){
+  const box = $('sugs-esencial'); if (!box) return;
+  const parts = sugParts($('input-esencial').value).map(x => x.toLowerCase());
+  const opts = currentSugs();
+  box.querySelectorAll('.sug').forEach(b => b.classList.toggle('on', parts.includes(opts[+b.dataset.i].toLowerCase())));
+}
+function toggleSug(i){
+  const t = $('input-esencial'); if (t.disabled) return;
+  const o = currentSugs()[i]; if (!o) return;
+  let parts = sugParts(t.value);
+  const k = parts.findIndex(x => x.toLowerCase() === o.toLowerCase());
+  if (k >= 0) parts.splice(k, 1); else parts.push(o);
+  t.value = parts.join(', '); autoGrow(t); markSugs(); t.focus();
+}
+function autoGrow(t){ t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 220) + 'px'; }
+function composerKey(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); sendUser(); } }
+
+// ═══════════════════════════════════════
+//  INTERFAZ
+// ═══════════════════════════════════════
+function renderAll(){ renderSlots(); renderModel(); renderActions(); renderChat(); renderComposer(); renderPromptLine(); }
+
+function renderSlots(){
+  const locked = state.messages.length > 0;
+  const f = state.files.bruto;
+  $('slots-esencial').innerHTML = `<div class="slot">
+    <div class="lbl">Texto en bruto</div>
+    <div class="fname ${f ? '' : 'empty'}">${f ? esc(f.name) + ' · ' + kb(f.text) : 'Sin cargar'}</div>
+    <div class="sbtns">
+      <label class="btn btn-sm" ${locked ? 'style="display:none"' : ''}>${f ? 'Cambiar' : 'Cargar'}<input type="file" accept=".md,.txt,text/markdown,text/plain" hidden onchange="loadSlot(this)"></label>
+      ${f ? `<button class="btn btn-sm" onclick="viewSlot()">Ver</button>` : ''}
+    </div></div>` + (locked ? '<div class="lock-note" style="align-self:center">Los ficheros y el modelo quedan fijados durante la conversación.</div>' : '');
+}
+async function loadSlot(input){
+  const file = input.files[0]; if (!file) return;
+  const text = await readFile(file);
+  state.files.bruto = {name:file.name, text};
+  saveState(); renderSlots(); renderActions();
+}
+function viewSlot(){
+  const f = state.files.bruto; if (!f) return;
+  openFileModal({title:f.name, sub:'Fichero de entrada (solo lectura)', text:f.text, readonly:true});
+}
+
+function modelList(prov){
+  const p = PROVIDERS[prov];
+  if (prov === 'openrouter'){ const c = loadJSON(LS.orList); if (c && c.length) return [...PROVIDERS.openrouter.models.filter(m => !c.some(x => x.id === m.id)), ...c]; }
+  if (prov === 'aistudio'){ const c = loadJSON(LS.gemList); if (c && c.length) return c; }
+  if (prov === 'deepseek'){ const c = loadJSON(LS.dskList); if (c && c.length) return [...p.models.filter(m => !c.some(x => x.id === m.id)), ...c]; }
+  return p.models;
+}
+let onlyFree = (() => { try { return localStorage.getItem(LS.models + '_onlyfree') !== '0'; } catch(e){ return true; } })();
+function toggleOnlyFree(v){
+  onlyFree = v; try { localStorage.setItem(LS.models + '_onlyfree', v ? '1' : '0'); } catch(e){}
+  renderModel();
+}
+function visibleList(prov){
+  const l = modelList(prov);
+  if (prov !== 'openrouter' || !onlyFree) return l;
+  const f = l.filter(m => isFree(prov, m)); return f.length ? f : l;
+}
+function orAutoRefresh(){
+  if (Date.now() - (loadJSON(LS.orList + '_t') || 0) < 864e5) return;
+  if (modelChoice.provider === 'openrouter') refreshModels(true);
+}
+function renderModel(){
+  const lock = state.locked; const cur = lock || modelChoice;
+  const ps = $('prov-esencial'), ms = $('model-esencial');
+  ps.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}" ${k === cur.provider ? 'selected' : ''}>${p.label}</option>`).join('');
+  let list = visibleList(cur.provider);
+  const ft = $('freetick-esencial'); ft.style.display = (cur.provider === 'openrouter' && !state.locked) ? '' : 'none'; ft.querySelector('input').checked = onlyFree;
+  if (!list.some(m => m.id === cur.model)) list = [{id:cur.model, label:cur.model}, ...list];
+  ms.innerHTML = list.map(m => `<option value="${esc(m.id)}" ${m.id === cur.model ? 'selected' : ''}>${esc(m.label)}${isFree(cur.provider, m) ? ' (g)' : ''}</option>`).join('');
+  ps.disabled = ms.disabled = !!lock;
+  $('refresh-esencial').style.display = (!lock && PROVIDERS[cur.provider].dynamic) ? '' : 'none';
+}
+function changeProvider(){
+  const prov = $('prov-esencial').value;
+  modelChoice = {provider:prov, model:visibleList(prov)[0].id};
+  saveModels(); renderModel();
+  const dynKey = prov === 'openrouter' ? LS.orList : prov === 'aistudio' ? LS.gemList : prov === 'deepseek' ? LS.dskList : null;
+  if (PROVIDERS[prov].dynamic && dynKey && !loadJSON(dynKey)) refreshModels(true);
+}
+function changeModel(){ modelChoice.model = $('model-esencial').value; saveModels(); }
+async function refreshModels(quiet){
+  const prov = modelChoice.provider;
+  try {
+    if (prov === 'openrouter'){
+      const r = await fetch('https://openrouter.ai/api/v1/models');
+      if (!r.ok) throw new Error('OpenRouter ' + r.status);
+      const data = (await r.json()).data || [];
+      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
+      const list = data.filter(m => keep.test(m.id) || /:free$/.test(m.id) || !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id));
+      saveJSON(LS.orList, list); saveJSON(LS.orList + '_t', Date.now());
+    } else if (prov === 'deepseek'){
+      const key = getKey('deepseek'); if (!key){ if (!quiet) openKeys('deepseek'); return; }
+      const r = await fetch('https://api.deepseek.com/models', {headers:{'Authorization':'Bearer ' + key}});
+      if (!r.ok) throw new Error('DeepSeek ' + r.status);
+      const data = (await r.json()).data || [];
+      const list = data.filter(m => m.object === 'model').map(m => ({id:m.id, label:m.id})).sort((a, b) => a.id.localeCompare(b.id));
+      if (list.length) saveJSON(LS.dskList, list);
+    } else if (prov === 'aistudio'){
+      const key = getKey('aistudio'); if (!key){ if (!quiet) openKeys('aistudio'); return; }
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {headers:{'x-goog-api-key':key}});
+      if (!r.ok) throw new Error('AI Studio ' + r.status);
+      const data = (await r.json()).models || [];
+      const list = data.filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name) && !/(embed|tts|image|live|audio|vision|transcribe|robotics|banana|omni|lyria|veo)/.test(m.name)).map(m => ({id:m.name.replace(/^models\//, ''), label:(m.displayName || m.name.replace(/^models\//, '')), out:m.outputTokenLimit})).sort((a, b) => b.id.localeCompare(a.id));
+      saveJSON(LS.gemList, list);
+    }
+    renderModel(); if (!quiet) showStatus('ok', 'Lista de modelos actualizada.');
+  } catch(e){ if (!quiet) showStatus('err', 'No se ha podido cargar la lista de modelos: ' + e.message); }
+}
+
+function renderActions(){
+  const el = $('actions-esencial');
+  if (running){ el.innerHTML = `<button class="btn btn-danger" onclick="stopConv()">Detener</button>`; return; }
+  if (!state.messages.length){
+    const miss = [];
+    if (!$('chapter').value.trim()) miss.push('el nombre corto del capítulo');
+    if (!state.files.bruto) miss.push('el texto en bruto');
+    el.innerHTML = `<button class="btn btn-primary" ${miss.length ? 'disabled' : ''} title="${miss.length ? 'Falta ' + esc(miss.join(' y ')) : ''}" onclick="startConv()">Empezar</button>`;
+  } else {
+    el.innerHTML = `<button class="btn btn-danger" onclick="resetConv()">Reiniciar</button>`;
+  }
+}
+function renderComposer(){
+  const can = state.messages.length > 0 && !running;
+  $('input-esencial').disabled = !can; $('send-esencial').disabled = !can;
+  renderSugs();
+}
+function renderPromptLine(){ $('pline-esencial').textContent = 'Prompt: ' + promptTitle(); }
+
+function renderChat(keepScroll){
+  const box = $('chatin-esencial');
+  if (!state.messages.length && !state.error){
+    box.innerHTML = `<div class="empty-state"><h2>Entrevista sobre lo esencial del capítulo</h2><p>Escribe arriba el nombre corto del capítulo, carga el texto en bruto en Markdown y pulsa «Empezar».</p><p>El modelo leerá el capítulo, te propondrá un resumen y te irá haciendo las preguntas de una en una. Al final entregará el fichero ESENCIAL, que podrás revisar y descargar.</p></div>`;
+    return;
+  }
+  box.innerHTML = state.messages.map((m, mi) => renderMsg(m, mi)).join('') +
+    (state.error ? `<div class="error-box"><span>${esc(state.error)}</span><button class="btn btn-sm" onclick="retry()">Reintentar</button></div>` : '');
+  if (!keepScroll) scrollChat();
+}
+function scrollChat(){ const c = $('chat-esencial'); c.scrollTop = c.scrollHeight; }
+
+function renderMsg(m, mi){
+  if (m.role === 'user' && m.kind === 'files') return `<div class="msg files">${esc(m.summary)}</div>`;
+  if (m.role === 'user') return `<div class="msg user">${esc(m.content)}</div>`;
+  const streaming = !!m.streaming;
+  const segs = parseSegments(stripSugs(m.content, streaming), streaming);
+  let body = segs.map(sg => {
+    if (sg.type === 'text') return mdToHtml(sg.text);
+    if (sg.type === 'code') return `<pre>${esc(sg.body)}</pre>`;
+    const text = (m.edits && m.edits[sg.idx] != null) ? m.edits[sg.idx] : sg.body;
+    if (sg.writing) return `<div class="filecard writing"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">Escribiendo… ${kb(text)}</div></div></div>`;
+    return `<div class="filecard"><div class="ico">¶</div><div><div class="fn">${esc(sg.name)}</div><div class="meta">${kb(text)}${m.edits && m.edits[sg.idx] != null ? ' · editado' : ''}</div></div>
+      <div class="fbtns"><button class="btn btn-sm" onclick="openOutput(${mi},${sg.idx})">Ver y editar</button>
+      <button class="btn btn-sm btn-primary" onclick="downloadOutput(${mi},${sg.idx})">Descargar</button></div></div>`;
+  }).join('');
+  if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
+  const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
+  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${streaming ? '' : `<button onclick="copyMsg(${mi})">Copiar</button>`}</div>
+    <div class="md ${streaming && m.content ? 'cursor' : ''}">${body}</div>${tail}</div>`;
+}
+function copyMsg(mi){ copyText(stripSugs(state.messages[mi].content)); }
+
+// Ver / editar / descargar ficheros
+let fileCtx = null;
+function getOutput(mi, idx){ return msgFiles(state.messages[mi]).find(f => f.idx === idx); }
+function openOutput(mi, idx){ const f = getOutput(mi, idx); openFileModal({title:f.name, sub:'Puedes corregirlo aquí antes de descargarlo', text:f.text, ctx:{mi, idx}}); }
+function downloadOutput(mi, idx){ const f = getOutput(mi, idx); download(f.name, f.text); }
+function openFileModal(o){
+  fileCtx = o;
+  $('file-title').textContent = o.title; $('file-sub').textContent = o.sub || '';
+  const t = $('file-text'); t.value = o.text; t.readOnly = !!o.readonly;
+  $('file-dl').style.display = o.readonly ? 'none' : '';
+  openOv('ov-file'); t.scrollTop = 0;
+}
+$('file-text').addEventListener('input', () => {
+  if (!fileCtx || !fileCtx.ctx) return;
+  const {mi, idx} = fileCtx.ctx; const m = state.messages[mi];
+  m.edits = m.edits || {}; m.edits[idx] = $('file-text').value; saveState();
+});
+function closeFileModal(){
+  closeOv('ov-file');
+  if (fileCtx && fileCtx.ctx){ renderChat(true); renderSlots(); }
+  fileCtx = null;
+}
+function copyFileModal(){ copyText($('file-text').value); }
+function downloadFileModal(){ download(fileCtx.title, $('file-text').value); }
+
+// ═══════════════════════════════════════
+//  FLUJO DE CONVERSACIÓN
+// ═══════════════════════════════════════
+function firstMessage(){
+  const chap = $('chapter').value.trim();
+  const f = state.files.bruto;
+  return `Nombre corto del capítulo: «${chap}». Úsalo en los nombres de los ficheros que entregues.\n\n` +
+    'Nota de la aplicación: esta conversación se hace a través de una aplicación y no puedes crear ficheros. ' +
+    'Entrega cada fichero final en un bloque ```markdown precedido de su nombre de fichero.\n\n' +
+    `=== TEXTO EN BRUTO — fichero «${f.name}» ===\n\n${f.text}\n\n=== FIN DEL TEXTO EN BRUTO ===\n\nEmpieza.`;
+}
+function startConv(){
+  if (!$('chapter').value.trim() || !state.files.bruto) return;
+  state.locked = {...modelChoice};
+  state.prompt = getPrompt();
+  const f = state.files.bruto;
+  const summary = `Enviado: ${f.name} (${kb(f.text)})`;
+  state.messages = [{role:'user', kind:'files', content:firstMessage(), summary}];
+  state.error = null; saveState(); renderAll(); runAssistant();
+}
+function sendUser(){
+  const t = $('input-esencial'); const text = t.value.trim();
+  if (!text || running) return;
+  state.messages.push({role:'user', content:text}); state.error = null;
+  t.value = ''; autoGrow(t); saveState(); renderChat(); runAssistant();
+}
+function resetConv(){
+  if (!confirm('Se borrará la conversación y sus documentos no descargados. ¿Seguir?')) return;
+  stopConv(); const files = state.files;
+  state = blankState(); state.files = files; state.chapter = $('chapter').value;
+  saveState(); renderAll();
+}
+function newChapter(){
+  if (!confirm('Se borrarán el fichero cargado, la conversación y los documentos. Descarga antes lo que quieras conservar. ¿Empezar un capítulo nuevo?')) return;
+  stopConv();
+  state = blankState(); $('chapter').value = ''; saveJSON(LS.state, state); renderAll();
+}
+function stopConv(){ if (running){ running.abort(); } }
+function retry(){ state.error = null; runAssistant(); }
+
+async function runAssistant(){
+  const {provider, model} = state.locked;
+  const label = PROVIDERS[provider].label + ' · ' + ((modelList(provider).find(m => m.id === model) || {}).label || model);
+  const history = state.messages.map(m => ({role:m.role, content:m.content}));
+  const msg = {role:'assistant', content:'', streaming:true, modelLabel:label};
+  state.messages.push(msg);
+  const ctrl = new AbortController(); running = ctrl;
+  renderChat(); renderActions(); renderComposer();
+
+  let pending = false;
+  const repaint = () => { if (pending) return; pending = true; requestAnimationFrame(() => {
+    pending = false; const c = $('chat-esencial');
+    const atBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+    renderChat(true); if (atBottom) scrollChat();
+  }); };
+
+  try {
+    const res = await callModel({provider, model, system:state.prompt + SUG_NOTE, messages:history, signal:ctrl.signal,
+      onText: t => { msg.content += t; repaint(); },
+      onThinking: () => { if (!msg.thinking){ msg.thinking = true; repaint(); } }});
+    if (res.truncated) msg.note = 'La respuesta se ha cortado por llegar al límite de longitud. Escribe «continúa» para que siga.';
+    if (!msg.content.trim()) throw new Error('El modelo ha devuelto una respuesta vacía.');
+  } catch(e){
+    if (e.name === 'AbortError'){
+      if (msg.content.trim()) msg.note = 'Respuesta detenida.';
+      else { state.messages.pop(); state.error = 'La respuesta se detuvo antes de empezar. Pulsa «Reintentar» para volver a pedirla.'; }
+    } else {
+      if (!msg.content.trim()) state.messages.pop(); else msg.note = 'La respuesta se interrumpió por un error.';
+      state.error = describeError(e);
+    }
+  } finally {
+    delete msg.streaming; delete msg.thinking;
+    running = null;
+    saveJSON(LS.state, state);
+    renderSlots(); renderActions(); renderChat(true); renderComposer();
+    if (!state.error) $('input-esencial').focus();
+  }
+}
+function describeError(e){
+  const m = e.message || String(e);
+  if (/Failed to fetch|NetworkError|CORS/i.test(m)) return 'No se ha podido conectar con la API (sin red, o la API no acepta llamadas desde el navegador). ' + m;
+  return m;
+}
+
+// ═══════════════════════════════════════
+//  APIs (con streaming) — idénticas al original
+// ═══════════════════════════════════════
+async function* sseData(resp, signal){
+  const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
+  while (true){
+    if (signal.aborted) { reader.cancel(); throw new DOMException('Detenido', 'AbortError'); }
+    const {done, value} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream:true});
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+      if (line.startsWith('data:')){ const d = line.slice(5).trim(); if (d && d !== '[DONE]') yield d; }
+    }
+  }
+}
+async function httpError(resp, who){
+  let detail = '';
+  try { const j = await resp.json(); detail = (j.error && (j.error.message || j.error)) || j.message || JSON.stringify(j); }
+  catch(e){ try { detail = await resp.text(); } catch(_){} }
+  if (typeof detail === 'object') detail = JSON.stringify(detail);
+  return new Error(`${who} (${resp.status}): ${String(detail).slice(0, 400)}`);
+}
+function needKey(id){
+  const k = getKey(id);
+  if (!k){ openKeys(id); throw new Error('Falta la clave de ' + KEYS.find(x => x.id === id).label + '. Añádela y pulsa «Reintentar».'); }
+  return k;
+}
+function callModel(o){
+  if (o.provider === 'claude')   return callClaude(o);
+  if (o.provider === 'aistudio') return callGemini(o);
+  const cfg = {
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions', who:'OpenRouter', max:null},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions', who:'DeepSeek', max:32768},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions', who:'Mistral', max:16000},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions', who:'Groq', max:16000},
+  }[o.provider];
+  return callOpenAICompat(o, cfg);
+}
+async function callClaude({model, system, messages, signal, onText, onThinking}){
+  const key = needKey('claude');
+  const msgs = messages.map((m, i) => {
+    const cache = (i === 0) || (i === messages.length - 1 && m.role === 'user');
+    return {role:m.role, content:[cache ? {type:'text', text:m.content, cache_control:{type:'ephemeral'}} : {type:'text', text:m.content}]};
+  });
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', signal,
+    headers:{'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:32000, stream:true,
+      system:[{type:'text', text:system, cache_control:{type:'ephemeral'}}], messages:msgs})
+  });
+  if (!resp.ok) throw await httpError(resp, 'Claude');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') onText(j.delta.text);
+    else if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'thinking_delta' && onThinking) onThinking();
+    else if (j.type === 'message_delta' && j.delta && j.delta.stop_reason === 'max_tokens') truncated = true;
+    else if (j.type === 'error') throw new Error('Claude: ' + (j.error && j.error.message || 'error en la respuesta'));
+  }
+  return {truncated};
+}
+async function callGemini({model, system, messages, signal, onText, onThinking}){
+  const key = needKey('aistudio');
+  const info = (loadJSON(LS.gemList) || []).find(m => m.id === model);
+  const maxOut = Math.min((info && info.out) ? info.out : 65536, 65536);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+  const resp = await fetch(url, {
+    method:'POST', signal, headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
+    body:JSON.stringify({
+      systemInstruction:{parts:[{text:system}]},
+      contents:messages.map(m => ({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.content}]})),
+      generationConfig:{maxOutputTokens:maxOut}
+    })
+  });
+  if (!resp.ok) throw await httpError(resp, 'AI Studio');
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error('AI Studio: ' + j.error.message);
+    const c = j.candidates && j.candidates[0]; if (!c) continue;
+    ((c.content && c.content.parts) || []).forEach(p => { if (p.text && !p.thought) onText(p.text); else if (p.thought && onThinking) onThinking(); });
+    if (c.finishReason === 'MAX_TOKENS') truncated = true;
+  }
+  return {truncated};
+}
+async function callOpenAICompat({provider, model, system, messages, signal, onText, onThinking}, cfg){
+  const key = needKey(provider);
+  const headers = {'Content-Type':'application/json', 'Authorization':'Bearer ' + key};
+  if (provider === 'openrouter'){ headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Esencial Castroverde'; }
+  const body = {model, stream:true, messages:[{role:'system', content:system}, ...messages]};
+  if (cfg.max) body.max_tokens = cfg.max;
+  const resp = await fetch(cfg.url, {method:'POST', signal, headers, body:JSON.stringify(body)});
+  if (!resp.ok) throw await httpError(resp, cfg.who);
+  let truncated = false;
+  for await (const d of sseData(resp, signal)){
+    let j; try { j = JSON.parse(d); } catch(e){ continue; }
+    if (j.error) throw new Error(cfg.who + ': ' + (j.error.message || JSON.stringify(j.error)));
+    const ch = j.choices && j.choices[0]; if (!ch) continue;
+    const dl = ch.delta || {};
+    if (dl.reasoning_content || dl.reasoning) onThinking();
+    if (typeof dl.content === 'string' && dl.content) onText(dl.content);
+    else if (Array.isArray(dl.content)) dl.content.forEach(c => {
+      if (c.type === 'text' && c.text) onText(c.text); else if (c.type === 'thinking') onThinking();
+    });
+    if (ch.finish_reason === 'length') truncated = true;
+  }
+  return {truncated};
+}
+
+// ═══════════════════════════════════════
+//  CLAVES
+// ═══════════════════════════════════════
+function openKeys(focusId){
+  $('keys-body').innerHTML = '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones.</p>' +
+    KEYS.map(k => `<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"></div>`).join('');
+  $('showkeys').checked = false;
+  openOv('ov-keys');
+  setTimeout(() => { const el = $('key-' + (typeof focusId === 'string' ? focusId : 'claude')); if (el) el.focus(); }, 60);
+}
+function toggleShowKeys(){ const t = $('showkeys').checked ? 'text' : 'password'; KEYS.forEach(k => $('key-' + k.id).type = t); }
+function saveKeys(){
+  const oldFb = getKey('firebase');
+  KEYS.forEach(k => { const v = $('key-' + k.id).value.trim(); try { v ? localStorage.setItem(k.ls, v) : localStorage.removeItem(k.ls); } catch(e){} });
+  closeOv('ov-keys'); showStatus('ok', 'Claves guardadas.');
+  const fb = getKey('firebase'); if (fb && fb !== oldFb) initFirebase(fb);
+}
+
+// ═══════════════════════════════════════
+//  PROMPT
+// ═══════════════════════════════════════
+function openPrompts(){
+  $('ptext').value = getPrompt();
+  const isDefault = getPrompt().trim() === document.getElementById('default-esencial').textContent.trim();
+  $('ptitle').textContent = isDefault ? 'Versión por defecto' : 'Versión modificada';
+  openOv('ov-prompts');
+}
+async function importPrompt(input){
+  const f = input.files[0]; if (!f) return;
+  $('ptext').value = await readFile(f); input.value = '';
+  $('ptitle').textContent = 'Versión modificada';
+}
+function restorePrompt(){
+  if (!confirm('¿Restaurar el prompt por defecto?')) return;
+  $('ptext').value = document.getElementById('default-esencial').textContent.trim();
+  $('ptitle').textContent = 'Versión por defecto';
+}
+function savePrompts(){
+  const def = document.getElementById('default-esencial').textContent.trim();
+  const val = $('ptext').value.trim();
+  promptCustom = val === def ? null : val;
+  saveJSON(LS.prompt, promptCustom);
+  closeOv('ov-prompts'); renderPromptLine();
+  showStatus('ok', 'Prompt guardado. Se aplica a las conversaciones que empieces a partir de ahora.');
+  if (fbUser) doSync(true);
+}
+
+// ═══════════════════════════════════════
+//  FIREBASE
+// ═══════════════════════════════════════
+let fbAuth = null, fbDb = null, fbProvider = null, fbUser = null;
+function initFirebase(apiKey){
+  if (!apiKey || typeof firebase === 'undefined') return;
+  try {
+    if (firebase.apps.length) firebase.app().delete().then(() => startFirebase(apiKey));
+    else startFirebase(apiKey);
+  } catch(e){}
+}
+function startFirebase(apiKey){
+  firebase.initializeApp({
+    apiKey, authDomain:'castroverde-apps.firebaseapp.com', projectId:'castroverde-apps',
+    storageBucket:'castroverde-apps.firebasestorage.app', messagingSenderId:'371026533141',
+    appId:'1:371026533141:web:315767f60cbf8d6f47671c'
+  });
+  fbAuth = firebase.auth(); fbDb = firebase.firestore(); fbProvider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.onAuthStateChanged(u => { fbUser = u; updateSyncUI(); });
+}
+function updateSyncUI(){
+  const b = $('btn-sync'), u = $('sync-user'), so = $('btn-signout');
+  if (fbUser){ b.classList.add('synced'); b.textContent = '✓ Sincronizar prompt'; u.textContent = fbUser.email; u.style.display = 'inline'; so.style.display = ''; }
+  else { b.classList.remove('synced'); b.textContent = 'Sincronizar prompt'; u.style.display = 'none'; so.style.display = 'none'; }
+}
+function handleSync(){
+  if (!fbAuth){ showStatus('err', 'Falta la clave de Firebase.'); openKeys('firebase'); return; }
+  if (!fbUser){ showStatus('info', 'Iniciando sesión…'); fbAuth.signInWithPopup(fbProvider).then(() => doSync()).catch(e => showStatus('err', e.message)); }
+  else doSync();
+}
+async function doSync(quiet){
+  if (!fbUser || !fbDb) return;
+  const b = $('btn-sync'); b.classList.add('busy'); if (!quiet) showStatus('info', 'Sincronizando…');
+  try {
+    const ref = fbDb.collection('esencial').doc(fbUser.uid);
+    const snap = await ref.get();
+    const remote = snap.exists ? snap.data() : null;
+    let pulled = false;
+    if (remote && remote.promptUpdatedAt && (remote.promptUpdatedAt || 0) > (loadJSON(LS.prompt + '_t') || 0)){
+      promptCustom = remote.promptCustom || null;
+      saveJSON(LS.prompt, promptCustom); saveJSON(LS.prompt + '_t', remote.promptUpdatedAt);
+      pulled = true; renderPromptLine();
+    } else {
+      const now = Date.now();
+      await ref.set({promptCustom, promptUpdatedAt:now, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      saveJSON(LS.prompt + '_t', now);
+    }
+    showStatus('ok', pulled ? 'Prompt actualizado desde la nube.' : 'Prompt sincronizado.');
+  } catch(e){ showStatus('err', 'Error al sincronizar: ' + e.message); }
+  finally { b.classList.remove('busy'); }
+}
+function fbSignOut(){ if (fbAuth) fbAuth.signOut().then(() => { fbUser = null; updateSyncUI(); }); }
+
+// ═══════════════════════════════════════
+//  ARRANQUE
+// ═══════════════════════════════════════
+$('chapter').value = state.chapter || '';
+$('chapter').addEventListener('input', () => { state.chapter = $('chapter').value; saveState(); renderActions(); });
+
+// Conversación interrumpida
+const msgs = state.messages; const last = msgs[msgs.length - 1];
+if (last && last.streaming){ delete last.streaming; delete last.thinking; if (!last.content.trim()) msgs.pop(); else last.note = 'Respuesta interrumpida al cerrar la página.'; }
+const now2 = msgs[msgs.length - 1];
+if (now2 && now2.role === 'user' && !state.error)
+  state.error = 'La respuesta no llegó (la página se cerró o se recargó mientras el modelo trabajaba). Pulsa «Reintentar».';
+
+renderAll();
+orAutoRefresh();
+if (getKey('firebase')) initFirebase(getKey('firebase'));
+</script>
+</body>
+</html>
