@@ -71,12 +71,19 @@
                     <p class="text-base text-slate-500">Valladolid</p>
                 </div>
             </div>
-            <!-- Botón filtrar -->
-            <button onclick="toggleFiltros()" id="btn-filtros"
-                class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-base font-medium px-4 py-2.5 rounded-xl border border-slate-200 transition shadow-sm">
-                <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                <span>Filtrar</span>
-            </button>
+            <!-- Botones -->
+            <div class="flex items-center gap-2">
+                <button onclick="loadCartelera()" title="Actualizar cartelera"
+                    class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-base font-medium px-4 py-2.5 rounded-xl border border-slate-200 transition shadow-sm">
+                    <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                    <span class="hidden sm:inline">Actualizar</span>
+                </button>
+                <button onclick="toggleFiltros()" id="btn-filtros"
+                    class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-base font-medium px-4 py-2.5 rounded-xl border border-slate-200 transition shadow-sm">
+                    <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+                    <span>Filtrar</span>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -176,22 +183,22 @@
             <div class="space-y-4 text-sm leading-relaxed text-slate-600">
                 <section>
                     <h4 class="text-base font-semibold text-amber-600 flex items-center gap-1.5 mb-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> El desafío de CORS en aplicaciones estáticas
+                        <i data-lucide="zap" class="w-4 h-4"></i> Arquitectura: scraping gratuito sin servidor
                     </h4>
                     <p>
-                        Cuando publicas este archivo HTML en <strong>GitHub Pages</strong>, el navegador bloquea las peticiones <code class="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">fetch()</code> directas a <code class="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">cbroadway.net</code> o <code class="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">filmaffinity.com</code> debido a las políticas de seguridad <strong>CORS (Cross-Origin Resource Sharing)</strong>.
+                        El navegador no puede acceder directamente a <code class="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">eCartelera</code> ni a <code class="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">filmaffinity.com</code> por restricciones CORS. La solución es un <strong>proxy CORS público gratuito</strong> (<code class="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">allorigins.win</code>) que actúa de intermediario. Sin API de pago, sin servidor, sin coste.
                     </p>
                 </section>
 
                 <section class="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
                     <h4 class="text-base font-semibold text-emerald-700 flex items-center gap-1.5">
-                        <i data-lucide="check-circle-2" class="w-4 h-4"></i> Solución Recomendada: GitHub Actions + Cron Job
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i> Flujo al abrir la aplicación
                     </h4>
                     <ol class="list-decimal pl-5 space-y-2 text-slate-500">
-                        <li><strong class="text-slate-600">Script de Scraping (Python):</strong> Se crea un archivo <code class="text-slate-700">scraper.py</code> que extrae la cartelera diaria de Cines Broadway.</li>
-                        <li><strong class="text-slate-600">Matching con FilmAffinity:</strong> El script busca cada título en FilmAffinity y genera un archivo <code class="text-slate-700">cartelera.json</code>.</li>
-                        <li><strong class="text-slate-600">GitHub Action Automatizada:</strong> Ejecuta el script todos los días a las 08:00 AM y actualiza el JSON en el repositorio.</li>
-                        <li><strong class="text-slate-600">Consumo en el Frontend:</strong> El HTML realiza un <code class="text-slate-700">fetch('./cartelera.json')</code> sin errores CORS.</li>
+                        <li><strong class="text-slate-600">eCartelera vía proxy:</strong> Se descarga <code class="text-slate-700">ecartelera.com/cines/497,0,1.html</code> (Cines Broadway Valladolid) a través de <code class="text-slate-700">allorigins.win</code>.</li>
+                        <li><strong class="text-slate-600">Parseo en el navegador:</strong> Se usa <code class="text-slate-700">DOMParser</code> para extraer títulos, horarios, director, género y póster del HTML.</li>
+                        <li><strong class="text-slate-600">Render inmediato:</strong> Las tarjetas aparecen enseguida, sin esperar a FilmAffinity.</li>
+                        <li><strong class="text-slate-600">FilmAffinity en paralelo:</strong> Se enriquece cada película con su nota, votos y sinopsis buscando en FilmAffinity (también vía proxy), en lotes de 4 peticiones simultáneas.</li>
                     </ol>
                 </section>
             </div>
@@ -218,111 +225,257 @@
 
     <!-- Application Script -->
     <script>
-        // MOCK DATA
-        const mockCartelera = [
-            {
-                id: "1",
-                titulo: "Dune: Parte Dos",
-                originalTitle: "Dune: Part Two",
-                director: "Denis Villeneuve",
-                genero: "Ciencia Ficción / Aventuras",
-                tags: ["2D", "Dolby"],
-                horarios: ["17:15", "19:45", "21:30"],
-                poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&q=80",
-                filmaffinity: {
-                    rating: 8.1,
-                    votos: "38.450",
-                    sinopsis: "Paul Atreides se une a Chani y a los Fremen mientras busca venganza contra los conspiradores que destruyeron a su familia. Frente a una elección entre el amor de su vida y el destino del universo, debe evitar un futuro terrible.",
-                    valoracionGeneral: "Una de las secuelas más esperadas de los últimos años cumple con creces las expectativas. Denis Villeneuve entrega una película de ciencia ficción épica y visualmente deslumbrante, con una fotografía excepcional y una banda sonora que envuelve cada escena. El público valora especialmente la profundidad de los personajes, la fidelidad al espíritu de la novela de Frank Herbert y el ritmo pausado pero hipnótico de la narración. Algunos espectadores echan en falta más acción directa, pero la mayoría coincide en que es cine de autor en estado puro, pensado para disfrutarse en pantalla grande.",
-                    url: "https://www.filmaffinity.com/es/film815002.html"
+        // -------------------------------------------------------
+        // CARGA EN VIVO — scraping gratuito vía allorigins.win
+        // Fuentes: eCartelera (cartelera) + FilmAffinity (ratings)
+        // Sin API de pago, sin servidor, sin coste.
+        // -------------------------------------------------------
+
+        const PROXY = 'https://api.allorigins.win/get?url=';
+        const ECARTELERA_URL = 'https://www.ecartelera.com/cines/497,0,1.html';
+
+        // Estado global
+        let moviesData = [];
+
+        // --- UI helpers ---
+        function showLoading(msg = 'Cargando cartelera…', sub = 'Obteniendo datos de eCartelera y FilmAffinity') {
+            document.getElementById('movies-grid').innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-20 gap-4 text-slate-500">
+                    <div class="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-lg font-medium">${msg}</p>
+                    <p class="text-sm text-slate-400">${sub}</p>
+                </div>`;
+            document.getElementById('empty-state').classList.add('hidden');
+        }
+
+        function showError(msg) {
+            document.getElementById('movies-grid').innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
+                    <i data-lucide="wifi-off" class="w-12 h-12 text-red-300"></i>
+                    <p class="text-lg font-semibold text-red-500">No se pudo cargar la cartelera</p>
+                    <p class="text-sm text-slate-400 text-center max-w-sm">${msg}</p>
+                    <button onclick="loadCartelera()" class="mt-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-5 py-2.5 rounded-xl transition text-base">
+                        Reintentar
+                    </button>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        // --- Proxy fetch helper ---
+        async function proxyFetch(url) {
+            const res = await fetch(PROXY + encodeURIComponent(url));
+            if (!res.ok) throw new Error(`Error de red al obtener ${url}`);
+            const json = await res.json();
+            return json.contents; // HTML como texto
+        }
+
+        // --- Parsear eCartelera ---
+        function parseECartelera(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const movies = [];
+
+            // Cada película está en un bloque <article> o en la estructura de lista de eCartelera.
+            // En eCartelera las películas están en elementos con clase "movie-card-info" o similares.
+            // Según el HTML visto: cada película aparece como img + enlace con título + lista de horarios.
+            // Buscamos todos los enlaces de película (href /peliculas/...)
+            const seen = new Set();
+
+            // Los títulos son enlaces <a href="/peliculas/...">Título</a>
+            // Los horarios son <a href="/cines/comprar/...">HH:MM</a>
+            // La estructura es una lista de bloques, cada uno con imagen, título, metadatos y horarios.
+
+            // Estrategia: buscar todos los <a> que apunten a /peliculas/
+            const titleLinks = doc.querySelectorAll('a[href^="/peliculas/"]');
+
+            titleLinks.forEach(link => {
+                const titulo = link.textContent.trim();
+                if (!titulo || seen.has(titulo)) return;
+                seen.add(titulo);
+
+                // Contenedor padre (subir hasta encontrar el bloque de la película)
+                // Buscamos el ancestro que contenga los horarios
+                let container = link;
+                for (let i = 0; i < 8; i++) {
+                    container = container.parentElement;
+                    if (!container) break;
+                    // Si el contenedor tiene horarios (enlaces /cines/comprar/) paramos
+                    if (container.querySelector('a[href^="/cines/comprar/"]')) break;
                 }
-            },
-            {
-                id: "2",
-                titulo: "La Zona de Interés",
-                originalTitle: "The Zone of Interest",
-                director: "Jonathan Glazer",
-                genero: "Drama / Histórico",
-                tags: ["VOSE", "Cine Club"],
-                horarios: ["18:00", "20:15"],
-                poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=500&q=80",
-                filmaffinity: {
-                    rating: 7.6,
-                    votos: "19.200",
-                    sinopsis: "El comandante de Auschwitz, Rudolf Höss, y su esposa Hedwig intentan construir una vida idílica para su familia en una casa con jardín justo al lado del campo de concentración.",
-                    valoracionGeneral: "Una película perturbadora y valiente que aborda el Holocausto desde un ángulo radicalmente distinto: sin mostrar el horror directamente, sino dejándolo intuir al fondo mientras una familia lleva una vida aparentemente normal. El público se divide entre quienes la consideran una obra maestra por su originalidad y quienes encuentran su frialdad difícil de sostener. En general se valora muy positivamente su apuesta formal arriesgada, el sonido como elemento dramático central y la actuación contenida de sus protagonistas. No es una película fácil, pero sí muy necesaria.",
-                    url: "https://www.filmaffinity.com/es/film892134.html"
+
+                // Horarios
+                const horarioLinks = container ? container.querySelectorAll('a[href^="/cines/comprar/"]') : [];
+                const horarios = Array.from(horarioLinks).map(a => a.textContent.trim()).filter(h => /^\d{1,2}:\d{2}$/.test(h));
+
+                // Metadatos de texto (duración, país, género, director)
+                // Están en texto plano dentro del contenedor
+                const textoBloque = container ? container.textContent : '';
+
+                // Director: busca "Dir.: Nombre" o "Dir: Nombre"
+                const dirMatch = textoBloque.match(/Dir\.?\s*:\s*([^\n\r]+)/);
+                const director = dirMatch ? dirMatch[1].replace(/\s+/g, ' ').trim().split('\n')[0].trim() : 'Desconocido';
+
+                // Género: línea con duración/país/género (p.ej. "102 min. España Comedia")
+                const generoMatch = textoBloque.match(/(?:\d+ min\.)?\s*(?:[A-ZÁÉÍÓÚÜ][a-záéíóúüñ]+ del [A-Z][a-z]+|[A-ZÁÉÍÓÚÜ][a-záéíóúüñ]+(?:\s[A-ZÁÉÍÓÚÜ][a-záéíóúüñ]+)?)\s+([\wáéíóúüñÁÉÍÓÚÜÑ\s\/\+]+?)(?:\s+Dir|\s+\d|\s*$)/);
+                const genero = generoMatch ? generoMatch[1].trim() : 'Sin clasificar';
+
+                // URL de la película en eCartelera
+                const peliculaUrl = 'https://www.ecartelera.com' + link.getAttribute('href');
+
+                // Imagen del póster (miniatura)
+                const img = container ? container.querySelector('img[src*="/carteles/"]') : null;
+                const poster = img ? img.src.replace('_mini.jpg', '_large.jpg') : '';
+
+                // Nota de eCartelera (si aparece, es un número como "8.3" suelto)
+                const notaMatch = container ? container.textContent.match(/\b([0-9]\.[0-9])\b/) : null;
+                const notaEC = notaMatch ? parseFloat(notaMatch[1]) : 0;
+
+                // Tags VOSE / +18 / +16 / +12
+                const tags = [];
+                if (/VOSE/i.test(textoBloque)) tags.push('VOSE');
+                if (/\+18/i.test(textoBloque)) tags.push('+18');
+                else if (/\+16/i.test(textoBloque)) tags.push('+16');
+                else if (/\+12/i.test(textoBloque)) tags.push('+12');
+                if (tags.length === 0) tags.push('2D');
+
+                movies.push({
+                    id: String(movies.length + 1),
+                    titulo,
+                    originalTitle: '',
+                    director: director.split('\n')[0].trim(),
+                    genero: genero.trim(),
+                    tags,
+                    horarios: horarios.length > 0 ? horarios : ['Consultar web'],
+                    poster,
+                    peliculaUrl,
+                    notaEC,
+                    filmaffinity: {
+                        rating: 0,
+                        votos: 'Sin datos',
+                        sinopsis: '',
+                        valoracionGeneral: '',
+                        url: 'https://www.filmaffinity.com/es/'
+                    }
+                });
+            });
+
+            return movies;
+        }
+
+        // --- Buscar una película en FilmAffinity y devolver sus datos ---
+        async function fetchFilmAffinity(titulo) {
+            try {
+                const searchUrl = `https://www.filmaffinity.com/es/search.php?stext=${encodeURIComponent(titulo)}&stype=tit`;
+                const html = await proxyFetch(searchUrl);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Si redirige directamente a la ficha (1 resultado)
+                // La URL canónica puede ser /film\d+.html
+                let filmUrl = null;
+                const canon = doc.querySelector('link[rel="canonical"]');
+                if (canon && /film\d+\.html/.test(canon.href)) {
+                    filmUrl = canon.href;
                 }
-            },
-            {
-                id: "3",
-                titulo: "Pobres Criaturas",
-                originalTitle: "Poor Things",
-                director: "Yorgos Lanthimos",
-                genero: "Comedia / Fantástico",
-                tags: ["2D", "VOSE"],
-                horarios: ["17:00", "19:30", "21:45"],
-                poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80",
-                filmaffinity: {
-                    rating: 7.8,
-                    votos: "32.100",
-                    sinopsis: "Bella Baxter es una joven revivida por el brillante y poco ortodoxo científico Dr. Godwin Baxter. Con ganas de aprender y con hambre de la mundanidad que le falta, Bella se escapa con Duncan Wedderburn.",
-                    valoracionGeneral: "Una película extravagante, provocadora y llena de vida que no deja indiferente a nadie. La mayoría del público celebra su atrevimiento visual, su sentido del humor disparatado y la interpretación de Emma Stone, que se entrega sin reservas a un papel exigente y completamente fuera de lo común. Algunos espectadores encuentran su tono excesivo o su contenido explícito innecesario, pero la valoración general es muy alta: se trata de una obra con personalidad propia, difícil de encasillar y muy difícil de olvidar.",
-                    url: "https://www.filmaffinity.com/es/film482103.html"
+
+                // Si hay lista de resultados, coger el primero
+                if (!filmUrl) {
+                    const firstResult = doc.querySelector('a.mc-title, .se-it a[href*="film"]');
+                    if (firstResult) filmUrl = firstResult.href;
                 }
-            },
-            {
-                id: "4",
-                titulo: "Cine Club: Anatomía de una Caída",
-                originalTitle: "Anatomie d'une chute",
-                director: "Justine Triet",
-                genero: "Intriga / Drama Judicial",
-                tags: ["Cine Club", "VOSE"],
-                horarios: ["19:00", "21:15"],
-                poster: "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=500&q=80",
-                filmaffinity: {
-                    rating: 7.7,
-                    votos: "24.500",
-                    sinopsis: "Sandra, una escritora alemana, vive con su esposo Samuel y su hijo ciego Daniel en los Alpes franceses. Cuando Samuel fallece en misteriosas circunstancias, Sandra es acusada de asesinato.",
-                    valoracionGeneral: "Un thriller judicial de altísima tensión que mantiene al espectador en vilo de principio a fin sin necesidad de golpes de efecto. El público destaca sobre todo la inteligencia del guion, que nunca revela del todo la verdad y obliga a formarse una opinión propia, y la actuación extraordinaria de Sandra Hüller. Se valora también la mirada honesta sobre las dinámicas de pareja y la vida familiar. Ganó la Palma de Oro en Cannes y la mayoría de quienes la ven entienden perfectamente por qué.",
-                    url: "https://www.filmaffinity.com/es/film210948.html"
-                }
-            },
-            {
-                id: "5",
-                titulo: "Cazafantasmas: Imperio Helado",
-                originalTitle: "Ghostbusters: Frozen Empire",
-                director: "Gil Kenan",
-                genero: "Aventuras / Comedia",
-                tags: ["2D", "Dolby"],
-                horarios: ["16:30", "18:45", "20:30"],
-                poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&q=80",
-                filmaffinity: {
-                    rating: 5.8,
-                    votos: "6.800",
-                    sinopsis: "La familia Spengler regresa al lugar donde empezó todo (el icónico parque de bomberos de Nueva York) para formar equipo con los Cazafantasmas originales.",
-                    valoracionGeneral: "Una entrega que funciona mejor como homenaje nostálgico que como película independiente. Los fans de la saga original encuentran satisfacción en el reencuentro con personajes clásicos y en los guiños al material de los años 80, pero la mayoría coincide en que el guion es débil y que la película no arriesga lo suficiente. El público familiar la valora como entretenimiento sin pretensiones, apta para ver con niños. En general, una película agradable pero prescindible para quienes no tengan vínculo sentimental con la franquicia.",
-                    url: "https://www.filmaffinity.com/es/film879236.html"
-                }
-            },
-            {
-                id: "6",
-                titulo: "Kung Fu Panda 4",
-                originalTitle: "Kung Fu Panda 4",
-                director: "Mike Mitchell",
-                genero: "Animación / Infantil",
-                tags: ["2D"],
-                horarios: ["16:15", "18:15"],
-                poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&q=80",
-                filmaffinity: {
-                    rating: 6.1,
-                    votos: "8.300",
-                    sinopsis: "Po es llamado a convertirse en el Líder Espiritual del Valle de la Paz. Para ello necesita encontrar y entrenar rápidamente a un nuevo Guerrero del Dragón.",
-                    valoracionGeneral: "La cuarta entrega de la saga mantiene el nivel de humor y la energía que la caracterizan, y los más pequeños disfrutan sin duda del espectáculo. Sin embargo, el público adulto nota que la fórmula empieza a agotarse: la historia resulta predecible y la profundidad emocional de las primeras películas brilla por su ausencia. Es una opción ideal para una tarde en familia con niños, pero quienes busquen la magia de las entregas anteriores pueden salir con una ligera decepción.",
-                    url: "https://www.filmaffinity.com/es/film390219.html"
-                }
+
+                if (!filmUrl) return null;
+
+                // Asegurar URL absoluta
+                if (filmUrl.startsWith('/')) filmUrl = 'https://www.filmaffinity.com' + filmUrl;
+
+                // Cargar ficha
+                const filmHtml = await proxyFetch(filmUrl);
+                const fdoc = parser.parseFromString(filmHtml, 'text/html');
+
+                // Rating
+                const ratingEl = fdoc.querySelector('[id^="movie-rat-avg"], .avgrat-box, .rat-avg');
+                const ratingText = ratingEl ? ratingEl.textContent.trim().replace(',', '.') : '0';
+                const rating = parseFloat(ratingText) || 0;
+
+                // Votos
+                const votosEl = fdoc.querySelector('[id^="movie-count-rat"], .rat-count');
+                const votos = votosEl ? votosEl.textContent.trim().replace(/\s+/g, '.') : 'Sin datos';
+
+                // Título original
+                const origEl = fdoc.querySelector('.movie-info .dt:contains("Título original") + .dd, [itemprop="alternativeHeadline"]');
+                const originalTitle = origEl ? origEl.textContent.trim() : '';
+
+                // Sinopsis
+                const sinopsisEl = fdoc.querySelector('[id^="plot-txt-"], .movie-plot, [itemprop="description"]');
+                const sinopsis = sinopsisEl ? sinopsisEl.textContent.trim().replace(/\s+/g, ' ') : '';
+
+                return { rating, votos, sinopsis, url: filmUrl, originalTitle };
+
+            } catch (e) {
+                return null;
             }
-        ];
+        }
+
+        // --- Carga principal ---
+        async function loadCartelera() {
+            showLoading('Cargando cartelera de hoy…', 'Obteniendo datos de eCartelera…');
+
+            try {
+                // 1. Obtener y parsear eCartelera
+                const html = await proxyFetch(ECARTELERA_URL);
+                let movies = parseECartelera(html);
+
+                if (movies.length === 0) throw new Error('No se encontraron películas en eCartelera. Puede que hayan cambiado la estructura de la web.');
+
+                // Mostrar las películas rápido (sin FilmAffinity aún)
+                moviesData = movies;
+                applyFilters();
+
+                // 2. Enriquecer con FilmAffinity en paralelo (máx 4 a la vez para no saturar)
+                showLoading(
+                    `${movies.length} películas encontradas`,
+                    'Enriqueciendo con datos de FilmAffinity…'
+                );
+
+                // Lotes de 4 peticiones simultáneas
+                for (let i = 0; i < movies.length; i += 4) {
+                    const lote = movies.slice(i, i + 4);
+                    await Promise.all(lote.map(async (movie) => {
+                        const fa = await fetchFilmAffinity(movie.titulo);
+                        if (fa) {
+                            movie.filmaffinity.rating = fa.rating;
+                            movie.filmaffinity.votos = fa.votos;
+                            movie.filmaffinity.sinopsis = fa.sinopsis;
+                            movie.filmaffinity.url = fa.url;
+                            if (fa.originalTitle) movie.originalTitle = fa.originalTitle;
+                            // Valoración general: generar un breve resumen a partir de la nota
+                            if (fa.rating >= 7.5) {
+                                movie.filmaffinity.valoracionGeneral = `Película muy bien valorada por los usuarios de FilmAffinity con un ${fa.rating.toFixed(1)}/10.`;
+                            } else if (fa.rating >= 6.0) {
+                                movie.filmaffinity.valoracionGeneral = `Película con buena acogida, con un ${fa.rating.toFixed(1)}/10 en FilmAffinity.`;
+                            } else if (fa.rating > 0) {
+                                movie.filmaffinity.valoracionGeneral = `Valoración discreta en FilmAffinity: ${fa.rating.toFixed(1)}/10.`;
+                            } else {
+                                movie.filmaffinity.valoracionGeneral = 'Aún sin valoración suficiente en FilmAffinity.';
+                            }
+                        } else if (movie.notaEC > 0) {
+                            // Fallback: usar nota de eCartelera
+                            movie.filmaffinity.rating = movie.notaEC;
+                            movie.filmaffinity.votos = 'eCartelera';
+                            movie.filmaffinity.valoracionGeneral = `Nota ${movie.notaEC}/10 según usuarios de eCartelera.`;
+                        }
+                    }));
+                }
+
+                moviesData = movies;
+                applyFilters();
+
+            } catch (e) {
+                console.error('Error cargando cartelera:', e);
+                showError(e.message || 'Error desconocido al cargar la cartelera.');
+            }
+        }
 
         // -------------------------------------------------------
         // Panel desplegable FilmAffinity dentro de la tarjeta
@@ -340,9 +493,6 @@
             }
             lucide.createIcons();
         }
-
-        // Global State
-        let moviesData = [...mockCartelera];
 
         // Helper: Format Date
         document.getElementById('current-date-str').textContent = new Date().toLocaleDateString('es-ES', {
@@ -386,8 +536,8 @@
 
                 card.innerHTML = `
                     <!-- Movie Header / Image Banner -->
-                    <div class="relative h-52 overflow-hidden bg-slate-200">
-                        <img src="${movie.poster}" alt="${movie.titulo}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-95">
+                    <div class="relative h-52 overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900">
+                        ${movie.poster ? `<img src="${movie.poster}" alt="${movie.titulo}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-95">` : `<div class="w-full h-full flex items-center justify-center opacity-20"><i data-lucide="clapperboard" class="w-20 h-20 text-white"></i></div>`}
                         <div class="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent"></div>
                         
                         <!-- Top Badges -->
@@ -500,7 +650,7 @@
             const tagVal = document.getElementById('tag-filter').value;
             const minRating = parseFloat(document.getElementById('rating-filter').value);
 
-            let filtered = mockCartelera.filter(movie => {
+            let filtered = moviesData.filter(movie => {
                 const matchesSearch = movie.titulo.toLowerCase().includes(searchVal) || 
                                       movie.director.toLowerCase().includes(searchVal) ||
                                       movie.genero.toLowerCase().includes(searchVal);
@@ -572,8 +722,8 @@
 
         // Initial Initialization
         window.addEventListener('DOMContentLoaded', () => {
-            applyFilters();
             lucide.createIcons();
+            loadCartelera();
         });
     </script>
 </body>
