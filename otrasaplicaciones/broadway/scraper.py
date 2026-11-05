@@ -235,32 +235,40 @@ def main():
     for i, m in enumerate(movies):
         print(f'[{i+1}/{len(movies)}] {m["titulo"]} — buscando en FilmAffinity…')
         fa = fetch_filmaffinity(m['titulo'])
-        time.sleep(0.8)  # respetar rate limit
+        
+        # Aumentamos la pausa a 2 segundos para no saturar FilmAffinity y evitar bloqueos
+        time.sleep(2.0)  
 
-        if fa and fa['rating'] > 0:
-            val = (f'Muy bien valorada: {fa["rating"]:.1f}/10.' if fa['rating'] >= 7.5 else
-                   f'Buena acogida: {fa["rating"]:.1f}/10.' if fa['rating'] >= 6.0 else
-                   f'Valoración discreta: {fa["rating"]:.1f}/10.')
-        elif m['nota_ec']:
-            val = f'Nota {m["nota_ec"]}/10 en eCartelera.'
+        # Si FilmAffinity falla o da nota 0, usamos la nota de eCartelera como respaldo
+        rating_final = fa['rating'] if (fa and fa['rating'] > 0) else m['nota_ec']
+        votos_final = fa['votos'] if (fa and fa['votos'] != 'Sin datos') else ('eCartelera' if m['nota_ec'] else 'Sin datos')
+        sinopsis_final = fa['sinopsis'] if (fa and fa['sinopsis']) else ''
+        url_final = fa['url'] if (fa and fa['url']) else 'https://www.filmaffinity.com/es/'
+
+        if rating_final >= 7.5:
+            val = f'Muy bien valorada: {rating_final:.1f}/10.'
+        elif rating_final >= 6.0:
+            val = f'Buena acogida: {rating_final:.1f}/10.'
+        elif rating_final > 0:
+            val = f'Valoración discreta: {rating_final:.1f}/10.'
         else:
             val = 'Sin valoración disponible aún.'
 
         result.append({
             'id': str(i + 1),
             'titulo': m['titulo'],
-            'originalTitle': fa['originalTitle'] if fa else '',
+            'originalTitle': fa['originalTitle'] if (fa and 'originalTitle' in fa) else '',
             'director': m['director'],
             'genero': m['genero'],
             'tags': m['tags'],
             'horarios': m['horarios'],
             'poster': m['poster'],
             'filmaffinity': {
-                'rating': fa['rating'] if fa else m['nota_ec'],
-                'votos': fa['votos'] if fa else ('eCartelera' if m['nota_ec'] else 'Sin datos'),
-                'sinopsis': fa['sinopsis'] if fa else '',
+                'rating': rating_final,
+                'votos': votos_final,
+                'sinopsis': sinopsis_final,
                 'valoracionGeneral': val,
-                'url': fa['url'] if fa else 'https://www.filmaffinity.com/es/',
+                'url': url_final,
             }
         })
 
