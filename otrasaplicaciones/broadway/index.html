@@ -4,33 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartelera Cines Broadway & FilmAffinity</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <!-- Tailwind CSS (play CDN — válido para uso personal/estático) -->
     <script>
-        tailwind.config = {
+        window.tailwind = window.tailwind || {};
+        window.tailwind_config = {
             theme: {
                 extend: {
-                    colors: {
-                        broadway: {
-                            gold: '#d4af37',
-                            red: '#e50914',
-                            dark: '#0f172a'
-                        }
-                    },
+                    colors: { broadway: { gold: '#d4af37', red: '#e50914', dark: '#0f172a' } },
                     fontSize: {
-                        'xs': ['0.85rem', { lineHeight: '1.4rem' }],
-                        'sm': ['0.95rem', { lineHeight: '1.5rem' }],
+                        'xs':   ['0.85rem', { lineHeight: '1.4rem' }],
+                        'sm':   ['0.95rem', { lineHeight: '1.5rem' }],
                         'base': ['1.05rem', { lineHeight: '1.6rem' }],
-                        'lg': ['1.2rem', { lineHeight: '1.75rem' }],
-                        'xl': ['1.35rem', { lineHeight: '1.9rem' }],
-                        '2xl': ['1.55rem', { lineHeight: '2rem' }],
+                        'lg':   ['1.2rem',  { lineHeight: '1.75rem' }],
+                        'xl':   ['1.35rem', { lineHeight: '1.9rem' }],
+                        '2xl':  ['1.55rem', { lineHeight: '2rem'   }],
                     }
                 }
             }
-        }
+        };
     </script>
-    <!-- Lucide Icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17" onload="if(window.tailwind&&window.tailwind.config)tailwind.config=window.tailwind_config"></script>
+    <!-- Lucide Icons (jsdelivr, carga síncrona antes del body) -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -231,8 +226,14 @@
         // Sin API de pago, sin servidor, sin coste.
         // -------------------------------------------------------
 
-        const PROXY = 'https://api.allorigins.win/get?url=';
         const ECARTELERA_URL = 'https://www.ecartelera.com/cines/497,0,1.html';
+
+        // Proxies CORS públicos — se prueban en orden hasta que uno funcione
+        const PROXIES = [
+            url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+            url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        ];
 
         // Estado global
         let moviesData = [];
@@ -261,12 +262,26 @@
             lucide.createIcons();
         }
 
-        // --- Proxy fetch helper ---
-        async function proxyFetch(url) {
-            const res = await fetch(PROXY + encodeURIComponent(url));
-            if (!res.ok) throw new Error(`Error de red al obtener ${url}`);
-            const json = await res.json();
-            return json.contents; // HTML como texto
+        // --- Proxy fetch con cascada de fallback ---
+        async function proxyFetch(targetUrl) {
+            let lastErr;
+            for (const buildUrl of PROXIES) {
+                try {
+                    const proxyUrl = buildUrl(targetUrl);
+                    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+                    if (!res.ok) continue;
+                    const text = await res.text();
+                    // allorigins devuelve JSON {contents, status}; los demás devuelven HTML directo
+                    try {
+                        const json = JSON.parse(text);
+                        if (json.contents) return json.contents;
+                    } catch {}
+                    return text; // HTML directo
+                } catch (e) {
+                    lastErr = e;
+                }
+            }
+            throw new Error('Ningún proxy CORS funcionó: ' + (lastErr?.message || ''));
         }
 
         // --- Parsear eCartelera ---
