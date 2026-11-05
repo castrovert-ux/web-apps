@@ -226,6 +226,10 @@ def fetch_filmaffinity(titulo):
 def main():
     print(f'Scraping eCartelera: {ECARTELERA_URL}')
     html = get_html(ECARTELERA_URL)
+
+    # ESTA ES LA LÍNEA NUEVA:
+    print(f"HTML recibido: {html[:800]}")
+    
     movies = parse_ecartelera(html)
     print(f'Películas encontradas: {len(movies)}')
 
