@@ -227,9 +227,13 @@ def main():
     print(f'Scraping eCartelera: {ECARTELERA_URL}')
     html = get_html(ECARTELERA_URL)
 
-    # ESTA ES LA LÍNEA NUEVA:
-    print(f"HTML recibido: {html[:800]}")
-    
+    # BUSCAMOS EL NUEVO FORMATO DE LOS ENLACES:
+    inicio = html.find('/peliculas/')
+    if inicio != -1:
+        print(f"Estructura HTML actual: {html[inicio-50:inicio+150]}")
+    else:
+        print("No se encontró /peliculas/ en todo el código.")
+
     movies = parse_ecartelera(html)
     print(f'Películas encontradas: {len(movies)}')
 
