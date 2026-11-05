@@ -16,7 +16,7 @@ HEADERS = {
     'Accept-Language': 'es-ES,es;q=0.9',
 }
 
-ECARTELERA_URL = 'ecartelera.com/cines/497,0,1.html'
+ECARTELERA_URL = 'https://www.ecartelera.com/cines/497,0,1.html'
 
 def get_html(url, retries=3):
     for i in range(retries):
