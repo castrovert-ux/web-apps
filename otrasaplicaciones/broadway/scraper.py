@@ -106,48 +106,50 @@ def parse_ecartelera(html):
     movies = []
     seen = set()
 
-    # Patrón ultra flexible: captura lo que sea que haya dentro del enlace <a>
-    title_pattern = re.compile(r'<a[^>]+href="(/peliculas/[^"]+)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
-    schedule_pattern = re.compile(r'<a[^>]+href="/cines/comprar/[^"]*"[^>]*>\s*(\d{1,2}:\d{2})\s*</a>', re.IGNORECASE)
-    poster_pattern = re.compile(r'<img[^>]+src="([^"]+/carteles/[^"]+_mini\.jpg)"', re.IGNORECASE)
-    dir_pattern = re.compile(r'Dir\.?\s*:?\s*([A-ZÁÉÍÓÚÜÑ][^\n<]{3,50})', re.IGNORECASE)
-    nota_pattern = re.compile(r'\b([6-9]\.[0-9])\b')
-
-    parts = re.split(r'(?=<a[^>]+href="/peliculas/)', html)
+    # 1. Separar bloques de películas admitiendo tanto rutas absolutas (https://...) como relativas
+    parts = re.split(r'(?=<a[^>]+href="[^"]*/peliculas/)', html)
 
     for part in parts:
-        m = title_pattern.search(part)
-        if not m:
+        # Extraer el enlace a la ficha de la película
+        link_match = re.search(r'<a[^>]+href="([^"]*/peliculas/[^"]+)"', part, re.IGNORECASE)
+        if not link_match:
             continue
+        path = link_match.group(1)
+
+        # 2. ¡Usamos tu descubrimiento! Extraemos el título y el cartel desde la etiqueta <img>
+        img_match = re.search(r'<img[^>]+src="([^"]+/carteles/[^"]+_mini\.jpg)"[^>]*alt="([^"]+)"', part, re.IGNORECASE)
         
-        path = m.group(1)
-        # Limpiamos el título de posibles etiquetas HTML que hayan añadido (ej. <span> o <strong>)
-        titulo_crudo = m.group(2)
-        titulo = re.sub(r'<[^>]+>', '', titulo_crudo).strip()
-        titulo = re.sub(r'\s+', ' ', titulo)
-        
+        titulo = ""
+        poster = ""
+        if img_match:
+            poster = img_match.group(1).replace('_mini.jpg', '_large.jpg')
+            titulo = img_match.group(2).strip() # Sacamos el título limpio del atributo "alt"
+        else:
+            # Respaldo por si alguna peli no tiene póster
+            t_match = re.search(r'>\s*([^<]{2,80})\s*</a>', link_match.group(0))
+            if t_match:
+                titulo = re.sub(r'<[^>]+>', '', t_match.group(1)).strip()
+
         if not titulo or titulo in seen or len(titulo) < 2:
             continue
         seen.add(titulo)
 
-        # Horarios
-        horarios = list(dict.fromkeys(schedule_pattern.findall(part)))
+        # 3. Extraer horarios de los botones de compra (también admitiendo rutas absolutas)
+        horarios = list(dict.fromkeys(re.findall(r'<a[^>]+href="[^"]*/cines/comprar/[^"]*"[^>]*>\s*(\d{1,2}:\d{2})\s*</a>', part, re.IGNORECASE)))
+        
+        # Respaldo por si han quitado el enlace en los horarios y ahora son texto normal
+        if not horarios:
+            horarios = list(dict.fromkeys(re.findall(r'\b([0-2]?[0-9]:[0-5][0-9])\b', part)))
 
-        # Póster
-        pm = poster_pattern.search(part)
-        poster = pm.group(1).replace('_mini.jpg', '_large.jpg') if pm else ''
-
-        # Director
-        text = re.sub('<[^>]+>', ' ', part)
+        # 4. Extraer el resto de información
+        text = re.sub(r'<[^>]+>', ' ', part)
         text = re.sub(r'\s+', ' ', text)
-        dm = dir_pattern.search(text)
+        dm = re.search(r'Dir\.?\s*:?\s*([A-ZÁÉÍÓÚÜÑ][^\n<]{3,50})', text, re.IGNORECASE)
         director = dm.group(1).strip()[:60] if dm else 'Desconocido'
 
-        # Género (línea con duración/país)
         gm = re.search(r'(\d+ min\.)?\s*(?:[A-ZÁÉÍÓÚÜ][a-záéíóúüñ]+(?: del [A-Za-z]+)?)\s+([\wáéíóúüñÁÉÍÓÚÜÑ \/+]{3,25}?)(?:\s+Dir|\s*$)', text, re.MULTILINE)
         genero = gm.group(2).strip() if gm else 'Sin clasificar'
 
-        # Tags
         tags = []
         if re.search(r'\bVOSE\b', part, re.I): tags.append('VOSE')
         if '+18' in part: tags.append('+18')
@@ -155,8 +157,7 @@ def parse_ecartelera(html):
         elif '+12' in part: tags.append('+12')
         if not tags: tags.append('2D')
 
-        # Nota eCartelera
-        nm = nota_pattern.search(text)
+        nm = re.search(r'\b([6-9]\.[0-9])\b', text)
         nota_ec = float(nm.group(1)) if nm else 0
 
         movies.append({
@@ -171,7 +172,6 @@ def parse_ecartelera(html):
         })
 
     return movies
-
 
 # ── FilmAffinity ───────────────────────────────────────────────────────────────
 
