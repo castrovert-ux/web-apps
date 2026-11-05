@@ -4,500 +4,403 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartelera Cines Broadway · Valladolid</title>
-    <!-- Tailwind desde jsdelivr (sin warning de producción) -->
-    <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.3/tailwindcss.min.js"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #1e293b; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #e2e8f0; }
-        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
-        .fa-panel { display: none; animation: fadeIn .25s ease; }
-        .fa-panel.open { display: block; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
-        .spin { animation: spin 1s linear infinite; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* ── Layout ── */
+        header { position: sticky; top: 0; z-index: 40; background: #fff; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+        .header-inner { max-width: 1200px; margin: 0 auto; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        main { flex: 1; max-width: 1200px; width: 100%; margin: 0 auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+        footer { background: #fff; border-top: 1px solid #e2e8f0; padding: 1.25rem; text-align: center; font-size: .8rem; color: #94a3b8; margin-top: auto; }
+
+        /* ── Logo ── */
+        .logo-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #dc2626); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.2); flex-shrink: 0; }
+        .logo-title { font-size: 1.3rem; font-weight: 700; color: #1e293b; }
+        .logo-sub { font-size: .85rem; color: #64748b; }
+
+        /* ── Buttons ── */
+        .btn { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; font-size: .9rem; font-weight: 500; cursor: pointer; transition: background .15s, border-color .15s; white-space: nowrap; }
+        .btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn.active { background: #fef3c7; border-color: #fbbf24; color: #92400e; }
+        .btn-refresh span { display: none; }
+        @media(min-width: 480px) { .btn-refresh span { display: inline; } }
+
+        /* ── Banner fecha ── */
+        .date-banner { display: flex; align-items: center; gap: .75rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: .75rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+        .dot-pulse { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.35;} }
+        .date-text { font-weight: 600; font-size: 1.05rem; color: #334155; }
+        .date-text em { color: #d97706; font-style: normal; }
+
+        /* ── Filtros ── */
+        #panel-filtros { display: none; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.1rem; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+        #panel-filtros.open { display: block; }
+        .filters-grid { display: grid; grid-template-columns: 1fr; gap: .6rem; }
+        @media(min-width: 600px) { .filters-grid { grid-template-columns: 1fr 1fr; } }
+        .filter-wrap { position: relative; }
+        .filter-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+        .filter-wrap input, .filter-wrap select { width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: .65rem .75rem .65rem 2.2rem; font-size: .95rem; color: #334155; outline: none; appearance: none; }
+        .filter-wrap input:focus, .filter-wrap select:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+        .filter-footer { display: flex; justify-content: space-between; align-items: center; padding-top: .75rem; border-top: 1px solid #f1f5f9; margin-top: .5rem; font-size: .85rem; color: #64748b; }
+        #movies-count { font-weight: 700; color: #d97706; }
+        #reset-filters { background: none; border: none; color: #64748b; cursor: pointer; text-decoration: underline; font-size: .85rem; display: none; }
+        #reset-filters.visible { display: inline; }
+
+        /* ── Grid ── */
+        #movies-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+        @media(min-width: 640px)  { #movies-grid { grid-template-columns: 1fr 1fr; } }
+        @media(min-width: 1024px) { #movies-grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+        /* ── Card ── */
+        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; flex-direction: column; transition: box-shadow .2s, border-color .2s; }
+        .card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.1); border-color: #cbd5e1; }
+        .card-banner { position: relative; height: 200px; background: linear-gradient(135deg, #334155, #0f172a); overflow: hidden; }
+        .card-banner img { width: 100%; height: 100%; object-fit: cover; opacity: .8; transition: transform .4s, opacity .3s; }
+        .card:hover .card-banner img { transform: scale(1.04); opacity: .9; }
+        .banner-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: .15; }
+        .banner-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,.75) 0%, rgba(15,23,42,.15) 60%, transparent 100%); }
+        .banner-tags { position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+        .tag-pill { background: rgba(255,255,255,.92); color: #334155; font-size: .72rem; font-weight: 600; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.5); }
+        .banner-rating { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 10px; border: 1px solid; backdrop-filter: blur(6px); font-size: .85rem; font-weight: 700; font-family: monospace; }
+        .rating-high { background: rgba(236,253,245,.92); color: #15803d; border-color: #86efac; }
+        .rating-mid  { background: rgba(255,251,235,.92); color: #b45309; border-color: #fcd34d; }
+        .rating-low  { background: rgba(254,242,242,.92); color: #b91c1c; border-color: #fca5a5; }
+        .rating-none { background: rgba(248,250,252,.85); color: #64748b; border-color: rgba(255,255,255,.5); }
+        .banner-title { position: absolute; bottom: 10px; left: 10px; right: 10px; }
+        .banner-title h3 { color: #fff; font-size: 1.05rem; font-weight: 700; line-height: 1.3; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+        .banner-title p  { color: #cbd5e1; font-size: .82rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+
+        /* ── Card body ── */
+        .card-body { padding: 1rem; display: flex; flex-direction: column; gap: .9rem; flex: 1; }
+        .schedule-label { display: flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 600; color: #334155; margin-bottom: .5rem; }
+        .schedule-slots { display: flex; flex-wrap: wrap; gap: .4rem; }
+        .slot-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; font-size: .82rem; font-family: monospace; font-weight: 600; padding: .3rem .65rem; border-radius: 8px; cursor: pointer; transition: background .15s, color .15s; }
+        .slot-btn:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+        .synopsis { font-size: .85rem; color: #475569; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .fa-toggle { width: 100%; display: flex; align-items: center; justify-content: center; gap: .5rem; padding: .7rem 1rem; border-radius: 12px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; margin-top: auto; }
+        .fa-toggle:hover { background: #fef3c7; }
+        .fa-panel { display: none; background: #fffbeb; border: 1px solid #fde68a; border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+        .fa-panel.closed { display: none; }
+        .fa-rating-box { display: flex; align-items: center; gap: .75rem; }
+        .fa-score { display: flex; align-items: center; gap: .4rem; background: #fff; border: 1px solid #fcd34d; border-radius: 12px; padding: .4rem .9rem; }
+        .fa-score-num { font-size: 1.8rem; font-weight: 700; color: #b45309; font-family: monospace; }
+        .fa-score-den { font-size: .9rem; color: #94a3b8; }
+        .fa-votes { font-size: .82rem; color: #64748b; line-height: 1.4; }
+        .fa-votes strong { color: #334155; }
+        .fa-label { font-size: .72rem; font-weight: 700; color: #b45309; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+        .fa-text { font-size: .85rem; color: #334155; line-height: 1.5; }
+        .fa-link { display: block; text-align: center; font-size: .78rem; color: #d97706; text-decoration: underline; }
+        .fa-link:hover { color: #92400e; }
+        .fa-close { width: 100%; padding: .5rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; font-size: .85rem; cursor: pointer; }
+        .fa-close:hover { background: #f8fafc; }
+
+        /* ── Empty / Loading / Error ── */
+        #empty-state { display: none; text-align: center; padding: 4rem 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; }
+        .state-box { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 4rem 1rem; color: #64748b; }
+        .spinner { width: 48px; height: 48px; border: 4px solid #fde68a; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
-        /* SVG icon helper */
-        .icon { display:inline-block; vertical-align:middle; flex-shrink:0; }
+        .error-icon { font-size: 3rem; }
+        .state-title { font-size: 1.1rem; font-weight: 600; }
+        .state-title.error { color: #dc2626; }
+        .state-sub { font-size: .88rem; color: #94a3b8; text-align: center; max-width: 360px; }
+        .retry-btn { background: #f59e0b; color: #fff; border: none; padding: .65rem 1.4rem; border-radius: 12px; font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+        .retry-btn:hover { background: #d97706; }
+
+        /* ── Aviso de datos ── */
+        .data-info { font-size: .78rem; color: #94a3b8; text-align: right; padding: .2rem 0; }
+        .data-info.error-info { color: #f87171; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-<!-- Header -->
-<header class="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center shadow-md">
-                <!-- clapperboard -->
-                <svg class="icon w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v4M12 4v4M17 4v4M3 8h18M5 8v12a2 2 0 002 2h10a2 2 0 002-2V8"/></svg>
+<header>
+    <div class="header-inner">
+        <div style="display:flex;align-items:center;gap:.75rem">
+            <div class="logo-icon">
+                <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v4M12 4v4M17 4v4M3 8h18M5 8v12a2 2 0 002 2h10a2 2 0 002-2V8"/></svg>
             </div>
             <div>
-                <h1 class="text-2xl font-bold text-slate-800 leading-tight">Cines Broadway</h1>
-                <p class="text-base text-slate-500">Valladolid</p>
+                <div class="logo-title">Cines Broadway</div>
+                <div class="logo-sub">Valladolid</div>
             </div>
         </div>
-        <div class="flex items-center gap-2">
-            <button onclick="loadCartelera()" title="Actualizar"
-                class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-base font-medium px-4 py-2.5 rounded-xl border border-slate-200 transition shadow-sm">
-                <!-- refresh-cw -->
-                <svg class="icon w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M23 4v6h-6M1 20v-6h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                <span class="hidden sm:inline">Actualizar</span>
+        <div style="display:flex;gap:.5rem">
+            <button class="btn btn-refresh" onclick="loadCartelera()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M23 4v6h-6M1 20v-6h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                <span>Actualizar</span>
             </button>
-            <button onclick="toggleFiltros()" id="btn-filtros"
-                class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-base font-medium px-4 py-2.5 rounded-xl border border-slate-200 transition shadow-sm">
-                <!-- sliders -->
-                <svg class="icon w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-                <span>Filtrar</span>
+            <button class="btn" id="btn-filtros" onclick="toggleFiltros()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                Filtrar
             </button>
         </div>
     </div>
 </header>
 
-<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
-
-    <!-- Banner fecha -->
-    <div class="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
-        <span class="w-3 h-3 rounded-full bg-emerald-500 pulse flex-shrink-0"></span>
-        <p class="text-lg font-semibold text-slate-700">
-            Sesiones para hoy, <span id="current-date-str" class="text-amber-600"></span>
-        </p>
+<main>
+    <div class="date-banner">
+        <div class="dot-pulse"></div>
+        <div class="date-text">Sesiones para hoy, <em id="current-date-str"></em></div>
     </div>
 
-    <!-- Panel de filtros -->
-    <div id="panel-filtros" class="hidden bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="relative">
-                <svg class="icon w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="search-input" placeholder="Buscar película..."
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-base text-slate-700 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition">
+    <div id="panel-filtros">
+        <div class="filters-grid">
+            <div class="filter-wrap">
+                <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="search-input" placeholder="Buscar película…">
             </div>
-            <div class="relative">
-                <svg class="icon w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="5" x2="19" y2="5"/></svg>
-                <select id="sort-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-base text-slate-700 focus:outline-none focus:border-amber-500 transition appearance-none cursor-pointer">
+            <div class="filter-wrap">
+                <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="5" x2="19" y2="5"/></svg>
+                <select id="sort-select">
                     <option value="rating-desc">Mejor valoradas primero</option>
                     <option value="time-asc">Antes de empezar primero</option>
                     <option value="title-asc">Título (A-Z)</option>
                 </select>
             </div>
-            <div class="relative">
-                <svg class="icon w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-                <select id="tag-filter" class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-base text-slate-700 focus:outline-none focus:border-amber-500 transition appearance-none cursor-pointer">
+            <div class="filter-wrap">
+                <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <select id="tag-filter">
                     <option value="all">Todos los formatos</option>
-                    <option value="VOSE">Versión Original (VOSE)</option>
+                    <option value="VOSE">VOSE (versión original)</option>
                     <option value="+18">+18</option>
                     <option value="+16">+16</option>
                     <option value="2D">Estándar 2D</option>
                 </select>
             </div>
-            <div class="relative">
-                <svg class="icon w-4 h-4 text-amber-500 absolute left-3.5 top-1/2 -translate-y-1/2" fill="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <select id="rating-filter" class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-base text-slate-700 focus:outline-none focus:border-amber-500 transition appearance-none cursor-pointer">
+            <div class="filter-wrap">
+                <svg width="14" height="14" fill="#f59e0b" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <select id="rating-filter">
                     <option value="0">Cualquier puntuación</option>
-                    <option value="7.5">Muy buenas (más de 7,5)</option>
-                    <option value="6.5">Buenas (más de 6,5)</option>
-                    <option value="5.0">Aceptables (más de 5)</option>
+                    <option value="7.5">Muy buenas (≥ 7,5)</option>
+                    <option value="6.5">Buenas (≥ 6,5)</option>
+                    <option value="5.0">Aceptables (≥ 5)</option>
                 </select>
             </div>
         </div>
-        <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-sm text-slate-500">
-            <span><span id="movies-count" class="font-semibold text-amber-600">0</span> películas</span>
-            <button id="reset-filters" class="hover:text-slate-800 underline transition hidden">Quitar filtros</button>
+        <div class="filter-footer">
+            <span><span id="movies-count">0</span> películas</span>
+            <button id="reset-filters" onclick="resetFilters()">Quitar filtros</button>
         </div>
     </div>
 
-    <!-- Grid de películas -->
-    <div id="movies-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-
-    <!-- Estado vacío -->
-    <div id="empty-state" class="hidden text-center py-16 bg-white border border-slate-200 rounded-2xl">
-        <p class="text-lg font-semibold text-slate-600">No se encontraron películas</p>
-        <p class="text-base text-slate-400 mt-1">Prueba ajustando los filtros.</p>
-    </div>
-
+    <div id="data-info" class="data-info"></div>
+    <div id="movies-grid"></div>
+    <div id="empty-state"><p style="font-size:1.1rem;font-weight:600;color:#475569">No se encontraron películas</p><p style="font-size:.9rem;color:#94a3b8;margin-top:.4rem">Prueba ajustando los filtros.</p></div>
 </main>
 
-<!-- Footer -->
-<footer class="mt-auto bg-white border-t border-slate-200 py-6 text-center text-sm text-slate-400">
-    <p>Cines Broadway · Calle García Morato 34, Valladolid · Datos de eCartelera + FilmAffinity</p>
+<footer>
+    Cines Broadway · C/ García Morato 34, Valladolid · Datos: eCartelera + FilmAffinity
 </footer>
 
 <script>
-// ─────────────────────────────────────────────
-//  CONFIGURACIÓN
-// ─────────────────────────────────────────────
-const ECARTELERA_URL = 'https://www.ecartelera.com/cines/497,0,1.html';
-
-// corsproxy.io es el más fiable desde github.io; thingproxy como segundo
-const PROXIES = [
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u => `https://thingproxy.freeboard.io/fetch/${u}`,
-    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-];
-
+// ── Estado global ─────────────────────────────────────────────────────────────
 let moviesData = [];
 
-// ─────────────────────────────────────────────
-//  UI HELPERS
-// ─────────────────────────────────────────────
-function showLoading(msg = 'Cargando cartelera…', sub = 'Obteniendo datos de eCartelera') {
+// ── Fecha ─────────────────────────────────────────────────────────────────────
+document.getElementById('current-date-str').textContent =
+    new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+
+// ── Carga del JSON generado por GitHub Actions ────────────────────────────────
+async function loadCartelera() {
+    showLoading('Cargando cartelera…', 'Leyendo cartelera.json');
+    try {
+        // Añadimos timestamp para evitar caché del navegador
+        const r = await fetch(`cartelera.json?t=${Date.now()}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status} al leer cartelera.json`);
+        const data = await r.json();
+
+        moviesData = data.peliculas || [];
+        if (!moviesData.length) throw new Error('El fichero cartelera.json no contiene películas.');
+
+        // Mostrar cuándo se generó
+        const gen = data.generado ? new Date(data.generado) : null;
+        const info = document.getElementById('data-info');
+        if (gen) {
+            info.textContent = `Datos actualizados: ${gen.toLocaleString('es-ES', {weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}`;
+            info.className = 'data-info';
+        }
+
+        applyFilters();
+    } catch (e) {
+        console.error(e);
+        showError(e.message);
+    }
+}
+
+// ── UI: loading / error ───────────────────────────────────────────────────────
+function showLoading(msg, sub) {
     document.getElementById('movies-grid').innerHTML = `
-        <div class="col-span-full flex flex-col items-center justify-center py-20 gap-4 text-slate-500">
-            <div class="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full spin"></div>
-            <p class="text-lg font-medium">${msg}</p>
-            <p class="text-sm text-slate-400">${sub}</p>
+        <div class="state-box">
+            <div class="spinner"></div>
+            <div class="state-title">${msg}</div>
+            <div class="state-sub">${sub}</div>
         </div>`;
-    document.getElementById('empty-state').classList.add('hidden');
+    document.getElementById('empty-state').style.display = 'none';
 }
 
 function showError(msg) {
+    const info = document.getElementById('data-info');
+    info.textContent = '⚠ No se pudo cargar la cartelera';
+    info.className = 'data-info error-info';
     document.getElementById('movies-grid').innerHTML = `
-        <div class="col-span-full flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
-            <svg class="w-12 h-12 text-red-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
-            </svg>
-            <p class="text-lg font-semibold text-red-500">No se pudo cargar la cartelera</p>
-            <p class="text-sm text-slate-400 text-center max-w-sm">${msg}</p>
-            <button onclick="loadCartelera()" class="mt-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-5 py-2.5 rounded-xl transition text-base">
-                Reintentar
-            </button>
+        <div class="state-box">
+            <div class="error-icon">📡</div>
+            <div class="state-title error">No se pudo cargar la cartelera</div>
+            <div class="state-sub">${msg}</div>
+            <button class="retry-btn" onclick="loadCartelera()">Reintentar</button>
         </div>`;
 }
 
-// ─────────────────────────────────────────────
-//  PROXY FETCH CON FALLBACK
-// ─────────────────────────────────────────────
-async function proxyFetch(targetUrl) {
-    let lastErr;
-    for (const build of PROXIES) {
-        try {
-            const r = await fetch(build(targetUrl), { signal: AbortSignal.timeout(12000) });
-            if (!r.ok) { lastErr = new Error(`HTTP ${r.status}`); continue; }
-            const text = await r.text();
-            // allorigins devuelve JSON {contents:…}; los demás devuelven HTML directo
-            try { const j = JSON.parse(text); if (j.contents) return j.contents; } catch {}
-            if (text.trim().startsWith('<') || text.length > 500) return text;
-            lastErr = new Error('Respuesta vacía del proxy');
-        } catch (e) { lastErr = e; }
-    }
-    throw new Error('Ningún proxy CORS funcionó: ' + (lastErr?.message || ''));
-}
-
-// ─────────────────────────────────────────────
-//  PARSEAR ECARTELERA
-// ─────────────────────────────────────────────
-function parseECartelera(html) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const movies = [];
-    const seen = new Set();
-
-    // Cada película tiene un enlace <a href="/peliculas/...">Título</a>
-    doc.querySelectorAll('a[href^="/peliculas/"]').forEach(link => {
-        const titulo = link.textContent.trim();
-        if (!titulo || seen.has(titulo)) return;
-        seen.add(titulo);
-
-        // Subir hasta encontrar el contenedor que tiene horarios
-        let container = link;
-        for (let i = 0; i < 10; i++) {
-            container = container.parentElement;
-            if (!container) break;
-            if (container.querySelector('a[href^="/cines/comprar/"]')) break;
-        }
-        if (!container) return;
-
-        // Horarios
-        const horarios = Array.from(container.querySelectorAll('a[href^="/cines/comprar/"]'))
-            .map(a => a.textContent.trim())
-            .filter(h => /^\d{1,2}:\d{2}$/.test(h));
-
-        // Texto del bloque para extraer metadatos
-        const texto = container.innerText || container.textContent || '';
-
-        // Director (busca "Dir.: Nombre")
-        const dirM = texto.match(/Dir\.?\s*:?\s*([A-ZÁÉÍÓÚÜÑ][^\n\r,]{2,50})/);
-        const director = dirM ? dirM[1].trim() : 'Desconocido';
-
-        // Género (busca la línea con duración o país seguida de género)
-        const genM = texto.match(/(?:\d+ min\.)?\s*(?:[A-ZÁÉÍÓÚÜ][a-záéíóúüñ ]{2,20})\s+([\wáéíóúüñÁÉÍÓÚÜÑ \/+]{3,30}?)(?:\n|Dir|$)/m);
-        const genero = genM ? genM[1].trim() : 'Sin clasificar';
-
-        // Póster
-        const img = container.querySelector('img[src*="/carteles/"]');
-        const poster = img ? img.src.replace(/_mini\.jpg$/, '_large.jpg') : '';
-
-        // Tags
-        const tags = [];
-        if (/VOSE/i.test(texto)) tags.push('VOSE');
-        if (/\+18/.test(texto)) tags.push('+18');
-        else if (/\+16/.test(texto)) tags.push('+16');
-        else if (/\+12/.test(texto)) tags.push('+12');
-        if (tags.length === 0) tags.push('2D');
-
-        // Nota de eCartelera (si aparece)
-        const notaM = texto.match(/\b([6-9]\.[0-9])\b/);
-        const notaEC = notaM ? parseFloat(notaM[1]) : 0;
-
-        // URL de la película en eCartelera para buscar FA
-        const peliculaPath = link.getAttribute('href');
-
-        movies.push({
-            id: String(movies.length + 1),
-            titulo, director, genero, tags, poster,
-            originalTitle: '',
-            horarios: horarios.length ? horarios : ['Consultar web'],
-            notaEC, peliculaPath,
-            filmaffinity: { rating: notaEC, votos: notaEC ? 'eCartelera' : 'Sin datos', sinopsis: '', valoracionGeneral: '', url: 'https://www.filmaffinity.com/es/' }
-        });
-    });
-
-    return movies;
-}
-
-// ─────────────────────────────────────────────
-//  FILMAFFINITY
-// ─────────────────────────────────────────────
-async function fetchFA(titulo) {
-    try {
-        const searchUrl = `https://www.filmaffinity.com/es/search.php?stext=${encodeURIComponent(titulo)}&stype=tit`;
-        const html = await proxyFetch(searchUrl);
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-
-        // Si fue directo a la ficha (1 resultado), la URL canónica tiene /filmXXX.html
-        let filmUrl = null;
-        const canon = doc.querySelector('link[rel="canonical"]');
-        if (canon && /film\d+\.html/.test(canon.getAttribute('href'))) {
-            filmUrl = canon.getAttribute('href');
-        }
-        if (!filmUrl) {
-            const a = doc.querySelector('.mc-title a, .se-it .mc-title a');
-            if (a) filmUrl = 'https://www.filmaffinity.com' + a.getAttribute('href');
-        }
-        if (!filmUrl) return null;
-        if (filmUrl.startsWith('/')) filmUrl = 'https://www.filmaffinity.com' + filmUrl;
-
-        const fhtml = await proxyFetch(filmUrl);
-        const fdoc = new DOMParser().parseFromString(fhtml, 'text/html');
-
-        const ratingEl = fdoc.querySelector('[id^="movie-rat-avg"]') || fdoc.querySelector('.avgrat-box');
-        const rating = ratingEl ? parseFloat(ratingEl.textContent.trim().replace(',', '.')) || 0 : 0;
-
-        const votosEl = fdoc.querySelector('[id^="movie-count-rat"]') || fdoc.querySelector('.rat-count');
-        const votos = votosEl ? votosEl.textContent.trim() : 'Sin datos';
-
-        const sinopsisEl = fdoc.querySelector('[id^="plot-txt-"]') || fdoc.querySelector('.movie-plot');
-        const sinopsis = sinopsisEl ? sinopsisEl.textContent.trim().replace(/\s+/g, ' ') : '';
-
-        const origEl = fdoc.querySelector('[itemprop="alternativeHeadline"]');
-        const originalTitle = origEl ? origEl.textContent.trim() : '';
-
-        return { rating, votos, sinopsis, url: filmUrl, originalTitle };
-    } catch { return null; }
-}
-
-// ─────────────────────────────────────────────
-//  CARGA PRINCIPAL
-// ─────────────────────────────────────────────
-async function loadCartelera() {
-    showLoading('Cargando cartelera de hoy…', 'Conectando con eCartelera…');
-    try {
-        const html = await proxyFetch(ECARTELERA_URL);
-        const movies = parseECartelera(html);
-        if (!movies.length) throw new Error('No se encontraron películas. Puede que eCartelera haya cambiado su estructura.');
-
-        moviesData = movies;
-        applyFilters();
-
-        // Enriquecer con FilmAffinity en lotes de 3
-        for (let i = 0; i < movies.length; i += 3) {
-            await Promise.all(movies.slice(i, i + 3).map(async m => {
-                const fa = await fetchFA(m.titulo);
-                if (fa) {
-                    m.filmaffinity.rating = fa.rating;
-                    m.filmaffinity.votos = fa.votos;
-                    m.filmaffinity.sinopsis = fa.sinopsis;
-                    m.filmaffinity.url = fa.url;
-                    if (fa.originalTitle) m.originalTitle = fa.originalTitle;
-                    m.filmaffinity.valoracionGeneral =
-                        fa.rating >= 7.5 ? `Muy bien valorada: ${fa.rating.toFixed(1)}/10 en FilmAffinity.` :
-                        fa.rating >= 6.0 ? `Buena acogida: ${fa.rating.toFixed(1)}/10 en FilmAffinity.` :
-                        fa.rating > 0   ? `Valoración discreta: ${fa.rating.toFixed(1)}/10 en FilmAffinity.` :
-                                          'Aún sin valoración suficiente en FilmAffinity.';
-                }
-            }));
-        }
-        moviesData = [...movies];
-        applyFilters();
-
-    } catch (e) {
-        console.error(e);
-        showError(e.message || 'Error desconocido.');
-    }
-}
-
-// ─────────────────────────────────────────────
-//  RENDER
-// ─────────────────────────────────────────────
+// ── Rating helpers ────────────────────────────────────────────────────────────
 function ratingClass(r) {
-    if (r >= 7.5) return 'bg-emerald-100 text-emerald-700 border-emerald-300';
-    if (r >= 6.0) return 'bg-amber-100 text-amber-700 border-amber-300';
-    if (r > 0)    return 'bg-red-100 text-red-700 border-red-300';
-    return 'bg-slate-100 text-slate-500 border-slate-300';
+    if (r >= 7.5) return 'rating-high';
+    if (r >= 6.0) return 'rating-mid';
+    if (r > 0)    return 'rating-low';
+    return 'rating-none';
 }
 
-const STAR_SVG = `<svg class="icon w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-const STAR_LG  = `<svg class="icon w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-const CLOCK_SVG= `<svg class="icon w-4 h-4 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
-const FILM_SVG = `<svg class="icon w-20 h-20 text-white" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>`;
+const STAR = `<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+const STAR_LG = `<svg width="20" height="20" fill="#f59e0b" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+const CLOCK = `<svg width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const FILM_PH = `<svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>`;
 
+// ── Render ────────────────────────────────────────────────────────────────────
 function renderMovies(movies) {
     const grid = document.getElementById('movies-grid');
     const empty = document.getElementById('empty-state');
     document.getElementById('movies-count').textContent = movies.length;
     grid.innerHTML = '';
-    if (!movies.length) { empty.classList.remove('hidden'); return; }
-    empty.classList.add('hidden');
+    empty.style.display = movies.length ? 'none' : 'block';
+    if (!movies.length) return;
 
     movies.forEach(m => {
-        const rc = ratingClass(m.filmaffinity.rating);
-        const ratingLabel = m.filmaffinity.rating > 0 ? m.filmaffinity.rating.toFixed(1) : '—';
+        const fa = m.filmaffinity || {};
+        const rating = fa.rating || 0;
+        const rLabel = rating > 0 ? rating.toFixed(1) : '—';
+        const rc = ratingClass(rating);
+
         const card = document.createElement('div');
-        card.className = 'bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md hover:shadow-lg hover:border-slate-300 transition duration-300 flex flex-col group';
+        card.className = 'card';
         card.innerHTML = `
-            <div class="relative h-52 overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900">
+            <div class="card-banner">
                 ${m.poster
-                    ? `<img src="${m.poster}" alt="${m.titulo}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-95" onerror="this.style.display='none'">`
-                    : `<div class="w-full h-full flex items-center justify-center opacity-20">${FILM_SVG}</div>`
-                }
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent"></div>
-                <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
-                    ${m.tags.map(t => `<span class="bg-white/90 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-200 shadow-sm">${t}</span>`).join('')}
+                    ? `<img src="${m.poster}" alt="${m.titulo}" loading="lazy" onerror="this.style.display='none'">`
+                    : `<div class="banner-placeholder">${FILM_PH}</div>`}
+                <div class="banner-overlay"></div>
+                <div class="banner-tags">
+                    ${(m.tags||[]).map(t=>`<span class="tag-pill">${t}</span>`).join('')}
                 </div>
-                <div class="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1.5 rounded-xl border backdrop-blur-md bg-white/90 shadow-md ${rc}">
-                    ${STAR_SVG}
-                    <span class="text-sm font-bold font-mono">${ratingLabel}</span>
-                    ${m.filmaffinity.rating > 0 ? '<span class="text-xs opacity-70">/10</span>' : ''}
+                <div class="banner-rating ${rc}">
+                    ${STAR} ${rLabel}${rating>0?'<span style="opacity:.6;font-size:.75rem">/10</span>':''}
                 </div>
-                <div class="absolute bottom-3 left-3 right-3">
-                    <h3 class="text-lg font-bold text-white group-hover:text-amber-200 transition leading-snug drop-shadow-md">${m.titulo}</h3>
-                    <p class="text-sm text-slate-200 mt-0.5 truncate drop-shadow">${m.director} · <span class="italic text-slate-300">${m.genero}</span></p>
+                <div class="banner-title">
+                    <h3>${m.titulo}</h3>
+                    <p>${m.director||''}${m.director&&m.genero?' · ':''}<em style="color:#94a3b8">${m.genero||''}</em></p>
                 </div>
             </div>
-            <div class="p-4 flex-grow flex flex-col gap-4">
+            <div class="card-body">
                 <div>
-                    <div class="flex items-center gap-1 text-sm font-semibold text-slate-700 mb-2">
-                        ${CLOCK_SVG} Horarios hoy:
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        ${m.horarios.map(h => `
-                            <button onclick="alert('Sesión: ${m.titulo.replace(/'/g,"\\'")} a las ${h}\\nEntradas en taquilla o cbroadway.net')"
-                                class="bg-slate-100 hover:bg-amber-500 hover:text-white border border-slate-300 text-slate-700 text-sm font-mono font-semibold px-3 py-1.5 rounded-lg transition shadow-sm">
+                    <div class="schedule-label">${CLOCK} Horarios hoy:</div>
+                    <div class="schedule-slots">
+                        ${(m.horarios||[]).map(h=>`
+                            <button class="slot-btn" onclick="alert('${m.titulo.replace(/'/g,"\\'")} · ${h}\\nEntradas en taquilla o cbroadway.net')">
                                 ${h}
                             </button>`).join('')}
                     </div>
                 </div>
-                ${m.filmaffinity.sinopsis ? `<p class="text-sm text-slate-600 line-clamp-3 leading-relaxed">${m.filmaffinity.sinopsis}</p>` : ''}
-                <div class="pt-2 border-t border-slate-200 mt-auto">
-                    <button onclick="toggleFA('fa-${m.id}','chev-${m.id}')"
-                        class="w-full inline-flex items-center justify-center gap-2 text-sm text-amber-700 font-semibold bg-amber-50 hover:bg-amber-100 px-4 py-3 rounded-xl border border-amber-200 transition">
-                        ${STAR_SVG} Ver valoraciones FilmAffinity
-                        <svg id="chev-${m.id}" class="icon w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                ${fa.sinopsis ? `<p class="synopsis">${fa.sinopsis}</p>` : ''}
+                <div style="margin-top:auto">
+                    <button class="fa-toggle" onclick="toggleFA(${m.id})">
+                        ${STAR_LG}
+                        Ver valoraciones FilmAffinity
+                        <svg id="chev-${m.id}" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
-                </div>
-                <div id="fa-${m.id}" class="fa-panel bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1.5 bg-white border border-amber-300 rounded-xl px-4 py-2 shadow-sm">
-                            ${STAR_LG}
-                            <span class="text-3xl font-bold text-amber-700 font-mono">${ratingLabel}</span>
-                            ${m.filmaffinity.rating > 0 ? '<span class="text-base text-slate-400">/10</span>' : ''}
+                    <div id="fa-${m.id}" class="fa-panel closed">
+                        <div class="fa-rating-box">
+                            <div class="fa-score">
+                                ${STAR_LG}
+                                <span class="fa-score-num">${rLabel}</span>
+                                ${rating>0?'<span class="fa-score-den">/10</span>':''}
+                            </div>
+                            <div class="fa-votes">
+                                <strong>${fa.votos||'Sin datos'}</strong><br>
+                                ${fa.votos&&fa.votos!=='Sin datos'?'votos en FilmAffinity':''}
+                            </div>
                         </div>
-                        <div class="text-sm text-slate-500 leading-snug">
-                            <span class="font-semibold text-slate-700">${m.filmaffinity.votos}</span><br>
-                            ${m.filmaffinity.votos === 'eCartelera' ? 'según eCartelera' : 'votos en FilmAffinity'}
-                        </div>
+                        ${fa.valoracionGeneral ? `
+                        <div>
+                            <div class="fa-label">Valoración</div>
+                            <p class="fa-text">${fa.valoracionGeneral}</p>
+                        </div>` : ''}
+                        ${fa.url&&fa.url!=='https://www.filmaffinity.com/es/'
+                            ? `<a class="fa-link" href="${fa.url}" target="_blank" rel="noopener">Ver ficha completa en FilmAffinity →</a>` : ''}
+                        <button class="fa-close" onclick="toggleFA(${m.id})">Cerrar ▲</button>
                     </div>
-                    ${m.filmaffinity.valoracionGeneral ? `
-                    <div>
-                        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Valoración</p>
-                        <p class="text-sm text-slate-700 leading-relaxed">${m.filmaffinity.valoracionGeneral}</p>
-                    </div>` : ''}
-                    ${m.filmaffinity.url !== 'https://www.filmaffinity.com/es/' ? `
-                    <a href="${m.filmaffinity.url}" target="_blank" rel="noopener"
-                        class="block text-center text-xs text-amber-600 hover:text-amber-800 underline">
-                        Ver ficha completa en FilmAffinity →
-                    </a>` : ''}
-                    <button onclick="toggleFA('fa-${m.id}','chev-${m.id}')"
-                        class="w-full text-sm text-slate-500 hover:text-slate-700 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition">
-                        Cerrar ▲
-                    </button>
                 </div>
             </div>`;
         grid.appendChild(card);
     });
 }
 
-// ─────────────────────────────────────────────
-//  INTERACCIONES
-// ─────────────────────────────────────────────
-function toggleFA(panelId, chevId) {
-    const p = document.getElementById(panelId);
-    const c = document.getElementById(chevId);
-    const open = p.classList.toggle('open');
-    if (c) c.style.transform = open ? 'rotate(180deg)' : '';
-    if (open) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+// ── Toggle FA panel ───────────────────────────────────────────────────────────
+function toggleFA(id) {
+    const p = document.getElementById('fa-'+id);
+    const c = document.getElementById('chev-'+id);
+    const isOpen = !p.classList.contains('closed');
+    p.classList.toggle('closed', isOpen);
+    if (c) c.style.transform = isOpen ? '' : 'rotate(180deg)';
+    if (!isOpen) setTimeout(() => p.scrollIntoView({behavior:'smooth',block:'nearest'}), 60);
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+function applyFilters() {
+    const q   = document.getElementById('search-input').value.toLowerCase().trim();
+    const srt = document.getElementById('sort-select').value;
+    const tag = document.getElementById('tag-filter').value;
+    const minR= parseFloat(document.getElementById('rating-filter').value);
+
+    let f = moviesData.filter(m => {
+        const fa = m.filmaffinity||{};
+        return (m.titulo.toLowerCase().includes(q)||
+                (m.director||'').toLowerCase().includes(q)||
+                (m.genero||'').toLowerCase().includes(q)) &&
+               (tag==='all' || (m.tags||[]).includes(tag)) &&
+               (fa.rating||0) >= minR;
+    });
+
+    if (srt==='rating-desc') f.sort((a,b)=>(b.filmaffinity?.rating||0)-(a.filmaffinity?.rating||0));
+    else if (srt==='time-asc') f.sort((a,b)=>(a.horarios[0]||'').localeCompare(b.horarios[0]||''));
+    else f.sort((a,b)=>a.titulo.localeCompare(b.titulo));
+
+    const filtered = q||tag!=='all'||minR>0;
+    document.getElementById('reset-filters').className = filtered ? 'visible' : '';
+
+    renderMovies(f);
+}
+
+function resetFilters() {
+    document.getElementById('search-input').value='';
+    document.getElementById('sort-select').value='rating-desc';
+    document.getElementById('tag-filter').value='all';
+    document.getElementById('rating-filter').value='0';
+    applyFilters();
 }
 
 function toggleFiltros() {
     const p = document.getElementById('panel-filtros');
     const b = document.getElementById('btn-filtros');
-    const abierto = !p.classList.contains('hidden');
-    p.classList.toggle('hidden', abierto);
-    b.classList.toggle('bg-amber-100', !abierto);
-    b.classList.toggle('border-amber-300', !abierto);
-    b.classList.toggle('text-amber-700', !abierto);
+    p.classList.toggle('open');
+    b.classList.toggle('active');
 }
-
-function applyFilters() {
-    const q = document.getElementById('search-input').value.toLowerCase().trim();
-    const sort = document.getElementById('sort-select').value;
-    const tag = document.getElementById('tag-filter').value;
-    const minR = parseFloat(document.getElementById('rating-filter').value);
-
-    let f = moviesData.filter(m =>
-        (m.titulo.toLowerCase().includes(q) || m.director.toLowerCase().includes(q) || m.genero.toLowerCase().includes(q)) &&
-        (tag === 'all' || m.tags.includes(tag)) &&
-        (m.filmaffinity.rating >= minR)
-    );
-
-    if (sort === 'rating-desc') f.sort((a,b) => b.filmaffinity.rating - a.filmaffinity.rating);
-    else if (sort === 'time-asc') f.sort((a,b) => a.horarios[0].localeCompare(b.horarios[0]));
-    else f.sort((a,b) => a.titulo.localeCompare(b.titulo));
-
-    document.getElementById('reset-filters').classList.toggle('hidden', !q && tag === 'all' && minR === 0);
-    renderMovies(f);
-}
-
-// ─────────────────────────────────────────────
-//  INIT
-// ─────────────────────────────────────────────
-document.getElementById('current-date-str').textContent =
-    new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
 
 document.getElementById('search-input').addEventListener('input', applyFilters);
 document.getElementById('sort-select').addEventListener('change', applyFilters);
 document.getElementById('tag-filter').addEventListener('change', applyFilters);
 document.getElementById('rating-filter').addEventListener('change', applyFilters);
-document.getElementById('reset-filters').addEventListener('click', () => {
-    document.getElementById('search-input').value = '';
-    document.getElementById('sort-select').value = 'rating-desc';
-    document.getElementById('tag-filter').value = 'all';
-    document.getElementById('rating-filter').value = '0';
-    applyFilters();
-});
 
+// ── Arranque ──────────────────────────────────────────────────────────────────
 loadCartelera();
 </script>
 </body>
