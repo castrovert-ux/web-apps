@@ -103,28 +103,29 @@ class ECarteleraParser(HTMLParser):
 
 
 def parse_ecartelera(html):
-    # Usamos regex en lugar del parser de estados (más robusto para HTML irregular)
     movies = []
     seen = set()
 
-    # Extraer bloques entre enlaces de película
-    # Buscar todos los enlaces /peliculas/ con su título
-    title_pattern = re.compile(r'<a[^>]+href="(/peliculas/[^"]+)"[^>]*>\s*([^<]{2,80})\s*</a>', re.IGNORECASE)
+    # Patrón ultra flexible: captura lo que sea que haya dentro del enlace <a>
+    title_pattern = re.compile(r'<a[^>]+href="(/peliculas/[^"]+)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
     schedule_pattern = re.compile(r'<a[^>]+href="/cines/comprar/[^"]*"[^>]*>\s*(\d{1,2}:\d{2})\s*</a>', re.IGNORECASE)
     poster_pattern = re.compile(r'<img[^>]+src="([^"]+/carteles/[^"]+_mini\.jpg)"', re.IGNORECASE)
     dir_pattern = re.compile(r'Dir\.?\s*:?\s*([A-ZÁÉÍÓÚÜÑ][^\n<]{3,50})', re.IGNORECASE)
     nota_pattern = re.compile(r'\b([6-9]\.[0-9])\b')
 
-    # Dividir el HTML en secciones por película
-    # Cada película empieza con un enlace /peliculas/
     parts = re.split(r'(?=<a[^>]+href="/peliculas/)', html)
 
     for part in parts:
         m = title_pattern.search(part)
         if not m:
             continue
-        path, titulo = m.group(1), m.group(2).strip()
-        titulo = re.sub(r'\s+', ' ', titulo).strip()
+        
+        path = m.group(1)
+        # Limpiamos el título de posibles etiquetas HTML que hayan añadido (ej. <span> o <strong>)
+        titulo_crudo = m.group(2)
+        titulo = re.sub(r'<[^>]+>', '', titulo_crudo).strip()
+        titulo = re.sub(r'\s+', ' ', titulo)
+        
         if not titulo or titulo in seen or len(titulo) < 2:
             continue
         seen.add(titulo)
@@ -226,13 +227,6 @@ def fetch_filmaffinity(titulo):
 def main():
     print(f'Scraping eCartelera: {ECARTELERA_URL}')
     html = get_html(ECARTELERA_URL)
-
-    # BUSCAMOS EL NUEVO FORMATO DE LOS ENLACES:
-    inicio = html.find('/peliculas/')
-    if inicio != -1:
-        print(f"Estructura HTML actual: {html[inicio-50:inicio+150]}")
-    else:
-        print("No se encontró /peliculas/ en todo el código.")
 
     movies = parse_ecartelera(html)
     print(f'Películas encontradas: {len(movies)}')
