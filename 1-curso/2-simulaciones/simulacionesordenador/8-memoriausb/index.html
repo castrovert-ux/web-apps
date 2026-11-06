@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memoria USB - Simulación</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c1:#25D366; --c2:#FFD93D; --c3:#FF6B6B; --c4:#4DA3FF; --c5:#C38BFF; --c6:#FF9F43; --c7:#2DD4BF; --c8:#6BCB77;
+  --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--c2);outline-offset:2px}
+.bg-blobs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.15;animation:float 14s ease-in-out infinite alternate}
+.blob:nth-child(1){width:550px;height:550px;background:var(--c4);top:-120px;left:-100px}
+.blob:nth-child(2){width:400px;height:400px;background:var(--c3);bottom:-100px;right:-80px;animation-delay:-5s}
+.blob:nth-child(3){width:320px;height:320px;background:var(--c2);top:45%;left:55%;animation-delay:-9s}
+@keyframes float{from{transform:translate(0,0) scale(1)}to{transform:translate(25px,18px) scale(1.07)}}
+@keyframes popIn{from{opacity:0;transform:scale(.94) translateY(16px)}to{opacity:1;transform:none}}
+.container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:22px 24px 30px}
+.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:14px}
+.badge{background:linear-gradient(135deg,var(--c4),#2a6fd6);color:#fff;font-weight:800;font-size:.8rem;letter-spacing:2px;text-transform:uppercase;padding:6px 16px;border-radius:100px}
+h1{font-family:'Fredoka One',cursive;font-weight:400;font-size:clamp(1.5rem,3vw,2.4rem);line-height:1.1;background:linear-gradient(135deg,var(--c4),var(--c1),var(--c2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.modes{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.mode{padding:10px 20px;border-radius:14px;border:2px solid rgba(255,255,255,.15);background:transparent;color:var(--sub);font-weight:800;font-size:1rem;cursor:pointer;transition:all .2s}
+.mode.on{background:rgba(77,163,255,.18);border-color:var(--c4);color:var(--text)}
+.mode:hover{color:var(--text)}
+.prog{display:flex;align-items:center;gap:14px;margin-bottom:14px;font-weight:800;color:var(--sub)}
+.prog-bar{flex:1;height:10px;background:rgba(255,255,255,.08);border-radius:10px;overflow:hidden}
+.prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--c4),var(--c1),var(--c2));border-radius:10px;transition:width .5s}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,1.1fr);gap:26px;align-items:start}
+.subtabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.subtabs[hidden]{display:none}
+.st{padding:8px 16px;border-radius:100px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:var(--sub);font-weight:800;font-size:.95rem;cursor:pointer;transition:all .2s}
+.st.on{background:rgba(255,217,61,.15);border-color:var(--c2);color:var(--text)}
+.st:hover{color:var(--text)}
+.tools{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.tools[hidden]{display:none}
+.tbtn{padding:10px 18px;border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--text);font-weight:800;font-size:.95rem;cursor:pointer;transition:all .2s}
+.tbtn:hover{transform:scale(1.04);border-color:var(--c4)}
+
+/* Desktop simulation */
+.desktop{position:relative;width:100%;height:calc(100vh - 220px);min-height:400px;background:#0d1b3a;border-radius:12px;overflow:hidden;box-shadow:0 0 0 2px #2c3550,0 20px 50px rgba(0,0,0,.6);font-size:1rem}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:44px;background:rgba(10,22,40,.95);border-top:1px solid #2c3550;display:flex;align-items:center;padding:0 12px;z-index:10}
+.start-btn{width:44px;height:44px;border-radius:6px;background:linear-gradient(135deg,var(--c4),#2a6fd6);border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:grid;place-items:center;margin-right:8px}
+.start-btn:hover{filter:brightness(1.1)}
+.taskbar-icons{display:flex;gap:4px}
+.tb-icon{width:40px;height:40px;border-radius:6px;background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;position:relative}
+.tb-icon:hover{background:rgba(255,255,255,.1)}
+.tb-icon.active{background:rgba(77,163,255,.3)}
+.system-tray{margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:8px}
+.tray-icon{width:36px;height:36px;border-radius:6px;background:transparent;border:none;color:#fff;font-size:1.1rem;cursor:pointer;display:grid;place-items:center}
+.tray-icon:hover{background:rgba(255,255,255,.1)}
+.clock{font-size:.85rem;color:var(--sub);font-weight:700;margin-left:8px}
+
+/* Window */
+.window{position:absolute;background:#fff;color:#18202e;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:flex;flex-direction:column;min-width:500px;min-height:350px;z-index:20}
+.titlebar{height:36px;background:#f3f5f8;border-top-left-radius:8px;border-top-right-radius:8px;display:flex;align-items:center;padding:0 12px;gap:8px;cursor:move;user-select:none}
+.win-btn{width:28px;height:28px;border-radius:4px;border:none;background:transparent;color:#6b7587;font-size:1rem;cursor:pointer;display:grid;place-items:center}
+.win-btn:hover{background:#e3e8ef;color:#18202e}
+.win-title{flex:1;font-weight:800;font-size:.9rem;color:#18202e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toolbar{height:40px;background:#fafbfc;border-bottom:1px solid #e3e8ef;display:flex;align-items:center;padding:0 8px;gap:8px}
+.tb-btn{padding:6px 12px;border-radius:4px;border:none;background:transparent;color:#374151;font-weight:700;font-size:.8rem;cursor:pointer}
+.tb-btn:hover{background:#e3e8ef}
+.location-bar{flex:1;height:28px;border:1px solid #d1d5db;border-radius:4px;padding:0 8px;font-size:.8rem;color:#18202e;background:#fff}
+.sidebar{width:200px;background:#f9fafb;border-right:1px solid #e3e8ef;padding:8px 0;overflow:auto}
+.sb-item{padding:6px 12px;font-size:.85rem;font-weight:700;color:#374151;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-item:hover{background:#eef2f8}
+.sb-item.active{background:#dbeafe;color:#2563eb}
+.content{flex:1;overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;align-content:start}
+.file-item{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all .15s}
+.file-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);border-color:#93c5fd}
+.file-item.selected{box-shadow:0 0 0 2px var(--c4);border-color:var(--c4)}
+.file-icon{font-size:2rem;line-height:1}
+.file-name{font-size:.75rem;font-weight:700;color:#18202e;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+
+/* Context menu */
+.ctx-menu{position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:4px 0;min-width:180px;z-index:100;display:none}
+.ctx-menu.show{display:block}
+.ctx-item{padding:8px 16px;font-size:.85rem;font-weight:700;color:#18202e;cursor:pointer;white-space:nowrap}
+.ctx-item:hover{background:#f3f4f6}
+.ctx-sep{height:1px;background:#e5e7eb;margin:4px 0}
+
+/* Progress window */
+.progress-win{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:20px 30px;min-width:300px;z-index:200;display:none}
+.progress-win.show{display:block}
+.prog-label{font-weight:800;margin-bottom:8px;color:#18202e}
+.prog-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--c1),var(--c4));border-radius:4px;transition:width .3s}
+
+/* Save dialog */
+.save-dialog{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:20px;min-width:400px;z-index:200;display:none}
+.save-dialog.show{display:block}
+.sd-title{font-weight:800;margin-bottom:12px;color:#18202e}
+.sd-location{display:flex;gap:8px;margin-bottom:12px}
+.sd-tree{flex:1;max-height:200px;overflow:auto;border:1px solid #e5e7eb;border-radius:4px}
+.sd-tree-item{padding:6px 10px;font-size:.85rem;font-weight:700;color:#374151;cursor:pointer}
+.sd-tree-item:hover{background:#eef2f8}
+.sd-tree-item.active{background:#dbeafe;color:#2563eb}
+.sd-filename{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:.9rem;margin-bottom:12px}
+.sd-btns{display:flex;justify-content:flex-end;gap:8px}
+.sd-btn{padding:8px 16px;border-radius:4px;border:none;font-weight:800;font-size:.85rem;cursor:pointer}
+.sd-btn.cancel{background:#e5e7eb;color:#374151}
+.sd-btn.save{background:var(--c4);color:#fff}
+
+/* Eject notification */
+.eject-notif{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--c1);color:#0a1628;padding:12px 24px;border-radius:8px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:300;display:none;animation:popIn .3s}
+.eject-notif.show{display:block}
+
+/* Part markers for Descubrir */
+.part{cursor:pointer;transition:box-shadow .25s, background .25s;position:relative}
+.part::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;transition:background .25s}
+.part:hover::after{background:color-mix(in srgb,var(--pc) 25%, transparent)}
+.pin{position:absolute;z-index:30;width:1.8em;height:1.8em;border-radius:50%;background:var(--pc);color:#0a1628;font-weight:800;display:grid;place-items:center;font-size:.9em;box-shadow:0 2px 8px rgba(0,0,0,.45);animation:pulse 1.8s ease-in-out infinite;pointer-events:none;font-family:'Nunito',sans-serif}
+.pin.tr{top:-.4em;right:-.2em}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.part.found>.pin{animation:none}
+.part.sel{z-index:25;box-shadow:0 0 0 3px var(--pc),0 0 26px color-mix(in srgb,var(--pc) 80%, transparent)}
+.part.ok{box-shadow:0 0 0 3px var(--c1),0 0 26px rgba(37,211,102,.8);z-index:25}
+.part.bad{animation:shake .45s;box-shadow:0 0 0 3px var(--c3);z-index:25}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.mode-practica .pin{display:none}
+
+/* Side panel */
+.side{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto;border-radius:24px}
+.info{background:var(--card);border:1px solid rgba(255,255,255,.07);border-left:8px solid var(--ic,var(--c4));border-radius:24px;padding:24px 26px;min-height:360px;animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both;transition:border-color .3s}
+.info-num{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--ic,var(--c4));color:#0a1628;font-weight:800;font-size:1.3rem;margin-bottom:10px}
+.info h2{font-family:'Fredoka One',cursive;font-weight:400;font-size:clamp(1.5rem,2.6vw,2.2rem);line-height:1.15;margin-bottom:12px;color:var(--ic,var(--c4))}
+.info h3{font-family:'Fredoka One',cursive;font-weight:400;font-size:1.1rem;margin:14px 0 8px;color:var(--c2)}
+.info p{font-size:clamp(1rem,1.5vw,1.2rem);font-weight:600;line-height:1.5;margin-bottom:14px}
+.info b{color:var(--c2);font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{background:rgba(255,255,255,.07);border-radius:100px;padding:6px 14px;font-weight:800;font-size:clamp(.9rem,1.3vw,1.1rem)}
+.tip{background:rgba(255,217,61,.09);border-radius:14px;padding:12px 16px;color:var(--sub);font-weight:700;font-size:clamp(.9rem,1.3vw,1.1rem);margin-bottom:10px}
+.tip b{color:var(--c2)}
+.hello{text-align:center;padding-top:30px}
+.hello .big{font-size:3.4rem;margin-bottom:8px}
+.hello h2{color:var(--text)}
+.quiz-q{font-family:'Fredoka One',cursive;font-size:clamp(1.4rem,2.6vw,2.1rem);line-height:1.2;margin-bottom:14px}
+.quiz-q span{color:var(--c2)}
+.feedback{font-size:1.2rem;font-weight:800;min-height:2em;margin:6px 0 12px}
+.feedback.good{color:var(--c1)}
+.feedback.no{color:var(--c3)}
+.btn{padding:12px 24px;border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--text);font-weight:800;font-size:1.05rem;cursor:pointer;transition:all .2s}
+.btn:hover{transform:scale(1.04);border-color:var(--c4)}
+.btn.go{background:rgba(37,211,102,.18);border-color:var(--c1)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.trophy{font-size:4rem;animation:bounce 1s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0) rotate(-5deg)}to{transform:translateY(-12px) rotate(5deg)}}
+.retos{list-style:none;display:flex;flex-direction:column;gap:5px}
+.retos li{display:flex;gap:10px;align-items:flex-start;padding:7px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.07);font-weight:700;font-size:.95rem;line-height:1.3;transition:all .25s}
+.retos .rb{width:22px;height:22px;border-radius:7px;flex-shrink:0;background:rgba(255,255,255,.1);display:grid;place-items:center;font-weight:800;font-size:.8rem}
+.retos li small{display:block;color:var(--sub);font-weight:600;font-size:.82rem}
+.retos li.on{background:rgba(37,211,102,.13);border-color:var(--c1)}
+.retos li.on .rb{background:var(--c1);color:#0a1628}
+.retos li.on span.rt{opacity:.75}
+.win-all{text-align:center;background:rgba(255,217,61,.1);border:2px solid var(--c2);border-radius:16px;padding:10px;margin-bottom:12px;font-weight:800;color:var(--c2);font-size:1.15rem}
+.foot{text-align:center;margin-top:18px}
+.btn-reset{padding:10px 24px;border-radius:14px;border:2px solid rgba(255,255,255,.15);background:transparent;color:var(--sub);font-weight:800;cursor:pointer}
+.btn-reset:hover{color:var(--text);border-color:var(--c3)}
+@media (max-width:980px){.layout{grid-template-columns:1fr}.side{position:static;max-height:none}.info{min-height:0}.modes{margin-left:0}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">🪟 Ordenador</span>
+    <h1>Memoria USB</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+  <div class="prog"><span id="prog-txt"></span><div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div></div>
+
+  <div class="layout">
+    <div>
+      <div class="subtabs" id="subtabs" hidden></div>
+      <div class="desktop" id="desktop"></div>
+      <div class="tools" id="tools" hidden>
+        <button class="tbtn" id="t-connect" type="button">🔌 Conectar USB</button>
+        <button class="tbtn" id="t-eject" type="button">⏏️ Expulsar USB</button>
+        <button class="tbtn" id="t-reset" type="button">↩️ Reiniciar simulación</button>
+      </div>
+    </div>
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const info = $("info"), desktop = $("desktop");
+const restart = e => { e.style.animation="none"; e.offsetHeight; e.style.animation=""; };
+let modo = "desc";
+
+/* ============ PARTES PARA DESCUBRIR / PRACTICAR ============ */
+const PARTES = {
+  usbPort: {n:1, nombre:"Puerto USB", det:"el puerto USB del ordenador", color:"--c4", sitio:"En el lateral (portátil) o frontal/trasero (sobremesa).",
+    texto:"Introduce la memoria <b>con suavidad</b>. Si no entra, dale la vuelta; no la fuerces.", chips:["🔌 Conector","⏱️ Espera sonido/aviso"], tip:"Windows emite un sonido y muestra una notificación al reconocerla."},
+  explorerIcon: {n:2, nombre:"Icono Explorador", det:"el icono de la carpeta amarilla", color:"--c1", sitio:"En la barra de tareas, abajo.",
+    texto:"Abre el <b>Explorador de archivos</b> para gestionar tus archivos.", chips:["📁 Carpeta amarilla"], tip:"También puedes pulsar <b>Win + E</b>."},
+  usbDrive: {n:3, nombre:"Unidad USB", det:"la unidad de la memoria en el panel lateral", color:"--c2", sitio:"En la columna izquierda del Explorador, bajo «Este equipo».",
+    texto:"Haz <b>doble clic</b> para abrirla y ver su contenido.", chips:["💾 Nombre de la memoria"], tip:"Si no aparece, pulsa en «Este equipo» y búscalala en la lista."},
+  ctxCopy: {n:4, nombre:"Copiar (menú contextual)", det:"la opción «Copiar» al hacer clic derecho", color:"--c6", sitio:"Clic derecho sobre un archivo o carpeta.",
+    texto:"Selecciona <b>Copiar</b> para guardar el elemento en el portapapeles.", chips:["🖱️ Clic derecho","📋 Copiar"], tip:"El original queda intacto; se crea una copia al pegar."},
+  ctxPaste: {n:5, nombre:"Pegar (menú contextual)", det:"la opción «Pegar» al hacer clic derecho en zona vacía", color:"--c7", sitio:"Clic derecho en espacio libre de la carpeta destino.",
+    texto:"Elige <b>Pegar</b> para colocar la copia allí.", chips:["🖱️ Clic derecho","📥 Pegar"], tip:"Espera a que termine la barra de progreso si aparece."},
+  newFolder: {n:6, nombre:"Nueva carpeta", det:"la opción «Nueva carpeta» en el menú contextual", color:"--c8", sitio:"Clic derecho en zona vacía → «Nuevo» → «Carpeta».",
+    texto:"Escribe un <b>nombre claro</b> (ej. «Fotos», «Documentos») y pulsa <b>Intro</b>.", chips:["📂 Crear","✍️ Nombre","⏎ Intro"], tip:"Organiza así tus archivos para encontrarlos rápido."},
+  saveDialog: {n:7, nombre:"Ventana «Guardar como»", det:"el cuadro de diálogo al descargar un PDF", color:"--c3", sitio:"Aparece al pulsar «Descargar» o «Guardar como» en el navegador.",
+    texto:"Busca tu <b>memoria USB</b> en la columna izquierda, elige carpeta y pulsa <b>Guardar</b>.", chips:["💾 Seleccionar USB","📁 Carpeta","💾 Guardar"], tip:"¡Ojo! Si guardas en «Descargas», el archivo se queda en el PC."},
+  ejectIcon: {n:8, nombre:"Icono expulsar", det:"el icono de quitar hardware en la bandeja", color:"--c5", sitio:"Abajo a la derecha, junto al reloj (puede estar oculto bajo la flecha ^).",
+    texto:"Haz clic, elige tu memoria y espera el aviso <b>«Ya es seguro retirar el dispositivo»</b>.", chips:["⏏️ Expulsar","✅ Aviso"], tip:"No la saques antes; podrías perder datos."}
+};
+const TOTAL_PARTES = Object.keys(PARTES).length;
+let found = {};
+const KEY = "usb-sim-2026";
+try{const g=JSON.parse(localStorage.getItem(KEY));if(g&&g.found)found=g.found}catch(e){}
+const guardar=()=>{try{localStorage.setItem(KEY,JSON.stringify({found}))}catch(e){}};
+const partsEl = k => [...desktop.querySelectorAll('[data-part="'+k+'"]')];
+const limpiar = () => desktop.querySelectorAll(".part").forEach(p=>p.classList.remove("sel","ok","bad"));
+function pintarPins(){Object.keys(PARTES).forEach(k=>{const f=!!found[k];partsEl(k).forEach(p=>{p.classList.toggle("found",f);const pn=p.querySelector(":scope > .pin");if(pn)pn.textContent=f?PARTES[k].n:"?";});});}
+function renderStatic(){
+  // Static desktop with explorer open showing USB drive
+  desktop.innerHTML = `
+    <div class="taskbar" data-part="explorerIcon" style="--pc:var(--c1)">
+      <button class="start-btn" aria-label="Inicio">⊞</button>
+      <div class="taskbar-icons">
+        <button class="tb-icon active" aria-label="Explorador de archivos"><span class="pin tr">?</span>📁</button>
+      </div>
+      <div class="system-tray">
+        <button class="tray-icon" aria-label="Expulsar USB" data-part="ejectIcon" style="--pc:var(--c5)"><span class="pin tr">?</span>⏏️</button>
+        <span class="clock">10:30</span>
+      </div>
+    </div>
+    <div class="window" style="left:80px;top:40px;width:700px;height:450px;">
+      <div class="titlebar"><div class="win-btn" title="Cerrar">✕</div><div class="win-btn" title="Maximizar">☐</div><div class="win-btn" title="Minimizar">—</div><div class="win-title">Explorador de archivos - Memoria USB</div></div>
+      <div class="toolbar">
+        <button class="tb-btn">←</button><button class="tb-btn">→</button><button class="tb-btn">↑</button>
+        <input class="location-bar" value="Este equipo > Memoria USB (E:)" readonly>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden">
+        <div class="sidebar">
+          <div class="sb-item" data-part="usbDrive" style="--pc:var(--c2)"><span class="pin tr">?</span>💾 Memoria USB (E:)</div>
+          <div class="sb-item">💻 Este equipo</div>
+          <div class="sb-item">📁 Escritorio</div>
+          <div class="sb-item">📁 Descargas</div>
+        </div>
+        <div class="content">
+          <div class="file-item" data-part="ctxCopy" style="--pc:var(--c6)"><span class="pin tr">?</span><span class="file-icon">🖼️</span><span class="file-name">foto.jpg</span></div>
+          <div class="file-item" data-part="ctxCopy" style="--pc:var(--c6)"><span class="pin tr">?</span><span class="file-icon">📄</span><span class="file-name">documento.pdf</span></div>
+          <div class="file-item" data-part="newFolder" style="--pc:var(--c8)"><span class="pin tr">?</span><span class="file-icon">📂</span><span class="file-name">Nueva carpeta</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="save-dialog" style="left:50%;top:50%;transform:translate(-50%,-50%);display:block;z-index:50;opacity:.7;pointer-events:none">
+      <div class="sd-title">Guardar como</div>
+      <div class="sd-location">
+        <div class="sd-tree">
+          <div class="sd-tree-item active" data-part="saveDialog" style="--pc:var(--c3)"><span class="pin tr">?</span>💾 Memoria USB (E:)</div>
+          <div class="sd-tree-item">💻 Este equipo</div>
+          <div class="sd-tree-item">📁 Escritorio</div>
+        </div>
+      </div>
+      <input class="sd-filename" value="documento.pdf" readonly>
+      <div class="sd-btns"><button class="sd-btn cancel">Cancelar</button><button class="sd-btn save">Guardar</button></div>
+    </div>
+    <div class="eject-notif show" style="display:block;opacity:.7;pointer-events:none;bottom:140px">✅ Ya es seguro retirar el dispositivo</div>
+  `;
+  // Add pins to USB port area (simulated as a small rectangle on left edge)
+  const usbPortEl = document.createElement('div');
+  usbPortEl.className = 'part';
+  usbPortEl.dataset.part = 'usbPort';
+  usbPortEl.style.cssText = 'position:absolute;left:0;top:40%;width:12px;height:40px;background:#374151;border-radius:0 4px 4px 0;--pc:var(--c4)';
+  usbPortEl.innerHTML = '<span class="pin tr">?</span>';
+  desktop.appendChild(usbPortEl);
+  // Add pins to context menu items (simulated as hidden)
+  // We'll add dummy elements for ctxPaste (empty area)
+  const pasteArea = document.createElement('div');
+  pasteArea.className = 'part';
+  pasteArea.dataset.part = 'ctxPaste';
+  pasteArea.style.cssText = 'position:absolute;left:50%;top:80%;width:120px;height:30px;background:transparent;--pc:var(--c7);transform:translate(-50%,-50%)';
+  pasteArea.innerHTML = '<span class="pin tr">?</span>';
+  desktop.appendChild(pasteArea);
+  pintarPins();
+  $("subtabs").innerHTML = '<button class="st on" data-tab="main" type="button">🖥️ Escritorio</button>';
+}
+function detalle(d){
+  return '<div class="info-num">'+d.n+'</div><h2>'+d.nombre+'</h2><p>'+d.texto+'</p><p style="color:var(--sub);font-size:1.05rem">📍 '+d.sitio+'</p>'+(d.chips?'<div class="chips">'+d.chips.map(c=>'<span class="chip">'+c+'</span>').join("")+'</div>':'')+(d.tip?'<div class="tip">'+d.tip+'</div>':'');
+}
+function bienvenida(){
+  limpiar();
+  info.style.setProperty("--ic","var(--c4)");
+  info.innerHTML = '<div class="hello"><div class="big">💾</div><h2>Memoria USB</h2><p>Toca cada parte con un <b>?</b> del escritorio. Hay <b>'+TOTAL_PARTES+' partes</b> para descubrir.</p></div>';
+  restart(info);
+}
+function mostrar(k){
+  const d = PARTES[k]; limpiar(); partsEl(k).forEach(p=>p.classList.add("sel"));
+  found[k]=true; guardar(); pintarPins(); progreso();
+  info.style.setProperty("--ic","var("+d.color+")"); info.innerHTML = detalle(d); restart(info);
+  if(Object.keys(PARTES).every(x=>found[x])){
+    info.insertAdjacentHTML("beforeend",'<div class="row"><button class="btn go" id="to-live" type="button">🛠️ ¡Ahora a probarlo!</button></div>');
+    $("to-live").onclick = ()=>setModo("live");
+  }
+}
+function nueva(){
+  limpiar(); const ks = Object.keys(PARTES), quedan = ks.filter(k=>!hechas.includes(k));
+  if(!quedan.length) return final();
+  pregunta = quedan[Math.floor(Math.random()*quedan.length)];
+  info.style.setProperty("--ic","var(--c2)");
+  info.innerHTML = '<div class="info-num">🎯</div><div class="quiz-q">Toca lo que usarías para<br><span>'+PARTES[pregunta].det+'</span></div><div class="feedback" id="fb"></div>';
+  restart(info); progreso();
+}
+function responder(k){
+  if(!pregunta) return; const fb=$("fb");
+  if(k===pregunta){
+    limpiar(); partsEl(k).forEach(p=>p.classList.add("ok")); hechas.push(k); aciertos++; pregunta=null; progreso();
+    fb.className="feedback good"; fb.textContent="✅ ¡Correcto! "+PARTES[k].nombre;
+    info.insertAdjacentHTML("beforeend",'<p style="color:var(--sub)">'+PARTES[k].texto+'</p><div class="row"><button class="btn go" id="sig" type="button">'+(hechas.length===Object.keys(PARTES).length?'🏆 Terminar':'Siguiente ➜')+'</button></div>');
+    $("sig").onclick=nueva;
+  }else{
+    const ps=partsEl(k); ps.forEach(p=>{p.classList.remove("bad");p.offsetHeight;p.classList.add("bad");}); setTimeout(()=>ps.forEach(p=>p.classList.remove("bad")),900);
+    fb.className="feedback no"; fb.textContent="❌ Eso es "+PARTES[k].det+". ¡Inténtalo otra vez!";
+  }
+}
+function final(){
+  limpiar(); info.style.setProperty("--ic","var(--c2)");
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c2)">¡Enhorabuena!</h2><p>Ya conoces las partes clave para usar una memoria USB.</p><div class="row" style="justify-content:center"><button class="btn go" id="otra" type="button">🔄 Repetir</button></div></div>';
+  restart(info); $("otra").onclick=()=>{hechas=[];aciertos=0;nueva();};
+}
+$("subtabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b&&modo!=="live")setTab(b.dataset.tab);});
+function partClick(e){const p=e.target.closest(".part");if(!p)return;const k=p.dataset.part;modo==="desc"?mostrar(k):responder(k);}
+let tab="main", pregunta=null, aciertos=0, hechas=[];
+function setTab(k){tab=k;pregunta=null;hechas=[];aciertos=0;renderStatic();if(modo==="desc"){bienvenida();progreso();}else nueva();}
+
+/* ============ MODO PROBAR: SIMULACIÓN INTERACTIVA ============ */
+const RETOS = [
+  {id:"r1", t:"Conectar la memoria USB", h:"Pulsa «Conectar USB» bajo el escritorio"},
+  {id:"r2", t:"Abrir el Explorador de archivos", h:"Haz clic en el icono 📁 de la barra de tareas"},
+  {id:"r3", t:"Seleccionar la unidad USB", h:"En el panel lateral, haz clic en «Memoria USB»"},
+  {id:"r4", t:"Copiar un archivo del Escritorio al USB", h:"Clic derecho en «foto.jpg» → Copiar; luego en el USB → Pegar"},
+  {id:"r5", t:"Crear una carpeta en el USB", h:"Clic derecho en zona vacía del USB → Nuevo → Carpeta; nombra «Fotos»"},
+  {id:"r6", t:"Descargar un PDF directamente en el USB", h:"Pulsa «Descargar PDF» en la barra de herramientas; elige USB y carpeta «Fotos»"},
+  {id:"r7", t:"Copiar un archivo del USB al Escritorio", h:"En el USB, clic derecho en «documento.pdf» → Copiar; en Escritorio → Pegar"},
+  {id:"r8", t:"Expulsar la memoria USB de forma segura", h:"Pulsa ⏏️ en la bandeja, elige la memoria y espera el aviso"}
+];
+let retos={}, sim={usb:false, explorerOpen:false, explorerLoc:"desktop", selected:null, clipboard:null, usbFiles:[], desktopFiles:["foto.jpg","documento.pdf"], usbFolders:[], downloadStep:0, progressShow:false, ejectRequested:false};
+function resetSim(){
+  sim={usb:false, explorerOpen:false, explorerLoc:"desktop", selected:null, clipboard:null, usbFiles:[], desktopFiles:["foto.jpg","documento.pdf"], usbFolders:[], downloadStep:0, progressShow:false, ejectRequested:false};
+  retos={}; renderSim(); renderRetos();
+}
+function tick(id){if(!retos[id]){retos[id]=true;toast("✅ Reto: "+RETOS.find(r=>r.id===id).t);renderRetos();}}
+function toast(msg){const t=$("ptoast"); if(!t){const d=document.createElement('div');d.id="ptoast";d.className="ptoast";document.body.appendChild(d);}const el=$("ptoast");el.textContent=msg;el.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("on"),3000);}
+function renderSim(){
+  // Build desktop HTML based on sim state
+  let html = `
+    <div class="taskbar">
+      <button class="start-btn">⊞</button>
+      <div class="taskbar-icons">
+        <button class="tb-icon ${sim.explorerOpen?'active':''}" id="tb-explorer" aria-label="Explorador">📁</button>
+      </div>
+      <div class="system-tray">
+        <button class="tray-icon ${sim.usb?'':'hidden'}" id="tb-eject" aria-label="Expulsar USB">⏏️</button>
+        <span class="clock">10:30</span>
+      </div>
+    </div>
+  `;
+  if(sim.explorerOpen){
+    html += buildExplorer();
+  }
+  if(sim.progressShow){
+    html += `<div class="progress-win show"><div class="prog-label">Copiando...</div><div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div></div>`;
+  }
+  if(sim.downloadStep){
+    html += buildSaveDialog();
+  }
+  if(sim.ejectRequested){
+    html += `<div class="eject-notif show">✅ Ya es seguro retirar el dispositivo</div>`;
+  }
+  desktop.innerHTML = html;
+  attachSimEvents();
+}
+function buildExplorer(){
+  const loc = sim.explorerLoc;
+  let files = [];
+  if(loc==="desktop") files = sim.desktopFiles.map(n=>({name:n,type:n.endsWith(".pdf")?"pdf":"img"}));
+  else if(loc==="usb"){
+    files = [...sim.usbFolders.map(n=>({name:n,type:"folder"})), ...sim.usbFiles.map(n=>({name:n,type:n.endsWith(".pdf")?"pdf":"img"}))];
+  }
+  return `
+    <div class="window" style="left:80px;top:40px;width:700px;height:450px;" id="win-explorer">
+      <div class="titlebar" id="win-titlebar"><div class="win-btn" id="win-close">✕</div><div class="win-btn">☐</div><div class="win-btn">—</div><div class="win-title">Explorador de archivos - ${loc==="usb"?"Memoria USB (E:)":"Escritorio"}</div></div>
+      <div class="toolbar">
+        <button class="tb-btn" id="tb-back" title="Atrás">←</button>
+        <button class="tb-btn" id="tb-forward" title="Adelante">→</button>
+        <button class="tb-btn" id="tb-up" title="Subir">↑</button>
+        <input class="location-bar" value="${loc==="usb"?"Este equipo > Memoria USB (E:)":"Este equipo > Escritorio"}" readonly>
+        <button class="tb-btn" id="tb-download" title="Descargar PDF" style="margin-left:auto">⬇️ Descargar PDF</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden">
+        <div class="sidebar">
+          <div class="sb-item ${loc==="usb"?"active":""}" data-loc="usb">💾 Memoria USB (E:)</div>
+          <div class="sb-item ${loc==="desktop"?"active":""}" data-loc="desktop">💻 Escritorio</div>
+          <div class="sb-item" data-loc="downloads">📁 Descargas</div>
+          <div class="sb-item" data-loc="thispc">💻 Este equipo</div>
+        </div>
+        <div class="content" id="exp-content">
+          ${files.map(f=>`<div class="file-item" data-name="${f.name}" data-type="${f.type}"><span class="file-icon">${f.type==="folder"?"📂":f.type==="pdf"?"📄":"🖼️"}</span><span class="file-name">${f.name}</span></div>`).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+function buildSaveDialog(){
+  return `
+    <div class="save-dialog show" id="save-dialog">
+      <div class="sd-title">Guardar como</div>
+      <div class="sd-location">
+        <div class="sd-tree">
+          <div class="sd-tree-item active" data-saveloc="usb">💾 Memoria USB (E:)</div>
+          <div class="sd-tree-item" data-saveloc="desktop">💻 Escritorio</div>
+          <div class="sd-tree-item" data-saveloc="downloads">📁 Descargas</div>
+        </div>
+      </div>
+      <input class="sd-filename" id="sd-filename" value="documento.pdf">
+      <div class="sd-btns"><button class="sd-btn cancel" id="sd-cancel">Cancelar</button><button class="sd-btn save" id="sd-save">Guardar</button></div>
+    </div>
+  `;
+}
+function attachSimEvents(){
+  // Taskbar explorer
+  const tbExp = $("tb-explorer");
+  if(tbExp) tbExp.onclick = ()=>{sim.explorerOpen=!sim.explorerOpen; tick("r2"); renderSim();};
+  // Taskbar eject
+  const tbEj = $("tb-eject");
+  if(tbEj) tbEj.onclick = ()=>{if(sim.usb){sim.ejectRequested=true; tick("r8"); setTimeout(()=>{sim.usb=false; sim.ejectRequested=false; sim.explorerOpen=false; renderSim();},1500);}else toast("Primero conecta la USB");};
+  // Window close
+  const wc = $("win-close");
+  if(wc) wc.onclick = ()=>{sim.explorerOpen=false; renderSim();};
+  // Sidebar location
+  document.querySelectorAll(".sb-item[data-loc]").forEach(el=>{el.onclick=()=>{sim.explorerLoc=el.dataset.loc; tick(el.dataset.loc==="usb"?"r3":null); renderSim();};});
+  // Toolbar back/up (simplify)
+  const tbUp = $("tb-up");
+  if(tbUp) tbUp.onclick = ()=>{if(sim.explorerLoc==="usb"){sim.explorerLoc="thispc"; renderSim();}};
+  // Download button
+  const tbDl = $("tb-download");
+  if(tbDl) tbDl.onclick = ()=>{sim.downloadStep=1; tick("r6"); renderSim();};
+  // File items: click selects, right-click context menu
+  document.querySelectorAll("#exp-content .file-item").forEach(el=>{
+    el.onclick = (e)=>{document.querySelectorAll("#exp-content .file-item").forEach(x=>x.classList.remove("selected")); el.classList.add("selected"); sim.selected=el.dataset.name;};
+    el.oncontextmenu = (e)=>{e.preventDefault(); showCtxMenu(e.clientX, e.clientY, el.dataset.name, el.dataset.type, sim.explorerLoc);};
+  });
+  // Content area right-click for paste/new folder
+  const content = $("exp-content");
+  if(content) content.oncontextmenu = (e)=>{e.preventDefault(); if(e.target===content || e.target.classList.contains("content")) showCtxMenuEmpty(e.clientX, e.clientY, sim.explorerLoc);};
+  // Save dialog events
+  const sdTree = document.querySelectorAll(".sd-tree-item[data-saveloc]");
+  sdTree.forEach(el=>{el.onclick=()=>{sdTree.forEach(x=>x.classList.remove("active")); el.classList.add("active"); sim.saveLoc=el.dataset.saveloc;};});
+  const sdSave = $("sd-save");
+  if(sdSave) sdSave.onclick = ()=>{if(sim.saveLoc==="usb"){sim.usbFiles.push("documento.pdf"); tick("r6"); toast("PDF guardado en USB");}else toast("Debes elegir la memoria USB"); sim.downloadStep=0; renderSim();};
+  const sdCancel = $("sd-cancel");
+  if(sdCancel) sdCancel.onclick = ()=>{sim.downloadStep=0; renderSim();};
+  // Connect USB button (in tools)
+  // Handled in tools bar
+}
+function showCtxMenu(x,y,name,type,loc){
+  removeCtxMenu();
+  const menu = document.createElement("div");
+  menu.className="ctx-menu show";
+  menu.style.left=x+"px"; menu.style.top=y+"px";
+  menu.innerHTML = `
+    <div class="ctx-item" data-act="copy">📋 Copiar</div>
+    <div class="ctx-item" data-act="cut">✂️ Cortar</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-act="delete">🗑️ Eliminar</div>
+  `;
+  document.body.appendChild(menu);
+  menu.querySelector('[data-act="copy"]').onclick=()=>{sim.clipboard={name,type,from:loc}; removeCtxMenu(); toast("Copiado: "+name); if(loc==="desktop"&&sim.explorerLoc==="usb") tick("r4"); if(loc==="usb"&&sim.explorerLoc==="desktop") tick("r7");};
+  menu.querySelector('[data-act="cut"]').onclick=()=>{sim.clipboard={name,type,from:loc,cut:true}; removeCtxMenu(); toast("Cortado: "+name);};
+  menu.querySelector('[data-act="delete"]').onclick=()=>{removeCtxMenu(); toast("Eliminar no permitido en esta práctica");};
+  setTimeout(()=>document.addEventListener("click",removeCtxMenu,{once:true}),0);
+}
+function showCtxMenuEmpty(x,y,loc){
+  removeCtxMenu();
+  const menu = document.createElement("div");
+  menu.className="ctx-menu show";
+  menu.style.left=x+"px"; menu.style.top=y+"px";
+  menu.innerHTML = `
+    <div class="ctx-item" data-act="paste">📥 Pegar</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-act="newfolder">📂 Nueva carpeta</div>
+  `;
+  document.body.appendChild(menu);
+  menu.querySelector('[data-act="paste"]').onclick=()=>{if(sim.clipboard){doPaste(loc);}else toast("Portapapeles vacío"); removeCtxMenu();};
+  menu.querySelector('[data-act="newfolder"]').onclick=()=>{removeCtxMenu(); const nombre=prompt("Nombre de la carpeta:","Fotos"); if(nombre){if(loc==="usb"){sim.usbFolders.push(nombre); tick("r5"); toast("Carpeta «"+nombre+"» creada");}else toast("Solo se permite crear carpetas en la USB en esta práctica"); renderSim();}};
+  setTimeout(()=>document.addEventListener("click",removeCtxMenu,{once:true}),0);
+}
+function removeCtxMenu(){document.querySelectorAll(".ctx-menu").forEach(m=>m.remove());}
+function doPaste(dest){
+  if(!sim.clipboard) return;
+  const item = sim.clipboard;
+  // Simulate progress
+  sim.progressShow=true; renderSim();
+  setTimeout(()=>{
+    if(dest==="usb"){
+      if(item.type==="folder") sim.usbFolders.push(item.name); else sim.usbFiles.push(item.name);
+      if(item.from==="desktop" && item.cut) sim.desktopFiles=sim.desktopFiles.filter(f=>f!==item.name);
+    }else if(dest==="desktop"){
+      if(item.type==="folder") sim.desktopFiles.push(item.name); else sim.desktopFiles.push(item.name);
+      if(item.from==="usb" && item.cut) sim.usbFiles=sim.usbFiles.filter(f=>f!==item.name);
+    }
+    sim.clipboard=null; sim.progressShow=false; renderSim(); toast("Pegado en "+(dest==="usb"?"USB":"Escritorio"));
+  },800);
+}
+function renderRetos(){
+  const container = $("info");
+  if(modo!=="live") return;
+  let done = Object.keys(retos).length;
+  container.style.setProperty("--ic","var(--c4)");
+  container.innerHTML = (done===RETOS.length?'<div class="win-all">🏆 ¡Todos los retos superados!</div>':'')+
+    '<div class="lh"><span class="ico">💾</span><div class="nm">Memoria USB</div></div><p>Realiza las acciones de la guía. Los retos se marcan solos al conseguirlos.</p>'+
+    RETOS.map(r=>'<div class="retos"><li class="'+(retos[r.id]?'on':'')+'"><span class="rb">'+(retos[r.id]?'✓':'')+'</span><span class="rt">'+r.t+'<small>'+r.h+'</small></span></li></div>').join("");
+  restart(container);
+}
+
+/* ============ PROGRESO Y MODOS ============ */
+function progreso(){
+  let n,tot,txt;
+  if(modo==="desc"){n=Object.keys(found).length;tot=TOTAL_PARTES;txt="⭐ "+n+" de "+tot+" partes descubiertas";}
+  else if(modo==="prac"){n=aciertos;tot=TOTAL_PARTES;txt="🎯 "+n+" de "+tot+" aciertos";}
+  else{n=Object.keys(retos).length;tot=RETOS.length;txt="🛠️ "+n+" de "+tot+" retos superados";}
+  $("prog-txt").textContent=txt; $("prog-fill").style.width=(n/tot*100)+"%";
+}
+function setModo(m){
+  modo=m; pregunta=null;
+  ["desc","live","prac"].forEach(x=>$("m-"+x).classList.toggle("on",m===x));
+  $("root").classList.toggle("mode-practica",m==="prac");
+  $("subtabs").hidden = m==="live"; $("tools").hidden = m!=="live";
+  if(m==="live"){resetSim(); $("subtabs").innerHTML=""; renderSim(); progreso();}
+  else{hechas=[];aciertos=0;renderStatic(); if(m==="desc"){bienvenida();progreso();}else nueva();}
+}
+$("m-desc").onclick=()=>setModo("desc");
+$("m-live").onclick=()=>setModo("live");
+$("m-prac").onclick=()=>setModo("prac");
+$("reset").onclick=()=>{found={};retos={};guardar();resetSim();setModo(modo);};
+// Tools buttons
+$("t-connect").onclick=()=>{if(!sim.usb){sim.usb=true; tick("r1"); toast("🔌 Memoria USB conectada"); renderSim();}else toast("Ya está conectada");};
+$("t-eject").onclick=()=>{if(sim.usb){sim.ejectRequested=true; tick("r8"); setTimeout(()=>{sim.usb=false; sim.ejectRequested=false; sim.explorerOpen=false; renderSim();},1500);}else toast("No hay USB conectada");};
+$("t-reset").onclick=()=>{resetSim(); toast("Simulación reiniciada");};
+
+// Global click for parts in Descubrir/Practicar
+desktop.addEventListener("click",e=>{if(modo!=="live") partClick(e);});
+// Context menu on desktop for Practicar? Not needed.
+
+setModo("desc");
+</script>
+</body>
+</html>
