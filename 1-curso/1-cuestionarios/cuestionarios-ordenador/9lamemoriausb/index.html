@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Manejo Seguro de la Memoria USB</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: calc(16px * var(--k, 1)); }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { 
+    position: relative; z-index: 1; 
+    width: 100%; max-width: 800px; 
+    height: 100vh; max-height: 100vh; 
+    display: flex; flex-direction: column; 
+    padding: 2vh 20px; 
+  }
+
+  .header { text-align: center; margin-bottom: 2vh; flex-shrink: 0; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: clamp(0.7rem, 1.5vh, 0.8rem); letter-spacing: 2px;
+    text-transform: uppercase; padding: 0.6vh 12px; border-radius: 100px; margin-bottom: 1vh;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.4rem, 4vh, 2.2rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5vh;
+  }
+
+  #quiz-area { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  .progress-wrap { margin-bottom: 2vh; flex-shrink: 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px; padding: 3vh; margin-bottom: 2vh;
+    animation: fadeIn 0.35s ease;
+    display: flex; flex-direction: column; flex: 1; min-height: 0;
+  }
+
+  .q-type-badge {
+    display: inline-flex; font-size: clamp(0.65rem, 1.2vh, 0.75rem); font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 1vh;
+    background: rgba(33,115,70,0.2); color: #4ade80; flex-shrink: 0; align-self: flex-start;
+  }
+
+  .q-number { font-size: clamp(0.75rem, 1.5vh, 0.85rem); color: var(--sub); font-weight: 700; margin-bottom: 0.5vh; flex-shrink: 0; }
+  .q-text { font-size: clamp(1rem, 2.2vh, 1.2rem); font-weight: 700; line-height: 1.3; margin-bottom: 2vh; flex-shrink: 0; }
+
+  .options { 
+    display: flex; flex-direction: column; gap: 1vh; 
+    overflow-y: auto; flex: 1; padding-right: 10px; 
+  }
+  
+  .options::-webkit-scrollbar { width: 6px; }
+  .options::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .options::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+  .options::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 1.5vh 15px; color: var(--text);
+    font-size: clamp(0.9rem, 2vh, 1rem); font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 10px; transition: 0.2s; flex-shrink: 0;
+  }
+  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-btn:disabled { cursor: default; }
+  .option-letter {
+    width: 26px; height: 26px; border-radius: 6px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
+  }
+
+  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+
+  .feedback { display: none; margin-top: 1.5vh; padding: 1.5vh; border-radius: 12px; font-weight: 700; font-size: clamp(0.85rem, 1.8vh, 0.95rem); line-height: 1.4; animation: fadeIn 0.3s ease; flex-shrink: 0; }
+  .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-next {
+    display: none; width: 100%; max-width: 220px; margin: 0 0 0 auto;
+    padding: 1.5vh; border-radius: 12px; border: none; font-weight: 800; font-family: inherit;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
+    transition: 0.2s; flex-shrink: 0; font-size: clamp(0.9rem, 2vh, 1rem);
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+
+  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; flex-direction: column; justify-content: center; align-items: center; flex: 1; }
+  .score-circle {
+    width: clamp(110px, 20vh, 150px); height: clamp(110px, 20vh, 150px); border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 2vh auto;
+    font-size: clamp(1.8rem, 4vh, 2.2rem); font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
+  }
+  .score-circle small { font-family: 'Nunito'; font-size: clamp(0.7rem, 1.5vh, 0.9rem); color: var(--sub); font-weight: 700; }
+  .hidden { display: none !important; }
+
+  .result-sub { color: var(--sub); font-weight: 700; margin-top: 1vh; font-size: clamp(0.85rem, 1.8vh, 1rem); }
+  .btn-restart { margin-top: 3vh; cursor: pointer; border: none; font-family: inherit; font-size: clamp(0.9rem, 2vh, 1rem); padding: 1.5vh 20px; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge" id="quiz-badge">📝 Práctica de Clase</div>
+    <h1 id="quiz-title">Manejo de la Memoria USB</h1>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 10</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number">Cargando...</div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+
+  <div class="results" id="results">
+    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
+    <div class="score-circle" id="score-num">0/10</div>
+    <h2 id="result-msg"></h2>
+    <p class="result-sub" id="result-sub"></p>
+    <button class="badge btn-restart" onclick="restartQuiz()">🔄 Reiniciar Quiz</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    "q": "Al descargar un documento PDF de Internet, ¿por qué es crucial elegir la memoria USB como destino en la ventana de guardado?",
+    "options": [
+      "Para que el archivo se comprima automáticamente y ocupe menos espacio.",
+      "Porque si lo guardas en «Descargas», se quedará en el ordenador y no dentro de la memoria USB.",
+      "Para que el navegador pueda abrirlo más rápido la próxima vez."
+    ],
+    "correct": 1,
+    "expl": "La guía advierte explícitamente: «Si guardas el documento en 'Descargas', se quedará en el ordenador y no dentro de la memoria USB»[cite: 2]."
+  },
+  {
+    "q": "¿Qué paso es estrictamente obligatorio antes de usar la opción de retirar la memoria USB de forma segura?",
+    "options": [
+      "Cerrar los documentos y las ventanas que estés utilizando desde ella y esperar a que terminen las copias.",
+      "Apagar el monitor del ordenador para evitar subidas de tensión.",
+      "Borrar el historial del Explorador de archivos."
+    ],
+    "correct": 0,
+    "expl": "Es fundamental no saltarse este paso: «Antes de retirar la memoria, cierra los documentos y las ventanas que estés utilizando desde ella. Espera a que terminen las copias o las descargas»[cite: 2]."
+  },
+  {
+    "q": "Si quieres pasar unas fotos del USB al ordenador, pero deseas que las originales sigan existiendo en el USB como copia de seguridad, ¿qué debes hacer?",
+    "options": [
+      "Usar la opción «Cortar» y luego «Pegar».",
+      "Usar la opción «Copiar» y luego «Pegar».",
+      "Arrastrar los archivos directamente a la Papelera."
+    ],
+    "correct": 1,
+    "expl": "Debes usar «Copiar», no «Cortar», si quieres conservar el archivo en la memoria USB; «Cortar» sirve para moverlo y lo eliminaría de su ubicación original[cite: 2]."
+  },
+  {
+    "q": "Además del tradicional «Copiar y Pegar», ¿qué otra forma rápida menciona la guía para enviar un archivo del ordenador al USB?",
+    "options": [
+      "Hacer clic derecho sobre el archivo, elegir «Enviar a» y seleccionar el nombre de la memoria USB.",
+      "Pulsar la tecla F5 mientras se arrastra el archivo.",
+      "Usar la herramienta de compresión de Windows."
+    ],
+    "correct": 0,
+    "expl": "Una forma rápida es hacer clic con el botón derecho sobre una foto, elegir «Enviar a» y seleccionar el nombre de la memoria USB[cite: 2]."
+  },
+  {
+    "q": "Has intentado extraer el USB de forma segura, pero Windows no muestra el aviso de que ya es seguro retirarlo. ¿Cómo debes proceder?",
+    "options": [
+      "Tirar de la memoria rápidamente para evitar que se corrompan los datos.",
+      "Reiniciar el ordenador desconectándolo de la corriente eléctrica.",
+      "No forzarla ni tirar de ella; cerrar los archivos abiertos y volver a intentarlo."
+    ],
+    "correct": 2,
+    "expl": "Si no aparece el aviso: «No tires de la memoria ni la fuerces. Cierra los archivos abiertos y vuelve a intentarlo»[cite: 2]."
+  },
+  {
+    "q": "Tras copiar archivos importantes de la memoria USB al ordenador, ¿cuál es una buena práctica recomendada para asegurar que todo ha salido bien?",
+    "options": [
+      "Cambiar la letra de la unidad USB.",
+      "Abrir la copia en el ordenador para comprobar que el archivo funciona y se ha guardado correctamente.",
+      "Ocultar la carpeta para que no la vean otros usuarios del equipo."
+    ],
+    "correct": 1,
+    "expl": "Tras pegar los archivos, la guía recomienda: «Abre la copia para comprobar que el archivo funciona y que se ha guardado correctamente»[cite: 2]."
+  },
+  {
+    "q": "¿Cuál es la secuencia correcta de clics para crear una nueva carpeta dentro del USB desde el Explorador de archivos?",
+    "options": [
+      "Doble clic izquierdo -> Crear Carpeta -> Escribir nombre.",
+      "Clic derecho en un espacio vacío -> Nuevo -> Carpeta -> Escribir nombre -> Intro.",
+      "Clic derecho sobre un archivo existente -> Agrupar en carpeta."
+    ],
+    "correct": 1,
+    "expl": "El proceso exacto es: clic derecho en un espacio vacío, colocar el puntero sobre «Nuevo», hacer clic en «Carpeta», escribir el nombre y pulsar Intro[cite: 2]."
+  },
+  {
+    "q": "Si al intentar conectar la memoria USB en el puerto del ordenador notas que no entra con suavidad, ¿qué debes hacer?",
+    "options": [
+      "Darle la vuelta e intentarlo de nuevo sin forzarla.",
+      "Empujar con un poco más de fuerza hasta escuchar un clic de encaje.",
+      "Soplar en el puerto USB y volver a empujar."
+    ],
+    "correct": 0,
+    "expl": "La instrucción es clara: «Introduce la memoria con suavidad. Si no entra, dale la vuelta e inténtalo de nuevo. No la fuerces»[cite: 2]."
+  },
+  {
+    "q": "Si al abrir el Explorador de archivos no ves el nombre de tu memoria USB en la columna de la izquierda, debes buscarla dentro de la sección «Este equipo».",
+    "options": [
+      "Verdadero",
+      "Falso"
+    ],
+    "correct": 0,
+    "type": "boolean",
+    "expl": "Verdadero. La guía indica: «En la columna de la izquierda, busca el nombre de tu memoria USB. Si no aparece, haz clic en 'Este equipo' y búscala en la lista de unidades»[cite: 2]."
+  },
+  {
+    "q": "Al copiar una carpeta grande al USB, si aparece una ventana con una barra de progreso, puedes extraer el USB de forma segura en cuanto la barra pase del 50%.",
+    "options": [
+      "Verdadero",
+      "Falso"
+    ],
+    "correct": 1,
+    "type": "boolean",
+    "expl": "Falso. Hay que ser paciente: «Espera a que termine la copia. Si aparece una ventana con una barra de progreso, espera hasta que desaparezca»[cite: 2]."
+  }
+];
+const TOTAL = questions.length;
+
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+
+function loadQuestion() {
+  answered = false;
+  const qData = questions[currentIdx];
+
+  document.getElementById('q-type').textContent =
+    qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
+  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
+  document.getElementById('q-text').textContent = qData.q;
+  document.getElementById('btn-next').style.display = 'none';
+
+  const fb = document.getElementById('q-feedback');
+  fb.style.display = 'none';
+  fb.className = 'feedback';
+
+  const optionsDiv = document.getElementById('q-options');
+  optionsDiv.innerHTML = '';
+
+  qData.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(i);
+    optionsDiv.appendChild(btn);
+  });
+
+  const pct = (currentIdx / TOTAL) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
+  document.getElementById('btn-next').textContent =
+    currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
+    
+  fit(true);
+}
+
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  const qData = questions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const fb = document.getElementById('q-feedback');
+
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === qData.correct) {
+    btns[idx].classList.add('correct');
+    score++;
+    fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${qData.expl}`;
+    fb.className = 'feedback correct-fb';
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[qData.correct].classList.add('correct');
+    fb.innerHTML = `<strong>💡 Nota:</strong><br>${qData.expl}`;
+    fb.className = 'feedback wrong-fb';
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  fb.style.display = 'block';
+  document.getElementById('btn-next').style.display = 'block';
+  fit(false);
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx < TOTAL) {
+    loadQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  document.documentElement.style.setProperty('--k', 1);
+  document.getElementById('results').style.display = 'flex';
+
+  const pct = Math.round((score / TOTAL) * 100);
+  document.getElementById('score-num').innerHTML = `${score}/${TOTAL}<small>${pct}%</small>`;
+
+  let emoji, msg, sub;
+  if (pct === 100)    { emoji = '🏆'; msg = "¡Perfecto! Dominas la guía del USB";  sub = 'Respondiste todo correctamente.'; }
+  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';     sub = 'Solo te faltó un detalle.'; }
+  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';             sub = 'Vas por buen camino, repasa lo fallado.'; }
+  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';         sub = 'Vuelve a leer el material y reinténtalo.'; }
+  else                { emoji = '💪'; msg = '¡No te rindas!';             sub = 'Revisa el tema desde el principio.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-msg').textContent = msg;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('prog-fill').style.width = '100%';
+}
+
+function restartQuiz() {
+  currentIdx = 0;
+  score = 0;
+  answered = false;
+  document.getElementById('prog-score').textContent = '⭐ 0 pts';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-area').classList.remove('hidden');
+  loadQuestion();
+}
+
+/* Función que se encarga de reducir la escala si la pregunta es excesivamente grande */
+function fit(reset) {
+  const root = document.documentElement;
+  const card = document.querySelector('.question-card');
+  if (!card || !card.clientHeight) return;
+  let k = reset ? 1 : (parseFloat(root.style.getPropertyValue('--k')) || 1);
+  root.style.setProperty('--k', k);
+  while (k > 0.55 && card.scrollHeight > card.clientHeight + 1) {
+    k = Math.round((k - 0.04) * 100) / 100;
+    root.style.setProperty('--k', k);
+  }
+}
+window.addEventListener('resize', () => fit(!answered));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fit(!answered));
+
+window.onload = loadQuestion;
+</script>
+</body>
+</html>
