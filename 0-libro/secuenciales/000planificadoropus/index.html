@@ -1720,10 +1720,71 @@ function renderMsg(id, m, mi){
   }).join('');
   if (streaming && !m.content) body = `<div class="thinking">${m.thinking ? 'Pensando…' : 'Esperando respuesta…'}</div>`;
   const tail = m.note ? `<div class="thinking">${esc(m.note)}</div>` : '';
-  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${streaming ? '' : `<button onclick="copyMsg('${id}',${mi})">Copiar</button>`}</div>
+  const dlBtns = streaming ? '' : `<button onclick="copyMsg('${id}',${mi})">Copiar</button><button onclick="downloadMsgMd('${id}',${mi})">↓ .md</button><button onclick="downloadMsgDocx('${id}',${mi})">↓ .doc</button>`;
+  return `<div class="msg assistant"><div class="who"><span>${esc(m.modelLabel || '')}</span>${dlBtns}</div>
     <div class="md ${streaming && m.content ? 'cursor' : ''}">${body}</div>${tail}</div>`;
 }
 function copyMsg(id, mi){ copyText(stripSugs(state.steps[id].messages[mi].content)); }
+
+function msgLabel(id, mi){
+  const chap = ($('chapter').value.trim() || 'capitulo').replace(/\s+/g,'_');
+  const step = id === 'esencial' ? 'fase1' : 'fase2';
+  return `respuesta_${step}_${chap}_msg${mi+1}`;
+}
+function downloadMsgMd(id, mi){
+  const text = stripSugs(state.steps[id].messages[mi].content);
+  download(msgLabel(id, mi) + '.md', text);
+}
+function mdToWordHtml(md){
+  // Convierte Markdown a HTML para incrustar en un .docx via mhtml
+  const lines = md.split('\n'); let html = ''; let list = null; let para = [];
+  const ei = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const il = s => ei(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g,'$1<em>$2</em>');
+  const endP = () => { if(para.length){ html += '<p>' + para.map(il).join('<br>') + '</p>'; para=[]; } };
+  const endL = () => { if(list){ html += '</'+list+'>'; list=null; } };
+  for(const raw of lines){
+    const l = raw.replace(/\s+$/,''); let m;
+    if(!l.trim()){ endP(); endL(); continue; }
+    if((m=l.match(/^(#{1,6})\s+(.*)$/))){ endP(); endL(); const n=Math.min(6,m[1].length); html+=`<h${n}>${il(m[2])}</h${n}>`; continue; }
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endP(); endL(); html+='<hr>'; continue; }
+    if((m=l.match(/^\s*>\s?(.*)$/))){ endP(); endL(); html+=`<blockquote><p>${il(m[1])}</p></blockquote>`; continue; }
+    if((m=l.match(/^\s*[-*+]\s+(.*)$/))){ endP(); if(list!=='ul'){ endL(); html+='<ul>'; list='ul'; } html+=`<li>${il(m[1])}</li>`; continue; }
+    if((m=l.match(/^\s*\d+[.)]\s+(.*)$/))){ endP(); if(list!=='ol'){ endL(); html+='<ol>'; list='ol'; } html+=`<li>${il(m[1])}</li>`; continue; }
+    endL(); para.push(l);
+  }
+  endP(); endL();
+  return `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'>
+<style>
+  body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.5;margin:2cm;}
+  h1{font-size:18pt;} h2{font-size:15pt;} h3{font-size:13pt;}
+  h1,h2,h3,h4{font-weight:bold;margin-top:14pt;margin-bottom:4pt;}
+  p{margin:0 0 7pt;}
+  blockquote{margin-left:20pt;border-left:3px solid #aaa;padding-left:10pt;color:#555;}
+  code{font-family:Courier New,monospace;font-size:10pt;background:#f4f4f4;}
+  ul,ol{margin:0 0 7pt 20pt;} li{margin-bottom:3pt;}
+  strong{font-weight:bold;} em{font-style:italic;}
+  hr{border:none;border-top:1px solid #ccc;margin:10pt 0;}
+  table{border-collapse:collapse;width:100%;margin:0 0 8pt;}
+  th,td{border:1px solid #ccc;padding:4pt 7pt;font-size:10pt;}
+  th{background:#e8e8e8;font-weight:bold;}
+</style></head><body>${html}</body></html>`;
+}
+function downloadMsgDocx(id, mi){
+  const text = stripSugs(state.steps[id].messages[mi].content);
+  const wordHtml = mdToWordHtml(text);
+  const blob = new Blob(['\ufeff', wordHtml], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = msgLabel(id, mi) + '.doc';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
 
 // Ver / editar / descargar documentos
 let fileCtx = null;
