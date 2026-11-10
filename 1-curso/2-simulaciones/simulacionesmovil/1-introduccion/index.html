@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introducción y Objetivos del Móvil</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --mobile-frame:#333; --mobile-screen-bg:#f0f2f5; --mobile-status-bar:#dae2e8; --mobile-nav-bar:#e0e0e0;
+    --mobile-accent:#4DA3FF; /* Xiaomi blue */
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+  svg { fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c4); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.94) translateY(16px);} to{opacity:1; transform:none;} }
+
+  .container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:22px 24px 30px; }
+
+  .top { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+  .badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.1; background:linear-gradient(135deg,var(--c6),var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+  .mode:hover { color:var(--text); }
+
+  .prog { display:flex; align-items:center; gap:14px; margin-bottom:16px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+
+  .layout { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(330px,1fr); gap:22px; align-items:start; }
+  .stage[hidden] { display:none; }
+
+  /* ---------- Pantalla simulada de móvil ---------- */
+  .phone-frame {
+    position:relative;
+    width:380px; /* Base width for mobile display, scale using transform for responsiveness */
+    aspect-ratio: 9/19; /* Common phone aspect ratio */
+    background:var(--mobile-frame);
+    border-radius:36px;
+    padding:16px;
+    box-shadow:0 12px 28px rgba(0,0,0,.5);
+    margin:0 auto; /* Center the phone frame */
+    display:flex; flex-direction:column;
+    border:2px solid rgba(255,255,255,.1);
+    transform-origin:top;
+  }
+  .stage-live .phone-frame {
+    box-shadow:0 12px 28px rgba(0,0,0,.5), 0 0 0 4px var(--mobile-accent);
+  }
+  .phone-speaker { width:80px; height:8px; background:#444; border-radius:4px; margin:0 auto 10px; }
+  .phone-screen {
+    flex:1;
+    background:var(--mobile-screen-bg);
+    border-radius:24px;
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+    font-size:1.15em; /* Large text for projection */
+    user-select:none; -webkit-user-select:none;
+  }
+  .status-bar {
+    height:36px;
+    background:var(--mobile-status-bar);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 14px;
+    font-size:.85em; font-weight:600;
+    color:#333;
+  }
+  .status-bar-icons { display:flex; gap:6px; font-size:1.2em; }
+  .status-bar-time { font-weight:700; }
+
+  .home-screen {
+    flex:1;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3C/filter%3E%3Crect width='100' height='100' fill='%236bb6ff'/%3E%3Crect width='100' height='100' fill='%2325D366' style='mix-blend-mode:multiply'/%3E%3Crect width='100' height='100' fill='%23FFD93D' style='mix-blend-mode:color-burn'/%3E%3Crect width='100' height='100' fill='%23C38BFF' style='mix-blend-mode:screen'/%3E%3Crect width='100' height='100' fill='%234DA3FF' style='mix-blend-mode:overlay'/%3E%3Crect width='100' height='100' fill='url(%23g)'/%3E%3Cg filter='url(%23a)'%3E%3Crect width='100' height='100' fill='%234DA3FF' opacity='0.7'/%3E%3Crect width='100' height='100' fill='%23FFD93D' opacity='0.7' style='mix-blend-mode:overlay'/%3E%3C/g%3E%3C/svg%3E") center / cover;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(min-content, max-content);
+    padding:16px;
+    gap:16px 8px;
+    align-content:start;
+  }
+  .app-icon {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.4);
+    font-size:.7em; font-weight:600; text-align:center;
+    cursor:pointer;
+  }
+  .app-icon-img {
+    width:58px; height:58px; border-radius:16px;
+    background:rgba(255,255,255,.15);
+    display:grid; place-items:center;
+    font-size:2.2em;
+    margin-bottom:4px;
+    backdrop-filter: blur(5px);
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+  }
+  .app-icon-img.phn { background:#3b82f6; }
+  .app-icon-img.msg { background:#25D366; }
+  .app-icon-img.int { background:#FF9F43; }
+  .app-icon-img.set { background:#9ea5ad; }
+  .app-icon-img.cam { background:#c92a2a; }
+  .app-icon-img.gal { background:#785a8f; }
+
+  .nav-bar {
+    height:56px;
+    background:var(--mobile-nav-bar);
+    display:flex; justify-content:space-around; align-items:center;
+    border-top:1px solid rgba(0,0,0,.1);
+    color:#333;
+  }
+  .nav-btn {
+    width:calc(100% / 3); height:100%;
+    display:grid; place-items:center;
+    font-size:1.6em;
+    cursor:pointer;
+    border:0; background:transparent;
+    color:inherit;
+  }
+  .nav-btn:hover { background:rgba(0,0,0,.08); }
+  .nav-btn.home { font-size:1.8em; }
+
+  /* Zonas pulsables (modo descubrir/practicar) */
+  .part { cursor:pointer; transition:box-shadow .25s, background .25s; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .25s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 22%, transparent); }
+  .pin { position:absolute; z-index:8; width:2.1em; height:2.1em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:1.05em; box-shadow:0 2px 8px rgba(0,0,0,.4); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin, .fr.found .pin { animation:none; }
+  .part.sel { z-index:5; box-shadow:0 0 0 4px var(--pc), 0 0 28px color-mix(in srgb,var(--pc) 75%, transparent); }
+  .part.ok { box-shadow:0 0 0 4px var(--c1), 0 0 28px rgba(37,211,102,.75); z-index:5; }
+  .part.bad { animation:shake .45s; box-shadow:0 0 0 4px var(--c4); z-index:5; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-7px);} 75%{transform:translateX(7px);} }
+  .mode-practica .pin { display:none; }
+
+  /* Discover specific pins positioning */
+  .sc-discover .phone-screen.part { --pc:var(--c6); }
+  .sc-discover .status-bar.part { --pc:var(--c8); }
+  .sc-discover .nav-btn[data-part="back"] { --pc:var(--c1); }
+  .sc-discover .nav-btn[data-part="home"] { --pc:var(--c3); }
+  .sc-discover .nav-btn[data-part="recents"] { --pc:var(--c4); }
+  .sc-discover .qs-panel .pin { top:calc(100% + 10px); left:calc(50% - 1.05em); } /* Pin below the quick settings panel */
+  .sc-discover .qs-wifi.part { --pc:var(--c5); }
+  .sc-discover .qs-brightness.part { --pc:var(--c7); }
+  .sc-discover .pin-top-right { top:10px; right:10px; }
+  .sc-discover .pin-bottom-left { bottom:10px; left:10px; }
+  .sc-discover .pin-bottom-right { bottom:10px; right:10px; }
+  .sc-discover .pin-center-bottom { bottom:10px; left:50%; margin-left:-1.05em; }
+  .sc-discover .qs-wifi .pin { top:calc(50% - 1.05em); left:calc(50% + 4em); }
+  .sc-discover .qs-brightness .pin { top:calc(50% + 1em); left:calc(50% + 6em); }
+
+  /* Quick Settings Panel */
+  .quick-settings {
+    position:absolute; inset:0;
+    background:rgba(230,230,230,.98);
+    backdrop-filter: blur(8px);
+    transform:translateY(-100%);
+    transition:transform .3s ease-out;
+    z-index:10;
+    padding:16px 14px 0;
+    display:flex; flex-direction:column;
+    color:#333;
+  }
+  .quick-settings.active { transform:translateY(0); }
+  .qs-header {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:1.1em; font-weight:700; margin-bottom:12px;
+  }
+  .qs-header span { color:var(--mobile-accent); }
+  .qs-grid {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    margin-bottom:16px;
+  }
+  .qs-toggle {
+    display:flex; flex-direction:column; align-items:center;
+    gap:4px; font-size:.75em; font-weight:600;
+  }
+  .qs-toggle-btn {
+    width:56px; height:56px; border-radius:50%;
+    background:var(--mobile-accent);
+    display:grid; place-items:center;
+    color:#fff; font-size:1.8em;
+    border:0; cursor:pointer;
+  }
+  .qs-toggle-btn.off { background:#ccc; color:#777; }
+  .qs-toggle-btn.off.disabled { opacity:.6; cursor:default; }
+
+  .qs-brightness { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .qs-brightness span { font-size:1.2em; color:#777; }
+  .qs-slider-wrap { flex:1; height:6px; background:#ccc; border-radius:3px; position:relative; }
+  .qs-slider-fill { position:absolute; inset:0; background:var(--mobile-accent); border-radius:3px; width:50%; }
+  .qs-slider-thumb {
+    position:absolute; top:50%; transform:translate(-50%,-50%);
+    width:24px; height:24px; border-radius:50%;
+    background:#fff; border:2px solid var(--mobile-accent);
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+    cursor:pointer;
+  }
+
+  /* App Specific Styles */
+  .app-screen { position:absolute; inset:0; background:var(--mobile-screen-bg); z-index:1; display:none; flex-direction:column; }
+  .app-screen.active { display:flex; }
+  .app-header {
+    height:56px; background:#fff;
+    display:flex; align-items:center; gap:10px;
+    padding:0 14px;
+    font-weight:700; font-size:1.1em;
+    color:#333;
+    border-bottom:1px solid #eee;
+  }
+  .app-header .back-arrow { font-size:1.4em; cursor:pointer; margin-right:4px; color:#555; }
+  .app-body { flex:1; padding:16px; overflow-y:auto; color:#333; }
+
+  /* Phone App */
+  .phone-dialer { text-align:center; padding:20px 0; }
+  .dial-num { font-size:2em; font-weight:300; margin-bottom:20px; color:#555; min-height:1.2em;}
+  .dial-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; width:70%; margin:0 auto; }
+  .dial-btn {
+    width:64px; height:64px; border-radius:50%;
+    background:#eee; border:1px solid #ccc;
+    display:grid; place-items:center;
+    font-size:1.8em; font-weight:600;
+    color:#333; cursor:pointer;
+  }
+  .dial-btn:hover { background:#e0e0e0; }
+  .dial-btn.call { background:var(--c1); color:#fff; }
+  .dial-btn.call:hover { background:color-mix(in srgb,var(--c1) 85%, #000); }
+  .incoming-call-ui {
+    position:absolute; inset:0; background:rgba(0,0,0,.7); z-index:100;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:40px; color:#fff;
+    animation:popIn .3s ease;
+  }
+  .inc-info { text-align:center; }
+  .inc-name { font-size:2em; font-weight:700; margin-bottom:10px; }
+  .inc-number { font-size:1.4em; opacity:.8; }
+  .inc-actions { display:flex; gap:30px; }
+  .inc-btn {
+    width:80px; height:80px; border-radius:50%;
+    display:grid; place-items:center;
+    font-size:2.5em; color:#fff; border:0;
+    box-shadow:0 4px 12px rgba(0,0,0,.3); cursor:pointer;
+  }
+  .inc-btn.answer { background:var(--c1); }
+  .inc-btn.reject { background:var(--c4); }
+
+  /* Messages App */
+  .messages-list { display:flex; flex-direction:column; gap:12px; }
+  .msg-item { background:#fff; padding:12px 16px; border-radius:12px; border:1px solid #eee; }
+  .msg-item.new { background:#e8f4ff; }
+  .msg-from { font-weight:700; color:#333; margin-bottom:4px; }
+  .msg-prev { font-size:.9em; color:#555; }
+  .msg-start-chat {
+    background:var(--c1); color:#fff;
+    padding:12px 20px; border-radius:100px;
+    font-weight:700; font-size:1.1em;
+    border:0; cursor:pointer;
+    position:absolute; bottom:20px; right:20px;
+  }
+  .chat-view { display:none; flex-direction:column; }
+  .chat-view.active { display:flex; }
+  .chat-body { flex:1; padding:16px; overflow-y:auto; background:#f0f2f5; display:flex; flex-direction:column; gap:8px;}
+  .chat-bubble { max-width:70%; padding:10px 14px; border-radius:16px; position:relative; }
+  .chat-bubble.sent { background:var(--mobile-accent); color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
+  .chat-bubble.received { background:#e0e0e0; color:#333; align-self:flex-start; border-bottom-left-radius:4px; }
+  .chat-input {
+    display:flex; align-items:center; padding:10px 16px; background:#fff;
+    border-top:1px solid #eee;
+  }
+  .chat-input input {
+    flex:1; padding:8px 12px; border:1px solid #eee; border-radius:20px;
+    font-size:1em;
+  }
+  .chat-input button {
+    margin-left:10px; background:var(--mobile-accent); color:#fff;
+    width:40px; height:40px; border-radius:50%; border:0;
+    font-size:1.2em; cursor:pointer;
+  }
+  .recents-list { display:flex; flex-direction:column; gap:10px; padding:16px;}
+  .recents-item {
+    display:flex; align-items:center; gap:10px;
+    background:#fff; padding:12px; border-radius:12px;
+    color:#333; font-weight:600; font-size:1.1em;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+  }
+  .recents-icon { width:40px; height:40px; border-radius:10px; background:#eee; display:grid; place-items:center; font-size:1.5em; }
+  .recents-close {
+    position:absolute; top:8px; right:8px;
+    background:rgba(0,0,0,.2); color:#fff;
+    border-radius:50%; width:24px; height:24px;
+    display:grid; place-items:center;
+    font-size:.8em; cursor:pointer; border:0;
+  }
+
+  .tools { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .tbtn { padding:10px 18px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .tbtn:hover { transform:scale(1.04); border-color:var(--c6); }
+
+  /* ---------- Panel de información ---------- */
+  .side { position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; border-radius:24px; }
+  .info { background:var(--card); border:1px solid rgba(255,255,255,.07); border-left:8px solid var(--ic,var(--c6)); border-radius:24px; padding:24px 26px; min-height:360px; animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both; transition:border-color .3s; }
+  .info-num { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:50%; background:var(--ic,var(--c6)); color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .info h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,2.6vw,2.3rem); line-height:1.15; margin-bottom:12px; color:var(--ic,var(--c6)); }
+  .info h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.25rem; margin:14px 0 8px; color:var(--c3); }
+  .info p { font-size:clamp(1.05rem,1.5vw,1.3rem); font-weight:600; line-height:1.5; margin-bottom:14px; }
+  .info b { color:var(--c3); font-weight:800; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { background:rgba(255,255,255,.07); border-radius:100px; padding:6px 14px; font-weight:800; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip { background:rgba(255,217,61,.09); border-radius:14px; padding:12px 16px; color:var(--sub); font-weight:700; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip b { color:var(--c3); }
+  .hello { text-align:center; padding-top:30px; }
+  .hello .big { font-size:3.4rem; margin-bottom:8px; }
+  .hello h2 { color:var(--text); }
+  .quiz-q { font-family:'Fredoka One',cursive; font-size:clamp(1.5rem,2.6vw,2.2rem); line-height:1.2; margin-bottom:14px; }
+  .quiz-q span { color:var(--c3); }
+  .feedback { font-size:1.3rem; font-weight:800; min-height:2em; margin:6px 0 12px; }
+  .feedback.good { color:var(--c1); } .feedback.no { color:var(--c4); }
+  .btn { padding:12px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; transition:all .2s; }
+  .btn:hover { transform:scale(1.04); border-color:var(--c6); }
+  .btn.go { background:rgba(37,211,102,.18); border-color:var(--c1); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-12px) rotate(5deg);} }
+
+  .lh { display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+  .lh .ico { font-size:2.4rem; }
+  .lh .nm { font-family:'Fredoka One',cursive; font-size:1.5rem; line-height:1.1; }
+  .state { display:inline-block; margin-top:4px; padding:3px 14px; border-radius:100px; font-weight:800; font-size:1rem; color:#0a1628; }
+  .s-normal { background:var(--c1); } .s-max { background:var(--c6); } .s-min { background:var(--c3); } .s-closed { background:var(--c4); } .s-none { background:#8a9bbf; }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.07); font-weight:700; font-size:1rem; line-height:1.3; transition:all .25s; }
+  .retos .rb { width:24px; height:24px; border-radius:7px; flex-shrink:0; background:rgba(255,255,255,.1); display:grid; place-items:center; font-weight:800; font-size:.85rem; }
+  .retos li small { display:block; color:var(--sub); font-weight:600; font-size:.85rem; }
+  .retos li.on { background:rgba(37,211,102,.13); border-color:var(--c1); }
+  .retos li.on .rb { background:var(--c1); color:#0a1628; }
+  .retos li.on span.rt { opacity:.75; }
+  .win-all { text-align:center; background:rgba(255,217,61,.1); border:2px solid var(--c3); border-radius:16px; padding:10px; margin-bottom:12px; font-weight:800; color:var(--c3); font-size:1.15rem; }
+
+  .foot { text-align:center; margin-top:18px; }
+  .btn-reset { padding:10px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; cursor:pointer; }
+  .btn-reset:hover { color:var(--text); border-color:var(--c4); }
+
+  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .side { position:static; max-height:none; } .info { min-height:0; } .modes { margin-left:0; } }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">📱 Móvil</span>
+    <h1>Introducción y Objetivos</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+
+  <div class="prog">
+    <span id="prog-txt"></span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="stage" id="stage-parts">
+        <div class="phone-frame">
+          <div class="phone-speaker"></div>
+          <div class="phone-screen part sc-discover" data-part="screen">
+            <span class="pin pin-top-right">?</span>
+            <div class="status-bar part" data-part="status-bar">
+              <span class="status-bar-time">10:30</span>
+              <span class="status-bar-icons">📶🔋</span>
+              <span class="pin">?</span>
+            </div>
+            <div class="home-screen">
+              <!-- App icons for discover, they are not interactive -->
+              <div class="app-icon"><div class="app-icon-img phn">📞</div><span>Teléfono</span></div>
+              <div class="app-icon"><div class="app-icon-img msg">💬</div><span>Mensajes</span></div>
+              <div class="app-icon"><div class="app-icon-img cam">📷</div><span>Cámara</span></div>
+              <div class="app-icon"><div class="app-icon-img int">🌐</div><span>Internet</span></div>
+              <div class="app-icon"><div class="app-icon-img gal">🏞️</div><span>Fotos</span></div>
+              <div class="app-icon"><div class="app-icon-img set">⚙️</div><span>Ajustes</span></div>
+            </div>
+            <div class="nav-bar">
+              <button class="nav-btn part" data-part="back" type="button">
+                <span class="pin pin-bottom-left">?</span>
+                <svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button class="nav-btn home part" data-part="home" type="button">
+                <span class="pin pin-center-bottom">?</span>
+                <svg viewBox="0 0 24 24" width="1em" height="1em"><circle cx="12" cy="12" r="10"/></svg>
+              </button>
+              <button class="nav-btn part" data-part="recents" type="button">
+                <span class="pin pin-bottom-right">?</span>
+                <svg viewBox="0 0 24 24" width="1em" height="1em"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+              </button>
+            </div>
+
+            <div class="quick-settings" id="qs-discover">
+              <span class="pin">?</span>
+              <div class="qs-header">Ajustes Rápidos</div>
+              <div class="qs-grid">
+                <div class="qs-toggle part qs-wifi" data-part="wifi-toggle">
+                  <button class="qs-toggle-btn">
+                    <span class="pin">?</span>
+                    <svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 4L4.2 15.5H8.6L12 20L15.4 15.5H19.8L12 4z"/></svg>
+                  </button>
+                  <span>Wi-Fi</span>
+                </div>
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn off"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M7 14s-1.5-1.5-3-1.5M21 14s-1.5-1.5-3-1.5M12 2v20M2 12h20M12 4v16"/></svg></button>
+                  <span>Bluetooth</span>
+                </div>
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn off"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M17 10l-4 4-4-4"/></svg></button>
+                  <span>Datos móviles</span>
+                </div>
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn off"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M8 3h8M12 3v18M10 17h4"/></svg></button>
+                  <span>Linterna</span>
+                </div>
+              </div>
+              <div class="qs-brightness part" data-part="brightness-slider">
+                <span>💡</span>
+                <div class="qs-slider-wrap">
+                  <div class="qs-slider-fill" style="width:50%;"></div>
+                  <div class="qs-slider-thumb" style="left:50%;"></div>
+                  <span class="pin">?</span>
+                </div>
+                <span>☀️</span>
+              </div>
+            </div><!-- /quick-settings -->
+          </div><!-- /phone-screen -->
+        </div><!-- /phone-frame -->
+      </div><!-- /stage-parts -->
+
+      <div class="stage" id="stage-live" hidden>
+        <div class="phone-frame">
+          <div class="phone-speaker"></div>
+          <div class="phone-screen" id="live-phone-screen">
+            <div class="status-bar">
+              <span class="status-bar-time" id="lv-time">10:30</span>
+              <span class="status-bar-icons" id="lv-icons"></span>
+            </div>
+            <div class="home-screen" id="lv-home-screen">
+              <button class="app-icon" data-app="phone"><div class="app-icon-img phn">📞</div><span>Teléfono</span></button>
+              <button class="app-icon" data-app="messages"><div class="app-icon-img msg">💬</div><span>Mensajes</span></button>
+              <button class="app-icon" data-app="camera"><div class="app-icon-img cam">📷</div><span>Cámara</span></button>
+              <button class="app-icon" data-app="internet"><div class="app-icon-img int">🌐</div><span>Internet</span></button>
+              <button class="app-icon" data-app="gallery"><div class="app-icon-img gal">🏞️</div><span>Fotos</span></button>
+              <button class="app-icon" data-app="settings"><div class="app-icon-img set">⚙️</div><span>Ajustes</span></button>
+            </div>
+            <div class="nav-bar" id="lv-nav-bar">
+              <button class="nav-btn" data-nav="back" type="button"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <button class="nav-btn home" data-nav="home" type="button"><svg viewBox="0 0 24 24" width="1em" height="1em"><circle cx="12" cy="12" r="10"/></svg></button>
+              <button class="nav-btn" data-nav="recents" type="button"><svg viewBox="0 0 24 24" width="1em" height="1em"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg></button>
+            </div>
+
+            <!-- App Screens -->
+            <div class="app-screen" id="app-phone">
+              <div class="app-header"><span class="back-arrow" data-back="app-phone">leftarrow;</span> Teléfono</div>
+              <div class="app-body">
+                <div class="phone-dialer">
+                  <div class="dial-num" id="dial-display"></div>
+                  <div class="dial-grid">
+                    <button class="dial-btn" data-dial="1">1</button><button class="dial-btn" data-dial="2">2</button><button class="dial-btn" data-dial="3">3</button>
+                    <button class="dial-btn" data-dial="4">4</button><button class="dial-btn" data-dial="5">5</button><button class="dial-btn" data-dial="6">6</button>
+                    <button class="dial-btn" data-dial="7">7</button><button class="dial-btn" data-dial="8">8</button><button class="dial-btn" data-dial="9">9</button>
+                    <button class="dial-btn" data-dial="*">*</button><button class="dial-btn" data-dial="0">0</button><button class="dial-btn" data-dial="#">#</button>
+                    <button class="dial-btn call" id="call-btn">📞</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="app-screen" id="app-messages">
+              <div class="app-header"><span class="back-arrow" data-back="app-messages">leftarrow;</span> Mensajes</div>
+              <div class="app-body messages-list" id="msg-list">
+                <div class="msg-item"><div class="msg-from">Cruz Roja</div><div class="msg-prev">Hola, ¿todo bien?</div></div>
+                <div class="msg-item new"><div class="msg-from">Isabel (Monitora)</div><div class="msg-prev">Recuerda la clase de móvil mañana</div></div>
+                <div class="msg-item"><div class="msg-from">Banco</div><div class="msg-prev">Su cuenta ha sido...</div></div>
+              </div>
+              <button class="msg-start-chat" id="new-message-btn">Iniciar chat</button>
+              <div class="app-screen chat-view" id="chat-view">
+                <div class="app-header"><span class="back-arrow" data-back="chat-view">leftarrow;</span> Isabel (Monitora)</div>
+                <div class="chat-body">
+                  <div class="chat-bubble received">Hola, ¿todo bien?</div>
+                  <div class="chat-bubble received">Recuerda la clase de móvil mañana</div>
+                </div>
+                <div class="chat-input">
+                  <input type="text" placeholder="Escribe un mensaje..." id="chat-input-text">
+                  <button id="send-chat-btn">➔</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="app-screen" id="app-recents">
+              <div class="app-header">Aplicaciones recientes</div>
+              <div class="recents-list" id="recents-apps-list">
+                <div class="recents-item" data-app="phone"><span class="recents-icon">📞</span>Teléfono</div>
+                <div class="recents-item" data-app="messages"><span class="recents-icon">💬</span>Mensajes</div>
+              </div>
+            </div>
+
+            <div class="quick-settings" id="qs-live">
+              <div class="qs-header">Ajustes Rápidos</div>
+              <div class="qs-grid">
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn" id="lv-wifi-btn"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 4L4.2 15.5H8.6L12 20L15.4 15.5H19.8L12 4z"/></svg></button>
+                  <span>Wi-Fi</span>
+                </div>
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn off" id="lv-bluetooth-btn"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M7 14s-1.5-1.5-3-1.5M21 14s-1.5-1.5-3-1.5M12 2v20M2 12h20M12 4v16"/></svg></button>
+                  <span>Bluetooth</span>
+                </div>
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn off" id="lv-data-btn"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M17 10l-4 4-4-4"/></svg></button>
+                  <span>Datos móviles</span>
+                </div>
+                <div class="qs-toggle">
+                  <button class="qs-toggle-btn off" id="lv-flashlight-btn"><svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M8 3h8M12 3v18M10 17h4"/></svg></button>
+                  <span>Linterna</span>
+                </div>
+              </div>
+              <div class="qs-brightness">
+                <span>💡</span>
+                <div class="qs-slider-wrap" id="lv-brightness-slider">
+                  <div class="qs-slider-fill" style="width:50%;"></div>
+                  <div class="qs-slider-thumb" style="left:50%;"></div>
+                </div>
+                <span>☀️</span>
+              </div>
+            </div><!-- /qs-live -->
+
+            <div class="incoming-call-ui" id="incoming-call-ui" hidden>
+              <div class="inc-info">
+                <div class="inc-name">Número Oculto</div>
+                <div class="inc-number">Llamada entrante</div>
+              </div>
+              <div class="inc-actions">
+                <button class="inc-btn reject" id="call-reject">📞<br>❌</button>
+                <button class="inc-btn answer" id="call-answer">📞<br>✅</button>
+              </div>
+            </div>
+
+          </div><!-- /phone-screen -->
+        </div><!-- /phone-frame -->
+        <div class="tools">
+          <button class="tbtn" id="b-incoming-call" type="button">📞 Simular llamada</button>
+        </div>
+      </div><!-- /stage-live -->
+    </div><!-- /stage wrapper -->
+
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+/* =========================================================
+   Datos de las partes del móvil
+   ========================================================= */
+const PARTES = {
+  screen: {n:1, nombre:"Pantalla", det:"la pantalla", color:"--c6", sitio:"La superficie principal del móvil.",
+    texto:"Es donde <b>ves toda la información</b> y manejas el teléfono. Es táctil, así que interactúas con ella directamente con tus dedos.",
+    chips:["👀 Muestra información","👆 Táctil","🎮 Para controlar el móvil"],
+    tip:"Aprenderás a usar el toque, deslizar y pellizcar para hacer zoom."},
+  back: {n:2, nombre:"Botón de Volver", det:"el botón de Volver", color:"--c1", sitio:"Abajo a la izquierda, en la barra de navegación.",
+    texto:"Se representa con una <b>flecha hacia la izquierda (<)</b>. Sirve para <b>volver a la pantalla anterior</b> en la que estabas.",
+    chips:["< Flecha izquierda","↩️ Va hacia atrás"],
+    tip:"Es muy útil para corregir un paso o cerrar una ventana sin ir al inicio."},
+  home: {n:3, nombre:"Botón de Inicio", det:"el botón de Inicio", color:"--c3", sitio:"Abajo en el centro, en la barra de navegación.",
+    texto:"Suele ser un <b>círculo (○)</b>. Al pulsarlo, te lleva directamente a la <b>pantalla principal</b> de tu móvil, donde están los iconos de las aplicaciones.",
+    chips:["○ Círculo","🏠 Pantalla principal"],
+    tip:"Es como el botón 'Home' de tu casa, siempre te lleva al punto de partida."},
+  recents: {n:4, nombre:"Botón de Aplicaciones Recientes", det:"el botón de Aplicaciones Recientes", color:"--c4", sitio:"Abajo a la derecha, en la barra de navegación.",
+    texto:"Se representa con un <b>cuadrado (□)</b> o varias líneas. Al tocarlo, ves una lista de las <b>aplicaciones que has usado</b> hace poco.",
+    chips:["□ Cuadrado","🗂️ Lista de apps abiertas"],
+    tip:"Desde aquí puedes cambiar rápidamente entre aplicaciones o cerrarlas."},
+  "status-bar": {n:5, nombre:"Barra de Estado", det:"la barra de estado", color:"--c8", sitio:"Arriba del todo de la pantalla.",
+    texto:"Muestra información importante como la <b>hora, el nivel de batería, la cobertura</b> de red y si tienes Wi-Fi o Bluetooth activados.",
+    chips:["⏰ Hora","🔋 Batería","📶 Cobertura"],
+    tip:"Si deslizas el dedo desde aquí hacia abajo, se abre el panel de Ajustes Rápidos."},
+  "quick-settings": {n:6, nombre:"Panel de Ajustes Rápidos", det:"el panel de Ajustes Rápidos", color:"--c6", sitio:"Se desliza desde la parte superior de la pantalla hacia abajo.",
+    texto:"Un menú que te permite <b>activar o desactivar funciones</b> como el Wi-Fi, Bluetooth o la linterna sin tener que ir a los Ajustes principales.",
+    chips:["⚙️ Acceso directo","👆 Desliza hacia abajo","💡 Activa/desactiva funciones"],
+    tip:"Es muy práctico para cambiar cosas rápidamente sin perder tiempo."},
+  "wifi-toggle": {n:7, nombre:"Botón de Wi-Fi", det:"el botón de Wi-Fi", color:"--c5", sitio:"En el panel de Ajustes Rápidos.",
+    texto:"Un icono que representa la <b>conexión inalámbrica</b>. Permite activar o desactivar la conexión a internet a través de una red Wi-Fi.",
+    chips:["📶 Conexión a internet","ON/OFF"],
+    tip:"Actívalo para usar internet en casa sin gastar datos móviles."},
+  "brightness-slider": {n:8, nombre:"Control de Brillo de Pantalla", det:"el control de brillo de pantalla", color:"--c7", sitio:"En el panel de Ajustes Rápidos.",
+    texto:"Una barra que permite <b>ajustar la luminosidad</b> de la pantalla para que la veas mejor, o para ahorrar batería si la bajas.",
+    chips:["💡 Ajusta la luz","↔️ Deslizar para cambiar"],
+    tip:"Baja el brillo por la noche para que no te moleste la luz. Súbelo si hay mucho sol."}
+};
+const ORDEN = Object.keys(PARTES);
+
+const $ = id => document.getElementById(id);
+const info = $("info");
+let modo = "desc";
+function restart(e){ e.style.animation="none"; e.offsetHeight; e.style.animation=""; }
+
+/* =========================================================
+   MODOS DESCUBRIR y PRACTICAR (partes)
+   ========================================================= */
+const KEY = "movil-introduccion-2026";
+let found = {}, pregunta = null, aciertos = 0, hechas = [];
+try { const g = JSON.parse(localStorage.getItem(KEY)); if (g && g.found) found = g.found; } catch(e){}
+const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify({found})); } catch(e){} };
+
+const parts = k => [...document.querySelectorAll('#stage-parts [data-part="'+k+'"]')];
+ORDEN.forEach(k => parts(k).forEach(p => p.style.setProperty("--pc","var("+PARTES[k].color+")")));
+
+function limpiar(){ document.querySelectorAll("#stage-parts .part").forEach(p => p.classList.remove("sel","ok","bad")); }
+
+function pintarPins(){
+  ORDEN.forEach(k => {
+    const f = !!found[k];
+    parts(k).forEach(p => { p.classList.toggle("found", f); const pin = p.querySelector(":scope > .pin"); if (pin) pin.textContent = f ? PARTES[k].n : "?"; });
+  });
+}
+
+function bienvenida(){
+  limpiar();
+  info.style.setProperty("--ic","var(--c6)");
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte del móvil</h2><p>Hay <b>'+ORDEN.length+' partes</b> marcadas con un <b>?</b>. Vamos a descubrirlas juntos.</p></div>';
+  restart(info);
+}
+
+function mostrar(k){
+  const d = PARTES[k];
+  limpiar(); parts(k).forEach(p => p.classList.add("sel"));
+  found[k] = true; guardar(); pintarPins(); progreso();
+  info.style.setProperty("--ic","var("+d.color+")");
+  info.innerHTML =
+    '<div class="info-num">'+d.n+'</div><h2>'+d.nombre+'</h2><p>'+d.texto+'</p>' +
+    '<p style="color:var(--sub);font-size:1.05rem">📍 '+d.sitio+'</p>' +
+    '<div class="chips">'+d.chips.map(c=>'<span class="chip">'+c+'</span>').join("")+'</div>' +
+    '<div class="tip">'+d.tip+'</div>';
+  restart(info);
+  if (Object.keys(found).length === ORDEN.length) {
+    info.insertAdjacentHTML("beforeend",'<div class="row"><button class="btn go" id="to-live" type="button">🛠️ ¡Ahora a probarlo!</button></div>');
+    $("to-live").onclick = () => setModo("live");
+  }
+  if (k === "quick-settings" || k === "wifi-toggle" || k === "brightness-slider") {
+    // For discover mode, ensure the QS panel is active when clicked on these parts.
+    $("qs-discover").classList.add("active");
+  } else if ($("qs-discover").classList.contains("active")) {
+    // If another part is clicked while QS is active, close QS.
+    $("qs-discover").classList.remove("active");
+  }
+}
+
+function nueva(){
+  limpiar();
+  const quedan = ORDEN.filter(k => !hechas.includes(k));
+  if (!quedan.length) return final();
+  pregunta = quedan[Math.floor(Math.random()*quedan.length)];
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="info-num">🎯</div><div class="quiz-q">Toca '+PARTES[pregunta].det.replace(/^(el|la|los|las)/,'$1<br><span>')+'</span></div><div class="feedback" id="fb"></div>';
+  restart(info); progreso();
+  if (pregunta === "quick-settings" || pregunta === "wifi-toggle" || pregunta === "brightness-slider") {
+    // For practice, if QS part is asked, open it.
+    $("qs-discover").classList.add("active");
+  } else {
+    $("qs-discover").classList.remove("active");
+  }
+}
+
+function responder(k){
+  if (!pregunta) return;
+  const fb = $("fb");
+  if (k === pregunta){
+    limpiar(); parts(k).forEach(p => p.classList.add("ok"));
+    hechas.push(k); aciertos++; pregunta = null; progreso();
+    fb.className = "feedback good"; fb.textContent = "✅ ¡Correcto! " + PARTES[k].nombre;
+    info.insertAdjacentHTML("beforeend",'<p style="color:var(--sub)">'+PARTES[k].texto+'</p><div class="row"><button class="btn go" id="sig" type="button">'+(hechas.length===ORDEN.length?"🏆 Terminar":"Siguiente ➜")+'</button></div>');
+    $("sig").onclick = nueva;
+  } else {
+    const ps = parts(k); ps.forEach(p => { p.classList.remove("bad"); p.offsetHeight; p.classList.add("bad"); });
+    setTimeout(()=>ps.forEach(p=>p.classList.remove("bad")),900);
+    fb.className = "feedback no"; fb.textContent = "❌ Eso es " + PARTES[k].det + ". ¡Inténtalo otra vez!";
+  }
+}
+function final(){
+  limpiar();
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Ya conoces las <b>'+ORDEN.length+' partes</b> principales de tu móvil.</p><div class="row" style="justify-content:center"><button class="btn go" id="otra" type="button">🔄 Practicar otra vez</button></div></div>';
+  restart(info);
+  $("otra").onclick = () => { hechas=[]; aciertos=0; nueva(); };
+}
+
+document.querySelectorAll("#stage-parts .part").forEach(p => p.addEventListener("click", e => {
+  const hit = e.target.closest(".part");
+  if (hit !== p) return;           // only the innermost zone
+  const k = p.dataset.part;
+  modo === "desc" ? mostrar(k) : responder(k);
+}));
+
+/* =========================================================
+   MODO PROBAR (Simulación de móvil)
+   ========================================================= */
+const RETOS = [
+  {id:"open-phone-app", t:"Abrir la aplicación 'Teléfono'", h:"Pulsa el icono 📞 en la pantalla principal"},
+  {id:"make-call",   t:"Hacer una llamada simulada", h:"Marca un número y pulsa el botón 📞"},
+  {id:"answer-call",  t:"Responder una llamada entrante", h:"Cuando entre una llamada, pulsa el botón ✅"},
+  {id:"open-messages-app", t:"Abrir la aplicación 'Mensajes'", h:"Pulsa el icono 💬 en la pantalla principal"},
+  {id:"send-message", t:"Enviar un mensaje simulado", h:"Pulsa 'Iniciar chat', escribe y pulsa ➔"},
+  {id:"open-quick-settings", t:"Deslizar para abrir los Ajustes Rápidos", h:"Desliza el dedo desde la parte superior de la pantalla hacia abajo"},
+  {id:"toggle-wifi", t:"Activar la conexión Wi-Fi", h:"Pulsa el botón de Wi-Fi en Ajustes Rápidos"},
+  {id:"adjust-brightness", t:"Ajustar el brillo de la pantalla", h:"Arrastra el deslizador de brillo en Ajustes Rápidos"},
+  {id:"nav-back", t:"Ir a la pantalla anterior", h:"Pulsa el botón de Volver (<) en la barra de navegación"},
+  {id:"nav-home", t:"Ir a la pantalla de Inicio", h:"Pulsa el botón de Inicio (○) en la barra de navegación"},
+  {id:"nav-recents", t:"Abrir la lista de apps recientes", h:"Pulsa el botón de Aplicaciones Recientes (□) en la barra de navegación"},
+  {id:"close-quick-settings", t:"Cerrar el panel de Ajustes Rápidos", h:"Desliza el dedo desde el centro de la pantalla hacia arriba, o toca la flecha de arriba"},
+];
+let retos = {};
+const LIVE_KEY = "movil-live-state-2026";
+let liveReady = false;
+
+const liveState = {
+  currentScreen: "home", // "home", "phone", "messages", "chat", "recents", "incoming-call"
+  quickSettingsActive: false,
+  wifiOn: false,
+  brightness: 50, // 0-100
+  dialNumber: "",
+  recentsOrder: [], // order of apps in recents view, most recent first
+  previousScreen: "home" // To store screen before incoming call
+};
+
+function saveLiveState() {
+  try {
+    localStorage.setItem(LIVE_KEY, JSON.stringify({ liveState, retos }));
+  } catch(e) { console.error("Failed to save live state:", e); }
+}
+
+function loadLiveState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LIVE_KEY));
+    if (saved) {
+      Object.assign(liveState, saved.liveState);
+      retos = saved.retos || {};
+    }
+  } catch(e) { console.error("Failed to load live state:", e); }
+}
+
+function resetLiveState() {
+  Object.assign(liveState, {
+    currentScreen: "home",
+    quickSettingsActive: false,
+    wifiOn: false,
+    brightness: 50,
+    dialNumber: "",
+    recentsOrder: [],
+    previousScreen: "home"
+  });
+  retos = {};
+  saveLiveState();
+}
+
+function tick(id){
+  if (retos[id]) return;
+  retos[id] = true;
+  saveLiveState();
+  progreso();
+  renderLiveUI();
+  renderInfo();
+}
+
+// Function to update current time in status bar
+function updateTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const lvTime = $("lv-time");
+  if (lvTime) lvTime.textContent = timeStr;
+  setTimeout(updateTime, 1000); // Update every second
+}
+
+function renderLiveUI(){
+  if (!liveReady) return;
+
+  // Render current time & status icons
+  const lvIcons = $("lv-icons");
+  if (lvIcons) {
+    lvIcons.innerHTML = (liveState.wifiOn ? '📶' : '') + '🔋';
+  }
+
+  // Hide all app screens, then show the current one
+  document.querySelectorAll("#live-phone-screen .app-screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".home-screen").forEach(s => s.style.display = "none"); // Home screen default hidden
+
+  if (liveState.currentScreen === "home") {
+    $("lv-home-screen").style.display = "grid"; // Make home screen a grid
+  } else if (liveState.currentScreen === "phone") {
+    $("app-phone").classList.add("active");
+    $("dial-display").textContent = liveState.dialNumber;
+  } else if (liveState.currentScreen === "messages") {
+    $("app-messages").classList.add("active");
+    $("chat-view").classList.remove("active");
+    $("new-message-btn").style.display = "block";
+  } else if (liveState.currentScreen === "chat") {
+    $("app-messages").classList.add("active");
+    $("chat-view").classList.add("active");
+    $("new-message-btn").style.display = "none";
+  } else if (liveState.currentScreen === "recents") {
+    $("app-recents").classList.add("active");
+    const list = $("recents-apps-list");
+    list.innerHTML = "";
+    liveState.recentsOrder.forEach(appId => {
+      let appName = ""; let appIcon = "";
+      if (appId === "phone") { appName = "Teléfono"; appIcon = "📞"; }
+      else if (appId === "messages") { appName = "Mensajes"; appIcon = "💬"; }
+      const item = document.createElement("div");
+      item.className = "recents-item";
+      item.dataset.app = appId;
+      item.innerHTML = `<span class="recents-icon">${appIcon}</span>${appName}<button class="recents-close" data-app="${appId}">✕</button>`;
+      list.appendChild(item);
+    });
+  }
+
+  // Quick Settings Panel
+  $("qs-live").classList.toggle("active", liveState.quickSettingsActive);
+  $("lv-wifi-btn").classList.toggle("off", !liveState.wifiOn);
+  $("lv-bluetooth-btn").classList.toggle("off", true); // always off for this sim
+  $("lv-data-btn").classList.toggle("off", true); // always off for this sim
+  $("lv-flashlight-btn").classList.toggle("off", true); // always off for this sim
+
+  // Brightness slider
+  const fill = $("lv-brightness-slider").querySelector(".qs-slider-fill");
+  const thumb = $("lv-brightness-slider").querySelector(".qs-slider-thumb");
+  fill.style.width = liveState.brightness + "%";
+  thumb.style.left = liveState.brightness + "%";
+
+  // Simulate incoming call UI
+  $("incoming-call-ui").hidden = liveState.currentScreen !== "incoming-call";
+
+  // Update info panel
+  renderInfo();
+}
+
+function openApp(appName) {
+  liveState.currentScreen = appName;
+  // Add app to recents, move to front if already exists
+  const index = liveState.recentsOrder.indexOf(appName);
+  if (index > -1) liveState.recentsOrder.splice(index, 1);
+  liveState.recentsOrder.unshift(appName);
+  saveLiveState();
+  renderLiveUI();
+  if (appName === "phone") tick("open-phone-app");
+  if (appName === "messages") tick("open-messages-app");
+}
+
+function navigateBack() {
+  if (liveState.currentScreen === "chat") {
+    liveState.currentScreen = "messages";
+  } else if (liveState.currentScreen === "phone" || liveState.currentScreen === "messages" || liveState.currentScreen === "recents") {
+    liveState.currentScreen = "home";
+  } else if (liveState.currentScreen === "incoming-call") {
+    // If user presses back during incoming call, it's like rejecting
+    rejectCall();
+    return;
+  }
+  saveLiveState();
+  renderLiveUI();
+  tick("nav-back");
+}
+
+function navigateHome() {
+  liveState.currentScreen = "home";
+  liveState.quickSettingsActive = false; // Always close QS when going home
+  saveLiveState();
+  renderLiveUI();
+  tick("nav-home");
+}
+
+function navigateRecents() {
+  liveState.currentScreen = "recents";
+  saveLiveState();
+  renderLiveUI();
+  tick("nav-recents");
+}
+
+// Quick Settings gesture logic
+let swipeStartY = 0;
+$("live-phone-screen").addEventListener("pointerdown", e => {
+  if (e.target.closest(".qs-slider-thumb")) return; // Don't interfere with slider drag
+  if (e.target.closest(".app-icon")) return; // Don't interfere with app icon tap
+  if (e.target.closest(".nav-btn")) return; // Don't interfere with nav buttons
+  if (e.target.closest(".app-header") || e.target.closest(".app-body") || e.target.closest(".msg-start-chat") || e.target.closest(".phone-dialer")) return; // Don't interfere with app content
+  if (liveState.currentScreen === "incoming-call") return; // No swiping during call
+
+  swipeStartY = e.clientY;
+  e.target.setPointerCapture(e.pointerId);
+
+  const moveHandler = ev => {
+    const dy = ev.clientY - swipeStartY;
+    if (dy > 30 && !liveState.quickSettingsActive) { // Swiping down
+      liveState.quickSettingsActive = true;
+      renderLiveUI();
+      tick("open-quick-settings");
+      e.target.removeEventListener("pointermove", moveHandler);
+    } else if (dy < -30 && liveState.quickSettingsActive) { // Swiping up
+      liveState.quickSettingsActive = false;
+      renderLiveUI();
+      tick("close-quick-settings");
+      e.target.removeEventListener("pointermove", moveHandler);
+    }
+  };
+  const upHandler = () => {
+    e.target.removeEventListener("pointermove", moveHandler);
+    e.target.removeEventListener("pointerup", upHandler);
+    e.target.removeEventListener("pointercancel", upHandler);
+    swipeStartY = 0;
+  };
+  e.target.addEventListener("pointermove", moveHandler);
+  e.target.addEventListener("pointerup", upHandler);
+  e.target.addEventListener("pointercancel", upHandler);
+});
+
+
+function buildLive(){
+  liveReady = true;
+  updateTime();
+  loadLiveState();
+  renderLiveUI();
+
+  // App icons
+  document.querySelectorAll("#lv-home-screen .app-icon").forEach(icon => {
+    icon.addEventListener("click", () => openApp(icon.dataset.app));
+  });
+
+  // Nav buttons
+  document.querySelectorAll("#lv-nav-bar .nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.nav === "back") navigateBack();
+      else if (btn.dataset.nav === "home") navigateHome();
+      else if (btn.dataset.nav === "recents") navigateRecents();
+    });
+  });
+
+  // App Back buttons
+  document.querySelectorAll(".app-header .back-arrow").forEach(btn => {
+    btn.addEventListener("click", () => navigateBack());
+  });
+
+  // Quick Settings toggles
+  $("lv-wifi-btn").addEventListener("click", () => {
+    liveState.wifiOn = !liveState.wifiOn;
+    tick("toggle-wifi");
+    saveLiveState();
+    renderLiveUI();
+  });
+
+  // Brightness slider drag
+  const brightnessSlider = $("lv-brightness-slider");
+  brightnessSlider.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    const thumb = brightnessSlider.querySelector(".qs-slider-thumb");
+    const rect = brightnessSlider.getBoundingClientRect();
+    const startX = e.clientX;
+    const startBrightness = liveState.brightness;
+
+    function moveHandler(ev) {
+      const deltaX = ev.clientX - startX;
+      let newBrightness = startBrightness + (deltaX / rect.width) * 100;
+      newBrightness = Math.max(0, Math.min(100, newBrightness));
+      liveState.brightness = newBrightness;
+      renderLiveUI();
+    }
+    function upHandler() {
+      brightnessSlider.removeEventListener("pointermove", moveHandler);
+      brightnessSlider.removeEventListener("pointerup", upHandler);
+      brightnessSlider.removeEventListener("pointercancel", upHandler);
+      tick("adjust-brightness");
+      saveLiveState();
+    }
+    brightnessSlider.addEventListener("pointermove", moveHandler);
+    brightnessSlider.addEventListener("pointerup", upHandler);
+    brightnessSlider.addEventListener("pointercancel", upHandler);
+  });
+
+  // Phone app dialer
+  document.querySelectorAll(".dial-btn[data-dial]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (liveState.dialNumber.length < 15) { // Limit number length
+        liveState.dialNumber += btn.dataset.dial;
+        renderLiveUI();
+      }
+    });
+  });
+  $("call-btn").addEventListener("click", () => {
+    if (liveState.dialNumber.length > 0) {
+      alert("📞 Llamando al " + liveState.dialNumber + "...");
+      tick("make-call");
+    } else {
+      alert("Introduce un número para llamar.");
+    }
+  });
+
+  // Messages app
+  $("new-message-btn").addEventListener("click", () => {
+    liveState.currentScreen = "chat";
+    saveLiveState();
+    renderLiveUI();
+  });
+  $("send-chat-btn").addEventListener("click", () => {
+    const chatInput = $("chat-input-text");
+    if (chatInput.value.trim() !== "") {
+      const chatBody = $("chat-view").querySelector(".chat-body");
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble sent";
+      bubble.textContent = chatInput.value;
+      chatBody.appendChild(bubble);
+      chatInput.value = "";
+      chatBody.scrollTop = chatBody.scrollHeight; // Scroll to bottom
+      tick("send-message");
+    }
+  });
+
+  // Recents app close button
+  document.addEventListener("click", e => {
+    if (e.target.classList.contains("recents-close")) {
+      const appId = e.target.dataset.app;
+      liveState.recentsOrder = liveState.recentsOrder.filter(id => id !== appId);
+      saveLiveState();
+      renderLiveUI();
+    } else if (e.target.closest(".recents-item")) {
+      const appId = e.target.closest(".recents-item").dataset.app;
+      openApp(appId); // Switch to that app
+    }
+  });
+
+  // Incoming call simulation
+  $("b-incoming-call").addEventListener("click", () => {
+    if (liveState.currentScreen === "incoming-call") {
+      alert("Ya hay una llamada entrante.");
+      return;
+    }
+    liveState.previousScreen = liveState.currentScreen; // Save current screen to return to
+    liveState.currentScreen = "incoming-call";
+    saveLiveState();
+    renderLiveUI();
+  });
+  $("call-answer").addEventListener("click", () => {
+    alert("✅ Llamada contestada. ¡Hola!");
+    liveState.currentScreen = liveState.previousScreen || "home"; // Go back to previous screen or home
+    delete liveState.previousScreen;
+    tick("answer-call");
+    saveLiveState();
+    renderLiveUI();
+  });
+  $("call-reject").addEventListener("click", () => {
+    rejectCall();
+  });
+}
+
+function rejectCall() {
+  alert("❌ Llamada rechazada.");
+  liveState.currentScreen = liveState.previousScreen || "home";
+  delete liveState.previousScreen;
+  saveLiveState();
+  renderLiveUI();
+}
+
+
+/* =========================================================
+   Progreso y modos
+   ========================================================= */
+function progreso(){
+  let n, tot, txt;
+  if (modo === "desc") { n = Object.keys(found).length; tot = ORDEN.length; txt = "⭐ "+n+" de "+tot+" partes descubiertas"; }
+  else if (modo === "prac") { n = aciertos; tot = ORDEN.length; txt = "🎯 "+n+" de "+tot+" aciertos"; }
+  else { n = Object.keys(retos).length; tot = RETOS.length; txt = "🛠️ "+n+" de "+tot+" retos superados"; }
+  $("prog-txt").textContent = txt;
+  $("prog-fill").style.width = (n / tot * 100) + "%";
+}
+
+function setModo(m){
+  modo = m; pregunta = null;
+  $("m-desc").classList.toggle("on", m === "desc");
+  $("m-live").classList.toggle("on", m === "live");
+  $("m-prac").classList.toggle("on", m === "prac");
+  $("root").classList.toggle("mode-practica", m === "prac");
+  $("stage-parts").hidden = m === "live";
+  $("stage-live").hidden = m !== "live";
+
+  if (m === "live") {
+    if (!liveReady) { buildLive(); }
+    liveState.quickSettingsActive = false; // Ensure QS is closed when switching to live mode
+    renderLiveUI();
+    progreso();
+  } else if (m === "desc") {
+    $("qs-discover").classList.remove("active"); // Hide QS in discover mode initially
+    pintarPins();
+    bienvenida();
+    progreso();
+  } else { // Practice mode
+    $("qs-discover").classList.remove("active"); // Hide QS in practice mode initially
+    hechas = []; aciertos = 0; nueva();
+  }
+}
+$("m-desc").onclick = () => setModo("desc");
+$("m-live").onclick = () => setModo("live");
+$("m-prac").onclick = () => setModo("prac");
+$("reset").onclick = () => {
+  found = {};
+  resetLiveState(); // Reset live mode specific state and retos
+  guardar(); // Save found state for discover/practice
+  if (liveReady) renderLiveUI(); // Re-render live UI after reset
+  setModo(modo); // Re-initialize current mode
+};
+
+setModo("desc");
+</script>
+</body>
+</html>

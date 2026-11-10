@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prácticas en clase: Pasar información del USB al ordenador y viceversa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+    --suave: rgba(255,255,255,0.04);
+    --borde: rgba(255,255,255,0.08);
+    --escala: 1;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Nunito', 'Segoe UI', Verdana, sans-serif;
+    font-size: calc(clamp(1.05rem, 0.7rem + 1.1vw, 1.75rem) * var(--escala));
+    line-height: 1.45;
+    color: var(--text);
+    background: var(--bg);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fondo con manchas de color, como en el cuestionario */
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to { transform: translate(25px, 18px) scale(1.07); }
+  }
+  header, main, footer { position: relative; z-index: 1; }
+
+  /* Cabecera */
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.6em 1.2em;
+    padding: 0.8em clamp(1rem, 3vw, 2.5rem);
+    border-bottom: 1px solid var(--borde);
+  }
+  .tema { flex: 1 1 18em; min-width: 0; }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.6em;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 0.35em 1.2em; border-radius: 100px; margin-bottom: 0.4em;
+  }
+  .tema h1 {
+    margin: 0;
+    font-family: 'Fredoka One', 'Nunito', sans-serif; font-weight: 400;
+    font-size: 1.5em; line-height: 1.1;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .herramientas { display: flex; flex-wrap: wrap; gap: 0.4em; }
+  button {
+    font: inherit; font-size: 0.8em; font-weight: 700;
+    min-height: 2.6em; padding: 0.35em 0.9em;
+    color: var(--text); background: var(--suave);
+    border: 2px solid var(--borde); border-radius: 14px;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  button:hover:not(:disabled) { background: rgba(37,211,102,0.1); border-color: var(--c1); }
+  button:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+
+  /* Práctica */
+  main {
+    flex: 1; overflow-y: auto;
+    padding: clamp(1rem, 3vh, 2.2rem) clamp(1rem, 4vw, 3.5rem);
+  }
+  .practica {
+    max-width: 62em; margin: 0 auto;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: clamp(1.1rem, 3vw, 2.2rem);
+  }
+  .practica.entra { animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.96) translateY(16px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .cabeza { display: flex; align-items: flex-start; gap: 0.6em; }
+  .numero {
+    flex: none;
+    font-family: 'Fredoka One', 'Nunito', sans-serif;
+    font-size: 3.2em; line-height: 0.95;
+    min-width: 1.1em; text-align: right;
+    background: linear-gradient(135deg, var(--c1), var(--c3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .cabeza h2 { margin: 0; font-size: 1.5em; font-weight: 800; line-height: 1.2; }
+  .objetivo { margin: 0.35em 0 0; font-size: 1.05em; font-weight: 600; color: var(--sub); max-width: 40em; }
+
+  ol.pasos {
+    list-style: none; counter-reset: paso;
+    margin: 1.2em 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.55em;
+    max-width: 46em;
+  }
+  ol.pasos li {
+    counter-increment: paso;
+    position: relative;
+    padding: 0.6em 1em 0.6em 3.1em;
+    font-weight: 600;
+    background: var(--suave);
+    border: 2px solid var(--borde);
+    border-radius: 14px;
+  }
+  ol.pasos li::before {
+    content: counter(paso);
+    position: absolute; left: 0.75em; top: 0.6em;
+    width: 1.75em; height: 1.75em; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 0.9em;
+    color: var(--bg); background: var(--c1);
+  }
+
+  .fijate {
+    margin: 1.2em 0 0; padding: 0.75em 1.1em;
+    max-width: 46em;
+    font-weight: 700;
+    background: rgba(255,217,61,0.1);
+    border: 1px solid rgba(255,217,61,0.3);
+    border-radius: 12px;
+  }
+  .fijate b { color: var(--c3); }
+
+  /* Teclas */
+  kbd {
+    display: inline-block;
+    min-width: 1.7em; padding: 0 0.45em;
+    font: inherit; font-weight: 800; font-size: 0.9em; line-height: 1.5;
+    text-align: center;
+    color: var(--text); background: #1c2a47;
+    border: 2px solid rgba(255,255,255,0.3); border-radius: 8px;
+    box-shadow: 0 0.18em 0 rgba(255,255,255,0.3);
+    margin: 0 0.05em 0.18em;
+    white-space: nowrap;
+  }
+  .mas { margin: 0 0.1em; font-weight: 800; color: var(--sub); }
+
+  /* Pie */
+  footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 1em;
+    padding: 0.8em clamp(1rem, 3vw, 2.5rem);
+    border-top: 1px solid var(--borde);
+    background: rgba(10,22,40,0.6);
+  }
+  footer button { font-size: 1em; min-width: 7.5em; font-weight: 800; }
+  footer button.siguiente {
+    color: var(--bg); border: none;
+    background: linear-gradient(135deg, var(--c3), #f59e0b);
+  }
+  footer button.siguiente:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--c3), #f59e0b);
+    transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,217,61,0.4);
+  }
+  footer button:disabled { opacity: 0.35; cursor: default; }
+  .progreso { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.35em; min-width: 0; }
+  .progreso span { font-size: 0.85em; font-weight: 700; color: var(--sub); }
+  .barra { width: min(100%, 22em); height: 0.5em; border-radius: 10px; background: var(--borde); overflow: hidden; }
+  .barra i {
+    display: block; height: 100%; border-radius: 10px;
+    background: linear-gradient(90deg, var(--c1), var(--c3));
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Paneles: lista y atajos */
+  .panel {
+    position: fixed; inset: 0; z-index: 20;
+    display: none;
+    padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 3rem);
+    background: rgba(10,22,40,0.85);
+    overflow-y: auto;
+  }
+  .panel.abierto { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .caja {
+    max-width: 60em; margin: 0 auto; padding: 1.3em 1.5em 1.5em;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px;
+  }
+  .caja .arriba { display: flex; justify-content: space-between; align-items: center; gap: 1em; margin-bottom: 0.9em; }
+  .caja h2 {
+    margin: 0; font-size: 1.3em;
+    font-family: 'Fredoka One', 'Nunito', sans-serif; font-weight: 400;
+    color: var(--c1);
+  }
+  .indice { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 0.55em; }
+  .indice button {
+    display: flex; align-items: center; gap: 0.7em; text-align: left;
+    font-size: 0.9em; font-weight: 600;
+  }
+  .indice button b {
+    flex: none;
+    width: 1.9em; height: 1.9em; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 0.9em;
+    background: var(--borde);
+  }
+  .indice button.actual { background: rgba(37,211,102,0.15); border-color: var(--c1); }
+  .indice button.actual b { background: var(--c1); color: var(--bg); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.95em; font-weight: 600; }
+  th, td { text-align: left; padding: 0.55em 0.6em; border-bottom: 1px solid var(--borde); }
+  th { color: var(--sub); font-size: 0.8em; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+  .nota { margin: 0.9em 0 0; font-size: 0.85em; color: var(--sub); }
+
+  @media (max-width: 700px) {
+    .numero { font-size: 2.4em; }
+    .cabeza h2 { font-size: 1.3em; }
+    footer button { min-width: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blob, .practica.entra, .panel.abierto { animation: none; }
+    .barra i, button { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs" aria-hidden="true">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+</div>
+
+<header>
+  <div class="tema">
+    <div class="badge">💻 Prácticas en el ordenador</div>
+    <h1>Pasar información del USB al ordenador y viceversa</h1>
+  </div>
+  <div class="herramientas">
+    <button type="button" id="btnLista">Ver todas</button>
+    <button type="button" id="btnAtajos">Atajos</button>
+    <button type="button" id="btnMenos" aria-label="Letra más pequeña">A−</button>
+    <button type="button" id="btnMas" aria-label="Letra más grande">A+</button>
+    <button type="button" id="btnPantalla">Pantalla completa</button>
+  </div>
+</header>
+
+<main id="principal" tabindex="-1">
+  <article class="practica" id="practica" aria-live="polite"></article>
+</main>
+
+<footer>
+  <button type="button" id="btnAnterior">← Anterior</button>
+  <div class="progreso">
+    <span id="contador"></span>
+    <div class="barra" aria-hidden="true"><i id="relleno"></i></div>
+  </div>
+  <button type="button" class="siguiente" id="btnSiguiente">Siguiente →</button>
+</footer>
+
+<div class="panel" id="panelLista" role="dialog" aria-modal="true" aria-labelledby="tituloLista">
+  <div class="caja">
+    <div class="arriba">
+      <h2 id="tituloLista">Todas las prácticas</h2>
+      <button type="button" data-cerrar>Cerrar</button>
+    </div>
+    <div class="indice" id="indice"></div>
+  </div>
+</div>
+
+<div class="panel" id="panelAtajos" role="dialog" aria-modal="true" aria-labelledby="tituloAtajos">
+  <div class="caja">
+    <div class="arriba">
+      <h2 id="tituloAtajos">Atajos esenciales</h2>
+      <button type="button" data-cerrar>Cerrar</button>
+    </div>
+    <table id="tablaAtajos">
+      <thead><tr><th>Acción</th><th>Atajo</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="nota"></p>
+  </div>
+</div>
+
+<script type="application/json" id="datos">{
+  "titulo": "Pasar información del USB al ordenador y viceversa",
+  "clave": "pasar-informacion-del-usb-al-ordenador-y-viceversa",
+  "practicas": [
+    {
+      "t": "Conectar el USB y verlo en el ordenador",
+      "o": "Aprender a conectar el USB y encontrarlo en el Explorador de archivos.",
+      "p": [
+        "Coge el USB y conéctalo a un puerto del ordenador. Si no entra, dale la vuelta.",
+        "Espera unos segundos hasta que el ordenador lo reconozca.",
+        "Pulsa {Win}+{E} para abrir el Explorador de archivos.",
+        "En la columna de la izquierda, busca el nombre de tu USB: suele poner «Unidad extraíble» o una letra como (D:).",
+        "Haz clic sobre él: a la derecha verás lo que hay dentro."
+      ],
+      "f": "El USB aparece en la columna de la izquierda. Si no lo ves, prueba a conectarlo en otro puerto."
+    },
+    {
+      "t": "Preparar un archivo de prueba en el ordenador",
+      "o": "Crear un documento sencillo en el Escritorio para practicar la copia.",
+      "p": [
+        "Pulsa {Win}, escribe «Bloc de notas» y pulsa {Intro}.",
+        "Escribe una frase corta: «Práctica del USB. Curso de informática».",
+        "Haz clic en «Archivo», arriba a la izquierda, y elige «Guardar como».",
+        "En la ventana, elige el Escritorio, escribe el nombre «Prueba USB» y pulsa Guardar.",
+        "Cierra el Bloc de notas."
+      ],
+      "f": "El archivo «Prueba USB.txt» debe aparecer en el Escritorio. La extensión .txt la pone el programa solo."
+    },
+    {
+      "t": "Copiar el archivo al USB con el teclado",
+      "o": "Copiar un archivo del ordenador al USB y comprobar que se ha copiado.",
+      "p": [
+        "En el Escritorio, haz clic una vez sobre «Prueba USB» para seleccionarlo.",
+        "Pulsa {Ctrl}+{C} para copiarlo.",
+        "Abre el Explorador con {Win}+{E} y haz clic en tu USB en la columna izquierda.",
+        "Pulsa {Ctrl}+{V} para pegarlo dentro del USB.",
+        "Comprueba que el archivo aparece en la lista de la derecha."
+      ],
+      "f": "El archivo sigue en el Escritorio y ahora también está en el USB: se ha copiado, no movido."
+    },
+    {
+      "t": "Copiar varios archivos a la vez",
+      "o": "Seleccionar dos archivos y copiarlos juntos al USB.",
+      "p": [
+        "En el Escritorio, haz clic sobre un archivo.",
+        "Mantén pulsada {Ctrl} y haz clic sobre otro archivo: los dos quedan seleccionados.",
+        "Pulsa {Ctrl}+{C}.",
+        "Ve al USB en el Explorador y pulsa {Ctrl}+{V}.",
+        "Comprueba que los dos archivos están dentro del USB."
+      ],
+      "f": "Con {Ctrl} se eligen archivos sueltos; con {Mayús} se elige una tanda seguida."
+    },
+    {
+      "t": "Traer un archivo del USB al ordenador",
+      "o": "Copiar un archivo del USB al Escritorio, en sentido contrario.",
+      "p": [
+        "En el Explorador, haz clic en el USB de la columna izquierda.",
+        "Haz clic derecho sobre uno de los archivos y elige «Copiar».",
+        "En la columna izquierda, haz clic en «Escritorio».",
+        "Haz clic derecho en un espacio vacío y elige «Pegar».",
+        "Comprueba que el archivo aparece en el Escritorio."
+      ],
+      "f": "También puedes usar {Ctrl}+{C} y {Ctrl}+{V}. Copiar deja el original donde estaba."
+    },
+    {
+      "t": "Mover un archivo en lugar de copiarlo",
+      "o": "Trasladar un archivo del ordenador al USB sin dejar copia.",
+      "p": [
+        "En el Escritorio, selecciona un archivo y pulsa {Ctrl}+{X} para cortarlo.",
+        "Abre el Explorador y ve al USB.",
+        "Pulsa {Ctrl}+{V} para pegarlo.",
+        "Vuelve al Escritorio: el archivo ya no está allí."
+      ],
+      "f": "Cortar ({Ctrl}+{X}) mueve el archivo; copiar ({Ctrl}+{C}) lo duplica. Si te equivocas, {Ctrl}+{Z} lo deshace."
+    },
+    {
+      "t": "Copiar una carpeta entera al USB",
+      "o": "Copiar una carpeta con todo lo que lleva dentro.",
+      "p": [
+        "En el Escritorio, haz clic derecho en un espacio vacío y elige «Nuevo» y «Carpeta».",
+        "Escribe el nombre «Documentos curso» y pulsa {Intro}.",
+        "Abre la carpeta y guarda dentro dos archivos cualesquiera.",
+        "Selecciona la carpeta y pulsa {Ctrl}+{C}.",
+        "Ve al USB, pulsa {Ctrl}+{V} y abre la carpeta copiada: los archivos están dentro."
+      ],
+      "f": "Al copiar una carpeta se copia todo su contenido. Fíjate en que la carpeta original sigue en el Escritorio."
+    },
+    {
+      "t": "Cambiar el nombre de un archivo dentro del USB",
+      "o": "Renombrar un archivo que ya está guardado en el USB.",
+      "p": [
+        "En el Explorador, haz clic en el USB.",
+        "Haz clic derecho sobre un archivo y elige «Cambiar nombre».",
+        "Escribe «Documento curso» y pulsa {Intro}.",
+        "Comprueba que el nombre ha cambiado."
+      ],
+      "f": "También vale pulsar {F2}. No cambies la extensión (.txt, .docx): es lo que dice al ordenador con qué programa abrirlo."
+    },
+    {
+      "t": "Expulsar el USB de forma segura",
+      "o": "Retirar el USB sin riesgo de perder la información.",
+      "p": [
+        "Cierra cualquier archivo que tengas abierto desde el USB.",
+        "En la barra de tareas, abajo a la derecha, haz clic en la flecha para ver los iconos ocultos.",
+        "Busca el icono de extraer hardware (una flecha con un USB) y haz clic en él.",
+        "Elige «Expulsar [nombre de tu USB]».",
+        "Espera el aviso «Ya puede extraer el hardware» y retira el USB."
+      ],
+      "f": "Si retiras el USB sin expulsarlo, un archivo puede quedar a medio guardar y estropearse."
+    },
+    {
+      "t": "Revisar el USB antes de llevártelo",
+      "o": "Comprobar que el contenido del USB está completo y se abre bien.",
+      "p": [
+        "Abre el Explorador y haz clic en el USB.",
+        "Comprueba que están todos los archivos que has copiado.",
+        "Abre uno de ellos con doble clic para ver que se lee bien.",
+        "Ciérralo y expulsa el USB de forma segura."
+      ],
+      "f": "Abre siempre un archivo antes de expulsar: así sabes que la copia está completa."
+    },
+    {
+      "t": "Reto final: organizar el USB",
+      "o": "Combinar todo lo aprendido: crear una carpeta en el USB y ordenar archivos.",
+      "p": [
+        "Conecta el USB y abre el Explorador.",
+        "Dentro del USB, crea una carpeta llamada «Curso».",
+        "Copia desde el Escritorio dos archivos y pégalos dentro de «Curso».",
+        "Corta uno de esos archivos de «Curso» y pégalo en la raíz del USB.",
+        "Comprueba que la carpeta y los archivos están en su sitio.",
+        "Expulsa el USB de forma segura."
+      ],
+      "f": "Hazlo sin mirar las tareas anteriores. Si algo sale mal, {Ctrl}+{Z} deshace el último cambio."
+    }
+  ],
+  "atajos": [
+    ["Copiar", "{Ctrl}+{C}"],
+    ["Cortar", "{Ctrl}+{X}"],
+    ["Pegar", "{Ctrl}+{V}"],
+    ["Deshacer", "{Ctrl}+{Z}"],
+    ["Seleccionar todo", "{Ctrl}+{E}"],
+    ["Abrir el Explorador de archivos", "{Win}+{E}"],
+    ["Cambiar el nombre de un archivo", "{F2}"]
+  ],
+  "nota": "En una página web, {Ctrl}+{A} selecciona todo; en los documentos de Windows se usa {Ctrl}+{E}. Si un atajo no funciona, prueba con el botón derecho del ratón."
+}</script>
+<script>
+/* Cada práctica: t = título, o = objetivo, p = pasos, f = «Fíjate».
+   Las teclas van entre llaves: {Ctrl}+{C} */
+const DATOS = JSON.parse(document.getElementById('datos').textContent);
+const PRACTICAS = DATOS.practicas;
+const ATAJOS = DATOS.atajos || [];
+const $ = id => document.getElementById(id);
+const CLAVE = 'practicas-' + DATOS.clave;
+
+function esc(t) {
+  return t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+function teclas(t) {
+  return esc(t)
+    .replace(/\}\+\{/g, '}<span class="mas">+</span>{')
+    .replace(/\{([^}]+)\}/g, '<kbd>$1</kbd>');
+}
+
+let actual = 0;
+let escala = 1;
+try {
+  const g = JSON.parse(localStorage.getItem(CLAVE)) || {};
+  if (Number.isInteger(g.actual) && g.actual >= 0 && g.actual < PRACTICAS.length) actual = g.actual;
+  if (typeof g.escala === 'number') escala = g.escala;
+} catch (e) {}
+
+function guardar() {
+  try { localStorage.setItem(CLAVE, JSON.stringify({ actual, escala })); } catch (e) {}
+}
+
+function pintar() {
+  const x = PRACTICAS[actual];
+  const art = $('practica');
+  art.classList.remove('entra');
+  void art.offsetWidth;
+  art.classList.add('entra');
+  art.innerHTML =
+    '<div class="cabeza"><span class="numero">' + (actual + 1) + '</span><div>' +
+    '<h2>' + teclas(x.t) + '</h2><p class="objetivo">' + teclas(x.o) + '</p></div></div>' +
+    '<ol class="pasos">' + x.p.map(s => '<li>' + teclas(s) + '</li>').join('') + '</ol>' +
+    '<p class="fijate"><b>💡 Fíjate:</b> ' + teclas(x.f) + '</p>';
+  $('contador').textContent = 'Práctica ' + (actual + 1) + ' de ' + PRACTICAS.length;
+  $('relleno').style.width = ((actual + 1) / PRACTICAS.length * 100) + '%';
+  $('btnAnterior').disabled = actual === 0;
+  $('btnSiguiente').disabled = actual === PRACTICAS.length - 1;
+  document.title = (actual + 1) + '. ' + x.t + ' · ' + DATOS.titulo;
+  $('principal').scrollTop = 0;
+  guardar();
+}
+
+function ir(i) {
+  actual = Math.max(0, Math.min(PRACTICAS.length - 1, i));
+  pintar();
+}
+
+function aplicarEscala() {
+  document.documentElement.style.setProperty('--escala', escala);
+  guardar();
+}
+
+/* Paneles */
+function abrir(id) {
+  if (id === 'panelLista') {
+    $('indice').innerHTML = PRACTICAS.map((x, i) =>
+      '<button type="button" data-ir="' + i + '"' + (i === actual ? ' class="actual"' : '') +
+      '><b>' + (i + 1) + '</b><span>' + esc(x.t) + '</span></button>').join('');
+  }
+  $(id).classList.add('abierto');
+  $(id).querySelector('button').focus();
+}
+function cerrar() {
+  document.querySelectorAll('.panel.abierto').forEach(p => p.classList.remove('abierto'));
+}
+
+$('tablaAtajos').querySelector('tbody').innerHTML =
+  ATAJOS.map(a => '<tr><td>' + esc(a[0]) + '</td><td>' + teclas(a[1]) + '</td></tr>').join('');
+document.querySelector('#panelAtajos .nota').innerHTML = teclas(DATOS.nota || '');
+if (!ATAJOS.length) $('btnAtajos').hidden = true;
+
+$('btnAnterior').onclick = () => ir(actual - 1);
+$('btnSiguiente').onclick = () => ir(actual + 1);
+$('btnLista').onclick = () => abrir('panelLista');
+$('btnAtajos').onclick = () => abrir('panelAtajos');
+$('btnMas').onclick = () => { escala = Math.min(1.6, +(escala + 0.1).toFixed(1)); aplicarEscala(); };
+$('btnMenos').onclick = () => { escala = Math.max(0.7, +(escala - 0.1).toFixed(1)); aplicarEscala(); };
+$('btnPantalla').onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+};
+document.addEventListener('fullscreenchange', () => {
+  $('btnPantalla').textContent = document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
+});
+
+document.querySelectorAll('.panel').forEach(p => {
+  p.addEventListener('click', e => {
+    if (e.target === p || e.target.hasAttribute('data-cerrar')) cerrar();
+    const b = e.target.closest('[data-ir]');
+    if (b) { ir(+b.dataset.ir); cerrar(); }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { cerrar(); return; }
+  if (document.querySelector('.panel.abierto')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); ir(actual + 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); ir(actual - 1); }
+});
+
+aplicarEscala();
+pintar();
+</script>
+</body>
+</html>

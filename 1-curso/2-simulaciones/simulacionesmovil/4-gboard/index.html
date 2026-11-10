@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Teclado Gboard de Android</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --mobile-bg:#d1d4d8; --mobile-key-bg:#fff; --mobile-func-key-bg:#c3c7cc; --mobile-enter-key-bg:#4DA3FF;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+  svg { fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c4); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.94) translateY(16px);} to{opacity:1; transform:none;} }
+
+  .container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:22px 24px 30px; }
+
+  .top { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+  .badge { background:linear-gradient(135deg,var(--c1),#00c05e); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.1; background:linear-gradient(135deg,var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(37,211,102,.18); border-color:var(--c1); color:var(--text); }
+  .mode:hover { color:var(--text); }
+
+  .prog { display:flex; align-items:center; gap:14px; margin-bottom:16px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+
+  .layout { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(330px,1fr); gap:22px; align-items:start; }
+  .stage[hidden] { display:none; }
+
+  /* ---------- Pantalla simulada de Móvil ---------- */
+  .mobile-frame {
+    position: relative;
+    width: clamp(280px, 90%, 400px); /* Adjust max width for mobile */
+    aspect-ratio: 9/19; /* Standard phone aspect ratio */
+    background: #000;
+    border-radius: 30px;
+    padding: 10px;
+    box-shadow: 0 0 0 8px #333, 0 0 0 10px #222, 0 20px 50px rgba(0,0,0,.45);
+    margin: 0 auto; /* Center the phone */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .mobile-screen {
+    flex: 1;
+    background: #f0f2f5;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #333;
+    font-size: clamp(.85rem,1.2vw,1.05rem);
+  }
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #666;
+  }
+  .text-display {
+    flex: 1;
+    padding: 15px;
+    font-size: 1.1em;
+    line-height: 1.5;
+    overflow-y: auto;
+    background: #fff;
+    white-space: pre-wrap;
+  }
+  .text-display textarea {
+    width: 100%;
+    height: 100%;
+    border: none;
+    resize: none;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    background: transparent;
+    padding: 0;
+    outline: none;
+  }
+
+  /* Gboard styles */
+  .gboard, .gboard-live {
+    background: var(--mobile-bg);
+    padding: 4px 2px 8px; /* Slightly more padding at bottom for rounded corner feel */
+    border-radius: 0 0 20px 20px;
+    position: relative; /* For pins and overlays */
+  }
+  .keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .keyboard-row:last-of-type {
+    margin-bottom: 0;
+  }
+  .key {
+    flex: 1;
+    background: var(--mobile-key-bg);
+    border-radius: 6px;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    position: relative; /* For long-press elements */
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .key.part { border: 1px solid transparent; } /* Only for Descubrir/Practicar mode */
+
+  .key:active, .key.active-press {
+    background: #e0e0e0;
+    transform: translateY(1px);
+    box-shadow: 0 0 2px rgba(0,0,0,.1);
+  }
+  .key.wide { flex: 2; }
+  .key.shift, .key.num-sym, .key.emoji, .key.mic, .key.enter, .key.abc, .key.tools {
+    flex: 1.3;
+    font-size: 0.9em;
+  }
+  .key.space { flex: 4; font-size: 1.05em; }
+  .key.backspace { flex: 1.3; background: var(--mobile-func-key-bg); }
+  .key.backspace:active { background: #b0b4b8; }
+  .key.num-sym, .key.abc { background: var(--mobile-func-key-bg); }
+  .key.enter { background: var(--mobile-enter-key-bg); color: #fff; }
+  .key.mic, .key.emoji, .key.tools { background: var(--mobile-func-key-bg); font-size: 1.2em; }
+
+  /* Prediction bar */
+  .prediction-bar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 10px;
+    background: #e3e6e9;
+    border-radius: 8px;
+    margin: 0 4px 6px;
+    position: relative;
+  }
+  .prediction-bar .pin { left: 50%; top: 50%; margin: -1.05em 0 0 -1.05em; }
+  .suggestion {
+    flex: 1;
+    text-align: center;
+    padding: 4px 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #444;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .suggestion:hover { background: #d1d4d8; }
+  .suggestion.sel { background: var(--c6); color: #fff; }
+
+  /* Pins for Descubrir/Practicar mode */
+  .part { cursor:pointer; transition:box-shadow .25s, background .25s; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .25s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 22%, transparent); }
+  .pin { position:absolute; z-index:8; width:2.1em; height:2.1em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:1.05em; box-shadow:0 2px 8px rgba(0,0,0,.4); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin, .fr.found .pin { animation:none; }
+  .part.sel { z-index:5; box-shadow:0 0 0 4px var(--pc), 0 0 28px color-mix(in srgb,var(--pc) 75%, transparent); }
+  .part.ok { box-shadow:0 0 0 4px var(--c1), 0 0 28px rgba(37,211,102,.75); z-index:5; }
+  .part.bad { animation:shake .45s; box-shadow:0 0 0 4px var(--c4); z-index:5; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-7px);} 75%{transform:translateX(7px);} }
+  .mode-practica .pin { display:none; }
+
+  /* Long press characters */
+  .long-press-chars {
+    position: absolute;
+    top: -45px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fefefe;
+    border-radius: 8px;
+    padding: 6px 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .key.long-press-active > .long-press-chars {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .long-press-chars span {
+    padding: 0 4px;
+    cursor: pointer;
+  }
+  .long-press-chars span:hover {
+    background: #eee;
+    border-radius: 4px;
+  }
+
+  /* Emoji Panel */
+  .emoji-panel-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--mobile-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 8px 4px;
+    z-index: 11;
+  }
+  .emoji-categories {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,0,0,.1);
+    margin-bottom: 8px;
+  }
+  .emoji-cat {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    font-size: 1.4em;
+    cursor: pointer;
+    opacity: .6;
+  }
+  .emoji-cat:hover { opacity: 1; }
+  .emoji-cat.sel { opacity: 1; background: rgba(0,0,0,.08); border-radius: 6px; }
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    padding: 8px 0;
+    overflow-y: auto;
+  }
+  .emoji-grid span {
+    font-size: 1.6em;
+    text-align: center;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .emoji-grid span:hover { background: rgba(0,0,0,.08); }
+  .emoji-bottom-row {
+    margin-top: auto;
+  }
+
+  /* Tools Menu (Recuadro rojo) */
+  .tools-menu-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--mobile-bg);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.2);
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tools-menu-overlay h3 {
+    font-family:'Fredoka One',cursive;
+    font-size: 1.2em;
+    color: var(--c6);
+    margin-bottom: 5px;
+  }
+  .tool-item {
+    background: var(--mobile-key-bg);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tool-item:hover { background: #e0e0e0; }
+  .close-tools {
+    background: var(--c4);
+    color: #fff;
+    margin-top: 10px;
+    justify-content: center;
+  }
+  .close-tools:hover { background: var(--c4); }
+
+  /* Microphone/Dictation Overlay */
+  .mic-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.8);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    font-size: 1.5em;
+    z-index: 15;
+  }
+  .mic-overlay .mic-icon {
+    font-size: 3em;
+    animation: pulse 1.5s infinite;
+  }
+  .mic-overlay p { text-align: center; }
+  .mic-overlay .cancel-mic {
+    padding: 10px 20px;
+    background: #fff;
+    color: #333;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.8em;
+  }
+
+  /* Utilities */
+  .hidden { display: none !important; }
+
+  .toast { position:absolute; left:50%; bottom:2.5em; transform:translateX(-50%); z-index:80; background:rgba(10,22,40,.95); color:#fff; padding:.6em 1.2em; border-radius:12px; font-weight:800; border:1px solid var(--c3); opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; }
+  .toast.on { opacity:1; }
+
+  .tools { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .tbtn { padding:10px 18px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .tbtn:hover { transform:scale(1.04); border-color:var(--c6); }
+  
+  /* ---------- Panel de información ---------- */
+  .side { position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; border-radius:24px; }
+  .info { background:var(--card); border:1px solid rgba(255,255,255,.07); border-left:8px solid var(--ic,var(--c6)); border-radius:24px; padding:24px 26px; min-height:360px; animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both; transition:border-color .3s; }
+  .info-num { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:50%; background:var(--ic,var(--c6)); color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .info h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,2.6vw,2.3rem); line-height:1.15; margin-bottom:12px; color:var(--ic,var(--c6)); }
+  .info h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.25rem; margin:14px 0 8px; color:var(--c3); }
+  .info p { font-size:clamp(1.05rem,1.5vw,1.3rem); font-weight:600; line-height:1.5; margin-bottom:14px; }
+  .info b { color:var(--c3); font-weight:800; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { background:rgba(255,255,255,.07); border-radius:100px; padding:6px 14px; font-weight:800; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip { background:rgba(255,217,61,.09); border-radius:14px; padding:12px 16px; color:var(--sub); font-weight:700; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip b { color:var(--c3); }
+  .hello { text-align:center; padding-top:30px; }
+  .hello .big { font-size:3.4rem; margin-bottom:8px; }
+  .hello h2 { color:var(--text); }
+  .quiz-q { font-family:'Fredoka One',cursive; font-size:clamp(1.5rem,2.6vw,2.2rem); line-height:1.2; margin-bottom:14px; }
+  .quiz-q span { color:var(--c3); }
+  .feedback { font-size:1.3rem; font-weight:800; min-height:2em; margin:6px 0 12px; }
+  .feedback.good { color:var(--c1); } .feedback.no { color:var(--c4); }
+  .btn { padding:12px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; transition:all .2s; }
+  .btn:hover { transform:scale(1.04); border-color:var(--c6); }
+  .btn.go { background:rgba(37,211,102,.18); border-color:var(--c1); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-12px) rotate(5deg);} }
+
+  .lh { display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+  .lh .ico { font-size:2.4rem; }
+  .lh .nm { font-family:'Fredoka One',cursive; font-size:1.5rem; line-height:1.1; }
+  .state { display:inline-block; margin-top:4px; padding:3px 14px; border-radius:100px; font-weight:800; font-size:1rem; color:#0a1628; }
+  .s-normal { background:var(--c1); } .s-max { background:var(--c6); } .s-min { background:var(--c3); } .s-closed { background:var(--c4); } .s-none { background:#8a9bbf; }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.07); font-weight:700; font-size:1rem; line-height:1.3; transition:all .25s; }
+  .retos .rb { width:24px; height:24px; border-radius:7px; flex-shrink:0; background:rgba(255,255,255,.1); display:grid; place-items:center; font-weight:800; font-size:.85rem; }
+  .retos li.on { background:rgba(37,211,102,.13); border-color:var(--c1); }
+  .retos li.on .rb { background:var(--c1); color:#0a1628; }
+  .retos li.on span.rt { opacity:.75; }
+  .win-all { text-align:center; background:rgba(255,217,61,.1); border:2px solid var(--c3); border-radius:16px; padding:10px; margin-bottom:12px; font-weight:800; color:var(--c3); font-size:1.15rem; }
+
+  .foot { text-align:center; margin-top:18px; }
+  .btn-reset { padding:10px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; cursor:pointer; }
+  .btn-reset:hover { color:var(--text); border-color:var(--c4); }
+
+  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .side { position:static; max-height:none; } .info { min-height:0; } .modes { margin-left:0; } }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">📱 Móvil</span>
+    <h1>El Teclado Gboard de Android</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+
+  <div class="prog">
+    <span id="prog-txt"></span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <!-- Pantalla para descubrir y practicar las partes -->
+      <div class="stage" id="stage-parts">
+        <div class="mobile-frame">
+          <div class="mobile-screen">
+            <div class="status-bar">
+              <span class="sb-time">10:30</span>
+              <span class="sb-icons">📶 🔋</span>
+            </div>
+            <div class="text-display">
+              <p>Hola, ¿qué tal?</p>
+            </div>
+            <div class="gboard" id="gboard-parts">
+              <div class="prediction-bar">
+                <span class="suggestion"></span>
+                <span class="suggestion"></span>
+                <span class="suggestion"></span>
+              </div>
+              <div class="keyboard-row">
+                <span class="key part" data-part="qwerty" style="--pc:var(--c8);">Q<span class="pin">?</span></span><span class="key">W</span><span class="key">E</span><span class="key">R</span><span class="key">T</span><span class="key">Y</span><span class="key">U</span><span class="key">I</span><span class="key">O</span><span class="key">P</span>
+              </div>
+              <div class="keyboard-row">
+                <span class="key">A</span><span class="key">S</span><span class="key">D</span><span class="key">F</span><span class="key">G</span><span class="key">H</span><span class="key">J</span><span class="key">K</span><span class="key">L</span><span class="key">Ñ</span>
+              </div>
+              <div class="keyboard-row">
+                <span class="key shift part" data-part="shift" style="--pc:var(--c6);"><span class="pin">?</span>↑</span>
+                <span class="key">Z</span><span class="key">X</span><span class="key">C</span><span class="key">V</span><span class="key">B</span><span class="key">N</span><span class="key">M</span>
+                <span class="key backspace">⌫</span>
+              </div>
+              <div class="keyboard-row bottom-row">
+                <span class="key num-sym part" data-part="numsym" style="--pc:var(--c7);"><span class="pin">?</span>?123</span>
+                <span class="key emoji part" data-part="emoji" style="--pc:var(--c1);"><span class="pin">?</span>😊</span>
+                <span class="key space part" data-part="space" style="--pc:var(--c3);"><span class="pin">?</span>Espacio</span>
+                <span class="key mic part" data-part="mic" style="--pc:var(--c4);"><span class="pin">?</span>🎙️</span>
+                <span class="key enter part" data-part="enter" style="--pc:var(--c6);"><span class="pin">?</span>↩</span>
+                <span class="key tools part" data-part="tools" style="--pc:var(--c8);">☰</span>
+              </div>
+              <div class="emoji-panel-overlay hidden"></div>
+              <div class="tools-menu-overlay hidden"></div>
+              <div class="mic-overlay hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pantalla para probar (teclado interactivo) -->
+      <div class="stage" id="stage-live" hidden>
+        <div class="mobile-frame" id="live-mobile-frame">
+          <div class="mobile-screen" id="live-screen">
+            <div class="status-bar">
+              <span class="sb-time" id="live-time">10:30</span>
+              <span class="sb-icons">📶 🔋</span>
+            </div>
+            <div class="text-display" id="live-text-display">
+              <textarea id="text-input" placeholder="Escribe aquí..."></textarea>
+            </div>
+            <div class="gboard-live" id="gboard-live">
+              <!-- Keyboard will be rendered here by JS -->
+            </div>
+            <div class="toast" id="toast"></div>
+            <div id="ovHost"></div> <!-- Not used for Gboard but kept from example structure -->
+          </div>
+        </div>
+        <div class="tools hidden">
+          <!-- Additional controls for keyboard actions can be placed here if needed,
+               but the keyboard itself should be sufficient for interactions -->
+        </div>
+      </div>
+    </div>
+
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+/* =========================================================
+   Datos de las partes del Gboard
+   ========================================================= */
+const PARTES = {
+  qwerty: {n:1, nombre:"Teclado QWERTY", det:"el teclado QWERTY", color:"--c8", sitio:"La parte principal del teclado, con las letras.",
+    texto:"Aquí están las <b>letras</b> para escribir. Es como un teclado de ordenador pero más pequeño.",
+    chips:["🔤 Letras","✍️ Escribir palabras"],
+    tip:"Pulsa las letras que necesites para formar palabras. Las mayúsculas se hacen con la flecha ↑."},
+  shift: {n:2, nombre:"Flecha de Mayúsculas (↑)", det:"la flecha de Mayúsculas", color:"--c6", sitio:"En la esquina inferior izquierda del teclado de letras.",
+    texto:"Si la tocas <b>una vez</b>, la siguiente letra será mayúscula. Si la tocas <b>dos veces</b>, activarás el bloqueo de mayúsculas y todo lo que escribas será en mayúsculas.",
+    chips:["↑ Mayúsculas","⇧ Bloqueo mayúsculas"],
+    tip:"Para desactivar el bloqueo, vuelve a tocar la flecha ↑ una vez."},
+  numsym: {n:3, nombre:"Tecla '?123'", det:"la tecla '?123'", color:"--c7", sitio:"Abajo a la izquierda, junto a la flecha de mayúsculas.",
+    texto:"Al tocarla, el teclado <b>cambia para mostrar números y símbolos</b>. Es útil para escribir direcciones, fechas o signos de puntuación.",
+    chips:["🔢 Números","symbols Símbolos"],
+    tip:"Una vez en el modo de números, busca la tecla '=\>' para ver aún más símbolos especiales."},
+  space: {n:4, nombre:"Barra Espaciadora", det:"la barra Espaciadora", color:"--c3", sitio:"La barra larga en el centro, abajo del todo.",
+    texto:"Sirve para <b>separar las palabras</b>. Después de cada palabra, toca esta barra para dejar un espacio antes de la siguiente.",
+    chips:["〰️ Separar palabras","Espacio"],
+    tip:"A veces, al pulsarla el teclado te corrige automáticamente la palabra anterior."},
+  enter: {n:5, nombre:"Tecla Enter (↩)", det:"la tecla Enter", color:"--c6", sitio:"Abajo a la derecha, generalmente con una flecha doblada ↩.",
+    texto:"Tiene varias funciones: <b>saltar a la siguiente línea</b> al escribir, <b>enviar un mensaje</b> o <b>ejecutar un comando</b>.",
+    chips:["↩ Nueva línea","✉️ Enviar mensaje"],
+    tip:"En algunas aplicaciones, el 'Enter' puede significar 'Buscar' o 'Aceptar'."},
+  emoji: {n:6, nombre:"Cara Sonriente (😊)", det:"la cara sonriente (emojis)", color:"--c1", sitio:"Junto a la barra espaciadora, en la parte inferior.",
+    texto:"Si la tocas, aparecerá un panel lleno de <b>emojis</b>, que son pequeñas imágenes para expresar emociones o ideas. Simplemente toca el que quieras para insertarlo.",
+    chips:["😊 Iconos","😄 Expresar emociones"],
+    tip:"Hay muchas categorías de emojis: personas, animales, comida, banderas... ¡Explóralos!"},
+  mic: {n:7, nombre:"Icono del Micrófono (🎙️)", det:"el icono del micrófono", color:"--c4", sitio:"Arriba a la derecha del teclado, o a veces cerca de la barra espaciadora.",
+    texto:"Al tocarlo, puedes <b>hablar</b> y el teclado convertirá tu voz en texto. ¡Ideal si no te apetece escribir!",
+    chips:["🎙️ Dictado por voz","🗣️ Hablar para escribir"],
+    tip:"Habla claro y con calma para que el teclado entienda bien lo que dices."},
+  tools: {n:8, nombre:"Recuadro rojo (☰)", det:"el recuadro rojo con el icono de menú", color:"--c8", sitio:"Arriba a la izquierda del teclado, o en una barra flotante.",
+    texto:"Este icono (a veces son 4 cuadrados o 3 puntos) abre un <b>menú con herramientas adicionales</b> de Gboard, como pegatinas, GIFs, traducción o la configuración del teclado.",
+    chips:["⚙️ Herramientas","🗃️ Pegatinas","🌐 Traductor"],
+    tip:"Explora este menú para personalizar tu teclado y encontrar funciones extra muy útiles."},
+};
+const ORDEN = Object.keys(PARTES);
+
+const $ = id => document.getElementById(id);
+const info = $("info");
+let modo = "desc";
+function restart(e){ e.style.animation="none"; e.offsetHeight; e.style.animation=""; }
+
+/* =========================================================
+   MODOS DESCUBRIR y PRACTICAR (partes)
+   ========================================================= */
+const KEY = "gboard-android-2026";
+let found = {}, pregunta = null, aciertos = 0, hechas = [];
+try { const g = JSON.parse(localStorage.getItem(KEY)); if (g && g.found) found = g.found; } catch(e){}
+const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify({found, retos})); } catch(e){} }; // Also saves retos
+
+const parts = k => [...document.querySelectorAll('#gboard-parts [data-part="'+k+'"]')];
+ORDEN.forEach(k => parts(k).forEach(p => p.style.setProperty("--pc","var("+PARTES[k].color+")")));
+
+function limpiar(){ document.querySelectorAll("#gboard-parts .part").forEach(p => p.classList.remove("sel","ok","bad")); }
+
+function pintarPins(){
+  ORDEN.forEach(k => {
+    const f = !!found[k];
+    parts(k).forEach(p => { p.classList.toggle("found", f); const pin = p.querySelector(":scope > .pin"); if (pin) pin.textContent = f ? PARTES[k].n : "?"; });
+  });
+}
+
+function bienvenida(){
+  limpiar();
+  info.style.setProperty("--ic","var(--c6)");
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte del teclado</h2><p>Hay <b>8 partes</b> con un <b>?</b>. Vamos a descubrirlas juntas.</p></div>';
+  restart(info);
+}
+
+function mostrar(k){
+  const d = PARTES[k];
+  limpiar(); parts(k).forEach(p => p.classList.add("sel"));
+  found[k] = true; guardar(); pintarPins(); progreso();
+  info.style.setProperty("--ic","var("+d.color+")");
+  info.innerHTML =
+    '<div class="info-num">'+d.n+'</div><h2>'+d.nombre+'</h2><p>'+d.texto+'</p>' +
+    '<p style="color:var(--sub);font-size:1.05rem">📍 '+d.sitio+'</p>' +
+    '<div class="chips">'+d.chips.map(c=>'<span class="chip">'+c+'</span>').join("")+'</div>' +
+    '<div class="tip">'+d.tip+'</div>';
+  restart(info);
+  if (Object.keys(found).length === 8) {
+    info.insertAdjacentHTML("beforeend",'<div class="row"><button class="btn go" id="to-live" type="button">🛠️ ¡Ahora a probarlo!</button></div>');
+    $("to-live").onclick = () => setModo("live");
+  }
+}
+
+function nueva(){
+  limpiar();
+  const quedan = ORDEN.filter(k => !hechas.includes(k));
+  if (!quedan.length) return final();
+  pregunta = quedan[Math.floor(Math.random()*quedan.length)];
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="info-num">🎯</div><div class="quiz-q">Toca '+PARTES[pregunta].det.replace(/^(el|la|los|las)/,'$1<br><span>')+'</span></div><div class="feedback" id="fb"></div>';
+  restart(info); progreso();
+}
+function responder(k){
+  if (!pregunta) return;
+  const fb = $("fb");
+  if (k === pregunta){
+    limpiar(); parts(k).forEach(p => p.classList.add("ok"));
+    hechas.push(k); aciertos++; pregunta = null; progreso();
+    fb.className = "feedback good"; fb.textContent = "✅ ¡Correcto! " + PARTES[k].nombre;
+    info.insertAdjacentHTML("beforeend",'<p style="color:var(--sub)">'+PARTES[k].texto+'</p><div class="row"><button class="btn go" id="sig" type="button">'+(hechas.length===8?"🏆 Terminar":"Siguiente ➜")+'</button></div>');
+    $("sig").onclick = nueva;
+  } else {
+    const ps = parts(k); ps.forEach(p => { p.classList.remove("bad"); p.offsetHeight; p.classList.add("bad"); });
+    setTimeout(()=>ps.forEach(p=>p.classList.remove("bad")),900);
+    fb.className = "feedback no"; fb.textContent = "❌ Eso es " + PARTES[k].det + ". ¡Inténtalo otra vez!";
+  }
+}
+function final(){
+  limpiar();
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Ya conoces las <b>8 partes</b> del teclado Gboard.</p><div class="row" style="justify-content:center"><button class="btn go" id="otra" type="button">🔄 Practicar otra vez</button></div></div>';
+  restart(info);
+  $("otra").onclick = () => { hechas=[]; aciertos=0; nueva(); };
+}
+
+document.querySelectorAll("#gboard-parts .part").forEach(p => p.addEventListener("click", e => {
+  const hit = e.target.closest(".part");
+  if (hit !== p) return;
+  const k = p.dataset.part;
+  modo === "desc" ? mostrar(k) : responder(k);
+}));
+
+
+/* =========================================================
+   MODO PROBAR (teclado interactivo)
+   ========================================================= */
+const RETOS = [
+  {id:"type_letter", t:"Escribir una letra", h:"Toca cualquier tecla de letra."},
+  {id:"type_caps", t:"Escribir una mayúscula o activar bloqueo", h:"Toca ↑ para una mayúscula, o dos veces para bloqueo."},
+  {id:"change_key_layout", t:"Cambiar entre letras, números y símbolos", h:"Usa '?123', '=\>' y 'ABC' para cambiar de teclado."},
+  {id:"long_press_char", t:"Usar pulsación larga para caracteres especiales", h:"Mantén pulsada una tecla para ver sus opciones (ej: 'Q' para '1', 'A' para 'á')."},
+  {id:"add_space_enter", t:"Añadir espacio o nueva línea", h:"Usa la barra 'Espacio' o la tecla '↩'."},
+  {id:"select_suggestion", t:"Seleccionar una palabra sugerida", h:"Escribe una palabra y toca una de las sugerencias."},
+  {id:"open_emojis", t:"Abrir el panel de emojis", h:"Toca la cara sonriente 😊."},
+  {id:"use_mic", t:"Usar el micrófono para dictar", h:"Toca el icono del micrófono 🎙️ y di algo."},
+  {id:"open_tools", t:"Abrir el menú de herramientas", h:"Toca el icono de menú ☰ (el recuadro rojo)."},
+];
+let retos = {};
+let liveReady = false;
+let _kb = {
+  mode: 'qwerty', // 'qwerty', 'numbers', 'symbols', 'emojis', 'tools', 'mic'
+  shift: 0, // 0: off, 1: one capital, 2: caps lock
+  currentInput: '',
+  suggestions: ['Hola', 'Gboard', 'Android'],
+  longPressKey: null,
+  longPressTimer: null,
+  longPressDetected: false,
+};
+const LONG_PRESS_CHARS = {
+  'Q': '1', 'W': '2', 'E': '3èéêë€', 'R': '4', 'T': '5', 'Y': '6', 'U': '7ùúûüūÚÛÜ', 'I': '8ìíîïīÍÎÏ', 'O': '9òóôöõøōÒÓÔÕÖ', 'P': '0',
+  'A': 'áàäâãåæÁÀÄÂÃÅ', 'S': 'ß$§', 'D': 'đĐ', 'F': 'ƒ', 'G': 'ğ', 'H': 'ħ', 'J': 'ĵ', 'K': 'ķ', 'L': 'ł',
+  'Z': 'ž', 'X': '×', 'C': 'çÇ¢©', 'V': '√', 'B': '♭', 'N': 'ñńÑ', 'M': 'µ'
+};
+const NUMBER_LAYOUT = [
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+  ['-', '/', ':', ';', '(', ')', '€', '&', '@', '"'],
+  ['.', ',', '?', '!', "'", '#+='],
+];
+const SYMBOL_LAYOUT = [
+  ['[', ']', '{', '}', '#', '%', '^', '*', '+', '='],
+  ['<', '>', '¡', '¿', '\\', '|', '~', '`'],
+  ['.', ',', '?', '!', "'", 'ABC'],
+];
+const EMOJI_CATEGORIES = ['😀', '👋', '🍔', '⚽', '💡', '🚗', '❤️', '🏳️'];
+const EMOJIS_BY_CAT = {
+  '😀': ['😂', '😍', '👍', '🙏', '🎉', '🥳', '😎', '😘', '😢', '😡', '🤔', '🤯', '🤢', '👋', '👀', '👏'],
+  '👋': ['👋', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤙', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐'],
+  '🍔': ['🍔', '🍟', '🍕', '🌭', '🌮', '🌯', '🥗', '🍝', '🍜', '🍣', '🍤', '🍚', '🍪', '🎂', '🍎', '🍓'],
+  '⚽': ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🥅', '⛳', '🎯', '🎳', '⛸️'],
+  '💡': ['💡', '🔦', '🕯️', '🗑️', '🛢️', '🚿', '🛁', '🚽', '🧻', '🧼', '🧹', '🧺', '🪣', '🔑', '🔒', '🔓'],
+  '🚗': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🛵', '🚲', '🛴'],
+  '❤️': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💔', '❣️', '💕', '💞', '💓', '💗', '💖'],
+  '🏳️': ['🇪🇸', '🇺🇸', '🇬🇧', '🇫🇷', '🇩🇪', '🇮🇹', '🇯🇵', '🇨🇳', '🇷🇺', '🇮🇳', '🇧🇷', '🇦🇷', '🇲🇽', '🇨🇦', '🇦🇺', '🇿🇦'],
+};
+let curEmojiCat = '😀';
+
+function tick(id){
+  if (retos[id]) return;
+  retos[id] = true; guardar(); progreso(); renderInfo();
+}
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2200); }
+
+function buildLive(){
+  const kbLive = $("gboard-live");
+  kbLive.addEventListener('pointerdown', handlePointerDown);
+  kbLive.addEventListener('pointerup', handlePointerUp);
+  kbLive.addEventListener('pointermove', handlePointerMove);
+  kbLive.addEventListener('contextmenu', e => e.preventDefault()); // Prevent native context menu
+  $("text-input").addEventListener('input', updateSuggestions);
+  renderKeyboard();
+  liveReady = true;
+}
+
+function updateInput(char, isSuggestion = false){
+  let input = $("text-input");
+  let currentText = input.value;
+  let cursor = input.selectionStart;
+
+  // If selecting a suggestion, replace the last word
+  if (isSuggestion) {
+    const lastSpace = currentText.lastIndexOf(' ', cursor - 1);
+    const startIndex = lastSpace === -1 ? 0 : lastSpace + 1;
+    currentText = currentText.substring(0, startIndex) + char;
+    input.value = currentText;
+    input.selectionStart = input.selectionEnd = currentText.length;
+    tick("select_suggestion");
+    updateSuggestions(); // Update suggestions after selecting
+    return;
+  }
+
+  // Insert character at cursor position
+  currentText = currentText.substring(0, cursor) + char + currentText.substring(cursor);
+  input.value = currentText;
+  input.selectionStart = input.selectionEnd = cursor + char.length;
+
+  if (char.length === 1 && /[a-zA-ZñÑ]/.test(char)) {
+    tick("type_letter");
+    if (_kb.shift === 1) { _kb.shift = 0; renderKeyboard(); } // Disable shift after one capital
+  }
+  updateSuggestions();
+}
+
+function updateSuggestions(){
+  const input = $("text-input").value;
+  const lastWord = input.split(/[\s\n.,?!]/).pop().toLowerCase();
+  if (lastWord.length > 0) {
+    const commonWords = ['hola', 'adiós', 'gracias', 'por favor', 'android', 'gboard', 'teclado', 'móvil', 'bien', 'mal', 'si', 'no', 'quizás'];
+    _kb.suggestions = commonWords
+      .filter(w => w.startsWith(lastWord) && w !== lastWord)
+      .slice(0, 3)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1));
+    if (_kb.suggestions.length === 0) {
+      _kb.suggestions = ['Sugerencia1', 'Sugerencia2', 'Sugerencia3']; // Fallback
+    }
+  } else {
+    _kb.suggestions = ['Hola', 'Gboard', 'Android'];
+  }
+  renderKeyboard();
+}
+
+function handleKeyClick(event){
+  const keyEl = event.target.closest('.key');
+  if (!keyEl) return;
+  const key = keyEl.dataset.key;
+  if (!key) return;
+
+  // Close overlays if open
+  if (_kb.mode === 'emojis') changeMode('qwerty');
+  if (_kb.mode === 'tools') changeMode('qwerty');
+
+  if (key === 'shift') {
+    _kb.shift = (_kb.shift + 1) % 3;
+    if (_kb.shift === 2) tick("type_caps"); // Caps lock activated
+    renderKeyboard();
+  } else if (key === 'num-sym') {
+    changeMode('numbers');
+    tick("change_key_layout");
+  } else if (key === 'sym-more') {
+    changeMode('symbols');
+    tick("change_key_layout");
+  } else if (key === 'abc') {
+    changeMode('qwerty');
+    tick("change_key_layout");
+  } else if (key === 'space') {
+    updateInput(' ');
+    tick("add_space_enter");
+  } else if (key === 'enter') {
+    updateInput('\n');
+    tick("add_space_enter");
+  } else if (key === 'backspace') {
+    const input = $("text-input");
+    let currentText = input.value;
+    let cursor = input.selectionStart;
+    if (cursor > 0) {
+      currentText = currentText.substring(0, cursor - 1) + currentText.substring(cursor);
+      input.value = currentText;
+      input.selectionStart = input.selectionEnd = cursor - 1;
+    }
+  } else if (key === 'emoji') {
+    changeMode('emojis');
+    tick("open_emojis");
+  } else if (key === 'mic') {
+    startDictation();
+    tick("use_mic");
+  } else if (key === 'tools') {
+    changeMode('tools');
+    tick("open_tools");
+  } else {
+    let char = key;
+    if (_kb.shift === 1 || _kb.shift === 2) char = char.toUpperCase();
+    updateInput(char);
+  }
+}
+
+function handlePointerDown(event) {
+  const keyEl = event.target.closest('.key');
+  if (!keyEl || !keyEl.dataset.key) return;
+  
+  keyEl.classList.add('active-press');
+  _kb.longPressKey = keyEl;
+  _kb.longPressDetected = false;
+
+  if (LONG_PRESS_CHARS[keyEl.dataset.key.toUpperCase()]) {
+    _kb.longPressTimer = setTimeout(() => {
+      _kb.longPressDetected = true;
+      keyEl.classList.add('long-press-active');
+      tick("long_press_char");
+    }, 400); // Long press duration
+  }
+}
+
+function handlePointerUp(event) {
+  const keyEl = _kb.longPressKey;
+  if (!keyEl) return; // No key was being held down
+
+  clearTimeout(_kb.longPressTimer);
+  keyEl.classList.remove('active-press', 'long-press-active');
+  _kb.longPressKey = null;
+
+  if (_kb.longPressDetected) {
+    // If a long press was detected, check if a long-press char was selected
+    const longPressCharSpan = event.target.closest('.long-press-chars span');
+    if (longPressCharSpan) {
+      updateInput(longPressCharSpan.textContent);
+    } else {
+      // If no specific char was selected, it's just a general long press on the key
+      // If it's a number/vowel, just type the base key if nothing else was chosen.
+      let char = keyEl.dataset.key;
+      if (_kb.shift === 1 || _kb.shift === 2) char = char.toUpperCase();
+      // If a long-press menu was shown, clicking outside should not type the original key.
+      // For now, if long press was detected, we assume user interacted with the popup or just dismissed it without typing base char.
+    }
+  } else {
+    // Regular tap
+    handleKeyClick(event);
+  }
+}
+
+function handlePointerMove(event) {
+  if (_kb.longPressTimer && _kb.longPressKey) {
+    const keyRect = _kb.longPressKey.getBoundingClientRect();
+    if (event.clientX < keyRect.left || event.clientX > keyRect.right ||
+        event.clientY < keyRect.top || event.clientY > keyRect.bottom) {
+      clearTimeout(_kb.longPressTimer);
+      _kb.longPressKey.classList.remove('active-press', 'long-press-active');
+      _kb.longPressKey = null;
+    }
+  }
+}
+
+function renderKeyboard(){
+  const kbLive = $("gboard-live");
+  const input = $("text-input");
+  kbLive.innerHTML = ''; // Clear previous keyboard
+  input.focus(); // Keep focus on the textarea
+
+  let layoutHTML = '';
+
+  const renderNormalKey = (char, dataKey = char.toLowerCase(), longPress = null) => {
+    let displayChar = char;
+    if (_kb.shift === 1) displayChar = char.toUpperCase();
+    if (_kb.shift === 2) displayChar = char.toUpperCase();
+    let longPressHTML = '';
+    if (longPress) {
+      longPressHTML = '<span class="long-press-chars">' + longPress.split('').map(c => `<span>${c}</span>`).join('') + '</span>';
+    }
+    return `<span class="key" data-key="${dataKey}">${displayChar}${longPressHTML}</span>`;
+  };
+
+  const renderFuncKey = (char, dataKey, wide = false, icon = '') => {
+    let classes = `key ${dataKey}`;
+    if (wide) classes += ' wide';
+    return `<span class="${classes}" data-key="${dataKey}">${icon}${char}</span>`;
+  };
+
+  if (_kb.mode === 'qwerty') {
+    layoutHTML += `
+      <div class="prediction-bar" id="live-prediction-bar">
+        ${_kb.suggestions.map(s => `<span class="suggestion" data-suggestion="${s}">${s}</span>`).join('')}
+      </div>
+      <div class="keyboard-row">
+        ${['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(c => renderNormalKey(c, c.toLowerCase(), LONG_PRESS_CHARS[c] || '')).join('')}
+      </div>
+      <div class="keyboard-row">
+        ${['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ'].map(c => renderNormalKey(c, c.toLowerCase(), LONG_PRESS_CHARS[c] || '')).join('')}
+      </div>
+      <div class="keyboard-row">
+        ${renderFuncKey('↑', 'shift', false, (_kb.shift === 2 ? '🔒' : ''))}
+        ${['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map(c => renderNormalKey(c, c.toLowerCase(), LONG_PRESS_CHARS[c] || '')).join('')}
+        ${renderFuncKey('⌫', 'backspace')}
+      </div>
+      <div class="keyboard-row bottom-row">
+        ${renderFuncKey('?123', 'num-sym')}
+        ${renderFuncKey('😊', 'emoji')}
+        ${renderFuncKey('Espacio', 'space', true)}
+        ${renderFuncKey('🎙️', 'mic')}
+        ${renderFuncKey('↩', 'enter')}
+        ${renderFuncKey('☰', 'tools')}
+      </div>
+    `;
+    const emojiPanel = document.querySelector('.emoji-panel-overlay');
+    if (emojiPanel) emojiPanel.classList.add('hidden');
+    const toolsMenu = document.querySelector('.tools-menu-overlay');
+    if (toolsMenu) toolsMenu.classList.add('hidden');
+  } else if (_kb.mode === 'numbers' || _kb.mode === 'symbols') {
+    const currentLayout = _kb.mode === 'numbers' ? NUMBER_LAYOUT : SYMBOL_LAYOUT;
+    layoutHTML += `<div class="prediction-bar"></div>`;
+    currentLayout.forEach(row => {
+      layoutHTML += `<div class="keyboard-row">`;
+      row.forEach(key => {
+        if (key === '#+=') {
+          layoutHTML += renderFuncKey('#+=', 'sym-more');
+        } else if (key === 'ABC') {
+          layoutHTML += renderFuncKey('ABC', 'abc');
+        } else {
+          layoutHTML += renderNormalKey(key, key);
+        }
+      });
+      layoutHTML += `</div>`;
+    });
+    layoutHTML += `
+      <div class="keyboard-row bottom-row">
+        ${renderFuncKey(_kb.mode === 'numbers' ? 'ABC' : '?123', _kb.mode === 'numbers' ? 'abc' : 'num-sym')}
+        ${renderFuncKey('😊', 'emoji')}
+        ${renderFuncKey('Espacio', 'space', true)}
+        ${renderFuncKey('🎙️', 'mic')}
+        ${renderFuncKey('↩', 'enter')}
+        ${renderFuncKey('☰', 'tools')}
+      </div>
+    `;
+  } else if (_kb.mode === 'emojis') {
+    const emojiPanel = document.querySelector('.emoji-panel-overlay');
+    if (emojiPanel) emojiPanel.classList.remove('hidden');
+    renderEmojiPanel();
+  } else if (_kb.mode === 'tools') {
+    const toolsMenu = document.querySelector('.tools-menu-overlay');
+    if (toolsMenu) toolsMenu.classList.remove('hidden');
+    renderToolsMenu();
+  }
+
+  if (_kb.mode !== 'emojis' && _kb.mode !== 'tools') {
+    kbLive.innerHTML = layoutHTML;
+    // Add event listeners for dynamically created keys
+    kbLive.querySelectorAll('.key').forEach(keyEl => {
+      keyEl.addEventListener('pointerdown', handlePointerDown);
+      keyEl.addEventListener('pointerup', handlePointerUp);
+      keyEl.addEventListener('pointermove', handlePointerMove); // For cancelling drag
+    });
+    kbLive.querySelectorAll('.suggestion').forEach(suggEl => {
+      suggEl.addEventListener('click', () => updateInput(suggEl.dataset.suggestion + ' ', true));
+    });
+  }
+}
+
+function changeMode(newMode){
+  if (_kb.mode === 'emojis' && newMode !== 'emojis') {
+    document.querySelector('.emoji-panel-overlay').classList.add('hidden');
+  }
+  if (_kb.mode === 'tools' && newMode !== 'tools') {
+    document.querySelector('.tools-menu-overlay').classList.add('hidden');
+  }
+  if (_kb.mode === 'mic' && newMode !== 'mic') {
+    document.querySelector('.mic-overlay').classList.add('hidden');
+  }
+
+  _kb.mode = newMode;
+  renderKeyboard();
+}
+
+function renderEmojiPanel(){
+  const emojiPanel = document.querySelector('.emoji-panel-overlay');
+  emojiPanel.innerHTML = `
+    <div class="emoji-categories">
+      ${EMOJI_CATEGORIES.map(cat => `<span class="emoji-cat ${cat === curEmojiCat ? 'sel' : ''}" data-cat="${cat}">${cat}</span>`).join('')}
+    </div>
+    <div class="emoji-grid">
+      ${(EMOJIS_BY_CAT[curEmojiCat] || []).map(emoji => `<span>${emoji}</span>`).join('')}
+    </div>
+    <div class="keyboard-row bottom-row emoji-bottom-row">
+      ${renderFuncKey('ABC', 'abc')}
+      ${renderFuncKey('Espacio', 'space', true)}
+      ${renderFuncKey('↩', 'enter')}
+    </div>
+  `;
+  emojiPanel.querySelectorAll('.emoji-cat').forEach(catEl => {
+    catEl.addEventListener('click', () => { curEmojiCat = catEl.dataset.cat; renderEmojiPanel(); });
+  });
+  emojiPanel.querySelectorAll('.emoji-grid span').forEach(emojiEl => {
+    emojiEl.addEventListener('click', () => { updateInput(emojiEl.textContent); changeMode('qwerty'); });
+  });
+  emojiPanel.querySelector('[data-key="abc"]').addEventListener('click', () => changeMode('qwerty'));
+  emojiPanel.querySelector('[data-key="space"]').addEventListener('click', () => { updateInput(' '); changeMode('qwerty'); });
+  emojiPanel.querySelector('[data-key="enter"]').addEventListener('click', () => { updateInput('\n'); changeMode('qwerty'); });
+}
+
+function renderToolsMenu(){
+  const toolsMenu = document.querySelector('.tools-menu-overlay');
+  toolsMenu.innerHTML = `
+    <h3>Herramientas Gboard</h3>
+    <span class="tool-item">🗃️ Pegatinas</span>
+    <span class="tool-item">🎬 GIFs</span>
+    <span class="tool-item">🌐 Traductor</span>
+    <span class="tool-item">🗣️ Escritura por voz</span>
+    <span class="tool-item">⚙️ Configuración</span>
+    <span class="tool-item close-tools">✖️ Cerrar</span>
+  `;
+  toolsMenu.querySelector('.close-tools').addEventListener('click', () => changeMode('qwerty'));
+  toolsMenu.querySelectorAll('.tool-item:not(.close-tools)').forEach(item => {
+    item.addEventListener('click', () => toast(`Función '${item.textContent.trim().split(' ')[1]}' no simulada.`));
+  });
+}
+
+function startDictation(){
+  changeMode('mic');
+  const micOverlay = document.querySelector('.mic-overlay');
+  micOverlay.classList.remove('hidden');
+  micOverlay.innerHTML = `
+    <span class="mic-icon">🎙️</span>
+    <p>Escuchando... Di algo.</p>
+    <button class="cancel-mic">Cancelar</button>
+  `;
+  micOverlay.querySelector('.cancel-mic').addEventListener('click', () => changeMode('qwerty'));
+
+  setTimeout(() => {
+    if (_kb.mode === 'mic') {
+      micOverlay.innerHTML = `
+        <span class="mic-icon">🎙️</span>
+        <p>Texto dictado: "Hola, ¿cómo estás?"</p>
+        <button class="cancel-mic">Aceptar</button>
+      `;
+      micOverlay.querySelector('.cancel-mic').textContent = 'Aceptar';
+      micOverlay.querySelector('.cancel-mic').onclick = () => { updateInput("Hola, ¿cómo estás?"); changeMode('qwerty'); };
+    }
+  }, 2500); // Simulate dictation
+}
+
+
+/* =========================================================
+   Progreso y modos
+   ========================================================= */
+function progreso(){
+  let n, tot, txt;
+  if (modo === "desc") { n = Object.keys(found).length; tot = 8; txt = "⭐ "+n+" de 8 partes descubiertas"; }
+  else if (modo === "prac") { n = aciertos; tot = 8; txt = "🎯 "+n+" de 8 aciertos"; }
+  else { n = Object.keys(retos).length; tot = RETOS.length; txt = "🛠️ "+n+" de "+tot+" retos superados"; }
+  $("prog-txt").textContent = txt;
+  $("prog-fill").style.width = (n / tot * 100) + "%";
+}
+
+function setModo(m){
+  modo = m; pregunta = null;
+  $("m-desc").classList.toggle("on", m === "desc");
+  $("m-live").classList.toggle("on", m === "live");
+  $("m-prac").classList.toggle("on", m === "prac");
+  $("root").classList.toggle("mode-practica", m === "prac");
+  $("stage-parts").hidden = m === "live";
+  $("stage-live").hidden = m !== "live";
+
+  if (m === "live") {
+    if (!liveReady) { buildLive(); }
+    changeMode('qwerty'); // Ensure keyboard is in initial state
+    renderInfo();
+  } else if (m === "desc") {
+    pintarPins();
+    bienvenida();
+  } else { // 'prac'
+    hechas = []; aciertos = 0;
+    nueva();
+  }
+  progreso();
+}
+
+$("m-desc").onclick = () => setModo("desc");
+$("m-live").onclick = () => setModo("live");
+$("m-prac").onclick = () => setModo("prac");
+$("reset").onclick = () => {
+  found = {};
+  retos = {};
+  _kb.currentInput = '';
+  _kb.shift = 0;
+  _kb.mode = 'qwerty';
+  try { localStorage.removeItem(KEY); } catch(e){}
+  if (liveReady) {
+    $("text-input").value = '';
+    updateSuggestions();
+    changeMode('qwerty');
+  }
+  setModo(modo);
+};
+
+function renderInfo(){
+  if (modo !== "live" || !liveReady) return;
+  info.style.setProperty("--ic","var(--c6)");
+  const n = Object.keys(retos).length;
+  info.innerHTML =
+    (n === RETOS.length ? '<div class="win-all">🏆 ¡Todos los retos superados!</div>' : '') +
+    '<h2>Teclado Gboard</h2><p>Estado actual: <b>' + (_kb.mode === 'qwerty' ? 'letras' : _kb.mode === 'numbers' ? 'números' : _kb.mode === 'symbols' ? 'símbolos' : _kb.mode === 'emojis' ? 'emojis' : _kb.mode === 'mic' ? 'micrófono' : 'herramientas') + '</b>' +
+    ' (Mayúsculas: ' + (_kb.shift === 0 ? 'apagadas' : _kb.shift === 1 ? 'una vez' : 'bloqueadas') + ').</p>' +
+    '<h3>Retos (se marcan solos)</h3><ul class="retos">' +
+    RETOS.map(r => '<li class="'+(retos[r.id]?'on':'')+'"><span class="rb">'+(retos[r.id]?'✓':'')+'</span><span class="rt">'+r.t+'<small>'+r.h+'</small></span></li>').join("") + '</ul>';
+}
+
+setModo("desc");
+</script>
+</body>
+</html>

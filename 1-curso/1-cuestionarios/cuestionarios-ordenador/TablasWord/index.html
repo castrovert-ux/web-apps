@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎯 Trivial: Tablas en Microsoft Word</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+    :root {
+      --azul:     #1a6fc4;
+      --azul-c:   #2e8de8;
+      --amarillo: #f5c518;
+      --rojo:     #e63946;
+      --verde:    #2a9d5c;
+      --blanco:   #ffffff;
+      --fondo:    #0d2b55;
+      --panel:    #163567;
+      --texto:    #f0f4ff;
+      --borde:    #2e4f8a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--fondo);
+      color: var(--texto);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+
+    /* ── VOLVER ── */
+    .btn-volver {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #7a9fd4;
+      font-size: 0.97rem;
+      font-weight: 800;
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: 50px;
+      border: 2px solid var(--borde);
+      background: transparent;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      margin-bottom: 24px;
+    }
+    .btn-volver:hover { color: #fff; border-color: var(--azul-c); background: var(--panel); }
+
+    /* ── CABECERA ── */
+    header { text-align: center; margin-bottom: 36px; }
+    .logo  { font-size: 2.8rem; display: block; margin-bottom: 10px; }
+    h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1.9rem, 6vw, 3rem);
+      color: var(--amarillo);
+      text-shadow: 3px 3px 0 #7a5f00;
+      line-height: 1.15;
+    }
+    .subtitulo { margin-top: 8px; font-size: 1.12rem; color: #b3caee; font-weight: 600; }
+
+    .quiz-wrap { max-width: 800px; margin: 0 auto; }
+
+    /* ── BARRA ── */
+    .progreso-wrap  { background: var(--borde); border-radius: 20px; height: 14px; margin-bottom: 28px; overflow: hidden; }
+    .progreso-barra { height: 100%; background: linear-gradient(90deg, var(--amarillo), #ffda6e); border-radius: 20px; transition: width 0.5s ease; width: 0%; }
+
+    /* ── TARJETA PREGUNTA ── */
+    .pregunta-card {
+      background: var(--panel); border: 2px solid var(--borde);
+      border-radius: 20px; padding: 30px 28px; margin-bottom: 22px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35); animation: aparecer 0.4s ease;
+    }
+    @keyframes aparecer { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+
+    .num-pregunta   { font-size: 0.88rem; font-weight: 700; color: var(--amarillo); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .texto-pregunta { font-size: 1.22rem; font-weight: 800; line-height: 1.5; color: #eaf0ff; margin-bottom: 22px; }
+
+    /* ── OPCIONES ── */
+    .opciones { display: flex; flex-direction: column; gap: 12px; }
+
+    .opcion {
+      display: flex; align-items: center; gap: 14px;
+      background: #0f2040; border: 2px solid var(--borde); border-radius: 14px;
+      padding: 16px 18px; cursor: pointer;
+      font-size: 1.08rem; font-weight: 700; color: #cdd8f0;
+      transition: background 0.18s, border-color 0.18s, transform 0.12s;
+      width: 100%; text-align: left;
+    }
+    .opcion:hover:not(:disabled) { background: #1a3460; border-color: var(--azul-c); transform: translateX(4px); }
+    .opcion .letra {
+      min-width: 36px; height: 36px; border-radius: 50%; background: var(--borde);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: var(--amarillo); flex-shrink: 0;
+    }
+
+    .opcion.correcta   { background: #0a3d1f; border-color: var(--verde); color: #a8f0c6; }
+    .opcion.correcta .letra   { background: var(--verde); color: #fff; }
+    .opcion.incorrecta { background: #3d0a0a; border-color: var(--rojo);  color: #f0a8a8; }
+    .opcion.incorrecta .letra { background: var(--rojo);  color: #fff; }
+    .opcion.revelada   { background: #0a3d1f; border-color: var(--verde); color: #a8f0c6; opacity: 0.8; }
+    .opcion.revelada .letra   { background: var(--verde); color: #fff; }
+    .opcion:disabled   { cursor: default; }
+
+    /* ── RESULTADO INLINE ── */
+    .resultado-inline { margin-top: 14px; font-size: 1.02rem; font-weight: 700; padding: 12px 16px; border-radius: 10px; display: none; line-height: 1.5; }
+    .resultado-inline.acierto { background: #0a3d1f; border: 2px solid var(--verde); color: #5ef0a0; display: block; }
+    .resultado-inline.fallo   { background: #3d0a0a; border: 2px solid var(--rojo);  color: #f09898; display: block; }
+
+    /* ── BOTÓN SIGUIENTE ── */
+    .btn-siguiente {
+      display: none; margin: 18px auto 0;
+      background: linear-gradient(135deg, var(--azul), var(--azul-c));
+      color: #fff; border: none; padding: 14px 36px; border-radius: 50px;
+      font-family: 'Fredoka One', cursive; font-size: 1.22rem; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(46,141,232,0.45); transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-siguiente:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(46,141,232,0.55); }
+
+    /* ── PANEL FINAL ── */
+    #panel-final {
+      display: none; background: var(--panel); border: 2px solid var(--borde);
+      border-radius: 24px; padding: 40px 32px; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.45); animation: aparecer 0.5s ease;
+    }
+    .trofeo { font-size: 4rem; display: block; margin-bottom: 8px; }
+    #panel-final h2 { font-family: 'Fredoka One', cursive; font-size: 2.1rem; color: var(--amarillo); text-shadow: 2px 2px 0 #7a5f00; margin-bottom: 12px; }
+    .puntuacion-grande { font-family: 'Fredoka One', cursive; font-size: 4.5rem; color: var(--blanco); line-height: 1; margin: 8px 0; }
+    .de-total      { font-size: 1rem; color: #9db4d8; margin-bottom: 16px; }
+    .mensaje-final { font-size: 1.18rem; font-weight: 700; color: #cdd8f0; margin-bottom: 26px; line-height: 1.5; }
+    .resumen       { display: flex; justify-content: center; gap: 20px; margin-bottom: 28px; flex-wrap: wrap; }
+    .chip          { background: #0f2040; border: 2px solid var(--borde); border-radius: 50px; padding: 10px 22px; font-size: 1.08rem; font-weight: 800; }
+    .chip.v { border-color: var(--verde); color: #5ef0a0; }
+    .chip.r { border-color: var(--rojo);  color: #f09898; }
+    .estrellas { color: var(--amarillo); font-size: 1.8rem; letter-spacing: 6px; margin-bottom: 14px; }
+
+    .botones-final { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+    .btn-reiniciar {
+      background: linear-gradient(135deg, var(--amarillo), #f7d44e); color: #2b1800; border: none;
+      padding: 16px 40px; border-radius: 50px; font-family: 'Fredoka One', cursive;
+      font-size: 1.35rem; cursor: pointer; box-shadow: 0 6px 20px rgba(245,197,24,0.45); transition: transform 0.15s;
+    }
+    .btn-reiniciar:hover { transform: translateY(-3px); }
+
+    .btn-volver-final {
+      display: inline-flex; align-items: center; gap: 7px;
+      color: #7a9fd4; font-size: 1rem; font-weight: 800;
+      text-decoration: none; padding: 10px 24px; border-radius: 50px;
+      border: 2px solid var(--borde); background: transparent;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .btn-volver-final:hover { color: #fff; border-color: var(--azul-c); background: var(--panel); }
+
+    @media (max-width: 500px) {
+      .pregunta-card { padding: 20px 14px; }
+      .opcion { font-size: 1rem; padding: 13px 13px; }
+      .texto-pregunta { font-size: 1.08rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ENLACE VOLVER -->
+<div style="max-width:800px; margin:0 auto 4px;">
+  <a class="btn-volver" href="../index.html">← Volver a cuestionarios</a>
+</div>
+
+<header>
+  <span class="logo">📋✏️</span>
+  <h1>Tablas en Microsoft Word</h1>
+  <p class="subtitulo">¿Ha aprendido a crear y editar tablas? ¡Vamos a comprobarlo!</p>
+</header>
+
+<div class="quiz-wrap">
+  <div class="progreso-wrap"><div class="progreso-barra" id="barra"></div></div>
+  <div id="zona-preguntas"></div>
+
+  <div id="panel-final">
+    <span class="trofeo" id="trofeo">🏆</span>
+    <div class="estrellas" id="estrellas">★★★★★</div>
+    <h2>¡Cuestionario completado!</h2>
+    <div class="puntuacion-grande" id="puntuacion-grande">0</div>
+    <div class="de-total" id="de-total">de 10 preguntas correctas</div>
+    <p class="mensaje-final" id="mensaje-final"></p>
+    <div class="resumen">
+      <div class="chip v" id="chip-aciertos">✅ 0 aciertos</div>
+      <div class="chip r" id="chip-fallos">❌ 0 fallos</div>
+    </div>
+    <div class="botones-final">
+      <button class="btn-reiniciar" onclick="reiniciar()">🔄 Jugar otra vez</button>
+      <a class="btn-volver-final" href="../index.html">← Volver a cuestionarios</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const preguntas = [
+  {
+    texto: "¿En qué menú de Word hay que hacer clic para insertar una tabla?",
+    tipo: "multi",
+    opciones: ["Menú «Inicio»","Menú «Insertar»","Menú «Vista»","Menú «Diseño de página»"],
+    correcta: 1,
+    explicacion: "La opción «Tabla» está en el menú «Insertar», en la barra superior de la pantalla."
+  },
+  {
+    texto: "Al pulsar «Tabla» aparece una cuadrícula de pequeños cuadrados. ¿Para qué sirve?",
+    tipo: "multi",
+    opciones: ["Para elegir el color de la tabla","Para seleccionar el número de filas y columnas que queremos","Para escribir el título de la tabla","Para cambiar el tipo de letra"],
+    correcta: 1,
+    explicacion: "Arrastrando el ratón por esa cuadrícula elegimos cuántas filas y columnas tendrá nuestra tabla."
+  },
+  {
+    texto: "¿Cómo escribimos texto dentro de una celda de la tabla?",
+    tipo: "multi",
+    opciones: ["Hay que ir al menú «Insertar» → «Texto»","No es posible escribir directamente en las celdas","Hacemos clic dentro de la celda y escribimos","Hay que copiar el texto desde otro programa"],
+    correcta: 2,
+    explicacion: "Con un solo clic dentro de la celda el cursor se coloca ahí y ya podemos escribir directamente."
+  },
+  {
+    texto: "¿Cómo se llama el botón del menú «Inicio» que sirve para poner el texto en negrita?",
+    tipo: "multi",
+    opciones: ["El botón «C» (cursiva)","El botón «S» (subrayado)","El botón «N» (negrita)","El botón «T» (tamaño)"],
+    correcta: 2,
+    explicacion: "La «N» es la abreviatura de «Negrita» en Word en español. Seleccionamos primero el texto y luego pulsamos «N»."
+  },
+  {
+    texto: "¿Qué herramienta usamos para poner color de fondo en las celdas de cabecera?",
+    tipo: "multi",
+    opciones: ["El botón «Bordes»","El botón «Centrar»","El botón «Sombreado» (icono de cubo de pintura)","El botón «Zoom»"],
+    correcta: 2,
+    explicacion: "El «Sombreado» aparece en el menú «Diseño de tabla» y nos permite ponerle color de fondo a las celdas seleccionadas."
+  },
+  {
+    texto: "Verdadero o Falso: Para añadir una fila nueva a la tabla usamos el botón derecho del ratón y elegimos «Insertar filas debajo».",
+    tipo: "vf",
+    opciones: ["✅ Verdadero","❌ Falso"],
+    correcta: 0,
+    explicacion: "Correcto. Con el botón derecho del ratón sobre una celda aparece el menú con la opción «Insertar» → «Insertar filas debajo»."
+  },
+  {
+    texto: "Verdadero o Falso: Para eliminar una fila basta con borrar todo el texto que hay dentro y pulsar la tecla Suprimir.",
+    tipo: "vf",
+    opciones: ["✅ Verdadero","❌ Falso"],
+    correcta: 1,
+    explicacion: "Falso. Eso solo borra el texto, pero la fila vacía sigue ahí. Lo correcto es hacer clic derecho y elegir «Eliminar» → «Eliminar filas»."
+  },
+  {
+    texto: "Una celda nos ha quedado demasiado pequeña. ¿Cómo la hacemos más grande?",
+    tipo: "multi",
+    opciones: ["Escribiendo menos texto dentro de ella","Colocando el ratón sobre la línea de la tabla hasta ver una flecha doble y arrastrando","Yendo al menú «Vista» y aumentando el zoom","No se puede cambiar el tamaño de una celda"],
+    correcta: 1,
+    explicacion: "Cuando el cursor se convierte en una flecha doble al pasar por la línea divisoria, podemos arrastrar para agrandar o reducir la celda."
+  },
+  {
+    texto: "¿Dónde encontramos los diseños de tabla ya preparados que ofrece Word (con colores y estilos)?",
+    tipo: "multi",
+    opciones: ["En «Archivo» → «Plantillas»","En el menú «Diseño de tabla», galería de «Estilos de tabla»","En el menú «Insertar» → «Imágenes»","En el menú «Revisar» → «Ortografía»"],
+    correcta: 1,
+    explicacion: "Al hacer clic dentro de la tabla aparece el menú «Diseño de tabla» con una galería de estilos listos para aplicar con un solo clic."
+  },
+  {
+    texto: "¿Para qué sirve la opción «Bordes» del menú «Diseño de tabla»?",
+    tipo: "multi",
+    opciones: ["Para mover la tabla a otro lugar del documento","Para cambiar el tamaño de la letra","Para modificar las líneas de la tabla: grosor, color o eliminarlas","Para insertar imágenes dentro de las celdas"],
+    correcta: 2,
+    explicacion: "Con «Bordes» podemos cambiar el grosor y el color de las líneas, o elegir opciones como «Todos los bordes», «Solo bordes exteriores» o «Sin bordes»."
+  }
+];
+
+let aciertos = 0;
+let respondidas = new Array(preguntas.length).fill(false);
+
+function renderPreguntas() {
+  const zona = document.getElementById('zona-preguntas');
+  zona.innerHTML = '';
+  preguntas.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'pregunta-card';
+    card.id = 'card-' + i;
+    if (i > 0) card.style.display = 'none';
+
+    const letras = p.tipo === 'vf' ? ['V','F'] : ['A','B','C','D'];
+    const opcionesHTML = p.opciones.map((op, j) => `
+      <button class="opcion" id="op-${i}-${j}" onclick="responder(${i},${j})">
+        <span class="letra">${letras[j]}</span><span>${op}</span>
+      </button>`).join('');
+
+    card.innerHTML = `
+      <div class="num-pregunta">Pregunta ${i+1} de ${preguntas.length}</div>
+      <div class="texto-pregunta">${p.texto}</div>
+      <div class="opciones">${opcionesHTML}</div>
+      <div class="resultado-inline" id="res-${i}"></div>
+      <div style="text-align:center;">
+        <button class="btn-siguiente" id="btn-${i}" onclick="siguiente(${i})">
+          ${i < preguntas.length-1 ? 'Siguiente pregunta →' : '🏁 Ver resultado'}
+        </button>
+      </div>`;
+    zona.appendChild(card);
+  });
+  actualizarBarra();
+}
+
+function responder(pregIdx, opIdx) {
+  if (respondidas[pregIdx]) return;
+  respondidas[pregIdx] = true;
+
+  const p = preguntas[pregIdx];
+  const res = document.getElementById('res-' + pregIdx);
+  const letras = p.tipo === 'vf' ? ['V','F'] : ['A','B','C','D'];
+
+  p.opciones.forEach((_, j) => { document.getElementById(`op-${pregIdx}-${j}`).disabled = true; });
+
+  const elegido  = document.getElementById(`op-${pregIdx}-${opIdx}`);
+  const correcto = document.getElementById(`op-${pregIdx}-${p.correcta}`);
+
+  if (opIdx === p.correcta) {
+    elegido.classList.add('correcta');
+    aciertos++;
+    res.className = 'resultado-inline acierto';
+    res.innerHTML = `🎉 ¡Muy bien! ${p.explicacion}`;
+  } else {
+    elegido.classList.add('incorrecta');
+    correcto.classList.add('revelada');
+    res.className = 'resultado-inline fallo';
+    res.innerHTML = `😅 No era esa. La correcta era la <strong>${letras[p.correcta]}</strong>. ${p.explicacion}`;
+  }
+
+  document.getElementById('btn-' + pregIdx).style.display = 'inline-block';
+  actualizarBarra();
+}
+
+function siguiente(pregIdx) {
+  document.getElementById('card-' + pregIdx).style.display = 'none';
+  if (pregIdx < preguntas.length - 1) {
+    const sig = document.getElementById('card-' + (pregIdx + 1));
+    sig.style.display = 'block';
+    sig.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    mostrarFinal();
+  }
+}
+
+function actualizarBarra() {
+  const n = respondidas.filter(Boolean).length;
+  document.getElementById('barra').style.width = (n / preguntas.length * 100) + '%';
+}
+
+function mostrarFinal() {
+  document.getElementById('zona-preguntas').style.display = 'none';
+  document.getElementById('barra').style.width = '100%';
+
+  const fallos = preguntas.length - aciertos;
+  document.getElementById('puntuacion-grande').textContent = aciertos;
+  document.getElementById('de-total').textContent = `de ${preguntas.length} preguntas correctas`;
+  document.getElementById('chip-aciertos').textContent = `✅ ${aciertos} acierto${aciertos!==1?'s':''}`;
+  document.getElementById('chip-fallos').textContent   = `❌ ${fallos} fallo${fallos!==1?'s':''}`;
+
+  let trofeo, estrellas, mensaje;
+  if (aciertos === 10)     { trofeo='🏆'; estrellas='★★★★★'; mensaje='¡Diez de diez! Ya domina las tablas de Word como un auténtico profesional. ¡Enhorabuena!'; }
+  else if (aciertos >= 8)  { trofeo='🥇'; estrellas='★★★★☆'; mensaje='¡Excelente! Tiene muy claro cómo funcionan las tablas. Solo un pequeño repaso y lo borda.'; }
+  else if (aciertos >= 6)  { trofeo='🥈'; estrellas='★★★☆☆'; mensaje='¡Bien hecho! Va por buen camino. Repase los puntos que fallaron y vuelva a intentarlo.'; }
+  else if (aciertos >= 4)  { trofeo='🥉'; estrellas='★★☆☆☆'; mensaje='Gracias por intentarlo. Le recomendamos repasar los pasos del ejercicio con calma y volver a jugar.'; }
+  else                     { trofeo='📚'; estrellas='★☆☆☆☆'; mensaje='No se preocupe, ¡para eso está la clase! Repase el ejercicio despacio y vuelva a intentarlo.'; }
+
+  document.getElementById('trofeo').textContent        = trofeo;
+  document.getElementById('estrellas').textContent     = estrellas;
+  document.getElementById('mensaje-final').textContent = mensaje;
+
+  const panel = document.getElementById('panel-final');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function reiniciar() {
+  aciertos = 0;
+  respondidas = new Array(preguntas.length).fill(false);
+  document.getElementById('zona-preguntas').style.display = 'block';
+  document.getElementById('panel-final').style.display = 'none';
+  renderPreguntas();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+renderPreguntas();
+</script>
+</body>
+</html>

@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pequeñas destrezas con el móvil · Práctica</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366; --c3: #FFD93D; --c4: #FF6B6B; --c5: #6BCB77; --c6: #4DA3FF; --c7: #C77DFF;
+    --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+    --win: #f3f5f8; --win-ink: #1b2433;
+    --accent: var(--c6);
+    color-scheme: dark;
+  }
+  :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font-family: inherit; }
+  button:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.14; animation: float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1) { width: 45vw; height: 45vw; background: var(--c7); top: -12vw; left: -10vw; }
+  .blob:nth-child(2) { width: 35vw; height: 35vw; background: var(--c4); bottom: -10vw; right: -8vw; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 28vw; height: 28vw; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0,0) scale(1); } to { transform: translate(25px,18px) scale(1.07); } }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.96) translateY(14px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Estructura ---------- */
+  .app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 2.2vh 2.6vw 1.6vh; gap: 1.6vh; }
+  .top { display: flex; align-items: center; gap: 1.4vw; flex-shrink: 0; }
+  .badge {
+    background: linear-gradient(135deg, var(--c7), #8a3fd6); color: #fff; font-weight: 800;
+    font-size: clamp(0.7rem, 1vw, 1.05rem); letter-spacing: 2px; text-transform: uppercase;
+    padding: 0.5em 1.4em; border-radius: 100px; white-space: nowrap;
+  }
+  .top-title { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1rem, 1.7vw, 1.9rem); color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-actions { margin-left: auto; display: flex; gap: 0.6vw; }
+  .tbtn {
+    border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: var(--sub);
+    font-weight: 800; font-size: clamp(0.8rem, 1vw, 1.1rem); padding: 0.45em 0.9em; border-radius: 12px; cursor: pointer;
+  }
+  .tbtn:hover { color: var(--text); border-color: var(--c6); }
+  .stage { flex: 1; min-height: 0; display: flex; }
+  .slide { flex: 1; min-height: 0; display: flex; animation: popIn 0.45s cubic-bezier(.34,1.56,.64,1); }
+
+  /* ---------- Portada / menú ---------- */
+  .menu { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2.6vh; }
+  .menu .big-emoji { font-size: clamp(3rem, 7vw, 7rem); line-height: 1; }
+  .menu h1 {
+    font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(2.2rem, 5.6vw, 6.4rem); line-height: 1.05;
+    background: linear-gradient(135deg, var(--c7), var(--c4), var(--c3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .menu p { color: var(--sub); font-weight: 700; font-size: clamp(1rem, 1.9vw, 2.2rem); max-width: 32em; line-height: 1.35; }
+  .menu p b { color: var(--text); }
+  .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2vw; width: min(94vw, 1500px); }
+  .card {
+    flex: 0 0 calc(25% - 1vw); background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-top: 5px solid var(--ac);
+    border-radius: 22px; padding: 1.8vh 0.8vw; color: var(--text); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.6vh;
+    font-weight: 800; font-size: clamp(0.9rem, 1.35vw, 1.55rem); line-height: 1.15; transition: transform 0.15s;
+  }
+  .card:hover { transform: translateY(-4px); }
+  .card .ce { font-size: clamp(1.8rem, 3.2vw, 3.6rem); }
+  .card.done { border-color: rgba(37,211,102,0.45); border-top-color: var(--ac); }
+  .stars { color: var(--c3); letter-spacing: 2px; font-size: 0.95em; }
+  .stars i { color: rgba(255,255,255,0.22); font-style: normal; }
+
+  /* ---------- Ejercicio ---------- */
+  .ex { gap: 2vw; }
+  .ex-main {
+    flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: none;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-left: 0.6vw solid var(--accent);
+    border-radius: 28px; padding: 2.6vh 2.2vw;
+  }
+  .ex-main::-webkit-scrollbar { display: none; }
+  .ex-head { display: flex; align-items: center; gap: 1.4vw; margin-bottom: 1vh; }
+  .ex-icon {
+    width: clamp(48px, 5vw, 100px); aspect-ratio: 1; border-radius: 22%; flex-shrink: 0; display: grid; place-items: center;
+    font-size: clamp(1.5rem, 2.8vw, 3.4rem); background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .ex-num { font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-size: clamp(0.75rem, 1vw, 1.2rem); }
+  .ex-title { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(1.5rem, 2.8vw, 3.3rem); line-height: 1.1; }
+  .ex-obj { color: var(--sub); font-weight: 700; font-size: clamp(0.95rem, 1.45vw, 1.7rem); margin-bottom: 1.2vh; }
+  .brands { display: flex; align-items: center; flex-wrap: wrap; gap: 0.8vw; margin-bottom: 1.2vh; color: var(--sub); font-weight: 800; font-size: clamp(0.9rem, 1.3vw, 1.5rem); }
+  .bchip {
+    border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: var(--text); border-radius: 100px;
+    padding: 0.3em 1em; font-weight: 800; cursor: pointer; font-size: inherit;
+  }
+  .bchip.on { background: var(--accent); color: #0a1628; border-color: var(--accent); }
+  .ex-note {
+    font-weight: 700; color: var(--sub); line-height: 1.4; font-size: clamp(0.88rem, 1.3vw, 1.5rem);
+    background: rgba(77,163,255,0.1); border-radius: 14px; padding: 0.55em 1em; margin-bottom: 1.4vh;
+  }
+  .ex-note b { color: var(--text); }
+  .now {
+    background: rgba(255,217,61,0.09); border: 3px solid var(--c3); border-radius: 18px; padding: 1.3vh 1.2vw;
+    box-shadow: 0 0 0 6px rgba(255,217,61,0.08);
+  }
+  .now-n { color: var(--c3); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; font-size: clamp(0.72rem, 0.95vw, 1.15rem); }
+  .now-t { font-weight: 700; line-height: 1.3; font-size: clamp(1.1rem, 1.95vw, 2.4rem); margin-top: 0.5vh; }
+  .now-t b { color: var(--c3); font-weight: 800; }
+  .fb { display: none; margin-top: 1.4vh; font-weight: 800; line-height: 1.3; border-radius: 14px; padding: 0.6em 1em; font-size: clamp(0.92rem, 1.4vw, 1.7rem); }
+  .fb.ok { display: block; background: rgba(37,211,102,0.15); color: #86ffb0; }
+  .fb.bad { display: block; background: rgba(255,107,107,0.15); color: #ffa3a3; }
+  .fb.soft { display: block; background: rgba(77,163,255,0.15); color: #b0d6ff; }
+  .acts { display: flex; flex-wrap: wrap; gap: 1vw; margin-top: auto; padding-top: 1.6vh; }
+  .abtn {
+    border: 2px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); color: var(--text); font-weight: 800;
+    border-radius: 14px; padding: 0.5em 1.1em; cursor: pointer; font-size: clamp(0.92rem, 1.35vw, 1.6rem);
+  }
+  .abtn:hover { border-color: var(--c3); }
+  .abtn.go { border: 0; background: linear-gradient(135deg, var(--c1), #1aa851); color: #0a1628; }
+  .abtn[hidden] { display: none; }
+  .pips { display: flex; gap: 0.5vw; margin-top: 1.4vh; }
+  .pip { flex: 1; height: 7px; border-radius: 6px; background: rgba(255,255,255,0.1); transition: background 0.3s; }
+  .pip.past { background: var(--c1); }
+  .pip.cur { background: var(--c3); }
+  .ex-side { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 0 1vw; }
+
+  /* ---------- Móvil de mentira ---------- */
+  .phone {
+    --ph: clamp(430px, 68vh, 880px);
+    width: calc(var(--ph) * 0.5); height: var(--ph); font-size: calc(var(--ph) / 36); flex-shrink: 0;
+    background: #05070d; border-radius: 2em; padding: 0.5em; position: relative;
+    box-shadow: 0 0 0 0.14em #2a3550, 0 1.6em 3.5em rgba(0,0,0,0.55);
+  }
+  .ph-in {
+    position: relative; width: 100%; height: 100%; background: var(--win); color: var(--win-ink);
+    border-radius: 1.55em; overflow: hidden; display: flex; flex-direction: column; line-height: 1.25;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .ph-in.wall { background: linear-gradient(160deg, #3b2a78, #1b5fae 55%, #16a6a0); color: #fff; }
+  .ph-in.dark { background: #1c2438; color: #fff; }
+  .ph-in.cam { background: #0b0f18; color: #fff; }
+  .ph-in.okp { animation: okp 0.5s; }
+  @keyframes okp { 0% { box-shadow: inset 0 0 0 0 rgba(37,211,102,0); } 40% { box-shadow: inset 0 0 0 0.45em rgba(37,211,102,0.75); } 100% { box-shadow: inset 0 0 0 0 rgba(37,211,102,0); } }
+
+  .t { cursor: pointer; }
+  .sbar { display: flex; justify-content: space-between; align-items: center; padding: 0 1.1em; height: 2.4em; flex-shrink: 0; font-weight: 800; font-size: 0.72em; }
+  .sbar.lt { color: #fff; }
+  .sbar.dragz { height: 3em; cursor: grab; touch-action: none; }
+  .bar { display: flex; align-items: center; gap: 0.5em; padding: 0.3em 0.9em 0.55em; font-size: 1.1em; font-weight: 800; flex-shrink: 0; }
+  .back { font-size: 1.4em; line-height: 1; color: #6a7690; }
+  .list { flex: 1; overflow: hidden; padding: 0 0.6em; }
+  .row {
+    position: relative; overflow: hidden; display: flex; align-items: center; gap: 0.7em; padding: 0.5em 0.6em; margin-bottom: 0.35em;
+    background: #fff; border: 1px solid #e3e8f0; border-radius: 0.8em;
+  }
+  .row:active { filter: brightness(0.93); }
+  .r-ic { width: 1.7em; height: 1.7em; border-radius: 0.5em; background: #e8edf6; display: grid; place-items: center; font-size: 0.95em; flex-shrink: 0; }
+  .r-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 0.85em; }
+  .r-tx small { color: #6a7690; font-weight: 600; font-size: 0.8em; }
+  .chev { color: #9aa6bd; font-size: 1.3em; }
+  .okc { color: var(--c1); font-size: 1.6em; font-weight: 900; }
+  .sw { width: 2.6em; height: 1.45em; border-radius: 1em; background: #b6bfce; position: relative; flex-shrink: 0; transition: 0.25s; }
+  .sw i { position: absolute; top: 0.17em; left: 0.17em; width: 1.11em; height: 1.11em; border-radius: 50%; background: #fff; transition: 0.25s; }
+  .sw.on { background: var(--c1); }
+  .sw.on i { left: 1.32em; }
+  .rd { width: 1.2em; height: 1.2em; border-radius: 50%; border: 0.15em solid #9aa6bd; flex-shrink: 0; }
+  .rd.on { border-color: var(--c6); background: radial-gradient(var(--c6) 45%, transparent 50%); }
+  .field { border: 2px solid #b8c3d8; border-radius: 0.7em; padding: 0.6em 0.8em; font-weight: 700; color: #6a7690; background: #f7f9fc; font-size: 0.85em; }
+  .field.full { color: var(--win-ink); letter-spacing: 1px; }
+  .btnrow { display: flex; gap: 0.5em; margin-top: 0.7em; }
+  .pb { flex: 1; text-align: center; padding: 0.6em; border-radius: 0.7em; font-weight: 800; background: #e8edf6; font-size: 0.9em; }
+  .pb.pri { background: var(--c6); color: #fff; }
+  .scrim { position: absolute; inset: 0; background: rgba(10,20,40,0.5); }
+  .sheet { position: absolute; left: 0.6em; right: 0.6em; bottom: 0.8em; background: #fff; border-radius: 1.1em; padding: 0.9em; box-shadow: 0 0.6em 1.6em rgba(0,0,0,0.4); }
+  .sheet b { display: block; margin-bottom: 0.5em; }
+  .popc { position: absolute; inset: 0; display: grid; place-items: center; }
+  .pop { width: 92%; background: #fff; color: var(--win-ink); border-radius: 1em; overflow: hidden; box-shadow: 0 0.6em 1.6em rgba(0,0,0,0.45); }
+  .pop .row { border: 0; border-radius: 0; margin: 0; border-bottom: 1px solid #e3e8f0; }
+  .pop .ptitle { padding: 0.6em 0.9em; font-weight: 800; background: #eef2f8; font-size: 0.9em; }
+  .infob { flex-direction: column; align-items: stretch; gap: 0.4em; }
+  .infob small { display: block; color: #6a7690; font-size: 0.7em; font-weight: 700; }
+  .infob b { font-size: 0.95em; }
+  .pvcard { margin: 0 0.6em 0.8em; background: #fff; border: 1px solid #e3e8f0; border-radius: 0.9em; padding: 0.9em; min-height: 9em; display: grid; place-items: center; text-align: center; }
+  .pv { font-weight: 700; line-height: 1.25; transition: font-size 0.15s; }
+  .sl { display: flex; align-items: center; gap: 0.6em; padding: 0 0.9em; }
+  .qz { margin: 0 0.6em 0.7em; font-weight: 800; font-size: 0.95em; background: #fff; border: 1px solid #e3e8f0; border-radius: 0.9em; padding: 0.8em; }
+
+  input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; width: 100%; height: 2em; cursor: pointer; touch-action: pan-y; }
+  input[type=range]::-webkit-slider-runnable-track { height: 0.7em; border-radius: 1em; background: #b6bfce; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--c3); border: 0.15em solid #fff; margin-top: -0.5em; box-shadow: 0 0.1em 0.4em rgba(0,0,0,0.4); }
+  input[type=range]::-moz-range-track { height: 0.7em; border-radius: 1em; background: #b6bfce; }
+  input[type=range]::-moz-range-thumb { width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--c3); border: 0.15em solid #fff; }
+
+  /* Pantalla principal */
+  .home { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0.3em 0.6em 0.7em; }
+  .hgrid { padding: 0 0.3em; }
+  .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5em 0.2em; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 0.2em; padding: 0.15em 0; }
+  .ai { width: 1.9em; height: 1.9em; border-radius: 0.7em; background: rgba(255,255,255,0.92); display: grid; place-items: center; font-size: 1.3em; }
+  .app small { font-size: 0.62em; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.45); }
+  .gap { flex: 1; min-height: 3em; margin: 0.5em 0.3em; border-radius: 1em; position: relative; display: flex; align-items: center; justify-content: center; }
+  .dock { display: grid; grid-template-columns: repeat(4, 1fr); background: rgba(255,255,255,0.18); border-radius: 1.2em; padding: 0.4em 0.2em; }
+  .wd {
+    background: rgba(255,255,255,0.92); color: var(--win-ink); border-radius: 1em; padding: 0.6em 0.9em; margin: 0.2em 0.3em 0.55em;
+    display: flex; justify-content: space-between; align-items: center; cursor: grab; touch-action: none; min-width: 60%;
+  }
+  .wd b { font-size: 1.4em; }
+  .wd small { font-weight: 700; opacity: 0.7; }
+  .gap .wd { margin: 0; transform: scale(1.06); box-shadow: 0 0.8em 1.6em rgba(0,0,0,0.4); }
+  .wgrid { padding: 0 0.6em; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; }
+  .wc { background: #fff; border: 1px solid #e3e8f0; border-radius: 1em; padding: 0.9em 0.4em; text-align: center; font-weight: 800; }
+  .wc span { display: block; font-size: 1.7em; margin-bottom: 0.2em; }
+  .wc small { font-size: 0.75em; color: #6a7690; }
+
+  /* Menú superior */
+  .qs { flex: 1; padding: 0.4em 0.8em; display: flex; flex-direction: column; gap: 0.7em; }
+  .qd { font-weight: 800; font-size: 0.85em; color: #b8c3da; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5em; }
+  .tile { background: #2c3650; border-radius: 1em; padding: 0.7em 0.3em; text-align: center; font-weight: 800; font-size: 0.72em; display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+  .tile .te { font-size: 1.7em; }
+  .brt { background: #2c3650; border-radius: 1em; padding: 0.5em 0.8em; display: flex; align-items: center; gap: 0.6em; }
+
+  /* Teléfono */
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5em; padding: 0 0.8em; }
+  .keys span { background: #fff; border: 1px solid #e3e8f0; border-radius: 0.8em; text-align: center; padding: 0.55em 0; font-weight: 800; font-size: 1.1em; }
+  .kn { text-align: center; font-size: 1.3em; font-weight: 800; padding: 0.7em 0 0.9em; color: #9aa6bd; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #dde3ee; background: #fff; margin-top: auto; flex-shrink: 0; }
+  .tab { text-align: center; padding: 0.5em 0; font-size: 0.72em; font-weight: 800; color: #6a7690; display: flex; flex-direction: column; gap: 0.1em; }
+  .tab span { font-size: 1.5em; }
+  .tab.cur { color: var(--c6); }
+
+  /* Lector QR */
+  .vf { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1em; }
+  .vfb { width: 11em; height: 11em; border: 0.25em solid var(--c3); border-radius: 1em; display: grid; place-items: center; font-size: 5em; }
+  .vf small { font-weight: 800; font-size: 0.9em; }
+
+  .bigcheck { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10,22,40,0.5); }
+  .bigcheck span { width: 4em; height: 4em; border-radius: 50%; background: var(--c1); color: #0a1628; display: grid; place-items: center; font-size: 1.6em; font-weight: 900; animation: popIn 0.5s; }
+  .flash { position: absolute; inset: 0; background: #fff; pointer-events: none; animation: fl 0.5s forwards; }
+  @keyframes fl { from { opacity: 0.95; } to { opacity: 0; } }
+
+  .hint { outline: 0.22em solid var(--c3); outline-offset: 0.12em; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { outline-color: rgba(255,217,61,0.25); } }
+  .shake { animation: shake 0.35s; }
+  @keyframes shake { 25% { transform: translateX(-0.3em); } 75% { transform: translateX(0.3em); } }
+  .holding { position: relative; }
+  .holding::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgba(255,217,61,0.45); transform-origin: left; animation: fill 0.7s linear forwards; pointer-events: none; }
+  @keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  /* ---------- Final ---------- */
+  .finish { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2vh; }
+  .trophy { font-size: clamp(4rem, 10vw, 11rem); animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0) rotate(-5deg); } to { transform: translateY(-14px) rotate(5deg); } }
+  .finish h2 { font-family: 'Fredoka One', 'Nunito', sans-serif; font-size: clamp(2.2rem, 5vw, 5.8rem); color: var(--c3); }
+  .finish p { color: var(--sub); font-weight: 700; font-size: clamp(1rem, 1.9vw, 2.3rem); max-width: 32em; line-height: 1.4; }
+  .finish p b { color: var(--text); }
+  .sumlist { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vw; max-width: 90vw; }
+  .sumlist span { background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 100px; padding: 0.35em 1em; font-weight: 800; font-size: clamp(0.9rem, 1.4vw, 1.6rem); }
+
+  /* ---------- Barra inferior ---------- */
+  .bottom { flex-shrink: 0; display: flex; align-items: center; gap: 1.4vw; }
+  .nav { border: 0; border-radius: 16px; cursor: pointer; font-weight: 800; white-space: nowrap; font-size: clamp(1rem, 1.5vw, 1.8rem); padding: 0.6em 1.4em; transition: transform 0.15s; }
+  .nav:hover { transform: scale(1.04); }
+  .nav:disabled { opacity: 0.3; cursor: default; transform: none; }
+  .nav-prev { background: rgba(255,255,255,0.07); color: var(--text); }
+  .nav-next { background: linear-gradient(135deg, var(--c1), #1aa851); color: #0a1628; }
+  .dots { flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.7vw; flex-wrap: wrap; }
+  .dot {
+    height: clamp(30px, 3vw, 56px); min-width: clamp(30px, 3vw, 56px); padding: 0 0.6em; border-radius: 100px; cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--sub);
+    font-weight: 800; font-size: clamp(0.85rem, 1.25vw, 1.5rem); transition: all 0.2s;
+  }
+  .dot.seen { color: var(--text); border-color: rgba(37,211,102,0.5); background: rgba(37,211,102,0.1); }
+  .dot.on { color: #0a1628; background: var(--c3); border-color: var(--c3); transform: scale(1.12); }
+  .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,0.06); z-index: 2; }
+  .prog-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--c7), var(--c4), var(--c3)); transition: width 0.4s; }
+  .help { color: var(--sub); font-weight: 700; font-size: clamp(0.75rem, 0.95vw, 1.05rem); text-align: center; flex-shrink: 0; opacity: 0.7; }
+
+  @media (max-width: 900px), (max-aspect-ratio: 1/1) {
+    body { overflow: auto; }
+    html, body { height: auto; }
+    .app { min-height: 100vh; height: auto; }
+    .ex { flex-direction: column; }
+    .ex-main { overflow: visible; padding: 2vh 4vw; border-left-width: 6px; }
+    .ex-side { padding: 1vh 0 2vh; }
+    .phone { --ph: min(150vw, 820px); }
+    .card { flex-basis: calc(50% - 1vw); }
+    .top-title { display: none; }
+    .now-t { font-size: 1.25rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="app">
+  <div class="top">
+    <div class="badge">📱 Práctica</div>
+    <div class="top-title" id="top-title">Pequeñas destrezas con el móvil</div>
+    <div class="top-actions">
+      <button class="tbtn" id="btn-full" type="button" title="Pantalla completa (tecla F)">⛶ Pantalla completa</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="bottom">
+    <button class="nav nav-prev" id="prev" type="button">◀ Anterior</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav nav-next" id="next" type="button">Empezar ▶</button>
+  </div>
+  <div class="help">Toca el móvil de la pantalla como si fuera el tuyo · Si te atascas, pulsa 💡 Pista</div>
+</div>
+<div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const qs = s => document.querySelector(s);
+const oks = s => [].concat(s.ok);
+
+/* =========================================================
+   Piezas para dibujar las pantallas del móvil de mentira
+   ========================================================= */
+const sbar = (light, id) => `<div class="sbar${light ? ' lt' : ''}${id ? ' t dragz' : ''}"${id ? ` data-id="${id}"` : ''}><span>10:24</span><span>📶 🔋</span></div>`;
+const bar = t => `<div class="bar"><span class="back">‹</span><span>${t}</span></div>`;
+const row = r => `<div class="row t" data-id="${r.id}">${r.ic ? `<span class="r-ic">${r.ic}</span>` : ''}<span class="r-tx"><b>${r.lb}</b>${r.sub ? `<small>${r.sub}</small>` : ''}</span>${r.right || '<span class="chev">›</span>'}</div>`;
+const sw = on => `<span class="sw${on ? ' on' : ''}"><i></i></span>`;
+const rd = on => `<span class="rd${on ? ' on' : ''}"></span>`;
+const list = (t, rows) => sbar() + bar(t) + `<div class="list">${rows.map(row).join('')}</div>`;
+const popup = rows => `<div class="scrim"></div><div class="popc"><div class="pop">${rows.map(row).join('')}</div></div>`;
+
+const APPS = { ajustes:['⚙️','Ajustes'], galeria:['🖼️','Galería'], reloj:['⏰','Reloj'], correo:['✉️','Correo'], mapas:['🗺️','Mapas'],
+  musica:['🎵','Música'], calculadora:['🧮','Calculadora'], tienda:['🛍️','Tienda'], telefono:['📞','Teléfono'], mensajes:['💬','Mensajes'],
+  camara:['📷','Cámara'], whatsapp:['💚','WhatsApp'] };
+const GRID = ['ajustes','galeria','reloj','correo','mapas','musica','calculadora','tienda'];
+const DOCK = ['telefono','mensajes','camara','whatsapp'];
+const appIc = k => `<div class="app t" data-id="${k}"><span class="ai">${APPS[k][0]}</span><small>${APPS[k][1]}</small></div>`;
+const WID = { w_reloj:['10:24','Miércoles'], w_bateria:['🔋 85%','Batería'], w_tiempo:['☀️ 22°','Soleado'], w_calendario:['21 oct','Miércoles'] };
+
+const home = (o = {}) => {
+  const w = o.widget ? `<div class="wd t" data-id="widget"><b>${WID[o.widget][0]}</b><small>${WID[o.widget][1]}</small></div>` : '';
+  return sbar(true, o.top) + `<div class="home">
+    <div class="hgrid">${o.float ? '' : w}<div class="apps">${GRID.map(appIc).join('')}</div></div>
+    <div class="gap${o.gapId ? ' t' : ''}"${o.gapId ? ` data-id="${o.gapId}"` : ''}>${o.float ? w : ''}</div>
+    <div class="dock">${DOCK.map(appIc).join('')}</div>
+  </div>`;
+};
+
+const settings = brand => list('Ajustes', [
+  { id:'wifi', ic:'📶', lb:'Wi-Fi', sub:'Internet de casa' },
+  { id:'conexiones', ic:'🔗', lb:'Conexiones', sub:'Bluetooth, zona Wi-Fi…' },
+  { id:'sonidos', ic:'🔔', lb:'Sonidos' },
+  { id:'pantalla', ic:'🖥️', lb:'Pantalla', sub:'Brillo, tiempo de espera…' },
+  ...(brand === 'samsung' ? [{ id:'accesibilidad', ic:'♿', lb:'Accesibilidad' }] : []),
+  ...(brand === 'xiaomi' ? [{ id:'bloqueo', ic:'🔒', lb:'Pantalla siempre activa y Bloqueo' }] : []),
+  { id:'bateria', ic:'🔋', lb:'Batería' },
+  { id:'apps', ic:'📱', lb:'Aplicaciones' }
+]);
+
+/* Wi-Fi */
+const NETS = [
+  { id:'net_a', ic:'📶', lb:'Vecino_5G', sub:'Con contraseña', right:'<span class="chev">🔒</span>' },
+  { id:'net', ic:'📶', lb:'MiCasa_WiFi', sub:'Con contraseña', right:'<span class="chev">🔒</span>' },
+  { id:'net_c', ic:'📶', lb:'Cafeteria_Free', sub:'Abierta' , right:'<span class="chev"> </span>' },
+  { id:'net_d', ic:'📶', lb:'DIRECT-TV-3F', sub:'Con contraseña', right:'<span class="chev">🔒</span>' }
+];
+const wifiScr = on => sbar() + bar('Wi-Fi') + `<div class="list">
+  <div class="row t" data-id="sw"><span class="r-ic">📶</span><span class="r-tx"><b>Wi-Fi</b></span>${sw(on)}</div>
+  ${on ? NETS.map(row).join('') : ''}</div>`;
+const passScr = filled => wifiScr(true) + `<div class="scrim"></div><div class="sheet"><b>MiCasa_WiFi</b>
+  <div class="field t${filled ? ' full' : ''}" data-id="field">${filled ? '••••••••' : 'Toca aquí y escribe la contraseña'}</div>
+  <div class="btnrow"><div class="pb t" data-id="cancelar">Cancelar</div><div class="pb pri t" data-id="conectar">Conectar</div></div></div>`;
+const wifiDone = () => sbar() + bar('Wi-Fi') + `<div class="list">
+  <div class="row t" data-id="sw"><span class="r-ic">📶</span><span class="r-tx"><b>Wi-Fi</b></span>${sw(true)}</div>
+  <div class="row t" data-id="check"><span class="r-ic">📶</span><span class="r-tx"><b>MiCasa_WiFi</b><small>Conectada</small></span><span class="okc">✔</span></div></div>`;
+
+/* Letra y apagado de pantalla */
+const fsz = v => 0.6 + v * 0.25;
+const bri = v => 0.45 + v * 0.009;
+const fontScr = (title, c) => sbar() + bar(title) + `<div class="pvcard"><p class="pv" style="font-size:${fsz(c.fs)}em">Hola, ¿qué tal?<br>Así se lee mejor.</p></div>
+  <div class="sl"><span style="font-size:.8em;font-weight:800">A</span><input type="range" class="t" data-id="slider" min="1" max="5" step="1" value="${c.fs}"><span style="font-size:1.4em;font-weight:800">A</span></div>`;
+const listR = title => list(title, [
+  { id:'t15', lb:'15 segundos', right: rd(false) }, { id:'t30', lb:'30 segundos', right: rd(true) }, { id:'t1', lb:'1 minuto', right: rd(false) },
+  { id:'t2', lb:'2 minutos', right: rd(false) }, { id:'t5', lb:'5 minutos', right: rd(false) }, { id:'t10', lb:'10 minutos', right: rd(false) }
+]);
+
+/* Menú superior */
+const panel = c => sbar(true) + `<div class="qs"><div class="qd">Miércoles 21 de octubre</div>
+  <div class="tiles">${[['wifi','📶','Wi-Fi'],['bt','🔷','Bluetooth'],['linterna','🔦','Linterna'],['captura','✂️','Captura de pantalla'],['qr','🔳','Lector QR'],['avion','✈️','Modo avión']]
+    .map(([id, e, l]) => `<div class="tile t" data-id="${id}"><span class="te">${e}</span>${l}</div>`).join('')}</div>
+  <div class="brt t" data-id="brillo"><span>☀️</span><input type="range" class="t" data-id="slider" min="0" max="100" value="${c.b}"></div></div>`;
+const quiz = () => sbar() + bar('Pregunta') + `<div class="qz">¿Cómo se puede hacer una captura sin abrir el menú?</div><div class="list">${[
+  { id:'q1', ic:'☝️', lb:'Un dedo hacia arriba' }, { id:'q2', ic:'🖐️', lb:'Tres dedos hacia abajo' }, { id:'q3', ic:'✌️', lb:'Dos dedos hacia los lados' }].map(row).join('')}</div>`;
+const qrScr = () => sbar(true) + `<div class="vf"><div class="vfb">🔳</div><small>Apunta al código QR</small></div>`;
+
+/* Compartir internet */
+const hotspotScr = on => sbar() + bar('Zona Wi-Fi portátil') + `<div class="list">
+  <div class="row t" data-id="sw"><span class="r-ic">📡</span><span class="r-tx"><b>Zona Wi-Fi portátil</b><small>Compartir internet</small></span>${sw(on)}</div>
+  ${on ? `<div class="row t infob" data-id="info"><div><small>Nombre de la red</small><b>Mi_Movil</b></div><div><small>Contraseña</small><b>abc12345</b></div></div>` : ''}</div>`;
+
+/* Teléfono */
+const tabsBar = cur => `<div class="tabs">${[['teclado','⌨️','Teclado'],['recientes','🕘','Recientes'],['contactos','👤','Contactos']]
+  .map(([id, e, l]) => `<div class="tab t${cur === id ? ' cur' : ''}" data-id="${id}"><span>${e}</span>${l}</div>`).join('')}</div>`;
+const keypad = () => sbar() + `<div class="kn">Teléfono</div><div class="keys">${[1,2,3,4,5,6,7,8,9,'*',0,'#'].map(k => `<span>${k}</span>`).join('')}</div>` + tabsBar('teclado');
+const recientes = c => sbar() + bar('Recientes') + `<div class="list">${[
+  { id:'mama', ic:'👩', lb:'Mamá', sub:'Llamada saliente' },
+  { id:'num', ic:'☎️', lb: c.saved ? 'Carmen' : '612 345 678', sub:'Llamada perdida · hoy' },
+  { id:'spam', ic:'☎️', lb:'900 123 456', sub: c.blocked ? 'Bloqueado 🚫' : 'Llamada entrante · hoy' }].map(row).join('')}</div>` + tabsBar('recientes');
+const detalle = () => list('612 345 678', [
+  { id:'llamar', ic:'📞', lb:'Llamar' }, { id:'sms', ic:'💬', lb:'Mensaje' }, { id:'anadir', ic:'➕', lb:'Añadir a contactos' }, { id:'historial', ic:'🕘', lb:'Historial' }]);
+const formulario = filled => sbar() + bar('Contacto nuevo') + `<div class="list">
+  <div class="field t${filled ? ' full' : ''}" data-id="field">${filled ? 'Carmen' : 'Toca aquí para escribir el nombre'}</div>
+  <div class="field" style="margin-top:.5em">📞 612 345 678</div>
+  <div class="pb pri t" data-id="guardar" style="margin-top:1em">Guardar</div></div>`;
+const spamMenu = c => recientes(c) + `<div class="scrim"></div><div class="popc"><div class="pop"><div class="ptitle">900 123 456</div>${[
+  { id:'llamar', ic:'📞', lb:'Llamar' }, { id:'bloquear', ic:'🚫', lb:'Bloquear' }, { id:'marcarspam', ic:'⚠️', lb:'Marcar como spam' }, { id:'borrar', ic:'🗑️', lb:'Borrar llamada' }].map(row).join('')}</div></div>`;
+
+/* Widgets */
+const widgetMenu = () => home() + popup([
+  { id:'fondos', ic:'🖼️', lb:'Fondos de pantalla' }, { id:'widgets', ic:'🧩', lb:'Widgets' }, { id:'ajinicio', ic:'⚙️', lb:'Ajustes de inicio' }]);
+const widgetPicker = () => sbar() + bar('Widgets') + `<div class="wgrid">${[['w_reloj','🕙','Reloj'],['w_bateria','🔋','Batería'],['w_tiempo','☀️','Tiempo'],['w_calendario','📅','Calendario']]
+  .map(([id, e, l]) => `<div class="wc t" data-id="${id}"><span>${e}</span><small>${l}</small></div>`).join('')}</div>`;
+
+/* =========================================================
+   Ejercicios (basados en la guía «Pequeñas destrezas»)
+   ========================================================= */
+const T = (text, hint, ok, screen, extra = {}) => ({ text, hint, ok, screen, do: 'tap', ...extra });
+const HOME = { theme: 'wall' };
+const A_AJUSTES = () => T('Abre <b>Ajustes</b>: el engranaje ⚙️.', 'Busca el engranaje ⚙️ entre los iconos.', 'ajustes', () => home(), HOME);
+
+const EX = [
+  { icon:'📶', accent:'var(--c6)', title:'Conectar al Wi-Fi', objective:'Conectar el móvil al internet de casa.',
+    note: () => 'El Wi-Fi permite navegar <b>sin gastar datos móviles</b>.',
+    steps: () => [
+      A_AJUSTES(),
+      T('Entra en <b>Wi-Fi</b> (a veces se llama <b>Internet</b>).', 'Es la primera opción de la lista.', 'wifi', () => settings()),
+      T('<b>Activa el interruptor</b> para encender el Wi-Fi.', 'Toca el interruptor de la derecha: se pone verde.', 'sw', () => wifiScr(false)),
+      T('Busca el nombre de <b>tu red</b> (el del rúter). Hoy es <b>MiCasa_WiFi</b>.', 'Busca el nombre MiCasa_WiFi en la lista.', 'net', () => wifiScr(true),
+        { wrong: { net_a:'Esa es la red de un vecino. Busca <b>MiCasa_WiFi</b>.', net_d:'Esa es otra red. Busca <b>MiCasa_WiFi</b>.', net_c:'Esa es la de una cafetería. Busca <b>MiCasa_WiFi</b>.' } }),
+      T('Toca el campo y <b>escribe la contraseña</b> (hoy: <b>12345678</b>).', 'Toca el recuadro que dice «Toca aquí…».', 'field', () => passScr(false)),
+      T('Pulsa <b>Conectar</b>.', 'Es el botón azul de la derecha.', 'conectar', () => passScr(true), { wrong: { cancelar:'Cancelar lo borra todo. Pulsa <b>Conectar</b>.' } }),
+      T('Si sale <b>✔</b>, ya está listo. Toca el ✔ para comprobarlo.', 'Toca la fila de MiCasa_WiFi.', 'check', () => wifiDone(), { done:'¡Conectado! Ya puedes navegar sin gastar datos.' })
+    ] },
+
+  { icon:'🔠', accent:'var(--c4)', title:'Letra más grande', objective:'Aumentar el tamaño de la letra para leer mejor.', brands:true,
+    note: b => 'Si te cuesta leer, puedes aumentar el tamaño.<br>' + (b === 'samsung'
+      ? '<b>Samsung:</b> Ajustes › Accesibilidad › Mejoras de visibilidad › Tamaño y estilo de fuente.'
+      : '<b>Xiaomi:</b> Ajustes › Pantalla › Tamaño del texto.'),
+    steps: b => {
+      const barra = title => T('<b>Mueve la barra</b> hacia la derecha hasta ver la letra cómoda.', 'Arrastra el círculo amarillo hacia la derecha.', 'slider', c => fontScr(title, c),
+        { do:'slider', enter: c => { c.fs = 2; }, goal: v => v >= 4, soft:'Todavía se ve pequeña. Mueve la barra un poco más a la derecha.',
+          onInput: (v, c) => { c.fs = v; const p = qs('.pv'); if (p) p.style.fontSize = fsz(v) + 'em'; }, done:'¡Mucho mejor! Así se lee cómodo.' });
+      return b === 'samsung' ? [
+        A_AJUSTES(),
+        T('Entra en <b>Accesibilidad</b>.', 'Está en la lista, con un muñequito ♿.', 'accesibilidad', () => settings('samsung')),
+        T('Toca <b>Mejoras de visibilidad</b>.', 'Es la segunda opción.', 'vis', () => list('Accesibilidad', [{ id:'audicion', ic:'🔊', lb:'Mejoras de audición' }, { id:'vis', ic:'👁️', lb:'Mejoras de visibilidad' }, { id:'inter', ic:'✋', lb:'Interacción y destreza' }])),
+        T('Toca <b>Tamaño y estilo de fuente</b>.', 'Es la primera opción.', 'fuente', () => list('Mejoras de visibilidad', [{ id:'fuente', ic:'🔠', lb:'Tamaño y estilo de fuente' }, { id:'zoom', ic:'🔍', lb:'Zoom de pantalla' }, { id:'oscuro', ic:'🌙', lb:'Tema oscuro' }, { id:'contraste', ic:'◐', lb:'Contraste alto' }])),
+        barra('Tamaño y estilo de fuente')
+      ] : [
+        A_AJUSTES(),
+        T('Entra en <b>Pantalla</b>.', 'Es la cuarta opción: 🖥️.', 'pantalla', () => settings('xiaomi')),
+        T('Toca <b>Tamaño del texto</b>.', 'Busca «Tamaño del texto».', 'tamtexto', () => list('Pantalla', [{ id:'brillo', ic:'☀️', lb:'Brillo' }, { id:'lectura', ic:'📖', lb:'Modo lectura' }, { id:'tamtexto', ic:'🔠', lb:'Tamaño del texto' }, { id:'siempre', ic:'🕒', lb:'Pantalla siempre activa' }])),
+        barra('Tamaño del texto')
+      ];
+    } },
+
+  { icon:'⏱️', accent:'var(--c3)', title:'Apagado de pantalla', objective:'Que la pantalla no se apague tan rápido.', brands:true,
+    note: b => 'Recomendado: <b>2 o 5 minutos</b>.<br>' + (b === 'samsung'
+      ? '<b>Samsung:</b> Ajustes › Pantalla › Tiempo de espera.'
+      : '<b>Xiaomi:</b> Ajustes › Pantalla siempre activa y Bloqueo › Suspender.'),
+    steps: b => {
+      const elegir = title => T('Elige <b>2 minutos</b> o <b>5 minutos</b>.', 'Busca «2 minutos» o «5 minutos» en la lista.', ['t2', 't5'], () => listR(title),
+        { wrong: { t15:'Es muy poco: la pantalla se apagaría enseguida. Elige 2 o 5 minutos.', t30:'Es muy poco: la pantalla se apagaría enseguida. Elige 2 o 5 minutos.',
+          t1:'Aún es poco. Elige 2 o 5 minutos.', t10:'Es demasiado: gastaría mucha batería. Elige 2 o 5 minutos.' }, done:'¡Perfecto! Ahora la pantalla aguanta más tiempo encendida.' });
+      return b === 'samsung' ? [
+        A_AJUSTES(),
+        T('Entra en <b>Pantalla</b>.', 'Es la cuarta opción: 🖥️.', 'pantalla', () => settings('samsung')),
+        T('Toca <b>Tiempo de espera</b>.', 'Busca «Tiempo de espera».', 'espera', () => list('Pantalla', [{ id:'brillo', ic:'☀️', lb:'Brillo' }, { id:'oscuro', ic:'🌙', lb:'Modo oscuro' }, { id:'espera', ic:'⏱️', lb:'Tiempo de espera' }, { id:'fuente', ic:'🔠', lb:'Tamaño de fuente' }])),
+        elegir('Tiempo de espera')
+      ] : [
+        A_AJUSTES(),
+        T('Entra en <b>Pantalla siempre activa y Bloqueo</b>.', 'Tiene un candado 🔒.', 'bloqueo', () => settings('xiaomi')),
+        T('Toca <b>Suspender</b>.', 'Busca «Suspender».', 'suspender', () => list('Pantalla siempre activa y Bloqueo', [{ id:'siempre', ic:'🕒', lb:'Pantalla siempre activa', right: sw(false) }, { id:'suspender', ic:'⏱️', lb:'Suspender', sub:'30 segundos' }, { id:'contra', ic:'🔑', lb:'Contraseña' }])),
+        elegir('Suspender')
+      ];
+    } },
+
+  { icon:'⚡', accent:'var(--c7)', title:'Funciones rápidas', objective:'Usar el menú superior: brillo, captura y lector QR.',
+    note: () => 'Desliza <b>un dedo desde arriba hacia abajo</b>. Para la captura también puedes deslizar <b>tres dedos hacia abajo</b>.',
+    steps: () => [
+      T('Desliza <b>un dedo desde arriba hacia abajo</b>: pulsa arriba (donde está la hora) y arrastra hacia abajo.', 'Pon el dedo arriba, donde está la hora, y arrastra hacia abajo sin soltar.', 'top', () => home({ top:'top' }),
+        { do:'swipe', theme:'wall', done:'¡Ahí está el menú!' }),
+      T('Mueve la barra de <b>Brillo</b> ☀️ para subir o bajar la luz de la pantalla.', 'Arrastra el círculo amarillo hacia un lado.', 'slider', c => panel(c),
+        { do:'slider', theme:'dark', bright:true, enter: c => { c.b = 50; }, goal: v => Math.abs(v - 50) >= 25, soft:'Muévela un poco más para notar el cambio.',
+          onInput: (v, c) => { c.b = v; const p = $('phin'); if (p) p.style.filter = `brightness(${bri(v)})`; }, done:'¡Eso es! Así se sube o se baja la luz.' }),
+      T('Pulsa <b>Captura de pantalla</b> (las tijeras ✂️).', 'Es el botón de las tijeras.', 'captura', c => panel(c),
+        { theme:'dark', bright:true, enter: c => { c.b = 50; }, fx:'flash', done:'¡Captura hecha! Se guarda como una foto en la Galería.' }),
+      T('Pregunta: ¿cómo se puede hacer una captura <b>sin abrir el menú</b>?', 'Piensa en cuántos dedos hay que usar.', 'q2', () => quiz(),
+        { wrong: { q1:'Un dedo hacia arriba no hace captura.', q3:'Dos dedos hacia los lados no hacen captura.' }, done:'¡Correcto! Tres dedos hacia abajo.' }),
+      T('Pulsa <b>Lector QR</b> para escanear códigos.', 'Es el botón con un cuadrado de puntitos 🔳.', 'qr', c => panel(c),
+        { theme:'dark', bright:true, enter: c => { c.b = 50; }, done:'¡Listo! Ahora solo hay que apuntar al código.' })
+    ],
+    end: { theme:'cam', screen: () => qrScr() } },
+
+  { icon:'📡', accent:'var(--c1)', title:'Compartir internet', objective:'Que tu móvil dé internet a otro aparato.',
+    note: () => 'Ajustes › Conexiones / Redes › <b>Zona Wi-Fi portátil</b> o <b>Hotspot</b>.',
+    steps: () => [
+      A_AJUSTES(),
+      T('Entra en <b>Conexiones</b> (o Redes).', 'Es la segunda opción: 🔗.', 'conexiones', () => settings()),
+      T('Busca <b>Zona Wi-Fi portátil</b> (también se llama <b>Hotspot</b>).', 'Busca la palabra «Zona».', 'hotspot', () => list('Conexiones', [{ id:'wifi', ic:'📶', lb:'Wi-Fi' }, { id:'bt', ic:'🔷', lb:'Bluetooth' }, { id:'avion', ic:'✈️', lb:'Modo avión' }, { id:'hotspot', ic:'📡', lb:'Zona Wi-Fi portátil', sub:'Compartir internet' }, { id:'datos', ic:'📊', lb:'Uso de datos' }])),
+      T('<b>Actívalo</b> con el interruptor.', 'Toca el interruptor de la derecha.', 'sw', () => hotspotScr(false)),
+      T('Mira el <b>nombre y la contraseña</b>: toca el cuadro donde aparecen.', 'Toca el cuadro blanco con el nombre de la red.', 'info', () => hotspotScr(true), { done:'¡Ya sabes qué datos darle al otro aparato!' })
+    ] },
+
+  { icon:'👤', accent:'var(--c4)', title:'Contactos y spam', objective:'Guardar un número en la agenda y bloquear uno molesto.',
+    note: () => '<b>Guardar:</b> Teléfono › Recientes › toca el número › Añadir a contactos.<br><b>Spam:</b> mantén pulsado el número › Bloquear o Marcar como spam.',
+    steps: () => [
+      T('<b>Parte 1 · Guardar contacto.</b> Abre <b>Teléfono</b> 📞.', 'Está abajo, en la fila fija: el teléfono 📞.', 'telefono', () => home(), HOME),
+      T('Ve a <b>Recientes</b>.', 'Mira la barra de abajo: 🕘 Recientes.', 'recientes', () => keypad()),
+      T('Toca el número <b>612 345 678</b>.', 'Es el de «Llamada perdida».', 'num', c => recientes(c)),
+      T('Pulsa <b>Añadir a contactos</b>.', 'Tiene un símbolo ➕.', 'anadir', () => detalle()),
+      T('Toca el campo y <b>escribe el nombre</b> (hoy: <b>Carmen</b>).', 'Toca el recuadro que dice «Toca aquí…».', 'field', () => formulario(false)),
+      T('Pulsa <b>Guardar</b>.', 'Es el botón azul.', 'guardar', () => formulario(true), { after: c => { c.saved = true; }, done:'¡Contacto guardado! Ahora saldrá su nombre.' }),
+      T('<b>Parte 2 · Bloquear spam.</b> <b>Mantén pulsado</b> el número molesto <b>900 123 456</b> (no basta tocar: deja el dedo apretado).', 'Pulsa sobre 900 123 456 y no sueltes hasta que se llene la barra amarilla.', 'spam', c => recientes(c),
+        { do:'hold' }),
+      T('Pulsa <b>Bloquear</b> o <b>Marcar como spam</b>.', 'Mira la lista: 🚫 Bloquear o ⚠️ Marcar como spam.', ['bloquear', 'marcarspam'], c => spamMenu(c),
+        { wrong: { borrar:'Eso solo borra la llamada, pero el número podría volver a llamar.' }, after: c => { c.blocked = true; }, done:'¡Número bloqueado! Ya no te molestará.' })
+    ],
+    end: { screen: c => recientes(c) } },
+
+  { icon:'🧩', accent:'var(--c3)', title:'Widgets', objective:'Poner información útil en la pantalla principal.',
+    note: () => 'Mantén pulsado un hueco vacío › <b>Widgets</b> › elige uno y arrástralo donde quieras.',
+    steps: () => [
+      T('<b>Mantén pulsado</b> un hueco vacío de la pantalla principal (el espacio sin iconos).', 'Pulsa en el espacio libre entre los iconos y el dock, y no sueltes hasta que se llene la barra.', 'gap', () => home({ gapId:'gap' }), { do:'hold', theme:'wall' }),
+      T('Toca <b>Widgets</b>.', 'Tiene un puzle 🧩.', 'widgets', () => widgetMenu(), { theme:'wall' }),
+      T('Elige uno: <b>reloj, batería, tiempo o calendario</b>.', 'Toca el que más te guste.', ['w_reloj', 'w_bateria', 'w_tiempo', 'w_calendario'], () => widgetPicker(),
+        { after: (c, id) => { c.w = id; } }),
+      T('<b>Arrástralo</b> donde quieras: ponle el dedo encima y muévelo sin soltar.', 'Pon el dedo sobre el widget y arrástralo.', 'widget', c => home({ widget:c.w, float:true }),
+        { do:'drag', theme:'wall', done:'¡Widget colocado! Ya ves la información sin abrir ninguna aplicación.' })
+    ],
+    end: { theme:'wall', screen: c => home({ widget:c.w }) } }
+];
+
+/* =========================================================
+   Estado y guardado
+   ========================================================= */
+const SL = EX.length + 2;                 // portada + ejercicios + final
+const KEY = 'practica-movil-destrezas-v1';
+let S = { slide: 0, stars: {}, brand: 'samsung' };
+try {
+  const p = JSON.parse(localStorage.getItem(KEY));
+  if (p) {
+    S.stars = p.stars || {}; S.brand = p.brand === 'xiaomi' ? 'xiaomi' : 'samsung';
+    if (Number.isInteger(p.slide) && p.slide >= 0 && p.slide < SL) S.slide = p.slide;
+  }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const starsHTML = n => `<span class="stars">${'★'.repeat(n)}<i>${'★'.repeat(3 - n)}</i></span>`;
+
+/* =========================================================
+   Motor del ejercicio
+   ========================================================= */
+let run = null;
+
+function startRun(i) {
+  run = { i, s: 0, ctx: {}, err: 0, hints: 0, busy: false, done: false, hint: false, steps: EX[i].steps(S.brand) };
+  enterStep();
+}
+function enterStep() { const s = run.steps[run.s]; if (s && s.enter) s.enter(run.ctx); }
+const curStep = () => (run && !run.done) ? run.steps[run.s] : null;
+
+function fb(kind, html) { const e = $('fb'); if (!e) return; e.className = 'fb' + (kind ? ' ' + kind : ''); e.innerHTML = html || ''; }
+
+function renderPhone() {
+  const phin = $('phin'); if (!phin) return;
+  const ex = EX[run.i], cur = curStep();
+  const src = run.done ? (ex.end || run.steps[run.steps.length - 1]) : cur;
+  phin.className = 'ph-in ' + (src.theme || '');
+  phin.style.filter = (cur && cur.bright) ? `brightness(${bri(run.ctx.b)})` : '';
+  phin.innerHTML = src.screen(run.ctx) + (run.done ? '<div class="bigcheck"><span>✔</span></div>' : '');
+  if (cur && run.hint) oks(cur).forEach(id => phin.querySelectorAll(`[data-id="${id}"]`).forEach(el => el.classList.add('hint')));
+}
+
+function renderPanel() {
+  const ex = EX[run.i];
+  $('note').innerHTML = '📋 <b>En tu móvil:</b> ' + ex.note(S.brand);
+  if (run.done) {
+    const n = starsOf(run);
+    $('now').innerHTML = `<div class="now-n">¡Ejercicio terminado!</div><div class="now-t">🎉 ${starsHTML(n)}<br>Ahora <b>hazlo en tu móvil de verdad</b>.</div>`;
+  } else {
+    $('now').innerHTML = `<div class="now-n">Paso ${run.s + 1} de ${run.steps.length}</div><div class="now-t">${run.steps[run.s].text}</div>`;
+  }
+  $('pips').innerHTML = run.steps.map((_, j) => `<span class="pip ${run.done || j < run.s ? 'past' : j === run.s ? 'cur' : ''}"></span>`).join('');
+  $('b-hint').hidden = run.done;
+  $('b-next').hidden = !run.done;
+  $('b-next').textContent = run.i === EX.length - 1 ? 'Ver resultado ▶' : 'Siguiente ejercicio ▶';
+}
+function paint() { renderPhone(); renderPanel(); }
+
+const starsOf = r => { const e = r.err + r.hints; return e <= 2 ? 3 : e <= 6 ? 2 : 1; };
+
+function success(step, id) {
+  const r = run; r.busy = true;
+  if (step.after) step.after(r.ctx, id);
+  fb('ok', '✅ ' + (step.done || '¡Muy bien!'));
+  const phin = $('phin');
+  if (phin) {
+    phin.classList.add('okp');
+    if (step.fx === 'flash') phin.insertAdjacentHTML('beforeend', '<div class="flash"></div>');
+  }
+  setTimeout(() => {
+    if (run !== r) return;
+    r.busy = false; r.hint = false; r.s++;
+    if (r.s >= r.steps.length) finish();
+    else { enterStep(); paint(); }
+  }, 1000);
+}
+
+function finish() {
+  run.done = true;
+  const n = starsOf(run);
+  S.stars[run.i] = Math.max(S.stars[run.i] || 0, n);
+  save(); paint(); updateChrome();
+  fb('ok', '✅ ' + (run.steps[run.steps.length - 1].done || '¡Muy bien!'));
+}
+
+function wrong(step, id, el, msg) {
+  run.err++;
+  if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+  fb('bad', '🙂 ' + (msg || (step.wrong && step.wrong[id]) || ('Ese no es. ' + step.hint)));
+}
+
+/* ---- Interacciones sobre el móvil ---- */
+const stage = $('stage');
+const targetOf = e => { const t = e.target.closest('[data-id]'); return (t && t.closest('.ph-in')) ? t : null; };
+
+stage.addEventListener('contextmenu', e => { if (e.target.closest('.ph-in')) e.preventDefault(); });
+
+stage.addEventListener('click', e => {
+  /* botones del panel */
+  const b = e.target.closest('button');
+  if (b && run) {
+    if (b.dataset.brand) { S.brand = b.dataset.brand; save(); startRun(run.i); document.querySelectorAll('.bchip').forEach(x => x.classList.toggle('on', x.dataset.brand === S.brand)); paint(); return; }
+    if (b.id === 'b-hint' && !run.done) {
+      run.hints++; run.hint = true; renderPhone();
+      fb('soft', '💡 ' + curStep().hint); return;
+    }
+    if (b.id === 'b-redo') { startRun(run.i); paint(); fb('', ''); return; }
+    if (b.id === 'b-next') { next(); return; }
+  }
+  const card = e.target.closest('.card');
+  if (card) { goSlide(+card.dataset.s); return; }
+  if (e.target.closest('#b-reset')) { S.stars = {}; save(); goSlide(0); return; }
+
+  /* toques sobre el móvil */
+  const step = curStep(); if (!step || run.busy) return;
+  const t = targetOf(e); if (!t) return;
+  const id = t.dataset.id;
+  if (step.do === 'slider') { if (id !== 'slider') wrong(step, id, t); return; }
+  if (step.do === 'tap') { oks(step).includes(id) ? success(step, id) : wrong(step, id, t); return; }
+  const ok = oks(step).includes(id);
+  if (step.do === 'hold') wrong(step, id, t, ok ? 'Eso ha sido un toque rápido. <b>Mantén el dedo apretado</b> sin soltar hasta que se llene la barra amarilla.' : null);
+  else if (step.do === 'swipe') wrong(step, id, t, ok ? 'No basta con tocar: <b>arrastra el dedo hacia abajo</b> sin soltar.' : null);
+  else if (step.do === 'drag') wrong(step, id, t, ok ? 'No basta con tocar: <b>arrastra el widget</b> sin soltar el dedo.' : null);
+});
+
+stage.addEventListener('pointerdown', e => {
+  const step = curStep(); if (!step || run.busy) return;
+  const t = targetOf(e); if (!t || !oks(step).includes(t.dataset.id)) return;
+  const r = run;
+  const cleanups = [];
+  const stopAll = () => { cleanups.forEach(f => f()); };
+  const listen = (ev, fn) => { document.addEventListener(ev, fn); cleanups.push(() => document.removeEventListener(ev, fn)); };
+
+  if (step.do === 'hold') {
+    t.classList.add('holding');
+    const timer = setTimeout(() => { stopAll(); t.classList.remove('holding'); if (run === r && !r.busy) success(step, t.dataset.id); }, 700);
+    cleanups.push(() => clearTimeout(timer));
+    const cancel = () => { t.classList.remove('holding'); stopAll(); };
+    listen('pointerup', cancel); listen('pointercancel', cancel);
+  } else if (step.do === 'swipe' || step.do === 'drag') {
+    const x0 = e.clientX, y0 = e.clientY;
+    listen('pointermove', ev => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      const ok = step.do === 'swipe' ? (dy > 45 && Math.abs(dy) > Math.abs(dx)) : Math.hypot(dx, dy) > 45;
+      if (ok) { stopAll(); if (run === r && !r.busy) success(step, t.dataset.id); }
+    });
+    listen('pointerup', stopAll); listen('pointercancel', stopAll);
+  }
+});
+
+stage.addEventListener('input', e => {
+  const step = curStep();
+  if (!step || run.busy || !e.target.matches('input[type=range]')) return;
+  if (step.onInput) step.onInput(+e.target.value, run.ctx, e.target);
+});
+stage.addEventListener('change', e => {
+  const step = curStep();
+  if (!step || run.busy || step.do !== 'slider' || !e.target.matches('input[type=range]')) return;
+  if (step.goal(+e.target.value)) success(step, 'slider');
+  else fb('soft', '🙂 ' + step.soft);
+});
+
+/* =========================================================
+   Diapositivas
+   ========================================================= */
+function renderSlide() {
+  const s = S.slide, st = $('stage');
+  let h = '';
+  if (s === 0) {
+    run = null;
+    document.documentElement.style.setProperty('--accent', 'var(--c6)');
+    $('top-title').textContent = 'Pequeñas destrezas con el móvil';
+    h = `<div class="slide menu">
+      <div class="big-emoji">📱</div>
+      <h1>Pequeñas destrezas</h1>
+      <p>Practica en un <b>móvil de mentira</b>: toca, desliza y mantén pulsado igual que en el tuyo. Elige un ejercicio:</p>
+      <div class="cards">${EX.map((e, i) => `<button class="card${S.stars[i] ? ' done' : ''}" type="button" data-s="${i + 1}" style="--ac:${e.accent}">
+        <span class="ce">${e.icon}</span><span>${i + 1}. ${e.title}</span>${starsHTML(S.stars[i] || 0)}</button>`).join('')}</div>
+    </div>`;
+  } else if (s === SL - 1) {
+    run = null;
+    document.documentElement.style.setProperty('--accent', 'var(--c3)');
+    $('top-title').textContent = '¡Terminado!';
+    const done = EX.filter((_, i) => S.stars[i]).length;
+    h = `<div class="slide finish">
+      <div class="trophy">🏆</div>
+      <h2>${done === EX.length ? '¡Enhorabuena!' : 'Casi lo tienes'}</h2>
+      <p>${done === EX.length ? 'Has practicado <b>todas las pequeñas destrezas</b>. Ahora toca hacerlas en tu móvil de verdad.' : `Has completado <b>${done} de ${EX.length}</b> ejercicios. Puedes volver a cualquiera con los números de abajo.`}</p>
+      <div class="sumlist">${EX.map((e, i) => `<span>${e.icon} ${starsHTML(S.stars[i] || 0)}</span>`).join('')}</div>
+      <button class="abtn" id="b-reset" type="button">↺ Borrar estrellas y empezar de nuevo</button>
+    </div>`;
+  } else {
+    const i = s - 1, ex = EX[i];
+    startRun(i);
+    document.documentElement.style.setProperty('--accent', ex.accent);
+    $('top-title').textContent = `Ejercicio ${i + 1} de ${EX.length}`;
+    h = `<div class="slide ex">
+      <div class="ex-main">
+        <div class="ex-head">
+          <div class="ex-icon">${ex.icon}</div>
+          <div><div class="ex-num">Ejercicio ${i + 1}</div><div class="ex-title">${ex.title}</div></div>
+        </div>
+        <div class="ex-obj">🎯 ${ex.objective}</div>
+        ${ex.brands ? `<div class="brands">Mi móvil es:
+          <button class="bchip${S.brand === 'samsung' ? ' on' : ''}" type="button" data-brand="samsung">Samsung</button>
+          <button class="bchip${S.brand === 'xiaomi' ? ' on' : ''}" type="button" data-brand="xiaomi">Xiaomi</button></div>` : ''}
+        <div class="ex-note" id="note"></div>
+        <div class="now" id="now"></div>
+        <div class="fb" id="fb"></div>
+        <div class="acts">
+          <button class="abtn" id="b-hint" type="button">💡 Pista</button>
+          <button class="abtn" id="b-redo" type="button">↺ Repetir</button>
+          <button class="abtn go" id="b-next" type="button" hidden>Siguiente ejercicio ▶</button>
+        </div>
+        <div class="pips" id="pips"></div>
+      </div>
+      <div class="ex-side"><div class="phone"><div class="ph-in" id="phin"></div></div></div>
+    </div>`;
+  }
+  st.innerHTML = h;
+  if (run) paint();
+  updateChrome();
+}
+
+function updateChrome() {
+  $('prev').disabled = S.slide === 0;
+  $('next').disabled = S.slide === SL - 1;
+  $('next').textContent = S.slide === 0 ? 'Empezar ▶' : 'Siguiente ▶';
+  document.querySelectorAll('.dot').forEach((d, k) => {
+    d.classList.toggle('on', k === S.slide);
+    d.classList.toggle('seen', k !== S.slide && k >= 1 && k <= EX.length && !!S.stars[k - 1]);
+  });
+  $('prog-fill').style.width = (S.slide / (SL - 1) * 100) + '%';
+  save();
+}
+
+function goSlide(s) { S.slide = Math.max(0, Math.min(SL - 1, s)); renderSlide(); }
+function next() { if (S.slide < SL - 1) goSlide(S.slide + 1); }
+function prev() { if (S.slide > 0) goSlide(S.slide - 1); }
+
+$('dots').innerHTML = Array.from({ length: SL }, (_, k) => {
+  const lb = k === 0 ? '🏠' : k === SL - 1 ? '🏆' : k;
+  const tt = k === 0 ? 'Menú' : k === SL - 1 ? 'Resultado' : EX[k - 1].title;
+  return `<button class="dot" type="button" data-s="${k}" title="${tt}">${lb}</button>`;
+}).join('');
+$('dots').addEventListener('click', e => { const d = e.target.closest('.dot'); if (d) goSlide(+d.dataset.s); });
+$('next').onclick = next;
+$('prev').onclick = prev;
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches && e.target.matches('input')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') { e.preventDefault(); goSlide(0); }
+  else if (e.key === 'End') { e.preventDefault(); goSlide(SL - 1); }
+  else if (e.key.toLowerCase() === 'f') toggleFull();
+});
+
+/* Pantalla completa */
+function toggleFull() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  } catch (e) {}
+}
+if (!document.fullscreenEnabled) $('btn-full').style.display = 'none';
+$('btn-full').onclick = toggleFull;
+document.addEventListener('fullscreenchange', () => {
+  $('btn-full').textContent = document.fullscreenElement ? '✕ Salir de pantalla completa' : '⛶ Pantalla completa';
+});
+
+renderSlide();
+</script>
+</body>
+</html>

@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memoria USB: guía práctica</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --c1:#25D366; --c2:#00BFA6; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43; --c9:#2DD4BF;
+  --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+  --win:#1a2440; --win-border:#2d3a5e; --task:#0d1830; --task-border:#1e2d4a;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+button, input, select { font-family:inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+
+.bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+.blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+.blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+.blob:nth-child(2){ width:400px; height:400px; background:var(--c4); bottom:-100px; right:-80px; animation-delay:-5s; }
+.blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+@keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+@keyframes popIn { from{opacity:0; transform:scale(.94) translateY(16px);} to{opacity:1; transform:none;} }
+@keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+@keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+@keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-12px) rotate(5deg);} }
+@keyframes fillBar { to { width:100%; } }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+
+.container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:22px 24px 30px; }
+.top { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+.badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.1; background:linear-gradient(135deg,var(--c6),var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+.mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+.mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+.mode:hover { color:var(--text); }
+.prog { display:flex; align-items:center; gap:14px; margin-bottom:14px; font-weight:800; color:var(--sub); }
+.prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+.prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+
+.layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,1.1fr); gap:26px; align-items:start; }
+.subtabs { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+.subtabs[hidden] { display:none; }
+.st { padding:8px 16px; border-radius:100px; border:2px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:var(--sub); font-weight:800; font-size:.95rem; cursor:pointer; transition:all .2s; }
+.st.on { background:rgba(255,217,61,.15); border-color:var(--c3); color:var(--text); }
+.st:hover { color:var(--text); }
+.tools { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+.tools[hidden] { display:none; }
+.tbtn { padding:10px 18px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:.95rem; cursor:pointer; transition:all .2s; }
+.tbtn:hover { transform:scale(1.04); border-color:var(--c6); }
+
+/* ---------- Simulación Escritorio ---------- */
+.desktop { position:relative; width:100%; aspect-ratio:16/9; max-width:100%; background:#0d1324; border-radius:16px; border:2px solid var(--win-border); box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05); overflow:hidden; font-size:clamp(12px, 1.8vw, 16px); user-select:none; -webkit-user-select:none; }
+.wallpaper { position:absolute; inset:0; background:linear-gradient(135deg,#0f1a36 0%,#1a2a4a 100%); background-image: radial-gradient(ellipse at 20% 30%, rgba(77,163,255,.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 70%, rgba(255,107,107,.06) 0%, transparent 60%); }
+.icons { position:absolute; left:16px; top:16px; display:grid; grid-template-columns:repeat(auto-fill, 80px); gap:12px 16px; }
+.dicon { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:6px; border-radius:8px; transition:background .2s; }
+.dicon:hover { background:rgba(255,255,255,.1); }
+.dicon.selected { background:rgba(77,163,255,.3); box-shadow:0 0 0 2px var(--c6); }
+.dicon img { width:48px; height:48px; image-rendering:pixelated; }
+.dicon span { font-size:.75rem; font-weight:700; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px; }
+
+.taskbar { position:absolute; left:0; right:0; bottom:0; height:48px; background:var(--task); border-top:1px solid var(--task-border); display:flex; align-items:center; padding:0 12px; gap:8px; z-index:10; }
+.start-btn { width:48px; height:40px; border-radius:8px; border:1px solid transparent; background:rgba(255,255,255,.08); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.4rem; transition:background .2s; }
+.start-btn:hover { background:rgba(255,255,255,.15); }
+.task-btn { height:40px; padding:0 14px; border-radius:8px; border:1px solid transparent; background:transparent; color:var(--text); font-weight:700; font-size:.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background .2s; }
+.task-btn:hover { background:rgba(255,255,255,.1); }
+.task-btn.active { background:rgba(77,163,255,.3); border-color:var(--c6); box-shadow:0 0 0 1px var(--c6) inset; }
+.task-spacer { flex:1; }
+.tray { display:flex; align-items:center; gap:6px; padding:0 8px; }
+.tray-btn { width:36px; height:36px; border-radius:6px; border:1px solid transparent; background:transparent; color:var(--sub); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:all .2s; }
+.tray-btn:hover { background:rgba(255,255,255,.1); color:var(--text); }
+.tray-btn.usb { color:var(--c3); }
+.clock { font-weight:700; font-size:.8rem; color:var(--sub); padding:0 8px; }
+
+/* Ventana Explorador */
+.explorer { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:90%; height:85%; max-width:900px; max-height:600px; background:var(--win); border:1px solid var(--win-border); border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,.7); display:none; flex-direction:column; overflow:hidden; z-index:20; animation:popIn .3s cubic-bezier(.34,1.56,.64,1); }
+.explorer.open { display:flex; }
+.explorer-header { height:40px; background:rgba(0,0,0,.2); border-bottom:1px solid var(--win-border); display:flex; align-items:center; gap:8px; padding:0 12px; }
+.explorer-title { font-weight:800; font-size:.85rem; flex:1; }
+.explorer-controls { display:flex; gap:4px; }
+.explorer-btn { width:28px; height:28px; border-radius:6px; border:1px solid transparent; background:transparent; color:var(--sub); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:all .2s; }
+.explorer-btn:hover { background:rgba(255,255,255,.1); color:var(--text); }
+.explorer-btn.close:hover { background:var(--c4); color:#0a1628; }
+.explorer-address { height:36px; background:rgba(0,0,0,.15); border-bottom:1px solid var(--win-border); display:flex; align-items:center; padding:0 10px; gap:8px; font-size:.8rem; }
+.addr-btn { padding:4px 8px; border-radius:4px; background:transparent; border:1px solid transparent; color:var(--sub); font-weight:700; cursor:pointer; transition:all .2s; }
+.addr-btn:hover { background:rgba(255,255,255,.1); color:var(--text); }
+.addr-btn.active { background:rgba(77,163,255,.2); border-color:var(--c6); color:var(--c6); }
+.addr-sep { color:var(--sub); opacity:.5; }
+.explorer-body { flex:1; display:flex; overflow:hidden; }
+.nav-pane { width:220px; min-width:220px; background:rgba(0,0,0,.15); border-right:1px solid var(--win-border); padding:8px; overflow:auto; }
+.nav-section { margin-bottom:12px; }
+.nav-section-title { font-size:.7rem; font-weight:800; text-transform:uppercase; color:var(--sub); letter-spacing:1px; padding:4px 8px; margin-bottom:4px; }
+.nav-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-weight:700; font-size:.85rem; color:var(--text); transition:background .2s; }
+.nav-item:hover { background:rgba(255,255,255,.08); }
+.nav-item.active { background:rgba(77,163,255,.2); color:var(--c6); }
+.nav-item img { width:20px; height:20px; flex-shrink:0; }
+.content-pane { flex:1; padding:12px; overflow:auto; background:var(--win); }
+.content-grid { display:grid; grid-template-columns:repeat(auto-fill, 100px); gap:12px; }
+.citem { display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px; border-radius:8px; cursor:pointer; transition:background .2s; border:2px solid transparent; }
+.citem:hover { background:rgba(255,255,255,.08); }
+.citem.selected { background:rgba(77,163,255,.2); border-color:var(--c6); }
+.citem img { width:48px; height:48px; }
+.citem span { font-size:.75rem; font-weight:700; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; }
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--sub); text-align:center; gap:8px; }
+.empty-state img { width:64px; height:64px; opacity:.5; }
+
+/* Menús contextuales */
+.ctx-menu { position:fixed; min-width:180px; background:var(--card); border:1px solid var(--win-border); border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,.6); padding:4px 0; z-index:100; animation:popIn .15s ease; display:none; }
+.ctx-menu.open { display:block; }
+.ctx-item { display:flex; align-items:center; gap:10px; padding:8px 16px; cursor:pointer; font-size:.85rem; font-weight:700; color:var(--text); transition:background .15s; }
+.ctx-item:hover { background:rgba(77,163,255,.15); color:var(--c6); }
+.ctx-item img { width:18px; height:18px; flex-shrink:0; }
+.ctx-sep { height:1px; background:var(--win-border); margin:4px 0; }
+.ctx-sub { position:relative; }
+.ctx-sub-menu { position:absolute; left:100%; top:0; min-width:160px; background:var(--card); border:1px solid var(--win-border); border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,.6); padding:4px 0; z-index:101; display:none; }
+.ctx-sub:hover .ctx-sub-menu { display:block; }
+.ctx-sub-arrow { margin-left:auto; font-size:.7rem; color:var(--sub); }
+
+/* Diálogos */
+.dialog-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; display:none; align-items:center; justify-content:center; }
+.dialog-overlay.open { display:flex; }
+.dialog { background:var(--win); border:1px solid var(--win-border); border-radius:12px; padding:24px; min-width:360px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,.8); animation:popIn .3s cubic-bezier(.34,1.56,.64,1); }
+.dialog h3 { font-family:'Fredoka One',cursive; font-size:1.3rem; margin-bottom:16px; color:var(--c6); }
+.dialog p { margin-bottom:16px; line-height:1.5; }
+.dialog-input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--win-border); background:rgba(0,0,0,.3); color:var(--text); font-size:.95rem; margin-bottom:12px; }
+.dialog-input:focus { border-color:var(--c6); }
+.dialog-btns { display:flex; gap:10px; justify-content:flex-end; }
+.dbtn { padding:10px 24px; border-radius:8px; border:1px solid transparent; font-weight:800; font-size:.9rem; cursor:pointer; transition:all .2s; }
+.dbtn.primary { background:var(--c6); color:#0a1628; }
+.dbtn.primary:hover { background:#3d91e8; }
+.dbtn.secondary { background:rgba(255,255,255,.1); color:var(--text); border-color:var(--win-border); }
+.dbtn.secondary:hover { background:rgba(255,255,255,.2); }
+.dbtn.danger { background:var(--c4); color:#0a1628; }
+.dbtn.danger:hover { background:#e85555; }
+
+/* Progreso copia */
+.copy-progress { position:fixed; left:50%; bottom:80px; transform:translateX(-50%); background:var(--card); border:1px solid var(--win-border); border-radius:12px; padding:16px 24px; min-width:280px; z-index:150; box-shadow:0 8px 30px rgba(0,0,0,.6); display:none; }
+.copy-progress.open { display:block; animation:popIn .2s ease; }
+.copy-progress-bar { height:8px; background:rgba(255,255,255,.1); border-radius:4px; overflow:hidden; margin-top:8px; }
+.copy-progress-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1)); border-radius:4px; transition:width .3s; }
+.copy-progress-text { font-size:.8rem; font-weight:700; color:var(--sub); }
+
+/* Toast */
+.toast { position:fixed; left:50%; bottom:100px; transform:translateX(-50%); background:rgba(10,22,40,.96); color:#fff; border:1px solid var(--c3); border-radius:100px; padding:10px 20px; font-weight:800; font-size:.9rem; z-index:300; opacity:0; transition:opacity .3s, transform .3s; pointer-events:none; }
+.toast.open { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* Partes Descubrir */
+.part { cursor:pointer; transition:box-shadow .25s, background .25s; position:relative; }
+.part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .25s; }
+.part:hover::after { background:color-mix(in srgb, var(--pc) 25%, transparent); }
+.pin { position:absolute; z-index:30; width:28px; height:28px; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:.85rem; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; font-family:'Nunito',sans-serif; }
+.pin.tr { top:-6px; right:-6px; }
+.part.found > .pin { animation:none; background:var(--c1); }
+.part.sel { z-index:25; box-shadow:0 0 0 3px var(--pc), 0 0 26px color-mix(in srgb, var(--pc) 80%, transparent); }
+.part.ok { box-shadow:0 0 0 3px var(--c1), 0 0 26px rgba(37,211,102,.8); z-index:25; }
+.part.bad { animation:shake .45s; box-shadow:0 0 0 3px var(--c4); z-index:25; }
+.mode-practica .pin { display:none; }
+
+/* Panel info */
+.side { position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; }
+.info { background:var(--card); border:1px solid rgba(255,255,255,.07); border-left:8px solid var(--ic,var(--c6)); border-radius:24px; padding:24px 26px; min-height:360px; animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both; transition:border-color .3s; }
+.info-num { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:50%; background:var(--ic,var(--c6)); color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+.info h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,2.6vw,2.3rem); line-height:1.15; margin-bottom:12px; color:var(--ic,var(--c6)); }
+.info h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.15rem; margin:14px 0 8px; color:var(--c3); }
+.info p { font-size:clamp(1.05rem,1.5vw,1.3rem); font-weight:600; line-height:1.5; margin-bottom:14px; }
+.info b { color:var(--c3); font-weight:800; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.chip { background:rgba(255,255,255,.07); border-radius:100px; padding:6px 14px; font-weight:800; font-size:clamp(.95rem,1.3vw,1.1rem); }
+.tip { background:rgba(255,217,61,.09); border-radius:14px; padding:12px 16px; color:var(--sub); font-weight:700; font-size:clamp(.95rem,1.3vw,1.1rem); margin-bottom:10px; }
+.tip b { color:var(--c3); }
+.hello { text-align:center; padding-top:30px; }
+.hello .big { font-size:3.4rem; margin-bottom:8px; }
+.hello h2 { color:var(--text); }
+.quiz-q { font-family:'Fredoka One',cursive; font-size:clamp(1.5rem,2.6vw,2.2rem); line-height:1.2; margin-bottom:14px; }
+.quiz-q span { color:var(--c3); }
+.feedback { font-size:1.3rem; font-weight:800; min-height:2em; margin:6px 0 12px; }
+.feedback.good { color:var(--c1); }
+.feedback.no { color:var(--c4); }
+.btn { padding:12px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; transition:all .2s; }
+.btn:hover { transform:scale(1.04); border-color:var(--c6); }
+.btn.go { background:rgba(37,211,102,.18); border-color:var(--c1); }
+.row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+.trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+.lh { display:flex; align-items:center; gap:14px; margin-bottom:8px; }
+.lh .ico { font-size:2.2rem; }
+.lh .nm { font-family:'Fredoka One',cursive; font-size:1.45rem; line-height:1.1; color:var(--ic,var(--c6)); }
+.retos { list-style:none; display:flex; flex-direction:column; gap:5px; }
+.retos li { display:flex; gap:10px; align-items:flex-start; padding:7px 12px; border-radius:12px; background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.07); font-weight:700; font-size:.95rem; line-height:1.3; transition:all .25s; }
+.retos .rb { width:22px; height:22px; border-radius:7px; flex-shrink:0; background:rgba(255,255,255,.1); display:grid; place-items:center; font-weight:800; font-size:.8rem; }
+.retos li small { display:block; color:var(--sub); font-weight:600; font-size:.82rem; }
+.retos li.on { background:rgba(37,211,102,.13); border-color:var(--c1); }
+.retos li.on .rb { background:var(--c1); color:#0a1628; }
+.retos li.on span.rt { opacity:.75; }
+.win-all { text-align:center; background:rgba(255,217,61,.1); border:2px solid var(--c3); border-radius:16px; padding:10px; margin-bottom:12px; font-weight:800; color:var(--c3); font-size:1.15rem; }
+.foot { text-align:center; margin-top:18px; }
+.btn-reset { padding:10px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; cursor:pointer; }
+.btn-reset:hover { color:var(--text); border-color:var(--c4); }
+@media (max-width:980px) { .layout { grid-template-columns:1fr; } .side { position:static; max-height:none; } .info { min-height:0; } .modes { margin-left:0; } .desktop { aspect-ratio:4/3; } .nav-pane { width:180px; min-width:180px; } .content-grid { grid-template-columns:repeat(auto-fill, 85px); } }
+
+/* Iconos SVG en línea */
+.icon-folder { fill:#FFD93D; }
+.icon-file { fill:#4DA3FF; }
+.icon-usb { fill:#C38BFF; }
+.icon-explorer { fill:#25D366; }
+.icon-desktop { fill:#FF9F43; }
+.icon-download { fill:#6BCB77; }
+.icon-eject { fill:#FF6B6B; }
+.icon-copy { fill:#00BFA6; }
+.icon-paste { fill:#2DD4BF; }
+.icon-newfolder { fill:#FFD93D; }
+.icon-globe { fill:#4DA3FF; }
+.icon-save { fill:#25D366; }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">🪟 Ordenador</span>
+    <h1>Memoria USB: guía práctica</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+  <div class="prog"><span id="prog-txt"></span><div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div></div>
+
+  <div class="layout">
+    <div>
+      <div class="subtabs" id="subtabs"></div>
+      <div class="desktop" id="desktop">
+        <div class="wallpaper"></div>
+        <div class="icons" id="deskIcons"></div>
+        <div class="taskbar">
+          <button class="start-btn" title="Inicio">⊞</button>
+          <button class="task-btn" id="taskExplorer" data-win="explorer" title="Explorador de archivos"><svg class="icon-explorer" width="20" height="20" viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg><span>Explorador</span></button>
+          <button class="task-btn" id="taskBrowser" data-win="browser" title="Navegador (Edge/Chrome)"><svg class="icon-globe" width="20" height="20" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm3-11h-2v4h-2v2h4v-2h-2V9z"/></svg><span>Navegador</span></button>
+          <div class="task-spacer"></div>
+          <div class="tray">
+            <button class="tray-btn usb" id="trayEject" title="Quitar hardware de forma segura" disabled>⏏</button>
+            <div class="clock" id="clock">10:30</div>
+          </div>
+        </div>
+      </div>
+      <div class="tools" id="tools" hidden>
+        <button class="tbtn" id="t-connect" type="button">🔌 Conectar USB</button>
+        <button class="tbtn" id="t-reset" type="button">↩️ Reiniciar simulación</button>
+      </div>
+
+      <!-- Ventana Explorador -->
+      <div class="explorer" id="explorer">
+        <div class="explorer-header">
+          <div class="explorer-title">Explorador de archivos</div>
+          <div class="explorer-controls">
+            <button class="explorer-btn" id="expMin" title="Minimizar">−</button>
+            <button class="explorer-btn" id="expMax" title="Maximizar">☐</button>
+            <button class="explorer-btn close" id="expClose" title="Cerrar">×</button>
+          </div>
+        </div>
+        <div class="explorer-address">
+          <button class="addr-btn active" data-path="thispc">Este equipo</button>
+          <span class="addr-sep">›</span>
+          <button class="addr-btn" data-path="usb" id="addrUsb" disabled>USB (E:)</button>
+          <span class="addr-sep" id="addrSep2" style="display:none">›</span>
+          <button class="addr-btn" data-path="usbFolder" id="addrUsbFolder" style="display:none" disabled></button>
+        </div>
+        <div class="explorer-body">
+          <nav class="nav-pane" id="navPane"></nav>
+          <div class="content-pane" id="contentPane"></div>
+        </div>
+      </div>
+
+      <!-- Diálogos -->
+      <div class="dialog-overlay" id="dlgOverlay">
+        <div class="dialog" id="dialog"></div>
+      </div>
+      <div class="dialog-overlay" id="dlgOverlay2">
+        <div class="dialog" id="dialog2"></div>
+      </div>
+
+      <!-- Progreso copia -->
+      <div class="copy-progress" id="copyProgress">
+        <div class="copy-progress-text" id="copyText">Copiando...</div>
+        <div class="copy-progress-bar"><div class="copy-progress-fill" id="copyFill"></div></div>
+      </div>
+
+      <!-- Toast -->
+      <div class="toast" id="toast"></div>
+
+      <!-- Menús contextuales -->
+      <div class="ctx-menu" id="ctxDesk"></div>
+      <div class="ctx-menu" id="ctxContent"></div>
+      <div class="ctx-menu" id="ctxNav"></div>
+    </div>
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const $$ = sel => document.querySelectorAll(sel);
+const restart = e => { e.style.animation="none"; e.offsetHeight; e.style.animation=""; };
+let modo = "desc";
+
+/* =========================================================
+   Datos del tema: partes para Descubrir/Practicar
+   ========================================================= */
+const PARTES = [
+  {id:"taskExplorer", n:1, nombre:"Icono Explorador de archivos", det:"el icono del Explorador de archivos en la barra de tareas", color:"--c6",
+    sitio:"En la barra de tareas, junto al botón Inicio. Es una carpeta amarilla.",
+    texto:"Abre el <b>Explorador de archivos</b> para ver tus carpetas, el escritorio y las unidades conectadas (como la memoria USB).",
+    chips:["📂 Abre Explorador","👀 Ver unidades","📁 Gestionar archivos"], tip:"También puedes pulsar <b>⊞ Win + E</b> para abrirlo rápido."},
+  {id:"navUsb", n:2, nombre:"Unidad USB en panel lateral", det:"la unidad de memoria USB en el panel de navegación", color:"--c3",
+    sitio:"En la columna izquierda del Explorador, bajo «Este equipo». Suele llamarse «USB (E:)» o con el nombre que le diste.",
+    texto:"Haz clic en la <b>unidad USB</b> para abrirla y ver su contenido. Si no aparece, pulsa en «Este equipo» y búsquela en la lista.",
+    chips:["📂 Abre la unidad","👁️ Ver contenido","📋 Copiar/pegar aquí"], tip:"El nombre puede variar: «USB Drive», «PENDRIVE», «SANDISK», etc."},
+  {id:"fileItem", n:3, nombre:"Archivo o carpeta a copiar", det:"el archivo o carpeta que quieres copiar", color:"--c1",
+    sitio:"En el panel derecho del Explorador, por ejemplo en «Escritorio» o «Descargas».",
+    texto:"Selecciona el <b>archivo o carpeta</b> que quieres llevar a la memoria USB. Un clic izquierdo lo selecciona.",
+    chips:["🖱️ Clic para seleccionar","📄 Foto, PDF, carpeta..."], tip:"Puedes seleccionar varios manteniendo <b>Ctrl</b> y haciendo clic."},
+  {id:"ctxCopy", n:4, nombre:"Opción «Copiar» del menú contextual", det:"la opción «Copiar» al hacer clic derecho", color:"--c8",
+    sitio:"Menú que aparece al hacer clic derecho sobre el archivo seleccionado.",
+    texto:"Con el archivo seleccionado, haz <b>clic derecho</b> y elige <b>«Copiar»</b>. El archivo queda en el portapapeles (memoria temporal).",
+    chips:["🖱️ Clic derecho","📋 Copiar","⌨️ Ctrl+C"], tip:"«Copiar» deja el original en su sitio. «Cortar» lo movería (úsalo solo si quieres mover)."},
+  {id:"ctxPaste", n:5, nombre:"Opción «Pegar» en la unidad USB", det:"la opción «Pegar» al hacer clic derecho en espacio vacío", color:"--c7",
+    sitio:"Dentro de la unidad USB abierta, haz clic derecho en un espacio en blanco (sin archivos).",
+    texto:"En la ventana de la memoria USB, haz <b>clic derecho en un hueco vacío</b> y pulsa <b>«Pegar»</b>. Comienza la copia.",
+    chips:["🖱️ Clic derecho en hueco","📥 Pegar","⌨️ Ctrl+V"], tip:"Espera a que termine la barra de progreso. No quites la USB hasta que acabe."},
+  {id:"ctxNewFolder", n:6, nombre:"Crear carpeta nueva", det:"la opción «Nuevo › Carpeta» al hacer clic derecho", color:"--c9",
+    sitio:"En la unidad USB (o en cualquier carpeta), clic derecho en espacio vacío › «Nuevo» › «Carpeta».",
+    texto:"Para organizar, crea carpetas: clic derecho en hueco › <b>Nuevo</b> › <b>Carpeta</b>. Escribe nombre y pulsa <b>Intro</b>.",
+    chips:["📁 Nueva carpeta","✍️ Escribe nombre","⏎ Intro"], tip:"Nombres claros: «Fotos», «Documentos», «Curso», «Viajes 2024»..."},
+  {id:"saveAsUsb", n:7, nombre:"Guardar descarga en la USB", det:"la unidad USB en la ventana «Guardar como»", color:"--c4",
+    sitio:"Al descargar un PDF, el navegador abre «Guardar como». Busca la USB en la columna izquierda.",
+    texto:"Al descargar, elige <b>«Guardar como»</b>, busca tu <b>memoria USB</b> a la izquierda, entra en la carpeta deseada y pulsa <b>Guardar</b>.",
+    chips:["💾 Guardar como","📂 Elige USB","📁 Carpeta destino","✅ Guardar"], tip:"¡Ojo! Si guardas en «Descargas», el archivo se queda en el ordenador, NO en la USB."},
+  {id:"trayEject", n:8, nombre:"Icono «Quitar hardware»", det:"el icono para expulsar la USB de forma segura", color:"--c5",
+    sitio:"En la bandeja del sistema (esquina inferior derecha, junto al reloj). A veces está oculto bajo la flecha ^.",
+    texto:"Antes de sacar la USB: cierra archivos y ventanas. Haz clic en el <b>icono USB ⏏</b>, elige tu dispositivo y espera el aviso <b>«Ya es seguro retirar el dispositivo»</b>.",
+    chips:["⏏ Expulsar","🕐 Espera aviso","🤲 Saca con suavidad"], tip:"Si no sale el aviso, cierra todo lo que use la USB e inténtalo de nuevo. No la fuerces."}
+];
+const TOTAL_PARTES = PARTES.length;
+
+/* =========================================================
+   Retos para Probar
+   ========================================================= */
+const RETOS_GRUPOS = [
+  {g:"🔌 Conectar y abrir", items:[
+    {id:"rConnect", t:"Conectar la memoria USB", h:"Botón «Conectar USB» bajo el escritorio"},
+    {id:"rOpenExp", t:"Abrir el Explorador de archivos", h:"Icono carpeta amarilla en barra de tareas (o Win+E)"},
+    {id:"rSelUsb", t:"Seleccionar la unidad USB en el panel lateral", h:"Clic en «USB (E:)» a la izquierda"} ]},
+  {g:"📤 Copiar del PC a la USB", items:[
+    {id:"rGoDesk", t:"Ir al Escritorio y seleccionar un archivo", h:"Panel lateral › «Escritorio» › clic en «Foto.jpg»"},
+    {id:"rCopy", t:"Copiar el archivo (clic derecho › Copiar)", h:"Clic derecho sobre el archivo › «Copiar»"},
+    {id:"rOpenUsb", t:"Abrir la unidad USB", h:"Panel lateral › «USB (E:)»"},
+    {id:"rPaste", t:"Pegar en la USB (clic derecho › Pegar)", h:"Clic derecho en hueco vacío de la USB › «Pegar»"},
+    {id:"rWaitCopy", t:"Esperar a que termine la copia", h:"Barra de progreso: espera a que complete"} ]},
+  {g:"📁 Crear carpeta en la USB", items:[
+    {id:"rNewFolder", t:"Crear carpeta «Mis documentos» en la USB", h:"En la USB › clic derecho hueco › Nuevo › Carpeta › escribe nombre › Intro"} ]},
+  {g:"🌐 Descargar PDF directo a USB", items:[
+    {id:"rOpenBrowser", t:"Abrir el navegador", h:"Icono globo en barra de tareas"},
+    {id:"rDownload", t:"Descargar PDF y elegir «Guardar como»", h:"Clic en enlace PDF › «Guardar como»"},
+    {id:"rSaveUsb", t:"Guardar en la USB (columna izquierda › USB › carpeta › Guardar)", h:"Ventana «Guardar como» › elige USB › Guardar"} ]},
+  {g:"📥 Copiar de la USB al PC", items:[
+    {id:"rCopyFromUsb", t:"Copiar un archivo de la USB", h:"Abre USB › clic derecho archivo › Copiar"},
+    {id:"rPasteDesk", t:"Pegar en el Escritorio", h:"Panel lateral › «Escritorio» › clic derecho hueco › Pegar"},
+    {id:"rCheckFile", t:"Comprobar que el archivo se abre", h:"Doble clic en el archivo copiado en el Escritorio"} ]},
+  {g:"🛡️ Retirar de forma segura", items:[
+    {id:"rCloseAll", t:"Cerrar ventanas y archivos de la USB", h:"Cierra el Explorador y cualquier visor abierto"},
+    {id:"rEject", t:"Expulsar la USB (icono bandeja › Expulsar)", h:"Esquina inferior derecha › ⏏ › «Expulsar USB (E:)»"},
+    {id:"rWaitSafe", t:"Esperar aviso «Ya es seguro retirar»", h:"Aparece notificación › entonces saca la USB"} ]}
+];
+const ALL_RETOS = RETOS_GRUPOS.flatMap(g => g.items);
+const TOTAL_RETOS = ALL_RETOS.length;
+
+/* =========================================================
+   Estado de la simulación (Probar)
+   ========================================================= */
+let sim = {
+  usbConnected: false,
+  explorerOpen: false,
+  browserOpen: false,
+  currentPath: "thispc", // thispc, desktop, downloads, usb, usbFolder
+  selectedItems: [],
+  clipboard: null, // {type:'copy'|'cut', items:[...]}
+  folders: {}, // simulated folders on USB
+  copyProgress: 0,
+  copying: false,
+  downloadDialog: false,
+  saveAsPath: null,
+  ejectReady: false
+};
+let retosHechos = {};
+
+/* =========================================================
+   Persistencia
+   ========================================================= */
+const KEY = "usb-guia-2026";
+function loadProgress() {
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if (d) {
+      if (d.found) PARTES.forEach(p => { if (d.found[p.id]) p.found = true; });
+      if (d.retos) retosHechos = d.retos;
+    }
+  } catch(e){}
+}
+function saveProgress() {
+  try {
+    const found = {}; PARTES.forEach(p => { if (p.found) found[p.id] = true; });
+    localStorage.setItem(KEY, JSON.stringify({found, retos: retosHechos}));
+  } catch(e){}
+}
+
+/* =========================================================
+   Utilidades UI
+   ========================================================= */
+function showToast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("open");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("open"), 3000);
+}
+function tickReto(id) {
+  if (!retosHechos[id]) {
+    retosHechos[id] = true; saveProgress(); renderInfo();
+    const r = ALL_RETOS.find(x => x.id === id);
+    if (r) showToast("✅ Reto: " + r.t);
+  }
+}
+function openDialog(html, onClose) {
+  $("dialog").innerHTML = html;
+  $("dlgOverlay").classList.add("open");
+  $("dlgOverlay").onclick = e => { if (e.target === $("dlgOverlay")) closeDialog(); };
+  window._dlgClose = onClose || (()=>{});
+}
+function closeDialog() {
+  $("dlgOverlay").classList.remove("open");
+  if (window._dlgClose) window._dlgClose();
+}
+function openDialog2(html, onClose) {
+  $("dialog2").innerHTML = html;
+  $("dlgOverlay2").classList.add("open");
+  $("dlgOverlay2").onclick = e => { if (e.target === $("dlgOverlay2")) closeDialog2(); };
+  window._dlgClose2 = onClose || (()=>{});
+}
+function closeDialog2() {
+  $("dlgOverlay2").classList.remove("open");
+  if (window._dlgClose2) window._dlgClose2();
+}
+function showCopyProgress(text) {
+  $("copyText").textContent = text;
+  $("copyFill").style.width = "0%";
+  $("copyProgress").classList.add("open");
+}
+function updateCopyProgress(pct) {
+  $("copyFill").style.width = pct + "%";
+}
+function hideCopyProgress() {
+  $("copyProgress").classList.remove("open");
+}
+
+/* =========================================================
+   Renderizado del escritorio y explorador
+   ========================================================= */
+function renderDesktop() {
+  const icons = [
+    {id:"deskFile", type:"file", name:"Foto.jpg", icon:"icon-file"},
+    {id:"deskFolder", type:"folder", name:"Documentos", icon:"icon-folder"},
+    {id:"deskPdf", type:"file", name:"Guia.pdf", icon:"icon-file"}
+  ];
+  $("deskIcons").innerHTML = icons.map(f => `
+    <div class="dicon ${sim.selectedItems.includes(f.id) ? 'selected' : ''}" data-id="${f.id}">
+      <svg class="${f.icon}" width="48" height="48" viewBox="0 0 24 24"><use href="#${f.icon}"/></svg>
+      <span>${f.name}</span>
+    </div>
+  `).join("");
+  // USB icon on desktop when connected
+  if (sim.usbConnected && !document.getElementById("deskUsb")) {
+    const usbIcon = document.createElement("div");
+    usbIcon.className = "dicon";
+    usbIcon.id = "deskUsb";
+    usbIcon.dataset.id = "usbDrive";
+    usbIcon.innerHTML = `<svg class="icon-usb" width="48" height="48" viewBox="0 0 24 24"><use href="#icon-usb"/></svg><span>USB (E:)</span>`;
+    $("deskIcons").appendChild(usbIcon);
+  } else if (!sim.usbConnected) {
+    const el = document.getElementById("deskUsb"); if (el) el.remove();
+  }
+  // Taskbar eject button
+  $("trayEject").disabled = !sim.usbConnected;
+  $("trayEject").classList.toggle("usb", sim.usbConnected);
+  // Explorer address bar USB button
+  $("addrUsb").disabled = !sim.usbConnected;
+  $("addrUsb").classList.toggle("active", sim.currentPath === "usb");
+  $("addrSep2").style.display = sim.currentPath.startsWith("usb") ? "inline" : "none";
+  $("addrUsbFolder").style.display = sim.currentPath === "usbFolder" ? "inline-block" : "none";
+  if (sim.currentPath === "usbFolder") {
+    $("addrUsbFolder").textContent = sim.usbFolderName || "Carpeta";
+    $("addrUsbFolder").disabled = false;
+  }
+  // Explorer window
+  $("explorer").classList.toggle("open", sim.explorerOpen);
+  if (sim.explorerOpen) renderExplorer();
+}
+function renderExplorer() {
+  // Nav pane
+  const navItems = [
+    {id:"quickAccess", icon:"icon-folder", name:"Acceso rápido", children:[
+      {id:"desktop", icon:"icon-desktop", name:"Escritorio"},
+      {id:"downloads", icon:"icon-folder", name:"Descargas"},
+      {id:"documents", icon:"icon-folder", name:"Documentos"}
+    ]},
+    {id:"thispc", icon:"icon-folder", name:"Este equipo", children:[
+      {id:"localDisk", icon:"icon-folder", name:"Disco local (C:)"},
+      {id:"usbDrive", icon:"icon-usb", name:"USB (E:)", disabled:!sim.usbConnected}
+    ]}
+  ];
+  let navHtml = "";
+  navItems.forEach(sec => {
+    navHtml += `<div class="nav-section"><div class="nav-section-title">${sec.name}</div>`;
+    sec.children.forEach(ch => {
+      const active = (ch.id === "usbDrive" && (sim.currentPath === "usb" || sim.currentPath === "usbFolder")) ||
+                     (ch.id === "desktop" && sim.currentPath === "desktop") ||
+                     (ch.id === "downloads" && sim.currentPath === "downloads") ||
+                     (ch.id === "documents" && sim.currentPath === "documents") ||
+                     (ch.id === "localDisk" && sim.currentPath === "thispc");
+      navHtml += `<div class="nav-item ${active ? 'active' : ''} ${ch.disabled ? 'disabled' : ''}" data-path="${ch.id}"><svg class="${ch.icon}" width="20" height="20" viewBox="0 0 24 24"><use href="#${ch.icon}"/></svg><span>${ch.name}</span></div>`;
+    });
+    navHtml += "</div>";
+  });
+  $("navPane").innerHTML = navHtml;
+
+  // Content pane
+  let contentHtml = "";
+  let items = [];
+  switch(sim.currentPath) {
+    case "thispc":
+      items = [
+        {id:"localDisk", type:"folder", name:"Disco local (C:)", icon:"icon-folder"},
+        {id:"usbDrive", type:"usb", name:"USB (E:)", icon:"icon-usb", disabled:!sim.usbConnected}
+      ];
+      break;
+    case "desktop":
+      items = [
+        {id:"deskFile", type:"file", name:"Foto.jpg", icon:"icon-file"},
+        {id:"deskFolder", type:"folder", name:"Documentos", icon:"icon-folder"},
+        {id:"deskPdf", type:"file", name:"Guia.pdf", icon:"icon-file"}
+      ];
+      break;
+    case "downloads":
+      items = [
+        {id:"dlFile1", type:"file", name:"Instalador.exe", icon:"icon-file"},
+        {id:"dlFile2", type:"file", name:"Manual.pdf", icon:"icon-file"}
+      ];
+      break;
+    case "documents":
+      items = [
+        {id:"docFile1", type:"file", name:"Carta.docx", icon:"icon-file"},
+        {id:"docFile2", type:"file", name:"Hoja.xlsx", icon:"icon-file"}
+      ];
+      break;
+    case "usb":
+      items = Object.entries(sim.folders).map(([k,v]) => ({id:"usbFolder_"+k, type:"folder", name:k, icon:"icon-folder"}));
+      if (items.length === 0) items.push({id:"usbEmpty", type:"empty", name:"(vacío)", icon:"icon-folder"});
+      break;
+    case "usbFolder":
+      items = sim.folders[sim.usbFolderName] || [];
+      if (items.length === 0) items.push({id:"usbFolderEmpty", type:"empty", name:"(vacío)", icon:"icon-folder"});
+      break;
+  }
+  if (items.some(i => i.type === "empty")) {
+    contentHtml = `<div class="empty-state"><svg class="icon-folder" width="64" height="64" viewBox="0 0 24 24"><use href="#icon-folder"/></svg><p>Esta carpeta está vacía</p><p style="font-size:.8rem; color:var(--sub)">Arrastra archivos aquí o pega desde el portapapeles</p></div>`;
+  } else {
+    contentHtml = `<div class="content-grid">${items.map(f => `
+      <div class="citem ${sim.selectedItems.includes(f.id) ? 'selected' : ''}" data-id="${f.id}" ${f.disabled ? 'style="opacity:.5;pointer-events:none"' : ''}>
+        <svg class="${f.icon}" width="48" height="48" viewBox="0 0 24 24"><use href="#${f.icon}"/></svg>
+        <span>${f.name}</span>
+      </div>
+    `).join("")}</div>`;
+  }
+  $("contentPane").innerHTML = contentHtml;
+}
+function renderBrowser() {
+  // Simplified browser: just a dialog with a download link
+  if (!sim.browserOpen) return;
+  openDialog(`
+    <h3>Navegador (Microsoft Edge / Chrome)</h3>
+    <p>Estás en una página con un documento PDF para descargar.</p>
+    <div style="border:1px solid var(--win-border); border-radius:8px; padding:16px; margin:16px 0; background:rgba(0,0,0,.2);">
+      <strong>📄 Manual_de_USB.pdf</strong> <span style="color:var(--sub); margin-left:8px">(2.3 MB)</span>
+      <div style="margin-top:12px;">
+        <button class="dbtn primary" id="btnDownloadPdf">⬇ Descargar PDF</button>
+      </div>
+    </div>
+    <p style="font-size:.85rem; color:var(--sub)">Al pulsar «Descargar», se abrirá la ventana «Guardar como».</p>
+  `, () => { sim.browserOpen = false; renderDesktop(); });
+  $("btnDownloadPdf").onclick = () => { closeDialog(); showSaveAsDialog(); };
+}
+function showSaveAsDialog() {
+  sim.downloadDialog = true;
+  openDialog(`
+    <h3>Guardar como</h3>
+    <p>Elige dónde guardar <b>Manual_de_USB.pdf</b>.</p>
+    <div style="display:flex; gap:12px; margin:16px 0;">
+      <div style="flex:1; min-width:180px; background:rgba(0,0,0,.2); border:1px solid var(--win-border); border-radius:8px; padding:8px; max-height:200px; overflow:auto;">
+        <div class="nav-section-title">Ubicaciones</div>
+        <div class="nav-item ${sim.saveAsPath==="desktop"?"active":""}" data-save="desktop"><svg class="icon-desktop" width="20" height="20" viewBox="0 0 24 24"><use href="#icon-desktop"/></svg><span>Escritorio</span></div>
+        <div class="nav-item ${sim.saveAsPath==="downloads"?"active":""}" data-save="downloads"><svg class="icon-folder" width="20" height="20" viewBox="0 0 24 24"><use href="#icon-folder"/></svg><span>Descargas</span></div>
+        <div class="nav-item ${sim.saveAsPath==="documents"?"active":""}" data-save="documents"><svg class="icon-folder" width="20" height="20" viewBox="0 0 24 24"><use href="#icon-folder"/></svg><span>Documentos</span></div>
+        <div class="nav-item ${sim.saveAsPath==="usb"?"active":""}" data-save="usb" ${!sim.usbConnected?"style='opacity:.5;pointer-events:none'" : ""}><svg class="icon-usb" width="20" height="20" viewBox="0 0 24 24"><use href="#icon-usb"/></svg><span>USB (E:)</span></div>
+      </div>
+      <div style="flex:2; min-width:220px; background:rgba(0,0,0,.2); border:1px solid var(--win-border); border-radius:8px; padding:8px; max-height:200px; overflow:auto;">
+        <div class="nav-section-title">${sim.saveAsPath==="usb"?"USB (E:)": sim.saveAsPath==="desktop"?"Escritorio": sim.saveAsPath==="downloads"?"Descargas":"Documentos"}</div>
+        ${(() => {
+          if (sim.saveAsPath === "usb") {
+            return Object.keys(sim.folders).map(k => `<div class="nav-item ${sim.saveAsPath==="usbFolder_"+k?"active":""}" data-save="usbFolder_${k}"><svg class="icon-folder" width="20" height="20" viewBox="0 0 24 24"><use href="#icon-folder"/></svg><span>${k}</span></div>`).join("") ||
+                   "<p style='padding:8px; color:var(--sub); font-size:.85rem'>(vacío — crea una carpeta en el Explorador)</p>";
+          }
+          return "<p style='padding:8px; color:var(--sub); font-size:.85rem'>Archivos y carpetas del destino...</p>";
+        })()}
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <input type="text" class="dialog-input" id="saveFileName" value="Manual_de_USB.pdf" placeholder="Nombre del archivo">
+      <button class="dbtn secondary" id="btnCancelSave">Cancelar</button>
+      <button class="dbtn primary" id="btnDoSave">Guardar</button>
+    </div>
+  `, () => { sim.downloadDialog = false; sim.saveAsPath = null; });
+  $$("#dialog .nav-item[data-save]").forEach(el => {
+    el.onclick = () => {
+      sim.saveAsPath = el.dataset.save;
+      showSaveAsDialog();
+    };
+  });
+  $("btnCancelSave").onclick = closeDialog;
+  $("btnDoSave").onclick = () => {
+    if (!sim.saveAsPath) { showToast("Elige una ubicación"); return; }
+    if (sim.saveAsPath === "usb") { showToast("Elige una carpeta dentro de la USB"); return; }
+    if (sim.saveAsPath.startsWith("usbFolder_")) {
+      const folder = sim.saveAsPath.replace("usbFolder_","");
+      showToast("✅ PDF guardado en USB › " + folder);
+      tickReto("rSaveUsb");
+    } else {
+      showToast("⚠ PDF guardado en " + sim.saveAsPath + " (se queda en el ordenador)");
+    }
+    closeDialog();
+    sim.downloadDialog = false;
+    sim.browserOpen = false;
+    renderDesktop();
+  };
+}
+
+/* =========================================================
+   Menús contextuales
+   ========================================================= */
+function showCtxMenu(menuId, x, y, items) {
+  const menu = $(menuId);
+  menu.innerHTML = items.map(it => `
+    <div class="ctx-item ${it.disabled?'disabled':''}" data-act="${it.act}" ${it.sub?'data-sub="true"':''}>
+      ${it.icon ? `<svg class="${it.icon}" width="18" height="18" viewBox="0 0 24 24"><use href="#${it.icon}"/></svg>` : ''}
+      <span>${it.label}</span>
+      ${it.sub ? '<span class="ctx-sub-arrow">›</span>' : ''}
+    </div>
+    ${it.sepAfter ? '<div class="ctx-sep"></div>' : ''}
+  `).join("");
+  menu.style.left = x + "px";
+  menu.style.top = y + "px";
+  menu.classList.add("open");
+  $$("#" + menuId + " .ctx-item:not(.disabled)").forEach(el => {
+    el.onclick = () => {
+      hideCtxMenus();
+      if (el.dataset.act) handleCtxAction(el.dataset.act);
+    };
+  });
+}
+function hideCtxMenus() {
+  $$(".ctx-menu").forEach(m => m.classList.remove("open"));
+}
+function handleCtxAction(act) {
+  switch(act) {
+    case "copy":
+      sim.clipboard = {type:"copy", items:[...sim.selectedItems]};
+      showToast("📋 Copiado al portapapeles");
+      if (sim.selectedItems.includes("deskFile") || sim.selectedItems.includes("deskFolder") || sim.selectedItems.includes("deskPdf")) tickReto("rCopy");
+      if (sim.currentPath.startsWith("usb") && sim.selectedItems.length) tickReto("rCopyFromUsb");
+      break;
+    case "cut":
+      sim.clipboard = {type:"cut", items:[...sim.selectedItems]};
+      showToast("✂ Cortado (se moverá al pegar)");
+      break;
+    case "paste":
+      if (!sim.clipboard || !sim.clipboard.items.length) { showToast("Portapapeles vacío"); return; }
+      doPaste();
+      break;
+    case "newFolder":
+      showNewFolderDialog();
+      break;
+    case "open":
+      // handled by double click
+      break;
+    case "eject":
+      ejectUsb();
+      break;
+    case "closeExp":
+      sim.explorerOpen = false; renderDesktop(); break;
+    case "closeBrowser":
+      sim.browserOpen = false; renderDesktop(); break;
+  }
+}
+function doPaste() {
+  if (!sim.clipboard) return;
+  const dest = sim.currentPath;
+  const isUsbDest = dest === "usb" || dest === "usbFolder";
+  const isDesktopDest = dest === "desktop";
+  showCopyProgress("Copiando " + sim.clipboard.items.length + " elemento(s)...");
+  sim.copying = true;
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += Math.random() * 15 + 5;
+    if (progress >= 100) { progress = 100; clearInterval(interval); finishPaste(); }
+    updateCopyProgress(progress);
+  }, 150);
+  function finishPaste() {
+    hideCopyProgress();
+    sim.copying = false;
+    showToast("✅ Pegado completado");
+    if (isUsbDest && sim.clipboard.type === "copy") tickReto("rPaste");
+    if (isUsbDest && sim.clipboard.type === "copy") tickReto("rWaitCopy");
+    if (isDesktopDest && sim.clipboard.type === "copy") { tickReto("rPasteDesk"); tickReto("rCheckFile"); }
+    // Simulate file appearing
+    if (isUsbDest) {
+      sim.clipboard.items.forEach(id => {
+        if (dest === "usb") {
+          // create a generic file in USB root
+          const name = id.replace("desk","").replace("dl","").replace("doc","") + "_" + Date.now();
+          sim.folders["_root"] = sim.folders["_root"] || [];
+          sim.folders["_root"].push({id:name, type:"file", name:name, icon:"icon-file"});
+        } else if (dest === "usbFolder") {
+          sim.folders[sim.usbFolderName] = sim.folders[sim.usbFolderName] || [];
+          sim.folders[sim.usbFolderName].push({id:id, type:"file", name:id, icon:"icon-file"});
+        }
+      });
+    }
+    if (isDesktopDest) {
+      // file appears on desktop (simulated)
+    }
+    sim.clipboard = null;
+    sim.selectedItems = [];
+    renderExplorer();
+  }
+}
+function showNewFolderDialog() {
+  openDialog2(`
+    <h3>Nueva carpeta</h3>
+    <p>Escribe el nombre de la carpeta en la memoria USB.</p>
+    <input type="text" class="dialog-input" id="newFolderName" placeholder="Ej: Mis documentos" autocomplete="off">
+    <div class="dialog-btns">
+      <button class="dbtn secondary" id="btnCancelFolder">Cancelar</button>
+      <button class="dbtn primary" id="btnCreateFolder">Crear</button>
+    </div>
+  `);
+  $("newFolderName").focus();
+  $("btnCancelFolder").onclick = closeDialog2;
+  $("btnCreateFolder").onclick = () => {
+    const name = $("newFolderName").value.trim();
+    if (!name) { showToast("Escribe un nombre"); return; }
+    if (sim.currentPath === "usb") {
+      sim.folders[name] = [];
+      showToast("📁 Carpeta «" + name + "» creada en la USB");
+      tickReto("rNewFolder");
+    } else if (sim.currentPath === "usbFolder") {
+      sim.folders[sim.usbFolderName].push({id:"folder_"+name, type:"folder", name:name, icon:"icon-folder"});
+      showToast("📁 Subcarpeta «" + name + "» creada");
+    }
+    closeDialog2();
+    renderExplorer();
+  };
+}
+
+/* =========================================================
+   Acciones principales
+   ========================================================= */
+function connectUsb() {
+  if (sim.usbConnected) { showToast("La USB ya está conectada"); return; }
+  sim.usbConnected = true;
+  sim.folders = {}; // reset USB content
+  showToast("🔌 Memoria USB conectada — Windows la ha reconocido");
+  tickReto("rConnect");
+  $("trayEject").disabled = false;
+  renderDesktop();
+}
+function openExplorer() {
+  sim.explorerOpen = true;
+  sim.currentPath = "thispc";
+  renderDesktop();
+  tickReto("rOpenExp");
+}
+function openBrowser() {
+  sim.browserOpen = true;
+  renderBrowser();
+  tickReto("rOpenBrowser");
+}
+function navigateExplorer(path) {
+  if (path === "usbDrive" && !sim.usbConnected) { showToast("Conecta primero la USB"); return; }
+  if (path === "usbDrive") { sim.currentPath = "usb"; tickReto("rSelUsb"); tickReto("rOpenUsb"); }
+  else if (path === "desktop") { sim.currentPath = "desktop"; tickReto("rGoDesk"); }
+  else if (path === "downloads") sim.currentPath = "downloads";
+  else if (path === "documents") sim.currentPath = "documents";
+  else if (path === "localDisk") sim.currentPath = "thispc";
+  else if (path === "thispc") sim.currentPath = "thispc";
+  else if (path.startsWith("usbFolder_")) {
+    sim.currentPath = "usbFolder";
+    sim.usbFolderName = path.replace("usbFolder_","");
+  }
+  renderExplorer();
+}
+function ejectUsb() {
+  if (!sim.usbConnected) return;
+  if (sim.explorerOpen && (sim.currentPath === "usb" || sim.currentPath === "usbFolder")) {
+    showToast("Cierra la ventana de la USB antes de expulsar");
+    return;
+  }
+  // check if any file from USB is "open" (simulated)
+  sim.usbConnected = false;
+  sim.ejectReady = true;
+  showToast("✅ Ya es seguro retirar el dispositivo");
+  tickReto("rEject");
+  tickReto("rWaitSafe");
+  renderDesktop();
+}
+
+/* =========================================================
+   Eventos globales
+   ========================================================= */
+document.addEventListener("click", e => {
+  if (modo !== "live") return;
+  // Desktop icons
+  const deskIcon = e.target.closest(".dicon");
+  if (deskIcon && deskIcon.parentElement === $("deskIcons")) {
+    const id = deskIcon.dataset.id;
+    if (id === "usbDrive") { navigateExplorer("usbDrive"); sim.explorerOpen = true; renderDesktop(); return; }
+    // Select file
+    if (e.ctrlKey) {
+      if (sim.selectedItems.includes(id)) sim.selectedItems = sim.selectedItems.filter(x => x !== id);
+      else sim.selectedItems.push(id);
+    } else {
+      sim.selectedItems = [id];
+    }
+    renderDesktop();
+    return;
+  }
+  // Taskbar buttons
+  const taskBtn = e.target.closest(".task-btn");
+  if (taskBtn) {
+    if (taskBtn.id === "taskExplorer") { if (sim.explorerOpen) { sim.explorerOpen = false; } else openExplorer(); renderDesktop(); }
+    if (taskBtn.id === "taskBrowser") { if (sim.browserOpen) { sim.browserOpen = false; renderDesktop(); } else openBrowser(); }
+    return;
+  }
+  // Explorer nav items
+  const navItem = e.target.closest(".nav-item[data-path]");
+  if (navItem && navItem.closest("#navPane")) {
+    if (navItem.classList.contains("disabled")) return;
+    navigateExplorer(navItem.dataset.path);
+    return;
+  }
+  // Explorer content items
+  const contentItem = e.target.closest(".citem[data-id]");
+  if (contentItem && contentItem.closest("#contentPane")) {
+    const id = contentItem.dataset.id;
+    if (e.ctrlKey) {
+      if (sim.selectedItems.includes(id)) sim.selectedItems = sim.selectedItems.filter(x => x !== id);
+      else sim.selectedItems.push(id);
+    } else {
+      sim.selectedItems = [id];
+    }
+    renderExplorer();
+    // Double click to open folder
+    if (e.detail === 2) {
+      if (id.startsWith("usbFolder_")) {
+        navigateExplorer(id);
+      } else if (id === "usbDrive") {
+        navigateExplorer("usbDrive");
+      } else if (id === "deskFolder" || id === "documents") {
+        navigateExplorer("documents");
+      }
+    }
+    return;
+  }
+  // Explorer address bar
+  const addrBtn = e.target.closest(".addr-btn[data-path]");
+  if (addrBtn && addrBtn.closest(".explorer-address")) {
+    if (addrBtn.disabled) return;
+    if (addrBtn.dataset.path === "usb") navigateExplorer("usbDrive");
+    else if (addrBtn.dataset.path === "thispc") navigateExplorer("thispc");
+    else if (addrBtn.dataset.path === "usbFolder") navigateExplorer("usbFolder_" + sim.usbFolderName);
+    return;
+  }
+  // Explorer controls
+  if (e.target.id === "expClose") { sim.explorerOpen = false; renderDesktop(); }
+  if (e.target.id === "expMin") { sim.explorerOpen = false; renderDesktop(); }
+  // Tray eject
+  if (e.target.id === "trayEject" || e.target.closest("#trayEject")) { ejectUsb(); }
+  // Tools
+  if (e.target.id === "t-connect") connectUsb();
+  if (e.target.id === "t-reset") resetSimulation();
+  // Close context menus if clicking outside
+  if (!e.target.closest(".ctx-menu")) hideCtxMenus();
+});
+
+document.addEventListener("contextmenu", e => {
+  if (modo !== "live") return;
+  // Desktop context menu
+  if (e.target.closest(".dicon") && e.target.closest("#deskIcons")) {
+    e.preventDefault();
+    const id = e.target.closest(".dicon").dataset.id;
+    sim.selectedItems = [id];
+    renderDesktop();
+    showCtxMenu("ctxDesk", e.clientX, e.clientY, [
+      {label:"Abrir", act:"open", icon:"icon-folder"},
+      {label:"Copiar", act:"copy", icon:"icon-copy"},
+      {label:"Cortar", act:"cut", icon:"icon-copy"},
+      {sepAfter:true},
+      {label:"Eliminar", act:"delete", icon:"icon-file", disabled:true},
+      {label:"Propiedades", act:"props", disabled:true}
+    ]);
+    return;
+  }
+  // Explorer content context menu
+  const citem = e.target.closest(".citem[data-id]");
+  if (citem && citem.closest("#contentPane")) {
+    e.preventDefault();
+    const id = citem.dataset.id;
+    if (!sim.selectedItems.includes(id)) sim.selectedItems = [id];
+    renderExplorer();
+    const isFolder = citem.querySelector(".icon-folder");
+    const isUsb = sim.currentPath.startsWith("usb");
+    showCtxMenu("ctxContent", e.clientX, e.clientY, [
+      {label:"Abrir", act:"open", icon:isFolder?"icon-folder":"icon-file"},
+      {label:"Copiar", act:"copy", icon:"icon-copy"},
+      {label:"Cortar", act:"cut", icon:"icon-copy"},
+      {sepAfter:true},
+      {label:"Pegar", act:"paste", icon:"icon-paste", disabled:!sim.clipboard || !sim.clipboard.items.length},
+      {label:"Nuevo › Carpeta", act:"newFolder", icon:"icon-newfolder", disabled:!isUsb},
+      {sepAfter:true},
+      {label:"Eliminar", act:"delete", disabled:true},
+      {label:"Propiedades", act:"props", disabled:true}
+    ]);
+    return;
+  }
+  // Explorer nav context menu
+  const navItem = e.target.closest(".nav-item[data-path]");
+  if (navItem && navItem.closest("#navPane")) {
+    e.preventDefault();
+    const path = navItem.dataset.path;
+    if (path === "usbDrive") {
+      showCtxMenu("ctxNav", e.clientX, e.clientY, [
+        {label:"Abrir", act:"open", icon:"icon-usb"},
+        {label:"Expulsar", act:"eject", icon:"icon-eject"}
+      ]);
+    }
+    return;
+  }
+  // Empty space in content pane
+  if (e.target.closest("#contentPane") && !citem && !e.target.closest(".empty-state")) {
+    e.preventDefault();
+    sim.selectedItems = [];
+    renderExplorer();
+    const isUsb = sim.currentPath.startsWith("usb");
+    showCtxMenu("ctxContent", e.clientX, e.clientY, [
+      {label:"Pegar", act:"paste", icon:"icon-paste", disabled:!sim.clipboard || !sim.clipboard.items.length},
+      {label:"Nuevo › Carpeta", act:"newFolder", icon:"icon-newfolder", disabled:!isUsb},
+      {sepAfter:true},
+      {label:"Vista", act:"view", disabled:true},
+      {label:"Ordenar por", act:"sort", disabled:true}
+    ]);
+    return;
+  }
+  // Desktop empty space
+  if (e.target.closest(".desktop") && !deskIcon && !e.target.closest(".taskbar") && !e.target.closest(".explorer")) {
+    e.preventDefault();
+    sim.selectedItems = [];
+    renderDesktop();
+    showCtxMenu("ctxDesk", e.clientX, e.clientY, [
+      {label:"Nuevo › Carpeta", act:"newFolder", icon:"icon-newfolder", disabled:true},
+      {label:"Pegar", act:"paste", icon:"icon-paste", disabled:!sim.clipboard || !sim.clipboard.items.length},
+      {sepAfter:true},
+      {label:"Configuración de pantalla", act:"disp", disabled:true},
+      {label:"Personalizar", act:"pers", disabled:true}
+    ]);
+  }
+});
+
+/* =========================================================
+   Modo Descubrir / Practicar
+   ========================================================= */
+function renderStaticParts() {
+  // Show a static explorer window with parts marked
+  const explorer = $("explorer");
+  explorer.classList.add("open");
+  explorer.style.pointerEvents = "none"; // prevent interaction
+  // We'll overlay pins on the static parts
+  // For simplicity, we'll create a static screenshot-like view with pins
+  // But the requirement is to mark parts on the simulated screen.
+  // We'll add pins to the actual desktop/explorer elements by toggling a class.
+  // However, in Descubrir mode we want a static view. Let's create a static overlay.
+  // Instead, we'll use the real desktop but disable interaction and add pins.
+  sim.explorerOpen = true;
+  sim.currentPath = "usb"; // show USB content
+  sim.usbConnected = true;
+  sim.folders = {"Mis documentos":[], "Fotos":[]};
+  renderDesktop();
+  // Add pins to the relevant elements
+  PARTES.forEach(p => {
+    const el = document.getElementById(p.id);
+    if (el) {
+      el.classList.add("part");
+      el.style.setProperty("--pc", "var(" + p.color + ")");
+      if (!el.querySelector(".pin")) {
+        const pin = document.createElement("span");
+        pin.className = "pin tr";
+        pin.textContent = p.found ? p.n : "?";
+        el.appendChild(pin);
+      }
+    }
+  });
+  // Also need pins for navUsb (nav item), fileItem (content item), ctxCopy/ctxPaste/ctxNewFolder (context menu items), saveAsUsb (dialog), trayEject (tray button)
+  // These are not always visible. For Descubrir, we'll show a static explorer with context menus open? Too complex.
+  // Alternative: In Descubrir, we show a static image with numbered callouts. But the example uses interactive pins on the live simulation.
+  // We'll follow the example: in Descubrir, the simulation is interactive but only for discovering parts. The user clicks pins.
+  // So we enable pointerEvents on the pins only.
+  explorer.style.pointerEvents = "auto";
+  // But we don't want full simulation. We'll just let the user click the pins.
+  // We'll attach click handlers to .part elements in Descubrir mode.
+}
+function clearParts() {
+  $$(".part").forEach(el => {
+    el.classList.remove("part", "sel", "ok", "bad", "found");
+    el.style.removeProperty("--pc");
+    const pin = el.querySelector(".pin");
+    if (pin) pin.remove();
+  });
+  $$(".dicon, .nav-item, .citem, .task-btn, .tray-btn, .addr-btn, .ctx-item").forEach(el => {
+    el.classList.remove("part", "sel", "ok", "bad", "found");
+    el.style.removeProperty("--pc");
+    const pin = el.querySelector(".pin");
+    if (pin) pin.remove();
+  });
+}
+function attachPartListeners() {
+  // We'll delegate clicks on .part
+  document.removeEventListener("click", partClickHandler);
+  document.addEventListener("click", partClickHandler);
+}
+function partClickHandler(e) {
+  if (modo !== "desc" && modo !== "prac") return;
+  const part = e.target.closest(".part");
+  if (!part) return;
+  const partId = part.id || part.dataset.id;
+  const p = PARTES.find(x => x.id === partId);
+  if (!p) return;
+  if (modo === "desc") showPartInfo(p);
+  else if (modo === "prac") checkPractice(partId);
+}
+function showPartInfo(p) {
+  clearSelection();
+  p.found = true; saveProgress();
+  // highlight all instances
+  const els = document.querySelectorAll("#" + p.id + ", [data-id='" + p.id + "']");
+  els.forEach(el => {
+    el.classList.add("part", "found", "sel");
+    el.style.setProperty("--pc", "var(" + p.color + ")");
+    if (!el.querySelector(".pin")) {
+      const pin = document.createElement("span");
+      pin.className = "pin tr";
+      pin.textContent = p.n;
+      el.appendChild(pin);
+    } else {
+      el.querySelector(".pin").textContent = p.n;
+    }
+  });
+  renderInfoDescubrir(p);
+  updateProgress();
+}
+function clearSelection() {
+  $$(".part.sel").forEach(el => el.classList.remove("sel"));
+}
+function renderInfoDescubrir(p) {
+  const info = $("info");
+  info.style.setProperty("--ic", "var(" + p.color + ")");
+  info.innerHTML = `
+    <div class="info-num">${p.n}</div>
+    <h2>${p.nombre}</h2>
+    <p>${p.texto}</p>
+    <p style="color:var(--sub);font-size:1.05rem">📍 ${p.sitio}</p>
+    <div class="chips">${p.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>
+    <div class="tip"><b>💡 Consejo:</b> ${p.tip}</div>
+  `;
+  restart(info);
+  // Check if all found
+  const allFound = PARTES.every(x => x.found);
+  if (allFound) {
+    info.insertAdjacentHTML("beforeend", `<div class="row"><button class="btn go" id="toLive">🛠️ ¡Ahora a probarlo!</button></div>`);
+    $("toLive").onclick = () => setModo("live");
+  }
+}
+function checkPractice(partId) {
+  if (!pregunta) return;
+  const fb = $("fb");
+  if (partId === pregunta) {
+    clearSelection();
+    const els = document.querySelectorAll("#" + partId + ", [data-id='" + partId + "']");
+    els.forEach(el => { el.classList.add("part", "ok"); el.style.setProperty("--pc", "var(--c1)"); });
+    hechas.push(partId); aciertos++; pregunta = null; updateProgress();
+    fb.className = "feedback good"; fb.textContent = "✅ ¡Correcto! " + PARTES.find(x => x.id === partId).nombre;
+    const p = PARTES.find(x => x.id === partId);
+    $("info").insertAdjacentHTML("beforeend", `<p style="color:var(--sub)">${p.texto}</p><div class="row"><button class="btn go" id="sig" type="button">${hechas.length===PARTES.length?"🏆 Terminar":"Siguiente ➜"}</button></div>`);
+    $("sig").onclick = nuevaPregunta;
+  } else {
+    const els = document.querySelectorAll("#" + partId + ", [data-id='" + partId + "']");
+    els.forEach(el => { el.classList.add("part", "bad"); el.style.setProperty("--pc", "var(--c4)"); });
+    setTimeout(() => els.forEach(el => el.classList.remove("bad")), 900);
+    fb.className = "feedback no"; fb.textContent = "❌ Eso es " + PARTES.find(x => x.id === partId).det + ". ¡Inténtalo otra vez!";
+  }
+}
+
+/* =========================================================
+   Modo Probar: retos y panel
+   ========================================================= */
+function renderInfo() {
+  if (modo !== "live") return;
+  const n = Object.keys(retosHechos).length;
+  const info = $("info");
+  info.style.setProperty("--ic", "var(--c6)");
+  info.innerHTML = (n === TOTAL_RETOS ? '<div class="win-all">🏆 ¡Todos los retos superados!</div>' : '') +
+    '<div class="lh"><span class="ico">💻</span><div class="nm">Simulación Windows 11</div></div>' +
+    '<p>Realiza los pasos de la guía. Los retos se marcan solos al completarlos.</p>' +
+    RETOS_GRUPOS.map(gr => `
+      <h3>${gr.g}</h3>
+      <ul class="retos">${gr.items.map(r => `
+        <li class="${retosHechos[r.id] ? 'on' : ''}">
+          <span class="rb">${retosHechos[r.id] ? '✓' : ''}</span>
+          <span class="rt">${r.t}<small>${r.h}</small></span>
+        </li>
+      `).join("")}</ul>
+    `).join("");
+}
+function updateProgress() {
+  let n, tot, txt;
+  if (modo === "desc") { n = PARTES.filter(p => p.found).length; tot = TOTAL_PARTES; txt = "⭐ " + n + " de " + tot + " partes descubiertas"; }
+  else if (modo === "prac") { n = aciertos; tot = PARTES.length; txt = "🎯 " + n + " de " + tot + " aciertos"; }
+  else { n = Object.keys(retosHechos).length; tot = TOTAL_RETOS; txt = "🛠️ " + n + " de " + tot + " retos superados"; }
+  $("prog-txt").textContent = txt;
+  $("prog-fill").style.width = (n / tot * 100) + "%";
+}
+
+/* =========================================================
+   Cambio de modos
+   ========================================================= */
+function setModo(m) {
+  modo = m;
+  ["desc","live","prac"].forEach(x => $("m-"+x).classList.toggle("on", m === x));
+  $("root").classList.toggle("mode-practica", m === "prac");
+  $("subtabs").hidden = m === "live";
+  $("tools").hidden = m !== "live";
+  clearParts();
+  hideCtxMenus();
+  if (m === "live") {
+    if (!sim.usbConnected) { /* keep state */ }
+    renderDesktop();
+    renderInfo();
+    updateProgress();
+  } else {
+    // Reset practice state
+    hechas = []; aciertos = 0; pregunta = null;
+    // Show static view for Descubrir/Practicar
+    sim.explorerOpen = true;
+    sim.usbConnected = true;
+    sim.currentPath = "usb";
+    sim.folders = {"Mis documentos":[], "Fotos":[]};
+    renderDesktop();
+    // Add part markers
+    PARTES.forEach(p => {
+      const els = document.querySelectorAll("#" + p.id + ", [data-id='" + p.id + "']");
+      els.forEach(el => {
+        el.classList.add("part");
+        el.style.setProperty("--pc", "var(" + p.color + ")");
+        if (!el.querySelector(".pin")) {
+          const pin = document.createElement("span");
+          pin.className = "pin tr";
+          pin.textContent = p.found ? p.n : "?";
+          el.appendChild(pin);
+        }
+      });
+    });
+    attachPartListeners();
+    if (m === "desc") {
+      bienvenidaDescubrir();
+    } else {
+      nuevaPregunta();
+    }
+    updateProgress();
+  }
+}
+function bienvenidaDescubrir() {
+  const n = PARTES.length;
+  $("info").style.setProperty("--ic", "var(--c6)");
+  $("info").innerHTML = `<div class="hello"><div class="big">💾</div><h2>Memoria USB</h2><p>Toca cada parte con un <b>?</b> del escritorio. Hay <b>${n} partes</b> para descubrir.</p></div>`;
+  restart($("info"));
+}
+let pregunta = null, hechas = [], aciertos = 0;
+function nuevaPregunta() {
+  const quedan = PARTES.filter(p => !hechas.includes(p.id));
+  if (!quedan.length) return finPracticar();
+  pregunta = quedan[Math.floor(Math.random() * quedan.length)].id;
+  $("info").style.setProperty("--ic", "var(--c3)");
+  $("info").innerHTML = `<div class="info-num">🎯</div><div class="quiz-q">Toca<br><span>${PARTES.find(p => p.id === pregunta).det}</span></div><div class="feedback" id="fb"></div>`;
+  restart($("info"));
+  updateProgress();
+}
+function finPracticar() {
+  $("info").style.setProperty("--ic", "var(--c3)");
+  $("info").innerHTML = `<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Conoces todas las partes de la guía USB.</p><div class="row" style="justify-content:center"><button class="btn go" id="repetir" type="button">🔄 Repetir</button><button class="btn" id="aProbar" type="button">🛠️ Ir a Probar</button></div></div>`;
+  restart($("info"));
+  $("repetir").onclick = () => { hechas=[]; aciertos=0; nuevaPregunta(); };
+  $("aProbar").onclick = () => setModo("live");
+}
+function resetSimulation() {
+  sim = {
+    usbConnected: false,
+    explorerOpen: false,
+    browserOpen: false,
+    currentPath: "thispc",
+    selectedItems: [],
+    clipboard: null,
+    folders: {},
+    copyProgress: 0,
+    copying: false,
+    downloadDialog: false,
+    saveAsPath: null,
+    ejectReady: false
+  };
+  retosHechos = {};
+  saveProgress();
+  renderDesktop();
+  if (modo === "live") renderInfo();
+  updateProgress();
+  showToast("🔄 Simulación reiniciada");
+}
+
+/* =========================================================
+   Inicialización
+   ========================================================= */
+loadProgress();
+// Create SVG sprite for icons
+const svgSprite = document.createElement("div");
+svgSprite.style.display = "none";
+svgSprite.innerHTML = `
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 14H4V8h16v12z"/></symbol>
+  <symbol id="icon-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="icon-usb" viewBox="0 0 24 24"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-2 14H8V6h8v12z"/><path d="M10 10h4v4h-4z"/></symbol>
+  <symbol id="icon-desktop" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="2" y="3" width="20" height="14" rx="2" fill="none" stroke="currentColor"/><line x1="6" y1="17" x2="18" y2="17"/></symbol>
+  <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="icon-paste" viewBox="0 0 24 24"><path d="M15 9h-9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/><rect x="9" y="9" width="13" height="13" rx="2"/></symbol>
+  <symbol id="icon-newfolder" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 14H4V8h16v12z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="10" y1="12" x2="14" y2="12"/></symbol>
+  <symbol id="icon-eject" viewBox="0 0 24 24"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-2 14H8V6h8v12z"/><polygon points="12,8 8,12 16,12"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="icon-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+</svg>
+`;
+document.body.appendChild(svgSprite);
+
+$("m-desc").onclick = () => setModo("desc");
+$("m-live").onclick = () => setModo("live");
+$("m-prac").onclick = () => setModo("prac");
+$("reset").onclick = () => {
+  PARTES.forEach(p => delete p.found);
+  retosHechos = {};
+  saveProgress();
+  resetSimulation();
+  setModo(modo);
+};
+
+// Clock
+setInterval(() => {
+  const now = new Date();
+  $("clock").textContent = now.toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"});
+}, 1000);
+
+// Start
+setModo("desc");
+</script>
+</body>
+</html>

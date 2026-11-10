@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copiar y pegar texto e imágenes</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43; --c9:#FF8FD8;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --ink:#1b2433; --line:#e2e7ef; --word:#185abd;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c7); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.95) translateY(10px);} to{opacity:1; transform:none;} }
+
+  /* ---------- Estructura de la página ---------- */
+  .container { position:relative; z-index:1; max-width:1700px; margin:0 auto; padding:16px 22px 18px; display:flex; flex-direction:column; gap:12px; min-height:100%; }
+  .top { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.5rem,2.6vw,2.4rem); line-height:1.1; background:linear-gradient(135deg,var(--c6),var(--c7),var(--c9)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+  .mode:hover { color:var(--text); }
+  .prog { display:flex; align-items:center; gap:14px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c7),var(--c9)); border-radius:10px; transition:width .5s; }
+  .reset { padding:6px 14px; border-radius:12px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:.9rem; cursor:pointer; white-space:nowrap; }
+  .reset:hover { color:var(--text); border-color:var(--c4); }
+  .layout { display:flex; gap:20px; align-items:flex-start; }
+  .left { flex:0 1 auto; width:min(66%, calc((100vh - 250px) * 1.6)); min-width:0; display:flex; flex-direction:column; gap:10px; }
+  .stage[hidden] { display:none; }
+  .panel { flex:1; min-width:300px; align-self:stretch; background:var(--card); border:1px solid rgba(255,255,255,.08); border-left:6px solid var(--ic,var(--c6)); border-radius:22px; padding:18px 20px; overflow-y:auto; transition:border-color .3s;
+    scrollbar-width:auto; scrollbar-color:#4a5b80 rgba(255,255,255,.05); }
+  .panel::-webkit-scrollbar { width:12px; }
+  .panel::-webkit-scrollbar-thumb { background:#4a5b80; border-radius:10px; border:2px solid var(--card); }
+  @media (min-width:1000px) and (min-height:560px) {
+    body { overflow:hidden; }
+    .container { height:100vh; }
+    .layout { flex:1; min-height:0; align-items:stretch; }
+  }
+  @media (max-width:999px) { .layout { flex-direction:column; } .left { width:100%; } .panel { width:100%; min-width:0; } }
+
+  /* ---------- Pantalla simulada ---------- */
+  .screen { position:relative; width:100%; aspect-ratio:16/10; border-radius:16px; overflow:hidden; container-type:inline-size;
+    border:1px solid rgba(255,255,255,.12); box-shadow:0 20px 50px rgba(0,0,0,.45); user-select:none; -webkit-user-select:none;
+    background:radial-gradient(ellipse at 70% 120%, rgba(77,163,255,.75), transparent 60%), radial-gradient(ellipse at 30% 110%, rgba(195,139,255,.55), transparent 55%), linear-gradient(160deg,#0d2a55,#123c7a 55%,#1b5aa8); }
+  .scr { position:absolute; inset:0; font-size:1.32cqw; color:var(--ink); }
+  .desk { position:absolute; left:0; top:0; right:0; bottom:3.4em; }
+  .taskbar { position:absolute; left:0; right:0; bottom:0; height:3.4em; background:rgba(235,240,247,.95); display:flex; align-items:center; justify-content:center; gap:.35em; border-top:1px solid rgba(255,255,255,.5); }
+  .tk { position:relative; height:2.5em; min-width:2.5em; display:flex; align-items:center; justify-content:center; gap:.35em; padding:0 .55em; border-radius:.45em; border:0; background:transparent; color:var(--ink); font-size:1em; font-weight:700; cursor:pointer; }
+  .tk .ti { font-size:1.35em; }
+  .tk:hover { background:rgba(0,0,0,.07); }
+  .tk.on { background:rgba(255,255,255,.85); }
+  .tk.on::after { content:""; position:absolute; bottom:.12em; left:30%; right:30%; height:.16em; border-radius:3px; background:#3b82f6; }
+  .clock { position:absolute; right:1em; font-weight:700; font-size:.85em; text-align:right; line-height:1.25; }
+  .wlogo { display:inline-grid; place-items:center; width:1.35em; height:1.35em; border-radius:.25em; background:var(--word); color:#fff; font-weight:900; font-size:.95em; font-family:Arial, sans-serif; }
+
+  .win { position:absolute; inset:.55em .55em .55em .55em; background:#fff; border-radius:.6em; border:1px solid rgba(0,0,0,.28); box-shadow:0 1em 2.4em rgba(0,0,0,.45); display:flex; flex-direction:column; overflow:hidden; }
+  .win[hidden] { display:none; }
+  .win.opening { animation:winIn .2s ease; }
+  @keyframes winIn { from{opacity:0; transform:scale(.97);} to{opacity:1; transform:none;} }
+  .wt { flex-shrink:0; height:2.4em; display:flex; align-items:center; gap:.6em; padding:0 .9em; background:#eef2f7; font-weight:700; font-size:.92em; }
+  .wt .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wt .ctr { display:flex; gap:1.5em; color:#5c6779; font-weight:400; }
+  .selok { user-select:text; -webkit-user-select:text; cursor:text; }
+  ::selection { background:#b3d4ff; color:inherit; }
+
+  /* Navegador */
+  .w-web .wt { background:#dfe5ee; }
+  .tab { background:#fff; border-radius:.5em .5em 0 0; padding:.45em .9em; margin-top:.5em; align-self:flex-end; font-weight:700; max-width:22em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nbar { flex-shrink:0; display:flex; align-items:center; gap:.5em; padding:.4em .8em; border-bottom:1px solid var(--line); }
+  .nbar .nb { color:#5c6779; font-weight:800; font-size:1.05em; width:1.6em; text-align:center; }
+  .addr { position:relative; flex:1; min-width:0; background:#eef1f6; border-radius:2em; padding:.45em 1em; font-weight:600; white-space:nowrap; overflow:hidden; cursor:text; color:#3b4557; }
+  .addr .lock { margin-right:.4em; }
+  .wp { position:relative; flex:1; min-height:0; overflow-y:auto; padding:1em 2.2em 1.4em; font-family:Georgia, 'Times New Roman', serif; color:#202122; line-height:1.55; scrollbar-width:thin; }
+  .wp-top { display:flex; align-items:center; gap:.7em; padding-bottom:.6em; border-bottom:1px solid #a2a9b1; margin-bottom:.8em; font-family:'Nunito',sans-serif; }
+  .wp-logo { width:2.4em; height:2.4em; border-radius:50%; background:#f8f9fa; border:1px solid #c8ccd1; display:grid; place-items:center; font-family:Georgia, serif; font-size:1.2em; font-weight:700; }
+  .wp-top b { font-family:Georgia, serif; font-size:1.25em; font-weight:400; }
+  .wp-top small { display:block; font-size:.75em; color:#54595d; }
+  .wp-search { margin-left:auto; border:1px solid #a2a9b1; border-radius:.3em; padding:.3em .8em; color:#72777d; font-size:.85em; }
+  .wp h2.t { font-size:1.75em; font-weight:400; border-bottom:1px solid #a2a9b1; margin-bottom:.15em; }
+  .wp .from { font-size:.82em; color:#54595d; margin-bottom:.8em; font-family:'Nunito',sans-serif; }
+  .wp h3 { font-size:1.25em; font-weight:400; border-bottom:1px solid #c8ccd1; margin:1em 0 .4em; }
+  .wp p { margin-bottom:.7em; }
+  .wp a { color:#3366cc; text-decoration:none; }
+  .wp sup { font-size:.7em; line-height:0; }
+  .wp sup a, .wp sup { color:#3366cc; }
+  .infobox { float:right; width:16em; margin:0 0 .8em 1.2em; border:1px solid #a2a9b1; background:#f8f9fa; padding:.4em; font-size:.85em; text-align:center; font-family:'Nunito',sans-serif; user-select:none; -webkit-user-select:none; }
+  .infobox img { width:100%; display:block; border:1px solid #c8ccd1; cursor:context-menu; }
+  .infobox .cap { margin-top:.3em; color:#202122; }
+  .infobox table { width:100%; text-align:left; margin-top:.4em; border-collapse:collapse; }
+  .infobox td { padding:.15em .2em; border-top:1px solid #e2e5e9; vertical-align:top; }
+  .refs { font-size:.85em; padding-left:1.6em; }
+  .wp .note { font-family:'Nunito',sans-serif; font-size:.78em; color:#72777d; border-top:1px solid #c8ccd1; margin-top:1em; padding-top:.5em; }
+
+  /* Word */
+  .w-word .wt { background:var(--word); color:#fff; }
+  .w-word .wt .ctr { color:#dbe7ff; }
+  .rtabs { flex-shrink:0; display:flex; gap:.2em; padding:.25em .8em 0; background:#f3f3f3; font-size:.88em; font-weight:700; }
+  .rtabs span { padding:.35em .8em; border-radius:.35em .35em 0 0; color:#444; }
+  .rtabs span.on { background:#fff; color:var(--word); box-shadow:inset 0 -.15em 0 var(--word); }
+  .ribbon { position:relative; flex-shrink:0; display:flex; align-items:stretch; gap:.4em; padding:.35em .8em .25em; background:#fff; border-bottom:1px solid #d6d6d6; }
+  .rg { display:flex; flex-direction:column; align-items:center; padding:0 .7em; border-right:1px solid #e1e1e1; }
+  .rg .rgl { font-size:.72em; color:#666; margin-top:auto; padding-top:.15em; }
+  .rg .rb-row { display:flex; gap:.25em; align-items:center; flex:1; }
+  .rbtn { display:flex; align-items:center; gap:.3em; border:0; background:transparent; border-radius:.3em; padding:.25em .45em; font-size:.85em; font-weight:700; color:#333; cursor:pointer; }
+  .rbtn:hover { background:#e8eef9; }
+  .rbtn.big { flex-direction:column; font-size:.85em; padding:.2em .6em; }
+  .rbtn.big .ri { font-size:1.9em; line-height:1; }
+  .rbtn .ri { font-size:1.15em; }
+  .rcol { display:flex; flex-direction:column; gap:.1em; }
+  .fbox { border:1px solid #c8c8c8; border-radius:.2em; padding:.15em .5em; font-size:.82em; min-width:6em; background:#fff; color:#333; }
+  .fmt { width:1.9em; height:1.9em; border:0; border-radius:.25em; background:transparent; font-size:.95em; cursor:pointer; color:#333; font-family:Georgia, serif; }
+  .fmt:hover { background:#e8eef9; }
+  .pagewrap { flex:1; min-height:0; overflow-y:auto; background:#e9ebee; padding:1.1em 0 1.4em; scrollbar-width:thin; }
+  .page { width:82%; margin:0 auto; min-height:100%; background:#fff; box-shadow:0 .1em .6em rgba(0,0,0,.18); padding:2em 2.6em; font-family:Calibri, Carlito, 'Segoe UI', Arial, sans-serif; color:#1f1f1f; line-height:1.45; font-size:1.05em; outline:none; }
+  .page h1, .mailb h1 { font-family:inherit; font-size:1.7em; color:#1f4e9d; font-weight:700; margin-bottom:.2em; background:none; -webkit-text-fill-color:currentColor; }
+  .page h2 { font-size:1.2em; color:#1f4e9d; margin:.9em 0 .3em; }
+  .page p { margin-bottom:.45em; }
+  .page img, .mailb img { max-width:55%; border-radius:.25em; display:inline-block; vertical-align:top; }
+  .page a, .mailb a { color:#1d4ed8; }
+  .page .ph, .mailb .ph { color:#9aa3b2; background:#f3f6fb; border:1px dashed #b6c2d6; border-radius:.35em; padding:.35em .6em; font-style:italic; }
+  .page .sub { color:#666; }
+  .wstat { flex-shrink:0; height:1.8em; display:flex; align-items:center; gap:1.5em; padding:0 1em; background:#f3f3f3; border-top:1px solid #ddd; font-size:.78em; color:#555; font-weight:700; }
+
+  /* Correo */
+  .w-mail .wt { background:#0f6cbd; color:#fff; }
+  .w-mail .wt .ctr { color:#dbe7ff; }
+  .mfld { flex-shrink:0; display:flex; gap:.8em; padding:.5em 1.2em; border-bottom:1px solid var(--line); font-weight:600; }
+  .mfld b { color:#5c6779; width:4.5em; }
+  .mailb { flex:1; min-height:0; overflow-y:auto; padding:1em 1.4em; font-family:Calibri, Carlito, 'Segoe UI', Arial, sans-serif; line-height:1.45; outline:none; font-size:1.05em; }
+  .mailb p { margin-bottom:.45em; }
+  .mbar { flex-shrink:0; display:flex; gap:.6em; padding:.5em 1.2em; border-top:1px solid var(--line); }
+  .send { border:0; border-radius:.4em; background:#0f6cbd; color:#fff; font-weight:800; padding:.5em 1.4em; cursor:pointer; font-size:.95em; }
+
+  /* Explorador */
+  .exp-main { flex:1; min-height:0; display:flex; }
+  .exp-side { width:12em; background:#f6f8fb; border-right:1px solid var(--line); padding:.6em .4em; }
+  .exp-side div { padding:.45em .7em; border-radius:.4em; font-weight:700; cursor:pointer; }
+  .exp-side div:hover { background:#e8edf4; } .exp-side div.on { background:#dce8f8; }
+  .exp-files { flex:1; padding:1em; display:grid; grid-template-columns:repeat(auto-fill,minmax(8em,1fr)); gap:.5em; align-content:start; }
+  .ef { display:flex; flex-direction:column; align-items:center; gap:.3em; padding:.6em .3em; border-radius:.45em; text-align:center; font-weight:600; font-size:.9em; }
+  .ef .ii { font-size:2.6em; line-height:1; }
+  .ef img { width:5em; height:3.6em; object-fit:cover; border-radius:.25em; border:1px solid #d5dce6; }
+  .ef.fresh { background:#dcfce7; box-shadow:0 0 0 .15em #22c55e; }
+  .exp-empty { color:#7a8597; font-weight:700; padding:2em; }
+
+  /* Menús, avisos y diálogos */
+  .cm { position:absolute; z-index:40; min-width:14em; background:#fff; color:var(--ink); border:1px solid #d5dce6; border-radius:.6em; box-shadow:0 .6em 1.8em rgba(0,0,0,.32); padding:.3em; display:none; }
+  .cm.on { display:block; animation:popIn .12s ease; }
+  .cmi { display:flex; align-items:center; gap:.6em; padding:.5em .8em; border-radius:.4em; font-weight:700; cursor:pointer; }
+  .cmi:hover { background:#e8f0fb; } .cmi.dis { opacity:.38; pointer-events:none; }
+  .cmi .ck { margin-left:auto; padding-left:1.4em; color:#7a8597; font-size:.85em; }
+  .cmsep { height:1px; background:var(--line); margin:.25em .3em; }
+  .pzbtn { position:absolute; z-index:35; display:none; align-items:center; gap:.2em; background:#fff; border:1px solid #9aa3b2; border-radius:.3em; padding:.15em .35em; font-size:.95em; font-weight:800; cursor:pointer; box-shadow:0 .2em .5em rgba(0,0,0,.2); color:#333; }
+  .pzbtn.on { display:flex; animation:popIn .2s ease; }
+  .pzbtn:hover { background:#e8f0fb; }
+  .pzmenu { position:absolute; z-index:41; display:none; width:22em; background:#fff; border:1px solid #d5dce6; border-radius:.6em; box-shadow:0 .6em 1.8em rgba(0,0,0,.32); padding:.6em; color:var(--ink); }
+  .pzmenu.on { display:block; animation:popIn .14s ease; }
+  .pzmenu h5 { font-size:.85em; color:#5c6779; margin:0 0 .4em .3em; }
+  .pzo { display:flex; gap:.6em; align-items:center; padding:.5em .6em; border-radius:.45em; cursor:pointer; }
+  .pzo:hover { background:#e8f0fb; }
+  .pzo .pzi { width:2.2em; height:2.2em; border-radius:.35em; border:1px solid #c8d0dc; display:grid; place-items:center; font-weight:900; background:#f6f8fb; flex-shrink:0; }
+  .pzo b { display:block; }
+  .pzo small { color:#6b7587; font-weight:600; }
+  .pzo.cur { background:#eef4fc; }
+  .dlg-bg { position:absolute; inset:0; z-index:50; background:rgba(10,20,40,.4); display:grid; place-items:center; }
+  .dlg { width:min(34em,90%); background:#fff; color:var(--ink); border-radius:.8em; box-shadow:0 1em 3em rgba(0,0,0,.45); padding:1.1em 1.3em; animation:popIn .2s ease; }
+  .dlg h4 { font-size:1.15em; margin-bottom:.6em; }
+  .dlg .fl { display:flex; gap:.4em; flex-wrap:wrap; margin-bottom:.7em; }
+  .dlg .fl button { border:1px solid #d5dce6; background:#fff; border-radius:.5em; padding:.45em .8em; font-weight:700; cursor:pointer; font-size:.95em; }
+  .dlg .fl button.on { background:#dce8f8; border-color:#5ea4f4; }
+  .dlg label { display:block; font-size:.85em; font-weight:800; color:#5c6779; margin-bottom:.25em; }
+  .dlg input { width:100%; border:1px solid #c8d0dc; border-radius:.4em; padding:.45em .6em; font-size:1em; font-family:inherit; margin-bottom:.8em; }
+  .dlg .row { display:flex; gap:.5em; justify-content:flex-end; }
+  .dlg .b { border:0; border-radius:.45em; padding:.55em 1.3em; font-weight:800; font-size:.95em; cursor:pointer; }
+  .dlg .b.p { background:#2563eb; color:#fff; } .dlg .b.s { background:#e6eaf1; color:var(--ink); }
+  .toast { position:absolute; left:50%; bottom:4.3em; transform:translate(-50%,.5em); z-index:60; background:rgba(20,28,45,.95); color:#fff; padding:.6em 1.1em; border-radius:.7em; font-weight:700; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; max-width:80%; text-align:center; line-height:1.35; }
+  .toast.on { opacity:1; transform:translate(-50%,0); }
+
+  /* Teclas en pantalla */
+  .tools { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .kb { padding:6px 10px; border-radius:11px; border:2px solid rgba(255,255,255,.16); background:rgba(255,255,255,.05); color:var(--text); font-weight:800; font-size:.88rem; cursor:pointer; transition:transform .12s, border-color .2s; }
+  .kb:hover { border-color:var(--c6); }
+  .kb.flash { transform:scale(.93); border-color:var(--c3); }
+  .tsp { width:1px; height:26px; background:rgba(255,255,255,.15); margin:0 3px; }
+
+  /* Partes (Descubrir y Practicar) */
+  .part { position:relative; cursor:pointer; }
+  .part::after { content:""; position:absolute; inset:-.15em; border-radius:.4em; pointer-events:none; transition:background .2s, box-shadow .2s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 22%, transparent); }
+  .part.psel::after { box-shadow:0 0 0 .22em var(--pc); background:color-mix(in srgb,var(--pc) 16%, transparent); }
+  .part.ok::after { box-shadow:0 0 0 .22em var(--c1); background:rgba(37,211,102,.2); }
+  .part.bad { animation:shake .45s; }
+  .part.bad::after { box-shadow:0 0 0 .22em var(--c4); }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .pin { position:absolute; z-index:8; width:1.9em; height:1.9em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:.95em; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; top:-.9em; right:-.7em; font-family:'Nunito',sans-serif; font-style:normal; line-height:1; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin { animation:none; }
+  .mode-practica .pin { display:none; }
+  .taskbar.part { position:absolute; }
+  .taskbar.part::after { inset:0; border-radius:0; }
+  .fakesel { background:#b3d4ff; }
+  .caret { display:inline-block; width:.1em; height:1.15em; background:#111; vertical-align:-.2em; animation:blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  .s1 .win { box-shadow:0 .6em 1.6em rgba(0,0,0,.4); }
+
+  /* ---------- Panel ---------- */
+  .hello { text-align:center; padding:2vh 0; animation:popIn .4s ease; }
+  .hello .big { font-size:3.2rem; }
+  .hello h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.8rem; margin:8px 0 10px; }
+  .hello p { color:var(--sub); font-weight:700; line-height:1.5; font-size:1.05rem; }
+  .hello p b { color:var(--c3); }
+  .pnum { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .panel h2.pn { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.7rem; line-height:1.15; margin-bottom:6px; }
+  .sitio { color:var(--sub); font-weight:700; margin-bottom:12px; }
+  .panel p.tx { font-size:1.1rem; line-height:1.55; font-weight:600; margin-bottom:14px; }
+  .panel p.tx b, .last b, .guia b, .mis b { color:var(--c3); }
+  .pchips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .pchip { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:100px; padding:6px 13px; font-weight:800; font-size:.95rem; }
+  .tip { background:rgba(255,217,61,.09); border:1px solid rgba(255,217,61,.3); border-radius:14px; padding:12px 14px; font-weight:700; line-height:1.5; }
+  .win-all { background:rgba(37,211,102,.14); border:2px solid var(--c1); border-radius:14px; padding:10px 14px; font-weight:800; margin-bottom:12px; text-align:center; }
+  .ph3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.15rem; color:var(--c3); margin:4px 0 8px; }
+  .ph3 small { font-family:'Nunito',sans-serif; color:var(--sub); font-weight:700; font-size:.82rem; }
+  .mis { border:2px solid rgba(195,139,255,.5); background:rgba(195,139,255,.08); border-radius:16px; padding:12px 14px; margin-bottom:12px; }
+  .mis h4 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.2rem; margin-bottom:6px; }
+  .mis ul { list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; font-weight:700; }
+  .mis li { display:flex; gap:7px; align-items:center; }
+  .mis li i { font-style:normal; width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,.1); display:grid; place-items:center; font-size:.85rem; color:#0a1628; font-weight:900; flex-shrink:0; }
+  .mis li.on i { background:var(--c1); }
+  .mis li.on { color:var(--sub); }
+  .mis .done { margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-weight:800; color:#9cffc4; }
+  .clip { display:flex; gap:12px; align-items:center; border-radius:14px; padding:9px 13px; margin-bottom:10px; border:2px dashed rgba(255,255,255,.18); }
+  .clip .ci { font-size:1.7rem; }
+  .clip b { display:block; font-size:1rem; }
+  .clip small { display:block; color:var(--sub); font-weight:700; font-size:.86rem; line-height:1.35; max-height:2.7em; overflow:hidden; }
+  .clip.lleno { border:2px solid var(--c6); background:rgba(77,163,255,.1); }
+  .clip.corte { border-color:var(--c8); background:rgba(255,159,67,.1); }
+  .clip img { width:56px; height:40px; object-fit:cover; border-radius:6px; }
+  .last { background:rgba(255,255,255,.05); border-radius:14px; padding:12px 14px; font-weight:600; line-height:1.5; font-size:1.02rem; margin-bottom:14px; }
+  .last .gotit { display:block; color:#9cffc4; font-weight:800; margin-bottom:4px; }
+  .st { border:1px solid rgba(255,255,255,.09); border-radius:14px; margin-bottom:7px; overflow:hidden; background:rgba(255,255,255,.03); }
+  .st.open { border-color:rgba(77,163,255,.5); background:rgba(77,163,255,.05); }
+  .sth { width:100%; display:flex; align-items:center; gap:10px; padding:9px 12px; border:0; background:transparent; color:var(--text); cursor:pointer; text-align:left; font-size:1rem; }
+  .sth .ic { font-size:1.3rem; width:1.6em; text-align:center; }
+  .sth b { flex:1; font-weight:800; }
+  .sth .cnt { font-weight:800; color:var(--sub); font-size:.88rem; background:rgba(255,255,255,.07); border-radius:20px; padding:2px 9px; }
+  .st.done .cnt { background:var(--c1); color:#0a1628; }
+  .stb { padding:0 12px 12px; }
+  .guia { color:#cfd8ea; font-weight:600; line-height:1.5; font-size:.95rem; margin-bottom:10px; padding:8px 11px; border-left:3px solid var(--c6); background:rgba(77,163,255,.06); border-radius:0 10px 10px 0; }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px 11px; }
+  .retos .rb { width:24px; height:24px; flex-shrink:0; border-radius:7px; background:rgba(255,255,255,.08); display:grid; place-items:center; font-weight:900; color:#0a1628; }
+  .retos li.on { border-color:rgba(37,211,102,.55); background:rgba(37,211,102,.08); padding:5px 11px; }
+  .retos li.on .rb { background:var(--c1); }
+  .retos .rtx { font-weight:800; line-height:1.3; }
+  .retos .rtx small { display:block; color:var(--sub); font-weight:700; font-size:.86rem; margin-top:2px; }
+  .retos li.on .rtx { color:var(--sub); }
+  .retos li.on .rtx small { display:none; }
+  .qn { color:var(--sub); font-weight:800; margin-bottom:6px; }
+  .qt { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.5rem; line-height:1.25; margin-bottom:12px; }
+  .qhint { color:var(--c3); font-weight:800; margin-bottom:12px; font-size:1.05rem; }
+  .opts { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .qo { text-align:left; padding:12px 16px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; }
+  .qo:hover:not(:disabled) { border-color:var(--c6); }
+  .qo.ok { border-color:var(--c1); background:rgba(37,211,102,.15); }
+  .qo.bad { border-color:var(--c4); background:rgba(255,107,107,.12); }
+  .qo:disabled { cursor:default; }
+  .feedback.good { background:rgba(37,211,102,.14); color:#9cffc4; padding:12px 14px; border-radius:14px; font-weight:800; line-height:1.45; }
+  .feedback.no { background:rgba(255,107,107,.13); color:#ffb3b3; padding:12px 14px; border-radius:14px; font-weight:800; line-height:1.45; }
+  .pbtn { margin-top:12px; padding:11px 20px; border-radius:14px; border:0; background:linear-gradient(135deg,var(--c1),#1aa851); color:#0a1628; font-weight:800; font-size:1.05rem; cursor:pointer; }
+  .pbtn.sm { margin-top:0; padding:7px 14px; font-size:.95rem; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-10px) rotate(5deg);} }
+  .prev-bg { position:fixed; inset:0; z-index:300; background:rgba(5,10,22,.82); display:grid; place-items:center; padding:20px; }
+  .prev { width:min(760px,96vw); max-height:92vh; overflow:auto; background:#fff; color:#1f1f1f; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.6); padding:44px 54px; font-family:Calibri, Carlito, 'Segoe UI', Arial, sans-serif; line-height:1.5; font-size:17px; position:relative; }
+  .prev h1 { font-family:inherit; color:#1f4e9d; font-size:30px; background:none; -webkit-text-fill-color:currentColor; margin-bottom:4px; }
+  .prev h2 { color:#1f4e9d; font-size:21px; margin:16px 0 6px; }
+  .prev p { margin-bottom:8px; }
+  .prev img { max-width:60%; border-radius:4px; }
+  .prev .ph { display:none; }
+  .prev .x { position:absolute; top:10px; right:12px; border:0; background:#eef1f6; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; }
+  .prev .stamp { position:absolute; top:18px; right:60px; transform:rotate(8deg); border:3px solid #16a34a; color:#16a34a; border-radius:10px; padding:4px 12px; font-weight:900; font-family:'Nunito',sans-serif; }
+
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+  <div class="top">
+    <span class="badge">🪟 Ordenador</span>
+    <h1>Copiar y pegar texto e imágenes</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+  <div class="prog">
+    <span id="prog-txt"></span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <button class="reset" id="reset" type="button">🔄 Empezar de nuevo</button>
+  </div>
+
+  <div class="layout">
+    <div class="left">
+      <!-- Pantalla fija para Descubrir y Practicar -->
+      <div class="stage" id="st-parts">
+        <div class="screen s1" id="sc1"><div class="scr">
+          <div class="desk">
+            <div class="win w-web" style="right:50.5%">
+              <div class="wt"><span class="tab">Canal de Castilla - Wikipedia</span></div>
+              <div class="nbar"><span class="nb">←</span><span class="nb">⟳</span><span class="addr part" data-part="direccion"><span class="pin" style="top:50%;margin-top:-.95em;right:.4em">?</span><span class="lock">🔒</span>es.wikipedia.org/wiki/Canal_de_Castilla</span></div>
+              <div class="wp" style="padding:.8em 1.2em;overflow:hidden">
+                <h2 class="t" style="font-size:1.45em">Canal de Castilla</h2>
+                <div class="infobox part" data-part="imagen" style="width:9em"><span class="pin" style="top:-.5em;right:-.4em">?</span><img id="sc1-img" alt="Esclusa del canal"><div class="cap">Una esclusa del canal</div></div>
+                <p style="font-size:.95em"><span class="fakesel part" data-part="seleccion"><span class="pin" style="top:-1.4em;right:40%">?</span>El <b>Canal de Castilla</b> es una obra de ingeniería hidráulica construida entre los siglos XVIII y XIX.</span> Se pensó para llevar el trigo de Castilla hasta los puertos del norte<sup class="part" data-part="refs" style="color:#3366cc;font-size:.8em"><span class="pin" style="top:-1.6em;right:-1.1em">?</span>[1]</sup> en barcazas tiradas por mulas.</p>
+                <p style="font-size:.95em;color:#54595d">Las obras empezaron a mediados del siglo XVIII y duraron cerca de cien años…</p>
+              </div>
+            </div>
+            <div class="win w-word" style="left:50.5%">
+              <div class="wt"><span class="wlogo">W</span><span class="nm">Folleto excursión.docx - Word</span></div>
+              <div class="rtabs"><span>Archivo</span><span class="on">Inicio</span><span>Insertar</span></div>
+              <div class="ribbon"><div class="rg part" data-part="portapapeles"><span class="pin">?</span><div class="rb-row"><span class="rbtn big"><span class="ri">📋</span>Pegar</span><span class="rcol"><span class="rbtn"><span class="ri">✂️</span>Cortar</span><span class="rbtn"><span class="ri">📄</span>Copiar</span></span></div><span class="rgl">Portapapeles</span></div></div>
+              <div class="pagewrap" style="overflow:hidden"><div class="page" style="width:88%;padding:1.2em 1.4em;font-size:.95em">
+                <h1 style="font-size:1.4em">Excursión al Canal de Castilla</h1>
+                <h2>¿Qué es el Canal de Castilla?</h2>
+                <p>El Canal de Castilla es una obra de ingeniería hidráulica<span class="part" data-part="opciones" style="display:inline-block;margin-left:.4em;border:1px solid #9aa3b2;border-radius:.25em;padding:0 .3em;font-size:.85em;background:#fff"><span class="pin" style="top:-1.7em;right:-1em">?</span>📋 (Ctrl) ▾</span></p>
+                <h2>Programa</h2>
+                <p>10:00 Salida desde el centro.<span class="part" data-part="cursor" style="display:inline-block;padding:.1em .7em;vertical-align:middle;line-height:1"><span class="pin" style="top:-1.7em;right:-1.2em">?</span><span class="caret"></span></span></p>
+                <p>11:00 Paseo junto al canal.</p>
+              </div></div>
+            </div>
+          </div>
+          <div class="taskbar part" data-part="barra"><span class="pin" style="top:-1em;right:38%">?</span>
+            <span class="tk"><span class="ti">⊞</span></span><span class="tk on"><span class="ti">🌐</span>Navegador</span><span class="tk on"><span class="wlogo">W</span>Word</span><span class="tk"><span class="ti">✉️</span>Correo</span>
+            <span class="clock">10:30<br>20/10/2026</span>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Escritorio que funciona -->
+      <div class="stage" id="st-live" hidden>
+        <div class="screen" id="sc2"><div class="scr">
+          <div class="desk" id="desk">
+            <!-- Navegador -->
+            <div class="win w-web" id="w-web">
+              <div class="wt"><span class="tab">🌐 Canal de Castilla - Wikipedia</span><span style="flex:1"></span><span class="ctr"><span>—</span><span>☐</span><span>✕</span></span></div>
+              <div class="nbar"><span class="nb">←</span><span class="nb">→</span><span class="nb">⟳</span><span class="addr" id="addr"><span class="lock">🔒</span><span id="url">https://es.wikipedia.org/wiki/Canal_de_Castilla</span></span><span class="nb">☆</span></div>
+              <div class="wp selok" id="wp">
+                <div class="wp-top"><span class="wp-logo">W</span><div><b>Wikipedia</b><small>La enciclopedia libre</small></div><span class="wp-search">🔍 Buscar en Wikipedia</span></div>
+                <h2 class="t">Canal de Castilla</h2>
+                <div class="from">De Wikipedia, la enciclopedia libre</div>
+                <div class="infobox"><img id="wimg" alt="Esclusa del Canal de Castilla" draggable="false"><div class="cap">Una esclusa del canal</div>
+                  <table><tr><td><b>Tipo</b></td><td>Canal de navegación y riego</td></tr><tr><td><b>Provincias</b></td><td>Burgos, Palencia y Valladolid</td></tr><tr><td><b>Época</b></td><td>Siglos XVIII y XIX</td></tr></table></div>
+                <p id="p1">El <b>Canal de Castilla</b> es una obra de <a>ingeniería hidráulica</a> construida entre los siglos XVIII y XIX en el norte de España. Se pensó para llevar el trigo de Castilla hasta los puertos del norte en barcazas tiradas por mulas.<sup>[1]</sup> Recorre parte de las provincias de <a>Burgos</a>, <a>Palencia</a> y <a>Valladolid</a>.<sup>[2]</sup></p>
+                <h3>Historia</h3>
+                <p>Las obras empezaron a mediados del siglo XVIII y duraron cerca de cien años, con varias interrupciones.<sup>[3]</sup> Para salvar los desniveles del terreno se construyeron <a>esclusas</a>, una especie de escalones de agua por los que subían y bajaban las barcazas.</p>
+                <h3>Hoy en día</h3>
+                <p>Ya no se usa para el transporte, pero su agua sirve para regar los campos. Sus caminos de sirga, por donde caminaban las mulas, son hoy rutas muy populares para pasear y montar en bicicleta.<sup>[4]</sup></p>
+                <h3>Referencias</h3>
+                <ol class="refs"><li>Historia del transporte en Castilla.</li><li>Guía de los canales de España.</li><li>Las grandes obras del siglo XVIII.</li><li>Rutas verdes de Castilla y León.</li></ol>
+                <p class="note">Página de práctica que imita a Wikipedia para aprender a copiar y pegar.</p>
+              </div>
+            </div>
+            <!-- Word -->
+            <div class="win w-word" id="w-word" hidden>
+              <div class="wt"><span class="wlogo" style="background:#fff;color:var(--word)">W</span><span class="nm">Folleto excursión.docx - Word</span><span class="ctr"><span>—</span><span>☐</span><span>✕</span></span></div>
+              <div class="rtabs"><span>Archivo</span><span class="on">Inicio</span><span>Insertar</span><span>Diseño</span><span>Referencias</span><span>Revisar</span></div>
+              <div class="ribbon" id="ribbon">
+                <div class="rg"><div class="rb-row"><button class="rbtn big" data-rb="paste" type="button" title="Pegar (Ctrl + V)"><span class="ri">📋</span>Pegar</button>
+                  <span class="rcol"><button class="rbtn" data-rb="cut" type="button" title="Cortar (Ctrl + X)"><span class="ri">✂️</span>Cortar</button><button class="rbtn" data-rb="copy" type="button" title="Copiar (Ctrl + C)"><span class="ri">📄</span>Copiar</button></span></div><span class="rgl">Portapapeles</span></div>
+                <div class="rg"><div class="rb-row" style="flex-direction:column;align-items:flex-start;gap:.2em"><span style="display:flex;gap:.3em"><span class="fbox">Calibri ▾</span><span class="fbox" style="min-width:3em">11 ▾</span></span>
+                  <span style="display:flex;gap:.1em"><button class="fmt" data-rb="bold" type="button" title="Negrita"><b>N</b></button><button class="fmt" data-rb="italic" type="button" title="Cursiva"><i>K</i></button><button class="fmt" data-rb="underline" type="button" title="Subrayado"><u>S</u></button></span></div><span class="rgl">Fuente</span></div>
+                <div class="rg" style="border:0"><div class="rb-row" style="color:#999;font-size:1.1em;gap:.5em"><span>☰</span><span>≡</span><span>⇥</span></div><span class="rgl">Párrafo</span></div>
+              </div>
+              <div class="pagewrap" id="pagewrap"><div class="page selok" id="doc" contenteditable="true" spellcheck="false"></div></div>
+              <div class="wstat"><span>Página 1 de 1</span><span id="wcount"></span><span>Español (España)</span></div>
+            </div>
+            <!-- Correo -->
+            <div class="win w-mail" id="w-mail" hidden>
+              <div class="wt"><span>✉️</span><span class="nm">Nuevo mensaje - Correo</span><span class="ctr"><span>—</span><span>☐</span><span>✕</span></span></div>
+              <div class="mfld"><b>Para:</b><span>Grupo del curso de informática</span></div>
+              <div class="mfld"><b>Asunto:</b><span>Excursión del sábado</span></div>
+              <div class="mailb selok" id="mail" contenteditable="true" spellcheck="false"></div>
+              <div class="mbar"><button class="send" id="b-send" type="button">Enviar</button></div>
+            </div>
+            <!-- Explorador -->
+            <div class="win" id="w-exp" hidden>
+              <div class="wt"><span>📁</span><span class="nm" id="exp-title">Imágenes</span><span class="ctr"><span>—</span><span>☐</span><span>✕</span></span></div>
+              <div class="exp-main"><div class="exp-side" id="exp-side"></div><div class="exp-files" id="exp-files"></div></div>
+            </div>
+          </div>
+          <div class="taskbar">
+            <button class="tk" data-start="1" type="button" title="Inicio"><span class="ti">⊞</span></button>
+            <button class="tk" data-win="web" type="button"><span class="ti">🌐</span>Navegador</button>
+            <button class="tk" data-win="word" type="button"><span class="wlogo">W</span>Word</button>
+            <button class="tk" data-win="mail" type="button"><span class="ti">✉️</span>Correo</button>
+            <button class="tk" data-win="exp" type="button"><span class="ti">📁</span>Explorador</button>
+            <span class="clock">10:30<br>20/10/2026</span>
+          </div>
+          <div class="cm" id="cm"></div>
+          <button class="pzbtn" id="pzbtn" type="button" title="Opciones de pegado">📋 (Ctrl) ▾</button>
+          <div class="pzmenu" id="pzmenu"></div>
+          <div id="dlg-host"></div>
+          <div class="toast" id="toast"></div>
+        </div></div>
+        <div class="tools" id="tools">
+          <button class="kb" data-k="c" type="button">Ctrl + C</button>
+          <button class="kb" data-k="x" type="button">Ctrl + X</button>
+          <button class="kb" data-k="v" type="button">Ctrl + V</button>
+          <button class="kb" data-k="z" type="button">Ctrl + Z</button>
+          <span class="tsp"></span>
+          <button class="kb" data-k="e" type="button">Ctrl + E</button>
+          <button class="kb" data-k="a" type="button">Ctrl + A</button>
+          <span class="tsp"></span>
+          <button class="kb" data-k="left" type="button">Mayús + ←</button>
+          <button class="kb" data-k="right" type="button">Mayús + →</button>
+          <button class="kb" data-k="enter" type="button">Intro ↵</button>
+        </div>
+      </div>
+    </div>
+    <aside class="panel" id="info"></aside>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm = s => String(s).replace(/\s+/g, ' ').trim();
+const info = $('info');
+function restart(e){ e.style.animation = 'none'; e.offsetHeight; e.style.animation = ''; }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const URL_PAG = 'https://es.wikipedia.org/wiki/Canal_de_Castilla';
+
+/* Imagen de la esclusa, dibujada */
+const IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 210"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec5ff"/><stop offset="1" stop-color="#e6f3ff"/></linearGradient>' +
+  '<linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82c4"/><stop offset="1" stop-color="#1e5a8f"/></linearGradient></defs>' +
+  '<rect width="320" height="210" fill="url(#s)"/><circle cx="262" cy="42" r="20" fill="#ffe27a"/>' +
+  '<path d="M0 110 Q60 92 120 104 T240 98 T320 104 V140 H0Z" fill="#7fb069"/>' +
+  '<g fill="#3f7d3a"><circle cx="30" cy="96" r="18"/><circle cx="52" cy="90" r="14"/><circle cx="280" cy="92" r="17"/><circle cx="300" cy="99" r="12"/><circle cx="220" cy="98" r="11"/></g>' +
+  '<g fill="#6b4f2a"><rect x="28" y="104" width="4" height="14"/><rect x="278" y="102" width="4" height="14"/></g>' +
+  '<rect x="0" y="136" width="320" height="74" fill="#c9b48a"/><rect x="0" y="146" width="320" height="64" fill="url(#w)"/>' +
+  '<rect x="120" y="120" width="12" height="90" fill="#8a7a62"/><rect x="188" y="120" width="12" height="90" fill="#8a7a62"/>' +
+  '<rect x="132" y="128" width="56" height="18" fill="#6b4f2a"/><g stroke="#4a3620" stroke-width="3"><line x1="132" y1="128" x2="188" y2="146"/><line x1="188" y1="128" x2="132" y2="146"/></g>' +
+  '<rect x="132" y="146" width="56" height="64" fill="#5b8fbf" opacity=".6"/><g stroke="#fff" stroke-opacity=".5" stroke-width="2" fill="none"><path d="M10 170 q15 -5 30 0 t30 0"/><path d="M220 186 q15 -5 30 0 t30 0"/><path d="M60 196 q15 -5 30 0"/></g>' +
+  '<path d="M224 160 h44 l-6 10 h-32z" fill="#7a4a2a"/><rect x="236" y="150" width="3" height="10" fill="#7a4a2a"/></svg>');
+$('wimg').src = IMG; $('sc1-img').src = IMG;
+
+const DOC0 = '<h1>Excursión al Canal de Castilla</h1><p class="sub">Curso de informática de Cruz Roja · Sábado por la mañana</p>' +
+  '<h2>¿Qué es el Canal de Castilla?</h2><p class="ph">⤷ Pega aquí el párrafo de la Wikipedia</p><p class="ph">⤷ Pega aquí la foto del canal</p><p class="ph">⤷ Pega aquí la dirección de la página (la fuente)</p>' +
+  '<h2>Programa</h2><p>13:30 Comida en el merendero.</p><p>10:00 Salida desde la puerta del centro.</p><p>11:00 Paseo junto al canal y visita a una esclusa.</p><p>16:00 Vuelta a casa.</p>' +
+  '<h2>Qué llevar</h2><p>Agua, gorra y calzado cómodo.</p>';
+const MAIL0 = '<p>Hola a todos:</p><p>Os mando el programa de la excursión del sábado.</p><p class="ph">⤷ Pega aquí el programa de la excursión</p><p>Un saludo.</p>';
+const PH_TXT = ['⤷ Pega aquí el párrafo de la Wikipedia', '⤷ Pega aquí la foto del canal', '⤷ Pega aquí la dirección de la página (la fuente)', '⤷ Pega aquí el programa de la excursión'];
+
+/* Progreso guardado */
+const KEY = 'copiar-pegar-texto-imagenes-2026';
+let found = {}, retos = {};
+try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; found = s.found || {}; retos = s.retos || {}; } catch(e){}
+function guardar(){ try { localStorage.setItem(KEY, JSON.stringify({found, retos})); } catch(e){} }
+let modo = 'desc';
+
+/* =========================================================
+   Estaciones y retos (siguen los apartados del documento)
+   ========================================================= */
+const ESTACIONES = [
+  {id:'sel', ic:'🖱️', t:'Seleccionar texto', guia:'Antes de copiar, comprueba que está seleccionado <b>exactamente</b> el trozo que necesitas: se ve resaltado.<br><b>Palabra:</b> doble clic. <b>Párrafo:</b> triple clic. <b>Trozo:</b> arrastra con el botón izquierdo. <b>Con el teclado:</b> Mayús y las flechas. <b>Todo el documento:</b> Ctrl + E.', retos:[
+    {id:'palabra', t:'Selecciona una palabra', h:'Doble clic sobre ella'},
+    {id:'parrafo', t:'Selecciona un párrafo entero', h:'Triple clic dentro del párrafo'},
+    {id:'arrastrar', t:'Selecciona un trozo arrastrando', h:'Mantén pulsado el botón izquierdo y arrastra'},
+    {id:'mayus', t:'Selecciona con el teclado en Word', h:'Coloca el cursor, mantén Mayús y usa las flechas'},
+    {id:'todoDoc', t:'Selecciona todo el documento', h:'En Word, Ctrl + E'}]},
+  {id:'ccp', ic:'📋', t:'Copiar, cortar y pegar', guia:'<b>Teclado:</b> Ctrl + C y Ctrl + V. <b>Ratón:</b> clic derecho › Copiar, y clic derecho en el destino › Pegar. <b>Botones:</b> Copiar y Pegar, en la pestaña Inicio.<br>Para <b>mover</b> un texto: Ctrl + X, pon el cursor en el nuevo sitio y Ctrl + V. La <b>rayita parpadeante</b> indica dónde aparecerá. Para empezar en una línea nueva, pulsa <b>Intro</b> antes de pegar.', retos:[
+    {id:'teclado', t:'Copia y pega con el teclado', h:'Ctrl + C y luego Ctrl + V'},
+    {id:'raton', t:'Copia y pega con el botón derecho', h:'Clic derecho › Copiar; clic derecho en el destino › Pegar'},
+    {id:'botones', t:'Usa los botones Copiar o Pegar de Word', h:'Pestaña Inicio, grupo Portapapeles'},
+    {id:'mover', t:'Mueve un texto con Ctrl + X', h:'Cortar y después pegar en el nuevo sitio'},
+    {id:'ordenar', t:'Ordena el programa de la excursión', h:'En el folleto, mueve las horas para que vayan en orden'},
+    {id:'intro', t:'Pega en una línea nueva', h:'Pulsa Intro y después pega'},
+    {id:'varias', t:'Pega lo mismo dos veces sin volver a copiar', h:'Ctrl + V otra vez en otro sitio'}]},
+  {id:'entre', ic:'🔀', t:'Entre documentos y programas', guia:'1. Selecciona y copia en el programa de <b>origen</b>.<br>2. Cambia a la ventana de <b>destino</b> (la barra de abajo).<br>3. Haz clic donde quieras el texto y pulsa <b>Ctrl + V</b>.', retos:[
+    {id:'web2doc', t:'Copia texto de la página web y pégalo en Word', h:'Navegador › Ctrl + C › Word › Ctrl + V'},
+    {id:'doc2mail', t:'Copia el programa de Word y pégalo en el correo', h:'Word › Ctrl + C › Correo › Ctrl + V'}]},
+  {id:'formato', ic:'🎨', t:'Elegir el formato al pegar', guia:'Al pegar texto de una web puede llegar con otra letra, tamaño o colores. Toca el <b>icono de opciones de pegado</b> 📋 que aparece al lado:<br><b>Mantener el formato de origen</b>, <b>Combinar formato</b> o <b>Mantener solo texto</b>, que suele ser la opción más limpia.', retos:[
+    {id:'formato', t:'Abre las opciones de pegado y elige una', h:'El icono 📋 (Ctrl) que sale al lado de lo pegado'},
+    {id:'solotexto', t:'Elige «Mantener solo texto»', h:'Lo pegado toma la letra del documento'}]},
+  {id:'wiki', ic:'📖', t:'Copiar de una página web', guia:'Localiza el párrafo, <b>selecciónalo arrastrando</b> del principio al final y comprueba que <b>no has incluido texto de más</b>. Ctrl + C, abre Word, haz clic donde quieras y Ctrl + V.<br>Las referencias entre corchetes, como <b>[1]</b>, sirven para localizar las fuentes. Si compartes el texto, <b>indica de dónde procede</b>.', retos:[
+    {id:'exacto', t:'Copia el primer párrafo de la Wikipedia, ni más ni menos', h:'Desde «El Canal de Castilla…» hasta el final del párrafo'},
+    {id:'fuente', t:'Pon en el folleto de dónde procede el texto', h:'Copia la dirección de la página y pégala en el folleto'}]},
+  {id:'img', ic:'🖼️', t:'Imágenes y direcciones', guia:'<b>Pegar una imagen:</b> clic derecho sobre ella › Copiar imagen, y pega en el documento.<br><b>Guardarla:</b> clic derecho › Guardar imagen como, elige la carpeta y Guardar. Queda como un <b>archivo normal</b>.<br><b>Dirección de la página:</b> clic en la barra de direcciones, Ctrl + C y pega donde quieras.', retos:[
+    {id:'copiarImg', t:'Copia la foto de la web y pégala en el folleto', h:'Clic derecho sobre la foto › Copiar imagen'},
+    {id:'guardarImg', t:'Guarda la foto en el ordenador', h:'Clic derecho › Guardar imagen como › carpeta › Guardar'},
+    {id:'direccion', t:'Copia la dirección de la página', h:'Clic en la barra de direcciones y Ctrl + C'}]},
+  {id:'atajos', ic:'⌨️', t:'Atajos esenciales', guia:'<b>Ctrl + Z</b> deshace. <b>Ctrl + E</b> selecciona todo en Word y en muchos programas de Windows en español, pero <b>en el navegador es Ctrl + A</b>. Algunos programas usan atajos distintos.', retos:[
+    {id:'deshacer', t:'Deshaz algo con Ctrl + Z', h:'En Word o en el correo'},
+    {id:'ctrlA', t:'Selecciona toda la página web', h:'En el navegador, Ctrl + A'}]}
+];
+const TODOS = ESTACIONES.flatMap(s => s.retos.map(r => Object.assign({st:s.id}, r)));
+
+/* Estado */
+let X;
+function nuevoEstado(){
+  X = {win:'web', clip:null, lastRange:null, lastArea:null, pzN:0, pz:null, saved:[], expFolder:'Imágenes', enterAt:0, enterArea:null,
+       ultima:null, gotit:null, station:'sel', verSt:false, dlg:null, sent:false, folleto:false, fol:{wiki:false, img:false, src:false, orden:false}};
+}
+nuevoEstado();
+function tick(id){
+  if (retos[id]) return;
+  retos[id] = true; guardar();
+  const r = TODOS.find(x => x.id === id);
+  if (r){ X.gotit = r.t; X.station = r.st; X.verSt = true; }
+  progreso();
+}
+function explicar(html, color){ X.ultima = {html, color:color || '--c6'}; renderPanel(); }
+function toast(msg){ const t = $('toast'); t.innerHTML = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3200); }
+
+/* =========================================================
+   Ventanas
+   ========================================================= */
+const WIN = {web:'w-web', word:'w-word', mail:'w-mail', exp:'w-exp'};
+function verVentana(w){
+  if (X.win === w) return;
+  const antes = X.win;
+  X.win = w; ocultarMenus();
+  for (const k in WIN) $(WIN[k]).hidden = k !== w;
+  const el = $(WIN[w]); el.classList.remove('opening'); void el.offsetWidth; el.classList.add('opening');
+  document.querySelectorAll('#sc2 .tk[data-win]').forEach(b => b.classList.toggle('on', b.dataset.win === w));
+  if (w === 'exp') pintarExplorador();
+  if (X.clip && antes !== w && (w === 'word' || w === 'mail')) explicar('Has cambiado a la ventana de <b>' + (w === 'word' ? 'Word' : 'Correo') + '</b>. Lo que copiaste sigue en el portapapeles: <b>haz clic donde quieras pegarlo</b> y pulsa <b>Ctrl + V</b>.', '--c6');
+  renderPanel();
+}
+document.querySelectorAll('#sc2 .tk[data-win]').forEach(b => b.addEventListener('click', () => verVentana(b.dataset.win)));
+document.querySelector('#sc2 .tk[data-start]').addEventListener('click', () => toast('En esta práctica, cambia de ventana con los botones de la barra de abajo.'));
+$('b-send').addEventListener('click', () => {
+  const t = norm($('mail').textContent);
+  if (/10:00/.test(t) || /13:30/.test(t)){ X.sent = true; toast('Correo enviado (en la práctica no se envía de verdad).'); explicar('Has enviado el correo con el programa que copiaste de Word. ¡Así se comparte un texto sin volver a escribirlo!', '--c1'); }
+  else toast('Antes de enviarlo, pega el <b>programa de la excursión</b> en el correo.');
+});
+
+/* Explorador */
+const CARPETAS = {Escritorio:[], Documentos:[{n:'Folleto excursión.docx', ic:'📝'}, {n:'Recetas.docx', ic:'📝'}], Imágenes:[{n:'Nietos en la playa.jpg', ic:'🖼️'}, {n:'Navidad.jpg', ic:'🖼️'}], Descargas:[]};
+function pintarExplorador(){
+  $('exp-title').textContent = X.expFolder;
+  $('exp-side').innerHTML = Object.keys(CARPETAS).map(f => '<div class="' + (f === X.expFolder ? 'on' : '') + '" data-f="' + f + '">' + {Escritorio:'🖥️', Documentos:'📄', Imágenes:'🖼️', Descargas:'⬇️'}[f] + ' ' + f + '</div>').join('');
+  const files = CARPETAS[X.expFolder].concat(X.saved.filter(s => s.f === X.expFolder).map(s => ({n:s.n, img:true, fresh:s.fresh})));
+  $('exp-files').innerHTML = files.length ? files.map(f => '<div class="ef' + (f.fresh ? ' fresh' : '') + '">' + (f.img ? '<img src="' + IMG + '" alt="">' : '<span class="ii">' + f.ic + '</span>') + '<span>' + esc(f.n) + '</span></div>').join('') : '<div class="exp-empty">Esta carpeta está vacía.</div>';
+  $('exp-side').querySelectorAll('[data-f]').forEach(d => d.onclick = () => { X.expFolder = d.dataset.f; pintarExplorador(); });
+  X.saved.forEach(s => s.fresh = false);
+}
+
+/* =========================================================
+   Selección: dónde está y cómo se ha hecho
+   ========================================================= */
+const doc = $('doc'), mail = $('mail'), wp = $('wp'), addr = $('addr');
+function zona(node){
+  if (!node) return null;
+  const el = node.nodeType === 1 ? node : node.parentElement;
+  if (!el) return null;
+  if (el.closest('#addr')) return 'addr';
+  if (el.closest('#wp')) return 'web';
+  if (el.closest('#doc')) return 'doc';
+  if (el.closest('#mail')) return 'mail';
+  return null;
+}
+const zonaVentana = {web:'web', addr:'web', doc:'word', mail:'mail'};
+function rangoActual(){
+  const s = getSelection();
+  if (s.rangeCount){ const r = s.getRangeAt(0), z = zona(r.commonAncestorContainer); if (z && zonaVentana[z] === X.win) return {r, z}; }
+  if (X.lastRange && X.lastArea && zonaVentana[X.lastArea] === X.win) return {r:X.lastRange, z:X.lastArea};
+  return null;
+}
+document.addEventListener('selectionchange', () => {
+  if (modo !== 'live') return;
+  const s = getSelection(); if (!s.rangeCount) return;
+  const r = s.getRangeAt(0), z = zona(r.commonAncestorContainer);
+  if (z){ X.lastRange = r.cloneRange(); X.lastArea = z; }
+});
+let downPt = null;
+$('sc2').addEventListener('mousedown', e => {
+  if (!e.target.closest('#cm')) ocultarMenu();
+  if (!e.target.closest('#pzmenu') && !e.target.closest('#pzbtn')) $('pzmenu').classList.remove('on');
+  downPt = {x:e.clientX, y:e.clientY};
+});
+$('sc2').addEventListener('mouseup', e => {
+  if (!downPt || e.button !== 0) return;
+  const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y) > 6; downPt = null;
+  setTimeout(() => {
+    const s = getSelection(); if (!s.rangeCount || s.isCollapsed) return;
+    const z = zona(s.getRangeAt(0).commonAncestorContainer); if (!z || z === 'addr') return;
+    if (moved && e.detail === 1){ tick('arrastrar'); explicar('Has seleccionado un trozo <b>arrastrando</b>: «' + esc(recorta(s.toString())) + '». Comprueba que está justo lo que necesitas antes de copiar.', '--c6'); }
+  }, 0);
+});
+$('sc2').addEventListener('dblclick', e => {
+  setTimeout(() => {
+    const s = getSelection(); if (!s.rangeCount || s.isCollapsed) return;
+    const z = zona(s.getRangeAt(0).commonAncestorContainer); if (!z || z === 'addr') return;
+    const t = norm(s.toString());
+    if (t && !/\s/.test(t)){ tick('palabra'); explicar('Con <b>doble clic</b> has seleccionado la palabra «' + esc(t) + '».', '--c6'); }
+  }, 0);
+});
+$('sc2').addEventListener('click', e => {
+  if (e.detail === 3) setTimeout(() => {
+    const s = getSelection(); if (!s.rangeCount || s.isCollapsed) return;
+    const z = zona(s.getRangeAt(0).commonAncestorContainer); if (!z || z === 'addr') return;
+    tick('parrafo'); explicar('Con <b>triple clic</b> has seleccionado el <b>párrafo entero</b>. En algunos programas no funciona: entonces, arrastra del principio al final.', '--c6');
+  }, 0);
+});
+addr.addEventListener('click', () => {
+  const r = document.createRange(); r.selectNodeContents($('url'));
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  X.lastRange = r.cloneRange(); X.lastArea = 'addr';
+  explicar('Has hecho clic en la <b>barra de direcciones</b>: la dirección está seleccionada. Ahora pulsa <b>Ctrl + C</b> para copiarla.', '--c7');
+});
+const recorta = s => { s = norm(s); return s.length > 60 ? s.slice(0, 57) + '…' : s; };
+
+/* =========================================================
+   Copiar, cortar y pegar
+   ========================================================= */
+function copiar(como){
+  if (X.win === 'exp') return toast('En el Explorador no hay texto que copiar.');
+  const a = rangoActual();
+  if (!a || a.r.collapsed) return toast('Primero <b>selecciona</b> lo que quieres copiar: se verá resaltado.');
+  const {r, z} = a;
+  if (z === 'addr'){
+    X.clip = {kind:'url', text:URL_PAG, src:'addr', copias:0, como};
+    tick('direccion'); explicar('Has copiado la <b>dirección de la página</b>. Pégala en el folleto, donde dice «la fuente», para indicar de dónde procede el texto.', '--c7');
+    return;
+  }
+  const div = document.createElement('div'); div.appendChild(r.cloneContents());
+  div.querySelectorAll('img, .infobox, table, .ph').forEach(n => { if (n.classList && n.classList.contains('ph')) n.classList.remove('ph'); else n.remove(); });
+  const tc = div.cloneNode(true); tc.querySelectorAll('p, h1, h2, h3, li, div, br').forEach(e => e.after(' '));
+  const text = norm(tc.textContent);
+  if (!text) return toast('No hay texto seleccionado. Para copiar la foto, haz <b>clic derecho sobre ella</b>.');
+  X.clip = {kind:'text', html:div.innerHTML, text, src:z, copias:0, como, corte:false};
+  let t = 'Has <b>copiado</b> «' + esc(recorta(text)) + '». El original se queda donde estaba.';
+  if (z === 'web'){
+    const p1 = norm($('p1').textContent);
+    if (text === p1){ tick('exacto'); t = '¡Perfecto! Has copiado <b>exactamente el primer párrafo</b>, ni más ni menos. Ahora cambia a <b>Word</b> en la barra de abajo, haz clic en «Pega aquí el párrafo…» y pulsa <b>Ctrl + V</b>.'; }
+    else if (text.includes(p1)) t = 'Has copiado el párrafo, pero <b>con texto de más</b> (' + (text.length - p1.length) + ' letras de más). Vuelve a seleccionarlo justo del principio al final.';
+    else if (p1.includes(text) && text.length > 40) t = 'Has copiado <b>solo una parte</b> del primer párrafo. Si quieres el párrafo entero, arrastra desde «El Canal de Castilla» hasta «Valladolid.[2]».';
+    else t += ' Cambia a la ventana de <b>destino</b> con la barra de abajo y pega.';
+  } else t += ' Haz clic donde quieras el texto y pulsa <b>Ctrl + V</b>' + (z === 'doc' ? ', o cambia al <b>Correo</b> para pegarlo allí' : '') + '.';
+  explicar(t, '--c6');
+}
+function cortar(como){
+  const a = rangoActual();
+  if (!a || a.r.collapsed) return toast('Primero <b>selecciona</b> el texto que quieres mover.');
+  if (a.z === 'web' || a.z === 'addr') return toast('En una página web solo se puede <b>copiar</b>, no cortar.');
+  copiar(como);
+  if (!X.clip || X.clip.kind !== 'text') return;
+  const el = a.z === 'doc' ? doc : mail;
+  el.focus(); const s = getSelection(); s.removeAllRanges(); s.addRange(a.r);
+  document.execCommand('delete');
+  X.clip.corte = true;
+  arreglarHuecos(el);
+  explicar('Has <b>cortado</b> «' + esc(recorta(X.clip.text)) + '»: ha desaparecido de su sitio y está en el portapapeles. Pon la <b>rayita</b> en el nuevo sitio y pulsa <b>Ctrl + V</b>.', '--c8');
+  comprobar();
+}
+function formatoWeb(html, modo, n){
+  const d = document.createElement('div'); d.innerHTML = html;
+  if (modo === 'solo') return '<span data-pz="' + n + '">' + esc(norm(d.textContent)) + '</span>';
+  d.querySelectorAll('*').forEach(e => { e.removeAttribute('style'); e.removeAttribute('class'); e.removeAttribute('id'); });
+  d.querySelectorAll('a').forEach(a => { a.setAttribute('href', '#'); if (modo === 'origen') a.setAttribute('style', 'color:#3366cc;text-decoration:none'); });
+  d.querySelectorAll('sup').forEach(s => { if (modo === 'origen') s.setAttribute('style', 'color:#3366cc'); });
+  d.querySelectorAll('p, h1, h2, h3, li, div').forEach(b => { const sp = document.createElement('span'); sp.innerHTML = b.innerHTML + ' '; b.replaceWith(sp); });
+  return modo === 'origen'
+    ? '<span data-pz="' + n + '" style="font-family:Georgia,\'Times New Roman\',serif;color:#202122;background:#f8f9fa;font-size:1.04em">' + d.innerHTML + '</span>'
+    : '<span data-pz="' + n + '">' + d.innerHTML + '</span>';
+}
+function pegar(como){
+  if (!X.clip) return toast('El portapapeles está vacío: primero <b>copia</b> algo.');
+  if (X.win === 'web') return toast('En una página web no se puede pegar. Cambia a <b>Word</b> o al <b>Correo</b> con la barra de abajo.');
+  if (X.win === 'exp') return toast('Para pegar texto o imágenes, cambia a <b>Word</b> o al <b>Correo</b>.');
+  const a = rangoActual();
+  if (!a || (a.z !== 'doc' && a.z !== 'mail')) return toast('Primero <b>haz clic</b> en el sitio donde quieres pegar: verás la <b>rayita parpadeante</b>.');
+  const el = a.z === 'doc' ? doc : mail;
+  el.focus();
+  const s = getSelection(); s.removeAllRanges(); s.addRange(a.r);
+  // Si el cursor está en un hueco «Pega aquí…», se sustituye el hueco
+  const nodo = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement);
+  const hueco = nodo && nodo.closest('.ph');
+  if (hueco && el.contains(hueco)){ const r = document.createRange(); r.selectNodeContents(hueco); s.removeAllRanges(); s.addRange(r); }
+  const c = X.clip; let html, n = 0;
+  if (c.kind === 'img') html = '<img src="' + IMG + '" alt="Esclusa del Canal de Castilla">';
+  else if (c.kind === 'url') html = '<a href="#">' + esc(c.text) + '</a>';
+  else if (c.src === 'web'){ n = ++X.pzN; html = formatoWeb(c.html, 'origen', n); }
+  else html = c.html;
+  const intro = Date.now() - X.enterAt < 30000 && X.enterArea === a.z;
+  document.execCommand('insertHTML', false, html);
+  if (hueco && hueco.isConnected && !PH_TXT.includes(norm(hueco.textContent))) hueco.classList.remove('ph');
+  c.copias++;
+  arreglarHuecos(el);
+  // Retos
+  if (c.copias >= 2) tick('varias');
+  if (como === 'teclado' && c.como === 'teclado') tick('teclado');
+  if (como === 'raton' && c.como === 'raton') tick('raton');
+  if (como === 'botones' || c.como === 'botones') tick('botones');
+  if (c.corte) tick('mover');
+  if (intro) tick('intro');
+  X.enterAt = 0;
+  let t;
+  if (c.kind === 'img'){ if (a.z === 'doc') tick('copiarImg'); t = 'Has pegado la <b>foto</b> en ' + (a.z === 'doc' ? 'el folleto' : 'el correo') + '. Se copió con clic derecho › <b>Copiar imagen</b>.'; }
+  else if (c.kind === 'url'){ if (a.z === 'doc') tick('fuente'); t = 'Has pegado la <b>dirección de la página</b>. Así, quien lea el folleto sabrá <b>de dónde procede</b> el texto.'; }
+  else if (c.src === 'web'){
+    if (a.z === 'doc') tick('web2doc');
+    t = 'Has pegado el texto de la web. Fíjate: ha llegado con <b>otra letra y otro color</b>. Toca el icono <b>📋 (Ctrl)</b> que ha salido al lado para elegir cómo quieres el formato.';
+    if (/\[\d\]/.test(c.text)) t += ' Las <b>[1]</b>, <b>[2]</b>… son referencias: si las borras, quitas también la pista de las fuentes.';
+  } else {
+    if (c.src === 'doc' && a.z === 'mail') tick('doc2mail');
+    t = c.corte ? 'Has <b>pegado lo cortado</b> en su nuevo sitio: el texto se ha <b>movido</b>.' : 'Has <b>pegado</b> «' + esc(recorta(c.text)) + '».' + (c.src === 'doc' && a.z === 'mail' ? ' Del documento al correo, sin volver a escribirlo.' : '');
+  }
+  if (c.copias >= 2) t += ' Lo has pegado <b>' + c.copias + ' veces</b> sin volver a copiar.';
+  if (intro) t += ' Como pulsaste <b>Intro</b> antes, ha empezado en una <b>línea nueva</b>.';
+  t += ' Si te has equivocado, <b>Ctrl + Z</b>.';
+  explicar(t, c.kind === 'img' ? '--c9' : c.corte ? '--c8' : '--c1');
+  if (n) mostrarPz(n);
+  comprobar();
+}
+
+/* Opciones de pegado */
+const PZ = [['origen', 'A', 'Mantener el formato de origen', 'Conserva el aspecto del texto original'], ['combinar', '🖌️', 'Combinar formato', 'Adapta parte del aspecto al documento'], ['solo', 'T', 'Mantener solo texto', 'Sin el formato original: lo más limpio']];
+function mostrarPz(n){
+  const el = doc.querySelector('[data-pz="' + n + '"]') || mail.querySelector('[data-pz="' + n + '"]');
+  if (!el) return;
+  X.pz = {n, modo:'origen', html:X.clip.html};
+  const rs = el.getClientRects(), last = rs[rs.length - 1], sc = $('sc2').getBoundingClientRect(), b = $('pzbtn');
+  if (!last) return;
+  b.style.left = Math.min(sc.width - 80, last.right - sc.left + 4) + 'px';
+  b.style.top = Math.min(sc.height - 60, last.bottom - sc.top + 2) + 'px';
+  b.classList.add('on');
+}
+$('pzbtn').addEventListener('mousedown', e => e.preventDefault());
+$('pzbtn').addEventListener('click', () => {
+  const m = $('pzmenu'), b = $('pzbtn');
+  m.innerHTML = '<h5>Opciones de pegado</h5>' + PZ.map(([k, ic, t, d]) => '<div class="pzo' + (X.pz && X.pz.modo === k ? ' cur' : '') + '" data-pz="' + k + '"><span class="pzi">' + ic + '</span><span><b>' + t + '</b><small>' + d + '</small></span></div>').join('');
+  const sc = $('sc2').getBoundingClientRect();
+  let left = parseFloat(b.style.left), top = parseFloat(b.style.top) + b.offsetHeight + 4;
+  m.classList.add('on');
+  if (left + m.offsetWidth > sc.width - 6) left = sc.width - m.offsetWidth - 6;
+  if (top + m.offsetHeight > sc.height - 50) top = parseFloat(b.style.top) - m.offsetHeight - 4;
+  m.style.left = left + 'px'; m.style.top = Math.max(4, top) + 'px';
+  m.querySelectorAll('[data-pz]').forEach(o => { o.addEventListener('mousedown', e => e.preventDefault()); o.onclick = () => aplicarPz(o.dataset.pz); });
+});
+function aplicarPz(k){
+  $('pzmenu').classList.remove('on');
+  if (!X.pz) return;
+  const host = doc.querySelector('[data-pz="' + X.pz.n + '"]') ? doc : mail;
+  const el = host.querySelector('[data-pz="' + X.pz.n + '"]');
+  if (!el){ $('pzbtn').classList.remove('on'); return; }
+  host.focus();
+  const r = document.createRange(); r.selectNode(el);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  document.execCommand('insertHTML', false, formatoWeb(X.pz.html, k, X.pz.n));
+  X.pz.modo = k;
+  tick('formato');
+  if (k === 'solo'){ tick('solotexto'); explicar('Has elegido <b>Mantener solo texto</b>: el texto ha tomado la <b>letra del documento</b> y ha perdido colores y enlaces. Suele ser la opción más limpia.', '--c1'); }
+  else if (k === 'combinar') explicar('Has elegido <b>Combinar formato</b>: usa la letra del documento pero conserva detalles como la negrita y los enlaces.', '--c6');
+  else explicar('Has elegido <b>Mantener el formato de origen</b>: el texto conserva la letra y los colores de la página web.', '--c6');
+  setTimeout(() => mostrarPz(X.pz.n), 0);
+  comprobar();
+}
+
+/* Huecos «Pega aquí…» */
+function arreglarHuecos(el){
+  el.querySelectorAll('p').forEach(p => p.classList.toggle('ph', PH_TXT.includes(norm(p.textContent))));
+  const n = norm(doc.textContent).split(' ').filter(Boolean).length;
+  $('wcount').textContent = n + ' palabras';
+}
+
+/* Comprobar el folleto */
+function comprobar(){
+  const t = norm(doc.textContent);
+  const horas = [...doc.querySelectorAll('p')].map(p => norm(p.textContent)).filter(s => /^\d{1,2}:\d{2}/.test(s)).map(s => { const [h, m] = s.match(/^(\d{1,2}):(\d{2})/).slice(1).map(Number); return h * 60 + m; });
+  const enOrden = horas.length >= 4 && horas.every((v, i) => i === 0 || v >= horas[i - 1]) && new Set(horas).size >= 4;
+  const f = {wiki:/obra de ingeniería hidráulica/.test(t), img:!!doc.querySelector('img'), src:t.includes('wikipedia.org/wiki/Canal'), orden:enOrden};
+  if (f.orden && !X.fol.orden){ tick('ordenar'); X.ultima = {html:'¡El <b>programa ya está en orden</b>: 10:00, 11:00, 13:30 y 16:00! Lo has conseguido moviendo líneas con Ctrl + X y Ctrl + V.', color:'--c8'}; }
+  X.fol = f;
+  const todo = f.wiki && f.img && f.src && f.orden;
+  if (todo && !X.folleto){ X.folleto = true; X.ultima = {html:'🎉 <b>¡Folleto terminado!</b> Tiene el párrafo de la Wikipedia, la foto, la fuente y el programa en orden. Pulsa «Ver el folleto» para verlo como quedaría impreso.', color:'--c1'}; }
+  if (!todo) X.folleto = false;
+  renderPanel();
+}
+
+/* =========================================================
+   Menú del clic derecho y diálogos
+   ========================================================= */
+function ocultarMenu(){ $('cm').classList.remove('on'); }
+function ocultarMenus(){ ocultarMenu(); $('pzmenu').classList.remove('on'); $('pzbtn').classList.remove('on'); }
+function abrirMenu(x, y, items){
+  const m = $('cm');
+  m.innerHTML = items.map((it, i) => it === '-' ? '<div class="cmsep"></div>' : '<div class="cmi' + (it.dis ? ' dis' : '') + '" data-i="' + i + '"><span>' + it.ic + '</span>' + it.t + (it.k ? '<span class="ck">' + it.k + '</span>' : '') + '</div>').join('');
+  m.classList.add('on');
+  const sc = $('sc2').getBoundingClientRect();
+  let left = x - sc.left, top = y - sc.top;
+  if (left + m.offsetWidth > sc.width - 4) left = sc.width - m.offsetWidth - 4;
+  if (top + m.offsetHeight > sc.height - 4) top = sc.height - m.offsetHeight - 4;
+  m.style.left = Math.max(4, left) + 'px'; m.style.top = Math.max(4, top) + 'px';
+  m.querySelectorAll('.cmi').forEach(e => { e.addEventListener('mousedown', ev => ev.preventDefault()); e.onclick = ev => { ev.stopPropagation(); const it = items[+e.dataset.i]; ocultarMenu(); it.f(); }; });
+}
+$('sc2').addEventListener('contextmenu', e => {
+  if (e.target.closest('.dlg-bg')) return;
+  e.preventDefault(); e.stopPropagation();
+  const t = e.target;
+  if (t.closest('#wimg')) return abrirMenu(e.clientX, e.clientY, [
+    {ic:'🔗', t:'Abrir imagen en una pestaña nueva', f:() => toast('En esta práctica nos quedamos en esta pestaña.')}, '-',
+    {ic:'📄', t:'Copiar imagen', f:copiarImagen}, {ic:'💾', t:'Guardar imagen como…', f:guardarImagen}]);
+  if (t.closest('#addr')){ addr.click(); return abrirMenu(e.clientX, e.clientY, [{ic:'📄', t:'Copiar', k:'Ctrl+C', f:() => copiar('raton')}]); }
+  const z = zona(t);
+  if (z === 'web'){
+    const s = getSelection(), hay = s.rangeCount && !s.isCollapsed && zona(s.getRangeAt(0).commonAncestorContainer) === 'web';
+    return abrirMenu(e.clientX, e.clientY, [{ic:'📄', t:'Copiar', k:'Ctrl+C', dis:!hay, f:() => copiar('raton')}, {ic:'☑️', t:'Seleccionar todo', k:'Ctrl+A', f:() => selTodo('web')}]);
+  }
+  if (z === 'doc' || z === 'mail'){
+    setTimeout(() => {
+      const s = getSelection(), hay = s.rangeCount && !s.isCollapsed && zona(s.getRangeAt(0).commonAncestorContainer) === z;
+      abrirMenu(e.clientX, e.clientY, [{ic:'✂️', t:'Cortar', k:'Ctrl+X', dis:!hay, f:() => cortar('raton')}, {ic:'📄', t:'Copiar', k:'Ctrl+C', dis:!hay, f:() => copiar('raton')},
+        {ic:'📋', t:'Pegar', k:'Ctrl+V', dis:!X.clip, f:() => pegar('raton')}]);
+    }, 0);
+  }
+});
+function copiarImagen(){
+  X.clip = {kind:'img', text:'Foto de la esclusa', src:'web', copias:0, como:'raton'};
+  explicar('Has elegido <b>Copiar imagen</b>: la foto está en el portapapeles. Cambia a <b>Word</b>, haz clic en «Pega aquí la foto…» y pega.', '--c9');
+}
+function guardarImagen(){
+  X.dlg = {f:'Descargas'};
+  pintarDialogo();
+}
+function pintarDialogo(){
+  const host = $('dlg-host');
+  if (!X.dlg){ host.innerHTML = ''; return; }
+  host.innerHTML = '<div class="dlg-bg"><div class="dlg"><h4>💾 Guardar imagen como</h4><label>1. Elige la carpeta</label><div class="fl">' +
+    Object.keys(CARPETAS).map(f => '<button class="' + (X.dlg.f === f ? 'on' : '') + '" data-f="' + f + '" type="button">' + {Escritorio:'🖥️', Documentos:'📄', Imágenes:'🖼️', Descargas:'⬇️'}[f] + ' ' + f + '</button>').join('') +
+    '</div><label for="dlg-n">2. Nombre del archivo</label><input id="dlg-n" value="esclusa-canal-de-castilla.jpg" spellcheck="false"><div class="row"><button class="b s" data-r="no" type="button">Cancelar</button><button class="b p" data-r="si" type="button">Guardar</button></div></div></div>';
+  host.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { X.dlg.f = b.dataset.f; const v = $('dlg-n').value; pintarDialogo(); $('dlg-n').value = v; });
+  host.querySelector('[data-r=no]').onclick = () => { X.dlg = null; pintarDialogo(); };
+  host.querySelector('[data-r=si]').onclick = () => {
+    const n = ($('dlg-n').value || '').trim() || 'imagen.jpg', f = X.dlg.f;
+    X.saved.push({f, n:/\.\w+$/.test(n) ? n : n + '.jpg', fresh:true}); X.dlg = null; pintarDialogo();
+    X.expFolder = f; tick('guardarImg');
+    toast('Imagen guardada en «' + esc(f) + '».');
+    explicar('Has guardado la foto en la carpeta <b>' + esc(f) + '</b>. Ahora es un <b>archivo normal</b>: ábrelo con el botón <b>📁 Explorador</b> de la barra de abajo. Podrás copiarlo o moverlo como cualquier otro archivo.', '--c9');
+  };
+}
+function selTodo(z){
+  const el = z === 'web' ? wp : z === 'doc' ? doc : mail;
+  if (z !== 'web') el.focus();
+  const r = document.createRange(); r.selectNodeContents(el);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  X.lastRange = r.cloneRange(); X.lastArea = z;
+  if (z === 'web'){ tick('ctrlA'); explicar('Con <b>Ctrl + A</b> has seleccionado <b>toda la página web</b>. En el navegador es Ctrl + A; en Word y otros programas de Windows en español, Ctrl + E.', '--c7'); }
+  else { tick('todoDoc'); explicar('Con <b>Ctrl + E</b> has seleccionado <b>todo</b> ' + (z === 'doc' ? 'el documento' : 'el mensaje') + '. En el navegador, en cambio, sería Ctrl + A.', '--c6'); }
+}
+
+/* Botones de Word */
+$('ribbon').querySelectorAll('[data-rb]').forEach(b => {
+  b.addEventListener('mousedown', e => e.preventDefault());
+  b.addEventListener('click', () => {
+    const k = b.dataset.rb;
+    if (k === 'paste') return pegar('botones');
+    if (k === 'copy') return copiar('botones');
+    if (k === 'cut') return cortar('botones');
+    const a = rangoActual();
+    if (!a || a.z !== 'doc' || a.r.collapsed) return toast('Selecciona primero el texto del documento.');
+    doc.focus(); const s = getSelection(); s.removeAllRanges(); s.addRange(a.r);
+    document.execCommand(k);
+  });
+});
+
+/* =========================================================
+   Teclado (el de verdad y el de la pantalla)
+   ========================================================= */
+function flashKb(k){ const b = document.querySelector('.kb[data-k="' + k + '"]'); if (!b) return; b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 180); }
+function atajo(k, desdePantalla, ev){
+  const enEditable = X.win === 'word' || X.win === 'mail';
+  const z = X.win === 'word' ? 'doc' : X.win === 'mail' ? 'mail' : 'web';
+  if (k === 'c'){ ev && ev.preventDefault(); copiar('teclado'); }
+  else if (k === 'x'){ ev && ev.preventDefault(); cortar('teclado'); }
+  else if (k === 'v'){ ev && ev.preventDefault(); pegar('teclado'); }
+  else if (k === 'z'){
+    if (!enEditable){ ev && ev.preventDefault(); return toast('Aquí no hay nada que deshacer.'); }
+    if (desdePantalla){ (z === 'doc' ? doc : mail).focus(); document.execCommand('undo'); }
+    tick('deshacer');
+    setTimeout(() => { arreglarHuecos(z === 'doc' ? doc : mail); $('pzbtn').classList.remove('on'); explicar('Con <b>Ctrl + Z</b> has <b>deshecho</b> la última acción. Puedes pulsarlo varias veces para ir hacia atrás.', '--c7'); comprobar(); }, 0);
+  }
+  else if (k === 'e'){
+    ev && ev.preventDefault();
+    if (enEditable) selTodo(z);
+    else toast('En el <b>navegador</b>, Ctrl + E no selecciona la página: usa <b>Ctrl + A</b>.');
+  }
+  else if (k === 'a'){
+    if (X.win === 'web'){ ev && ev.preventDefault(); selTodo('web'); }
+    else if (X.win === 'word'){ ev && ev.preventDefault(); toast('En Word en español, <b>Ctrl + A</b> sirve para abrir un documento. Para seleccionar todo, <b>Ctrl + E</b>.'); }
+    else if (desdePantalla) selTodo('mail');
+  }
+}
+document.addEventListener('keydown', e => {
+  if (modo !== 'live' || X.dlg) return;
+  if (e.key === 'Escape'){ ocultarMenus(); return; }
+  const k = (e.key || '').toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && ['c', 'x', 'v', 'z', 'e', 'a'].includes(k)){ ocultarMenu(); flashKb(k); atajo(k, false, e); return; }
+  const z = zona(document.activeElement);
+  if (z === 'doc' || z === 'mail'){
+    if (e.key === 'Enter'){ X.enterAt = Date.now(); X.enterArea = z; }
+    if (!e.ctrlKey && !e.metaKey && e.key !== 'Shift') $('pzbtn').classList.remove('on');
+  }
+});
+document.addEventListener('keyup', e => {
+  if (modo !== 'live') return;
+  if (e.shiftKey && /^Arrow/.test(e.key)){
+    const s = getSelection(); if (!s.rangeCount || s.isCollapsed) return;
+    const z = zona(s.getRangeAt(0).commonAncestorContainer);
+    if (z === 'doc' || z === 'mail'){ tick('mayus'); explicar('Con <b>Mayús y las flechas</b> has seleccionado «' + esc(recorta(s.toString())) + '». Cada flecha añade o quita una letra.', '--c6'); }
+  }
+});
+[doc, mail].forEach(el => el.addEventListener('input', () => { arreglarHuecos(el); comprobar(); }));
+document.querySelectorAll('#tools .kb').forEach(b => {
+  b.addEventListener('mousedown', e => e.preventDefault());
+  b.addEventListener('click', () => {
+    const k = b.dataset.k; flashKb(k); ocultarMenu();
+    if (k === 'left' || k === 'right'){
+      const a = rangoActual();
+      if (!a || (a.z !== 'doc' && a.z !== 'mail')) return toast('Haz clic en el texto de <b>Word</b> para poner el cursor y luego usa Mayús + flechas.');
+      const el = a.z === 'doc' ? doc : mail; el.focus();
+      const s = getSelection(); s.removeAllRanges(); s.addRange(a.r);
+      s.modify('extend', k === 'left' ? 'backward' : 'forward', 'character');
+      if (!s.isCollapsed){ tick('mayus'); explicar('Con <b>Mayús y las flechas</b> has seleccionado «' + esc(recorta(s.toString())) + '». Cada flecha añade o quita una letra.', '--c6'); }
+      return;
+    }
+    if (k === 'enter'){
+      const a = rangoActual();
+      if (!a || (a.z !== 'doc' && a.z !== 'mail')) return toast('Primero haz clic en el texto de <b>Word</b> o del <b>Correo</b>.');
+      const el = a.z === 'doc' ? doc : mail; el.focus();
+      const s = getSelection(); s.removeAllRanges(); s.addRange(a.r);
+      document.execCommand('insertParagraph');
+      X.enterAt = Date.now(); X.enterArea = a.z; arreglarHuecos(el);
+      return;
+    }
+    atajo(k, true, null);
+  });
+});
+
+/* =========================================================
+   DESCUBRIR
+   ========================================================= */
+const PARTES = {
+  seleccion:{n:1, color:'--c6', nombre:'Texto seleccionado', det:'el texto seleccionado', sitio:'El trozo de la página que se ve resaltado en azul.',
+    texto:'Lo primero es <b>seleccionar</b>. Antes de copiar, comprueba que está seleccionado <b>exactamente</b> el fragmento que necesitas.',
+    chips:['👆👆 Palabra: doble clic', '👆👆👆 Párrafo: triple clic', '🖱️ Trozo: arrastrar', '⌨️ Mayús + flechas'], tip:'Todo el documento: Ctrl + E. Toda la página web: Ctrl + A.'},
+  refs:{n:2, color:'--c7', nombre:'Referencias [1]', det:'una referencia', sitio:'Los números entre corchetes del texto de Wikipedia.',
+    texto:'Al copiar de Wikipedia se copian también estas <b>referencias</b>. Si las eliminas, quitas también la pista para <b>localizar las fuentes</b>.',
+    chips:['[1] Una fuente', '📝 Di de dónde procede'], tip:'Si compartes o publicas el texto, indica de dónde procede: por ejemplo, pegando la dirección de la página.'},
+  imagen:{n:3, color:'--c9', nombre:'Una imagen de la página', det:'una imagen', sitio:'La foto del cuadro de la derecha.',
+    texto:'Con <b>clic derecho</b> sobre ella puedes elegir <b>Copiar imagen</b> (para pegarla en un documento) o <b>Guardar imagen como</b> (para tenerla en el ordenador).',
+    chips:['📄 Copiar imagen', '💾 Guardar imagen como'], tip:'Una imagen guardada es un archivo normal: queda en la carpeta que elijas.'},
+  direccion:{n:4, color:'--c8', nombre:'Barra de direcciones', det:'la barra de direcciones', sitio:'Arriba del navegador, donde se ve «es.wikipedia.org…».',
+    texto:'Para copiar la <b>dirección de la página</b>: haz clic aquí, pulsa <b>Ctrl + C</b> y pégala donde quieras.',
+    chips:['👆 Clic', '⌨️ Ctrl + C', '📋 Pegar donde quieras'], tip:'Pegar la dirección en tu documento es una buena forma de indicar de dónde has sacado el texto.'},
+  portapapeles:{n:5, color:'--c4', nombre:'Botones Pegar, Cortar y Copiar', det:'los botones del Portapapeles', sitio:'En Word, pestaña Inicio, a la izquierda.',
+    texto:'Hacen lo mismo que los atajos: <b>Copiar</b> (Ctrl + C), <b>Cortar</b> (Ctrl + X) para trasladar un texto, y <b>Pegar</b> (Ctrl + V).',
+    chips:['📄 Copiar', '✂️ Cortar', '📋 Pegar'], tip:'Para trasladar un texto en vez de duplicarlo, usa Cortar y después Pegar en el nuevo sitio.'},
+  cursor:{n:6, color:'--c1', nombre:'La rayita parpadeante', det:'la rayita del cursor', sitio:'La línea vertical que parpadea en el texto de Word.',
+    texto:'Indica <b>dónde aparecerá</b> lo que pegues. Antes de pegar, <b>haz clic</b> en el sitio exacto donde quieres el texto.',
+    chips:['👆 Clic donde quieras', '↵ Intro: línea nueva'], tip:'Si quieres que lo pegado empiece en una línea nueva, pulsa Intro antes de pegar.'},
+  opciones:{n:7, color:'--c3', nombre:'Icono de opciones de pegado', det:'el icono de opciones de pegado', sitio:'El pequeño 📋 que aparece justo después de pegar.',
+    texto:'Al pegar desde una web u otro documento, el texto puede traer otra letra o colores. Aquí eliges: <b>Mantener el formato de origen</b>, <b>Combinar formato</b> o <b>Mantener solo texto</b>.',
+    chips:['A Formato de origen', '🖌️ Combinar', 'T Solo texto'], tip:'«Mantener solo texto» suele ser la opción más limpia.'},
+  barra:{n:8, color:'--c5', nombre:'Barra de tareas', det:'la barra de tareas', sitio:'La barra de abajo, con los programas abiertos.',
+    texto:'Sirve para <b>cambiar a la ventana de destino</b>: copias en el navegador, tocas <b>Word</b> aquí y pegas allí.',
+    chips:['🌐 Navegador', 'W Word', '✉️ Correo'], tip:'Lo copiado se queda en el portapapeles mientras cambias de ventana.'}
+};
+const ORDEN = Object.keys(PARTES);
+const parts = k => document.querySelectorAll('#sc1 .part[data-part="' + k + '"]');
+document.querySelectorAll('#sc1 .part').forEach(p => p.style.setProperty('--pc', 'var(' + PARTES[p.dataset.part].color + ')'));
+function limpiar(){ document.querySelectorAll('#sc1 .part').forEach(p => p.classList.remove('psel', 'ok', 'bad')); }
+function pintarPins(){
+  document.querySelectorAll('#sc1 .part').forEach(p => {
+    const k = p.dataset.part, pin = p.querySelector(':scope > .pin');
+    p.classList.toggle('found', !!found[k]);
+    if (pin) pin.textContent = found[k] ? PARTES[k].n : '?';
+  });
+}
+function bienvenida(){
+  info.style.setProperty('--ic', 'var(--c6)');
+  const n = ORDEN.filter(k => found[k]).length;
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte de la pantalla</h2><p>A la izquierda, una página web; a la derecha, un documento de Word. Hay <b>' + ORDEN.length + ' partes</b> con un <b>?</b> que sirven para copiar y pegar.' +
+    (n ? '<br>Ya has descubierto <b>' + n + '</b>.' : '') + '</p></div>';
+  restart(info);
+}
+function mostrar(k){
+  found[k] = true; guardar(); limpiar();
+  parts(k).forEach(p => p.classList.add('psel'));
+  const P = PARTES[k], todas = ORDEN.every(x => found[x]);
+  info.style.setProperty('--ic', 'var(' + P.color + ')');
+  info.innerHTML = (todas ? '<div class="win-all">🏆 ¡Has descubierto las ' + ORDEN.length + ' partes! Ahora pasa a «🛠️ Probar».</div>' : '') +
+    '<div class="pnum" style="background:var(' + P.color + ')">' + P.n + '</div><h2 class="pn">' + P.nombre + '</h2><div class="sitio">📍 ' + P.sitio + '</div><p class="tx">' + P.texto + '</p>' +
+    '<div class="pchips">' + P.chips.map(c => '<span class="pchip">' + c + '</span>').join('') + '</div><div class="tip">💡 ' + P.tip + '</div>';
+  restart(info); pintarPins(); progreso();
+}
+
+/* =========================================================
+   PRACTICAR
+   ========================================================= */
+const TOCA = [
+  {k:'toca', part:'direccion', q:'Quieres copiar la dirección de la página. ¿Dónde haces clic?', e:'Después, Ctrl + C.'},
+  {k:'toca', part:'refs', q:'¿Qué parte del texto indica de qué fuente sale la información?', e:'Las referencias entre corchetes.'},
+  {k:'toca', part:'imagen', q:'¿Sobre qué haces clic derecho para «Guardar imagen como»?', e:'Sobre la propia imagen.'},
+  {k:'toca', part:'portapapeles', q:'¿Dónde están los botones de copiar y pegar en Word?', e:'En la pestaña Inicio, grupo Portapapeles.'},
+  {k:'toca', part:'cursor', q:'¿Qué te indica dónde aparecerá el texto que pegues?', e:'La rayita parpadeante.'},
+  {k:'toca', part:'opciones', q:'Has pegado un texto con otra letra. ¿Qué tocas para cambiarlo?', e:'El icono de opciones de pegado.'},
+  {k:'toca', part:'barra', q:'¿Cómo cambias del navegador a Word?', e:'Con la barra de tareas.'},
+  {k:'toca', part:'seleccion', q:'¿Qué parte del texto está seleccionada?', e:'Se ve resaltada en azul.'}
+];
+const ELIGE = [
+  {k:'elige', q:'¿Cómo seleccionas una sola palabra?', o:['Doble clic sobre ella', 'Triple clic', 'Clic derecho'], c:0, e:'Con doble clic.'},
+  {k:'elige', q:'¿Y un párrafo entero, en muchos programas?', o:['Triple clic dentro del párrafo', 'Doble clic', 'Ctrl + C'], c:0, e:'Si no funciona, arrastra del principio al final.'},
+  {k:'elige', q:'Quieres llevar una frase a otro sitio, sin que se quede repetida. ¿Qué usas?', o:['Ctrl + X y después Ctrl + V', 'Ctrl + C y después Ctrl + V', 'Ctrl + Z'], c:0, e:'Cortar y pegar traslada el texto.'},
+  {k:'elige', q:'En Word en español, ¿con qué atajo seleccionas todo el documento?', o:['Ctrl + E', 'Ctrl + A', 'Ctrl + V'], c:0, e:'En el navegador, en cambio, es Ctrl + A.'},
+  {k:'elige', q:'¿Y para seleccionar toda una página web en el navegador?', o:['Ctrl + A', 'Ctrl + E', 'Ctrl + X'], c:0, e:'Algunos programas usan atajos distintos.'},
+  {k:'elige', q:'Has pegado un texto de internet con letra y colores raros. ¿Qué opción lo deja más limpio?', o:['Mantener solo texto', 'Mantener el formato de origen', 'Combinar formato'], c:0, e:'Pega el contenido sin el formato original.'},
+  {k:'elige', q:'Quieres que lo que pegas empiece en una línea nueva. ¿Qué haces antes de pegar?', o:['Pulsar Intro', 'Pulsar Ctrl + Z', 'Hacer doble clic'], c:0, e:'Intro crea la línea nueva.'},
+  {k:'elige', q:'Quieres tener una foto de internet guardada en el ordenador. ¿Qué eliges con el clic derecho?', o:['Guardar imagen como', 'Copiar imagen', 'Abrir imagen'], c:0, e:'Eliges la carpeta y pulsas Guardar.'},
+  {k:'elige', q:'Vas a compartir un texto copiado de Wikipedia. ¿Qué conviene hacer?', o:['Indicar de dónde procede', 'Borrar las referencias y no decir nada', 'Cambiarle el título'], c:0, e:'Por ejemplo, pegando la dirección de la página.'},
+  {k:'elige', q:'Te has equivocado al pegar. ¿Qué atajo pruebas?', o:['Ctrl + Z', 'Ctrl + V', 'Ctrl + C'], c:0, e:'Ctrl + Z deshace.'},
+  {k:'elige', q:'¿Tienes que volver a copiar para pegar el mismo texto otra vez?', o:['No: se puede pegar varias veces', 'Sí, cada vez', 'Solo si es una imagen'], c:0, e:'El portapapeles lo guarda hasta que copias otra cosa.'},
+  {k:'elige', q:'Al copiar un párrafo de una web, ¿qué compruebas antes de pulsar Ctrl + C?', o:['Que no he seleccionado texto de más', 'Que la página tiene fotos', 'Que Word está cerrado'], c:0, e:'Selecciona justo del principio al final.'}
+];
+let pq = [], pi = 0, aciertos = 0, primera = true, respondida = false;
+function empezarPractica(){
+  const toca = shuffle(TOCA.slice()).slice(0, 4), elige = shuffle(ELIGE.slice()).slice(0, 8).map(q => {
+    const idx = shuffle(q.o.map((_, i) => i));
+    return Object.assign({}, q, {o:idx.map(i => q.o[i]), c:idx.indexOf(q.c)});
+  });
+  pq = shuffle(toca.concat(elige)); pi = 0; aciertos = 0; siguiente();
+}
+function siguiente(){
+  limpiar();
+  if (pi >= pq.length) return finPractica();
+  const q = pq[pi]; primera = true; respondida = false;
+  info.style.setProperty('--ic', 'var(--c3)');
+  info.innerHTML = '<div class="qn">Pregunta ' + (pi + 1) + ' de ' + pq.length + '</div><h2 class="qt">' + q.q + '</h2>' +
+    (q.k === 'toca' ? '<p class="qhint">👆 Tócalo en la pantalla.</p>' : '<div class="opts">' + q.o.map((o, i) => '<button class="qo" data-i="' + i + '" type="button">' + o + '</button>').join('') + '</div>') +
+    '<div class="feedback" id="fb"></div><div id="qnext"></div>';
+  info.querySelectorAll('.qo').forEach(b => b.onclick = () => elegir(+b.dataset.i, b));
+  restart(info); progreso();
+}
+function acierto(txt){
+  respondida = true; if (primera) aciertos++;
+  const fb = $('fb'); fb.className = 'feedback good'; fb.textContent = '✅ ¡Correcto! ' + txt;
+  $('qnext').innerHTML = '<button class="pbtn" id="sig" type="button">' + (pi + 1 === pq.length ? '🏆 Terminar' : 'Siguiente ➜') + '</button>';
+  $('sig').onclick = () => { pi++; siguiente(); };
+  progreso();
+}
+function fallo(txt){ primera = false; const fb = $('fb'); fb.className = 'feedback no'; fb.textContent = '❌ ' + txt; }
+function elegir(i, b){
+  const q = pq[pi]; if (respondida || q.k !== 'elige') return;
+  if (i === q.c){ b.classList.add('ok'); info.querySelectorAll('.qo').forEach(x => x.disabled = true); acierto(q.e); }
+  else { b.classList.add('bad'); b.disabled = true; fallo('No es eso. ¡Prueba otra vez!'); }
+}
+function tocarParte(k){
+  const q = pq[pi]; if (!q || respondida || q.k !== 'toca') return;
+  if (k === q.part){ parts(k).forEach(p => p.classList.add('ok')); acierto(PARTES[k].nombre + '. ' + q.e); }
+  else { parts(k).forEach(p => { p.classList.remove('bad'); p.offsetHeight; p.classList.add('bad'); }); setTimeout(() => parts(k).forEach(p => p.classList.remove('bad')), 700); fallo('Eso es ' + PARTES[k].det + '. ¡Inténtalo otra vez!'); }
+}
+function finPractica(){
+  info.style.setProperty('--ic', 'var(--c3)');
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Has acertado a la primera <b>' + aciertos + ' de ' + pq.length + '</b> preguntas.</p><button class="pbtn" id="otra" type="button">🔄 Practicar otra vez</button></div>';
+  $('otra').onclick = empezarPractica; progreso();
+}
+document.querySelectorAll('#sc1 .part').forEach(p => p.addEventListener('click', e => {
+  if (e.target.closest('.part') !== p) return;
+  e.stopPropagation();
+  modo === 'desc' ? mostrar(p.dataset.part) : (modo === 'prac' ? tocarParte(p.dataset.part) : null);
+}));
+
+/* =========================================================
+   Panel de Probar, modos y progreso
+   ========================================================= */
+function clipHTML(){
+  const c = X.clip;
+  if (!c) return '<div class="clip"><span class="ci">📋</span><div><b>Portapapeles vacío</b><small>Cuando copies algo, lo verás aquí.</small></div></div>';
+  if (c.kind === 'img') return '<div class="clip lleno"><img src="' + IMG + '" alt=""><div><b>Copiado: una imagen</b><small>La foto de la esclusa. Pégala en Word.</small></div></div>';
+  if (c.kind === 'url') return '<div class="clip lleno"><span class="ci">🔗</span><div><b>Copiado: la dirección</b><small>' + esc(c.text) + '</small></div></div>';
+  return '<div class="clip lleno' + (c.corte ? ' corte' : '') + '"><span class="ci">' + (c.corte ? '✂️' : '📄') + '</span><div><b>' + (c.corte ? 'Cortado' : 'Copiado') + ' de ' + ({web:'la página web', doc:'Word', mail:'el correo'}[c.src]) + (c.copias ? ' · pegado ' + c.copias + (c.copias === 1 ? ' vez' : ' veces') : '') + '</b><small>«' + esc(recorta(c.text)) + '»</small></div></div>';
+}
+function renderPanel(){
+  if (modo !== 'live') return;
+  const hechos = TODOS.filter(r => retos[r.id]).length, f = X.fol;
+  info.style.setProperty('--ic', 'var(' + (X.ultima ? X.ultima.color : '--c6') + ')');
+  const it = (ok, t) => '<li class="' + (ok ? 'on' : '') + '"><i>' + (ok ? '✓' : '') + '</i>' + t + '</li>';
+  let h = (hechos === TODOS.length ? '<div class="win-all">🏆 ¡Has superado los ' + TODOS.length + ' retos!</div>' : '') +
+    '<div class="mis"><h4>🎯 Tu misión: terminar el folleto de la excursión</h4><ul>' + it(f.wiki, 'El párrafo de la Wikipedia') + it(f.img, 'La foto del canal') + it(f.src, 'La fuente (la dirección)') + it(f.orden, 'El programa en orden') + '</ul>' +
+    (X.folleto ? '<div class="done">🎉 ¡Folleto terminado! <button class="pbtn sm" id="b-prev" type="button">📄 Ver el folleto</button></div>' : '') + '</div>' +
+    '<h3 class="ph3">El portapapeles <small>(en Windows no se ve; aquí sí)</small></h3>' + clipHTML() +
+    '<div class="last">' + (X.gotit ? '<span class="gotit">✅ Reto conseguido: ' + X.gotit + '</span>' : '') +
+    (X.ultima ? X.ultima.html : 'Empieza en el <b>navegador</b>: selecciona el primer párrafo de la Wikipedia arrastrando el ratón y cópialo con <b>Ctrl + C</b>. Luego cambia a <b>Word</b> con la barra de abajo.') + '</div>' +
+    '<h3 class="ph3">Estaciones <small>(toca una para ver cómo se hace y sus retos)</small></h3>';
+  ESTACIONES.forEach(s => {
+    const n = s.retos.filter(r => retos[r.id]).length, open = X.station === s.id;
+    h += '<div class="st' + (open ? ' open' : '') + (n === s.retos.length ? ' done' : '') + '"><button class="sth" data-st="' + s.id + '" type="button"><span class="ic">' + s.ic + '</span><b>' + s.t + '</b><span class="cnt">' + n + '/' + s.retos.length + '</span></button>' +
+      (open ? '<div class="stb"><div class="guia">' + s.guia + '</div><ul class="retos">' + s.retos.map(r => '<li class="' + (retos[r.id] ? 'on' : '') + '"><span class="rb">' + (retos[r.id] ? '✓' : '') + '</span><span class="rtx">' + r.t + '<small>' + r.h + '</small></span></li>').join('') + '</ul></div>' : '') + '</div>';
+  });
+  const top = info.scrollTop;
+  info.innerHTML = h; info.scrollTop = top;
+  if (X.verSt){ X.verSt = false; const o = info.querySelector('.st.open'); if (o) o.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+  info.querySelectorAll('.sth').forEach(b => b.onclick = () => { X.station = X.station === b.dataset.st ? null : b.dataset.st; X.gotit = null; renderPanel(); });
+  const bp = $('b-prev'); if (bp) bp.onclick = verFolleto;
+}
+function verFolleto(){
+  const bg = document.createElement('div'); bg.className = 'prev-bg';
+  bg.innerHTML = '<div class="prev"><button class="x" type="button" aria-label="Cerrar">✕</button><span class="stamp">¡HECHO POR MÍ!</span>' + doc.innerHTML + '</div>';
+  bg.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable'));
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('.x').onclick = close;
+  bg.addEventListener('click', e => { if (e.target === bg) close(); });
+}
+function progreso(){
+  let n, tot, txt;
+  if (modo === 'desc'){ n = ORDEN.filter(k => found[k]).length; tot = ORDEN.length; txt = '⭐ ' + n + ' de ' + tot + ' partes descubiertas'; }
+  else if (modo === 'prac'){ tot = pq.length || 12; n = Math.min(tot, pi + (respondida ? 1 : 0)); txt = '🎯 ' + n + ' de ' + tot + ' preguntas'; }
+  else { n = TODOS.filter(r => retos[r.id]).length; tot = TODOS.length; txt = '🛠️ ' + n + ' de ' + tot + ' retos superados'; }
+  $('prog-txt').textContent = txt;
+  $('prog-fill').style.width = (n / tot * 100) + '%';
+  if (modo === 'live') renderPanel();
+}
+function iniciarDocs(){ doc.innerHTML = DOC0; mail.innerHTML = MAIL0; arreglarHuecos(doc); arreglarHuecos(mail); }
+function setModo(m){
+  modo = m;
+  ['desc', 'live', 'prac'].forEach(x => $('m-' + x).classList.toggle('on', x === m));
+  $('st-parts').hidden = m === 'live';
+  $('st-live').hidden = m !== 'live';
+  $('sc1').classList.toggle('mode-practica', m === 'prac');
+  limpiar(); ocultarMenus();
+  if (m === 'desc') bienvenida();
+  else if (m === 'prac') empezarPractica();
+  else comprobar();
+  progreso();
+}
+$('m-desc').onclick = () => setModo('desc');
+$('m-live').onclick = () => setModo('live');
+$('m-prac').onclick = () => setModo('prac');
+$('reset').onclick = () => {
+  if (modo === 'desc') found = {};
+  else if (modo === 'live'){
+    if (!confirm('¿Empezar de nuevo? Se borrarán los retos conseguidos y el folleto volverá a como estaba.')) return;
+    retos = {}; nuevoEstado(); iniciarDocs(); X.dlg = null; pintarDialogo();
+    for (const k in WIN) $(WIN[k]).hidden = k !== 'web';
+    document.querySelectorAll('#sc2 .tk[data-win]').forEach(b => b.classList.toggle('on', b.dataset.win === 'web'));
+  }
+  guardar(); pintarPins(); setModo(modo);
+};
+iniciarDocs();
+document.querySelectorAll('#sc2 .tk[data-win]').forEach(b => b.classList.toggle('on', b.dataset.win === 'web'));
+pintarPins();
+setModo('desc');
+</script>
+</body>
+</html>

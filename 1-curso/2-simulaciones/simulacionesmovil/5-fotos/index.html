@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fotos con el móvil</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43; --c9:#2DD4BF;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  button, input { font-family:inherit; }
+  button:focus-visible, input:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c4); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c3); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.94) translateY(16px);} to{opacity:1; transform:none;} }
+
+  .container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:22px 24px 30px; }
+  .top { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+  .badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.1; background:linear-gradient(135deg,var(--c6),var(--c1),var(--c3)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+  .mode:hover { color:var(--text); }
+  .prog { display:flex; align-items:center; gap:14px; margin-bottom:14px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,1.1fr); gap:26px; align-items:start; }
+  .subtabs { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+  .subtabs[hidden] { display:none; }
+  .st { padding:8px 16px; border-radius:100px; border:2px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:var(--sub); font-weight:800; font-size:.95rem; cursor:pointer; transition:all .2s; }
+  .st.on { background:rgba(255,217,61,.15); border-color:var(--c3); color:var(--text); }
+  .st:hover { color:var(--text); }
+  .tools { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+  .tools[hidden] { display:none; }
+  .tbtn { padding:10px 18px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:.95rem; cursor:pointer; transition:all .2s; }
+  .tbtn:hover { transform:scale(1.04); border-color:var(--c6); }
+
+  /* ---------- Móvil ---------- */
+  .phone { --pw:clamp(250px, calc((100vh - 250px) / 2.05), 390px); position:relative; width:var(--pw); height:calc(var(--pw) * 2.05); margin:0 auto; background:#05070c; border-radius:2.5em; padding:.55em; font-size:calc(var(--pw) / 22); box-shadow:0 0 0 2px #2c3550, 0 26px 60px rgba(0,0,0,.6); }
+  .scr { position:relative; width:100%; height:100%; border-radius:2em; overflow:hidden; background:#fff; color:#18202e; user-select:none; -webkit-user-select:none; }
+  .ptoast { position:absolute; left:6%; right:6%; bottom:13%; z-index:40; background:rgba(10,22,40,.96); color:#fff; border:1px solid var(--c3); border-radius:1em; padding:.6em .8em; font-weight:800; font-size:.85em; text-align:center; opacity:0; transition:opacity .25s; pointer-events:none; }
+  .ptoast.on { opacity:1; }
+  .flashov { position:absolute; inset:.55em; border-radius:2em; background:#fff; opacity:0; pointer-events:none; z-index:39; }
+  .flashov.go { animation:flashgo .5s ease-out; } .flashov.big { animation:flashbig .7s ease-out; }
+  @keyframes flashgo { 0%{opacity:.7;} 100%{opacity:0;} } @keyframes flashbig { 0%{opacity:1;} 100%{opacity:0;} }
+
+  .sides { position:absolute; right:-.7em; top:0; bottom:0; width:.7em; }
+  .sbtn { position:absolute; right:0; width:.7em; border-radius:0 .3em .3em 0; background:#4a5470; cursor:pointer; border:0; }
+  .sbtn:hover { background:#6b7899; }
+  .sbtn.up { top:21%; height:8%; } .sbtn.down { top:31%; height:8%; } .sbtn.power { top:44%; height:13%; }
+  .sbtn.held { background:var(--c3); box-shadow:0 0 14px var(--c3); }
+  .sbtn.part::after { border-radius:0 .3em .3em 0; }
+
+  /* Zonas pulsables */
+  .part { cursor:pointer; transition:box-shadow .25s, background .25s; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .25s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 25%, transparent); }
+  .sp { position:absolute; border-radius:.7em; }
+  .pin { position:absolute; z-index:30; width:2em; height:2em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:.95em; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; font-family:'Nunito',sans-serif; }
+  .pin.tr { top:-.3em; right:.15em; } .pin.c { left:calc(50% - 1em); top:calc(50% - 1em); } .pin.sd { left:100%; margin-left:.3em; top:calc(50% - 1em); }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin { animation:none; }
+  .part.sel { z-index:25; box-shadow:0 0 0 3px var(--pc), 0 0 26px color-mix(in srgb,var(--pc) 80%, transparent); }
+  .part.ok { box-shadow:0 0 0 3px var(--c1), 0 0 26px rgba(37,211,102,.8); z-index:25; }
+  .part.bad { animation:shake .45s; box-shadow:0 0 0 3px var(--c4); z-index:25; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .mode-practica .pin { display:none; }
+
+  /* Escenas / fotos */
+  .scene { position:absolute; inset:0; overflow:hidden; } .scene span { position:absolute; line-height:1; }
+  .ph { position:relative; width:100%; overflow:hidden; background:#222; }
+  .phin { position:absolute; inset:0; }
+  .shotph { aspect-ratio:4/3; background:linear-gradient(135deg,#1c2a4a,#0f1830); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; gap:.2em; text-align:center; }
+  .shotph small { font-size:.7em; color:#9fb0d4; font-weight:700; }
+
+  /* Pantallas del móvil */
+  .v { position:absolute; inset:0; display:flex; flex-direction:column; padding:2.2em .9em 2.8em; }
+  .sbar { position:absolute; left:0; right:0; top:0; z-index:20; height:2.1em; padding:.45em 1.2em 0; display:flex; justify-content:space-between; font-size:.72em; font-weight:800; cursor:pointer; color:#18202e; }
+  .sbar.light { color:#fff; }
+  .navb { position:absolute; left:0; right:0; bottom:0; z-index:20; height:2.6em; display:flex; justify-content:space-around; align-items:center; font-size:1em; color:#18202e; background:rgba(255,255,255,.0); }
+  .navb.light { color:#fff; } .navb span { padding:.2em 1em; cursor:pointer; }
+  .v-home { background:linear-gradient(160deg,#2563eb,#7c3aed 55%,#ec4899); color:#fff; }
+  .apps { display:grid; grid-template-columns:repeat(3,1fr); gap:.9em .3em; margin-top:1.2em; }
+  .app { border:0; background:transparent; color:#fff; font-weight:700; font-size:.8em; display:flex; flex-direction:column; align-items:center; gap:.2em; cursor:pointer; text-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .app .ai { font-size:2.4em; line-height:1.1; background:rgba(255,255,255,.18); border-radius:.45em; width:1.5em; height:1.5em; display:grid; place-items:center; }
+  .hint-h { margin-top:auto; text-align:center; font-weight:800; font-size:.8em; background:rgba(0,0,0,.3); border-radius:1em; padding:.5em; }
+  .v-lock { background:linear-gradient(170deg,#0f2a5e,#0b1530 70%); color:#fff; align-items:center; padding-top:4em; }
+  .lk-clock { font-size:3.6em; font-weight:800; line-height:1; } .lk-date { font-weight:700; opacity:.85; margin-top:.3em; font-size:.9em; }
+  .lk-cam { position:absolute; right:1.1em; bottom:4.2em; width:2.8em; height:2.8em; border-radius:50%; border:0; background:rgba(255,255,255,.2); font-size:1.2em; cursor:pointer; }
+  .lk-unl { position:absolute; left:1em; right:5.2em; bottom:4.6em; border:0; background:rgba(255,255,255,.14); color:#fff; border-radius:1em; padding:.7em; font-weight:800; font-size:.8em; cursor:pointer; }
+  .lk-hint { margin-top:auto; font-weight:700; font-size:.78em; opacity:.8; text-align:center; margin-bottom:5em; }
+  .v-cam { background:#000; padding:0; }
+  .vf { position:absolute; left:0; right:0; top:0; bottom:6.8em; overflow:hidden; cursor:crosshair; }
+  .vfs { position:absolute; inset:0; transition:filter .5s; } .vfs.blur { filter:blur(.5em); } .vfs.night { filter:brightness(.4); } .vfs.blur.night { filter:blur(.5em) brightness(.4); }
+  .ring { position:absolute; width:3.6em; height:3.6em; margin:-1.8em 0 0 -1.8em; border:.18em solid var(--c3); border-radius:.5em; animation:ringin .35s ease-out; pointer-events:none; z-index:3; }
+  @keyframes ringin { from{transform:scale(1.8); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .vf-hint { position:absolute; left:0; right:0; bottom:.8em; text-align:center; z-index:3; }
+  .vf-hint span { background:rgba(0,0,0,.55); color:#fff; padding:.35em .9em; border-radius:100px; font-weight:800; font-size:.78em; }
+  .cam-top { position:absolute; left:0; right:0; top:2em; z-index:6; display:flex; padding:0 .8em; }
+  .flashb { border:0; background:rgba(0,0,0,.5); color:#fff; border-radius:100px; padding:.35em .9em; font-weight:800; font-size:.85em; cursor:pointer; }
+  .flashb.on { background:var(--c3); color:#111; } .flashb.off { text-decoration:line-through; opacity:.85; }
+  .cam-bar { position:absolute; left:0; right:0; bottom:2.6em; height:4.2em; display:flex; justify-content:space-around; align-items:center; background:#000; z-index:6; }
+  .thumb { width:2.9em; height:2.9em; border-radius:.6em; border:.14em solid #fff; overflow:hidden; background:#222; cursor:pointer; position:relative; padding:0; }
+  .shut { width:3.6em; height:3.6em; border-radius:50%; border:.25em solid #fff; background:radial-gradient(circle,#fff 62%,#ddd 65%); cursor:pointer; padding:0; }
+  .shut:active { transform:scale(.92); }
+  .flip { width:2.9em; text-align:center; font-size:1.2em; color:#fff; opacity:.6; }
+  .v-gal { background:#fff; }
+  .gh { font-weight:800; font-size:1.3em; margin-bottom:.4em; }
+  .chipsr { display:flex; gap:.4em; margin-bottom:.7em; }
+  .ch { border:2px solid #d5dbe5; background:#fff; border-radius:100px; padding:.25em .8em; font-weight:800; font-size:.8em; cursor:pointer; color:#18202e; }
+  .ch.on { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .ggrid { display:grid; grid-template-columns:repeat(3,1fr); gap:.3em; overflow:auto; }
+  .gth { border:0; padding:0; border-radius:.4em; overflow:hidden; cursor:pointer; position:relative; aspect-ratio:1; background:#ddd; }
+  .gth .ph { height:100%; }
+  .empty { color:#6b7587; font-weight:700; text-align:center; margin-top:2em; font-size:.9em; }
+  .v-view { background:#111; color:#fff; padding-top:2.4em; }
+  .vtop { display:flex; align-items:center; gap:.6em; font-weight:800; margin-bottom:.6em; } .vtop span { cursor:pointer; font-size:1.2em; }
+  .vph { margin:auto 0; }
+  .vbar { margin-top:auto; display:flex; justify-content:space-around; padding:.5em 0; }
+  .vb { border:0; background:transparent; color:#fff; font-weight:800; font-size:.8em; display:flex; flex-direction:column; align-items:center; gap:.1em; cursor:pointer; padding:.3em .8em; border-radius:.8em; }
+  .vb:hover { background:rgba(255,255,255,.12); } .vb b { font-size:1.8em; line-height:1.1; }
+  .v-edit { background:#15181f; color:#fff; padding-top:2.4em; }
+  .edtabs { display:grid; grid-template-columns:repeat(4,1fr); gap:.3em; margin:.6em 0; }
+  .et { border:0; background:#232834; color:#cfd6e4; border-radius:.7em; padding:.4em 0; font-weight:800; font-size:.68em; cursor:pointer; display:flex; flex-direction:column; align-items:center; }
+  .et b { font-size:1.9em; line-height:1.1; } .et.on { background:#2563eb; color:#fff; }
+  .edctl { background:#1e2330; border-radius:.9em; padding:.7em; font-weight:700; font-size:.82em; min-height:6.6em; }
+  .edctl label { display:flex; justify-content:space-between; margin-bottom:.1em; } .edctl input[type=range] { width:100%; accent-color:#4DA3FF; height:1.6em; margin-bottom:.3em; }
+  .edctl small { display:block; color:#9fb0d4; font-weight:600; margin-top:.2em; }
+  .opts { display:flex; flex-wrap:wrap; gap:.35em; } .opt { border:2px solid #3a4258; background:transparent; color:#fff; border-radius:100px; padding:.25em .7em; font-weight:800; font-size:.95em; cursor:pointer; } .opt.on { background:var(--c3); color:#111; border-color:var(--c3); }
+  .edfoot { margin-top:auto; display:flex; justify-content:space-between; gap:.5em; }
+  .eb { flex:1; border:0; border-radius:.8em; padding:.6em; font-weight:800; font-size:.9em; cursor:pointer; background:#2a3042; color:#fff; } .eb.ok { background:var(--c1); color:#0a1628; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; z-index:25; background:#fff; color:#18202e; border-radius:1.3em 1.3em 0 0; padding:.9em .8em 3.2em; animation:popIn .25s ease; }
+  .sheet h5 { font-size:.9em; margin-bottom:.6em; }
+  .sapps { display:grid; grid-template-columns:repeat(5,1fr); gap:.2em; }
+  .sapp { border:0; background:transparent; font-weight:700; font-size:.6em; display:flex; flex-direction:column; align-items:center; gap:.2em; cursor:pointer; color:#18202e; padding:.3em 0; border-radius:.6em; }
+  .sapp:hover { background:rgba(0,0,0,.07); } .sapp b { font-size:2.6em; line-height:1.1; }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.5); z-index:24; }
+  .v-comp { background:#f3f5f8; color:#18202e; padding-top:2.4em; }
+  .cmp-h { font-weight:800; font-size:1.05em; margin-bottom:.5em; } .cmp-to { background:#fff; border-radius:.7em; padding:.5em .7em; font-weight:700; font-size:.85em; margin-bottom:.6em; }
+  .cmp-ph { border-radius:.7em; overflow:hidden; margin-bottom:.6em; }
+  .cmp-btn { margin-top:auto; border:0; background:var(--c1); color:#0a1628; border-radius:1em; padding:.8em; font-weight:800; font-size:1em; cursor:pointer; }
+  .cmp-ok { text-align:center; font-weight:800; font-size:1.1em; margin-top:.8em; } .bar { height:.5em; background:#dde2e8; border-radius:1em; overflow:hidden; margin-top:.8em; } .bar i { display:block; height:100%; width:0; background:var(--c1); animation:fill 1.2s linear forwards; }
+  @keyframes fill { to { width:100%; } }
+  .qs { position:absolute; left:0; right:0; top:0; z-index:27; background:rgba(24,30,46,.97); color:#fff; border-radius:0 0 1.4em 1.4em; padding:2.4em .9em 1em; animation:popIn .2s ease; }
+  .qs h5 { font-size:.8em; opacity:.7; margin-bottom:.6em; font-weight:700; }
+  .qtiles { display:grid; grid-template-columns:repeat(4,1fr); gap:.5em; }
+  .qt { border:0; background:#2c3550; color:#fff; border-radius:1em; padding:.5em 0; font-weight:700; font-size:.62em; display:flex; flex-direction:column; align-items:center; gap:.2em; cursor:pointer; }
+  .qt b { font-size:2.2em; line-height:1.1; } .qt.hot:hover { background:var(--c3); color:#111; }
+
+  /* Pantallas estáticas (descubrir) */
+  .s-bg { position:absolute; inset:0; }
+  .s-flash { background:rgba(0,0,0,.55); color:#fff; border-radius:100px; padding:.3em .8em; font-weight:800; font-size:.85em; display:inline-block; }
+  .s-bar { position:absolute; left:0; right:0; bottom:0; height:22%; background:#000; }
+  .s-th { width:100%; height:100%; border-radius:.6em; overflow:hidden; position:relative; border:.14em solid #fff; background:#222; }
+  .s-shut { width:100%; height:100%; border-radius:50%; border:.25em solid #fff; background:radial-gradient(circle,#fff 62%,#ddd 65%); }
+  .s-tool { height:100%; background:#232834; color:#fff; border-radius:.7em; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; font-size:.68em; } .s-tool b { font-size:2em; line-height:1.1; }
+  .s-btn { height:100%; border-radius:.8em; display:grid; place-items:center; font-weight:800; font-size:.9em; background:#2a3042; color:#fff; } .s-btn.ok { background:var(--c1); color:#0a1628; }
+  .s-top { position:absolute; left:0; right:0; top:0; height:9%; padding:.9em 1em 0; display:flex; gap:.6em; font-weight:800; color:#fff; font-size:.95em; }
+  .s-app { display:flex; flex-direction:column; align-items:center; font-weight:700; font-size:.6em; flex:1; color:#18202e; } .s-app b { font-size:2.6em; line-height:1.15; }
+  .s-appsrow { display:flex; height:100%; align-items:center; background:#f3f5f8; border-radius:.8em; }
+  .s-tile { height:100%; background:#2c3550; color:#fff; border-radius:1em; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:700; font-size:.62em; } .s-tile b { font-size:2.2em; line-height:1.1; } .s-tile.hot { background:#3d5aa8; }
+  .s-swipe { height:100%; display:grid; place-items:center; color:#fff; font-weight:800; font-size:.78em; background:rgba(255,255,255,.1); border-radius:.7em; }
+  .s-alb { height:100%; background:#f3f5f8; color:#18202e; border-radius:.9em; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; font-size:.8em; } .s-alb small { color:#6b7587; font-weight:600; font-size:.8em; }
+  .s-lbl { position:absolute; font-weight:800; font-size:.85em; }
+
+  /* ---------- Panel de información ---------- */
+  .side { position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; border-radius:24px; }
+  .info { background:var(--card); border:1px solid rgba(255,255,255,.07); border-left:8px solid var(--ic,var(--c6)); border-radius:24px; padding:24px 26px; min-height:360px; animation:popIn .45s cubic-bezier(.34,1.56,.64,1) both; transition:border-color .3s; }
+  .info-num { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:50%; background:var(--ic,var(--c6)); color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .info h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.6rem,2.6vw,2.3rem); line-height:1.15; margin-bottom:12px; color:var(--ic,var(--c6)); }
+  .info h3 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.15rem; margin:14px 0 8px; color:var(--c3); }
+  .info p { font-size:clamp(1.05rem,1.5vw,1.3rem); font-weight:600; line-height:1.5; margin-bottom:14px; }
+  .info b { color:var(--c3); font-weight:800; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { background:rgba(255,255,255,.07); border-radius:100px; padding:6px 14px; font-weight:800; font-size:clamp(.95rem,1.3vw,1.1rem); }
+  .tip { background:rgba(255,217,61,.09); border-radius:14px; padding:12px 16px; color:var(--sub); font-weight:700; font-size:clamp(.95rem,1.3vw,1.1rem); margin-bottom:10px; }
+  .tip b { color:var(--c3); }
+  .hello { text-align:center; padding-top:30px; } .hello .big { font-size:3.4rem; margin-bottom:8px; } .hello h2 { color:var(--text); }
+  .quiz-q { font-family:'Fredoka One',cursive; font-size:clamp(1.5rem,2.6vw,2.2rem); line-height:1.2; margin-bottom:14px; } .quiz-q span { color:var(--c3); }
+  .feedback { font-size:1.3rem; font-weight:800; min-height:2em; margin:6px 0 12px; } .feedback.good { color:var(--c1); } .feedback.no { color:var(--c4); }
+  .btn { padding:12px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; transition:all .2s; }
+  .btn:hover { transform:scale(1.04); border-color:var(--c6); } .btn.go { background:rgba(37,211,102,.18); border-color:var(--c1); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; } @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-12px) rotate(5deg);} }
+  .lh { display:flex; align-items:center; gap:14px; margin-bottom:8px; } .lh .ico { font-size:2.2rem; } .lh .nm { font-family:'Fredoka One',cursive; font-size:1.45rem; line-height:1.1; color:var(--ic,var(--c6)); }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:5px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; padding:7px 12px; border-radius:12px; background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.07); font-weight:700; font-size:.95rem; line-height:1.3; transition:all .25s; }
+  .retos .rb { width:22px; height:22px; border-radius:7px; flex-shrink:0; background:rgba(255,255,255,.1); display:grid; place-items:center; font-weight:800; font-size:.8rem; }
+  .retos li small { display:block; color:var(--sub); font-weight:600; font-size:.82rem; }
+  .retos li.on { background:rgba(37,211,102,.13); border-color:var(--c1); } .retos li.on .rb { background:var(--c1); color:#0a1628; } .retos li.on span.rt { opacity:.75; }
+  .win-all { text-align:center; background:rgba(255,217,61,.1); border:2px solid var(--c3); border-radius:16px; padding:10px; margin-bottom:12px; font-weight:800; color:var(--c3); font-size:1.15rem; }
+  .foot { text-align:center; margin-top:18px; }
+  .btn-reset { padding:10px 24px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; cursor:pointer; } .btn-reset:hover { color:var(--text); border-color:var(--c4); }
+  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .side { position:static; max-height:none; } .info { min-height:0; } .modes { margin-left:0; } }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+<div class="container" id="root">
+  <div class="top">
+    <span class="badge">📱 Móvil</span>
+    <h1>Fotos con el móvil</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+  <div class="prog"><span id="prog-txt"></span><div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div></div>
+
+  <div class="layout">
+    <div>
+      <div class="subtabs" id="subtabs"></div>
+      <div class="phone" id="phone">
+        <div class="scr" id="scr"></div>
+        <div class="flashov" id="flashov"></div>
+        <div class="ptoast" id="ptoast"></div>
+        <div class="sides" id="sides"></div>
+      </div>
+      <div class="tools" id="tools" hidden>
+        <button class="tbtn" id="t-scene" type="button">🔄 Apuntar a otra cosa</button>
+        <button class="tbtn" id="t-light" type="button">🌙 Cambiar la luz</button>
+        <button class="tbtn" id="t-reset" type="button">↩️ Reiniciar el móvil</button>
+      </div>
+    </div>
+    <aside class="side"><div class="info" id="info"></div></aside>
+  </div>
+  <div class="foot"><button class="btn-reset" id="reset" type="button">🔄 Empezar de nuevo</button></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const info = $("info"), scr = $("scr");
+const restart = e => { e.style.animation="none"; e.offsetHeight; e.style.animation=""; };
+let modo = "desc";
+
+/* =========================================================
+   Escenas y fotos
+   ========================================================= */
+const SCENES = {
+  playa:{n:"la playa", bg:"linear-gradient(#7fd0ff 0 52%,#3a9fd8 52% 68%,#f2d49b 68%)", els:[["☀️",70,6,2.6],["⛵",28,40,1.8],["🏖️",42,58,3.4],["🌴",8,48,2.6]]},
+  jardin:{n:"el jardín", bg:"linear-gradient(#a8e0ff 0 48%,#5cc46a 48%)", els:[["🌳",12,24,3.8],["🌻",50,60,2.6],["🌷",72,64,2.2],["🦋",58,24,1.8]]},
+  mesa:{n:"la mesa", bg:"linear-gradient(#f6d9b0 0 40%,#b9824b 40%)", els:[["🖼️",40,6,2.6],["🍰",28,50,3.2],["☕",58,54,2.8],["🌼",10,48,2.4]]}
+};
+const SCN = Object.keys(SCENES);
+function sceneHTML(k){ const s = SCENES[k]; return '<div class="scene" style="background:'+s.bg+'">'+s.els.map(e=>'<span style="left:'+e[1]+'%;top:'+e[2]+'%;font-size:'+e[3]+'em">'+e[0]+'</span>').join("")+'</div>'; }
+const FILT = {none:"", vivo:" saturate(1.5) contrast(1.1)", bn:" grayscale(1)", sepia:" sepia(.85)", frio:" hue-rotate(18deg) brightness(1.05)"};
+const newEdits = () => ({crop:"none", bright:0, color:0, contrast:0, filter:"none"});
+function filt(p, e){ e = e || p.edits; return "brightness("+(p.dark*(1+e.bright/100)).toFixed(2)+") contrast("+(1+e.contrast/100).toFixed(2)+") saturate("+(1+e.color/100).toFixed(2)+")"+FILT[e.filter]+(p.blur?" blur(.2em)":""); }
+function photoHTML(p, sq){
+  if (p.type === "shot") return '<div class="ph shotph" style="'+(sq?'height:100%':'')+'">📱<span>Captura</span><small>'+p.label+'</small></div>';
+  const e = p.edits, ratio = sq ? "1/1" : (e.crop === "cuadrado" ? "1/1" : "4/3");
+  const sc = ({none:1, bordes:1.18, centrar:1.55, cuadrado:1.1})[e.crop], org = e.crop === "centrar" ? "45% 65%" : "50% 50%";
+  return '<div class="ph" style="aspect-ratio:'+ratio+';'+(sq?'height:100%':'')+'"><div class="phin" style="filter:'+filt(p)+';transform:scale('+sc+');transform-origin:'+org+'">'+sceneHTML(p.scene)+'</div></div>';
+}
+
+/* =========================================================
+   Partes (Descubrir / Practicar)
+   ========================================================= */
+const TABS = [
+ {k:"cam", ico:"📷", t:"Hacer una foto", parts:{
+  view:{n:1, nombre:"Pantalla de la cámara", det:"la pantalla de la cámara (el visor)", color:"--c6", sitio:"Ocupa casi toda la pantalla.",
+    texto:"Apunta el móvil hacia lo que quieras fotografiar y <b>toca con el dedo</b> la parte de la pantalla que quieres que salga <b>nítida</b>.", chips:["📱 Apuntar","👆 Tocar para enfocar"], tip:"Aparece un cuadrito donde has tocado: ahí enfoca la cámara."},
+  flash:{n:2, nombre:"Flash ⚡", det:"el flash", color:"--c3", sitio:"En la parte superior o lateral de la pantalla de la cámara.",
+    texto:"Verás un <b>símbolo de rayo ⚡</b>. Úsalo solo si hace falta. Puedes elegir entre tres opciones:", chips:["🅰️ Automático: el móvil decide","⚡ Encendido: siempre","🚫 Apagado: nunca"], tip:"<b>Consejo:</b> si hay buena luz, mejor sin flash; el color se ve más natural."},
+  shutter:{n:3, nombre:"Botón de disparo", det:"el botón redondo de disparo", color:"--c1", sitio:"Abajo, en el centro.",
+    texto:"Pulsa el <b>botón redondo grande</b> (blanco o gris) para <b>tomar la foto</b>.", chips:["⚪ Redondo y grande","⚪ Blanco o gris"], tip:"Mantén el móvil quieto un momento al pulsar."},
+  side:{n:4, nombre:"Botón lateral", det:"el botón lateral del móvil", color:"--c8", sitio:"En el lateral del móvil, el del volumen.",
+    texto:"También puedes <b>apretar el botón lateral</b> del móvil, como si subieras el volumen, para tomar la foto.", chips:["🔊 Subir volumen"], tip:"Es muy cómodo cuando sujetas el móvil con las dos manos."},
+  thumb:{n:5, nombre:"Miniatura de la última foto", det:"la miniatura de la última foto", color:"--c7", sitio:"Abajo a la izquierda.",
+    texto:"Muestra la última foto que has hecho. Al tocarla entras en la <b>galería</b> (o «Fotos»).", chips:["🖼️ Galería","📷 Fotos"], tip:"Desde ahí podrás editar y compartir la foto."}}},
+ {k:"edit", ico:"✏️", t:"Editar la foto", parts:{
+  crop:{n:1, nombre:"Recortar", det:"la herramienta Recortar", color:"--c6", sitio:"Barra de herramientas de edición.",
+    texto:"<b>Recortar</b> sirve para <b>eliminar bordes</b> o <b>centrar mejor</b> la foto.", chips:["✂️ Quitar bordes","🎯 Centrar"], tip:"Para llegar aquí: abre la foto en la galería y presiona <b>Editar</b> (lápiz ✏️ o tres controles deslizantes)."},
+  bright:{n:2, nombre:"Brillo / luz", det:"Brillo o luz", color:"--c3", sitio:"Barra de herramientas de edición.",
+    texto:"<b>Aclara la foto</b> si está oscura.", chips:["☀️ Más luz","🌙 Menos luz"], tip:"Mueve el control deslizante poco a poco."},
+  color:{n:3, nombre:"Color / contraste", det:"Color o contraste", color:"--c1", sitio:"Barra de herramientas de edición.",
+    texto:"Mejora los <b>tonos</b> y los <b>detalles</b> de la foto.", chips:["🎨 Color","◐ Contraste"], tip:"Un poco es suficiente: demasiado se ve artificial."},
+  filter:{n:4, nombre:"Filtros", det:"los Filtros", color:"--c7", sitio:"Barra de herramientas de edición.",
+    texto:"Cambian el <b>estilo o color general</b> de la foto. Usa <b>pocos</b>, solo para resaltar.", chips:["✨ Vivo","⚫ Blanco y negro","🟤 Sepia"], tip:"Si dudas, déjala sin filtro."},
+  done:{n:5, nombre:"Hecho / Guardar", det:"el botón Hecho", color:"--c8", sitio:"Abajo a la derecha.",
+    texto:"Pulsa <b>Hecho</b> (o «Guardar») para <b>mantener los cambios</b>.", chips:["✅ Hecho","💾 Guardar"], tip:"Si no lo pulsas, los cambios no se guardan."}}},
+ {k:"share", ico:"📤", t:"Compartir la foto", parts:{
+  icon:{n:1, nombre:"Icono de compartir", det:"el icono de compartir", color:"--c6", sitio:"Arriba a la derecha, con la foto abierta.",
+    texto:"Abre la imagen desde la galería y pulsa el <b>icono de compartir</b>: tres puntos conectados o un cuadrado con una flecha hacia arriba.", chips:["⚬ Tres puntos unidos","⬆️ Cuadrado con flecha"], tip:"Se abre una lista con las formas de enviarla."},
+  msg:{n:2, nombre:"WhatsApp / Mensajes", det:"WhatsApp o Mensajes", color:"--c1", sitio:"En la lista de aplicaciones para compartir.",
+    texto:"Para enviarla a <b>una persona concreta</b>.", chips:["💬 WhatsApp","🗨️ Mensajes"], tip:"Elegirás a quién se la mandas."},
+  mail:{n:3, nombre:"Correo", det:"Correo", color:"--c3", sitio:"En la lista de aplicaciones para compartir.",
+    texto:"Si la vas a mandar a <b>una dirección de email</b>.", chips:["✉️ Correo electrónico"], tip:"Escribe la dirección de la persona."},
+  social:{n:4, nombre:"Facebook / Instagram", det:"Facebook o Instagram", color:"--c7", sitio:"En la lista de aplicaciones para compartir.",
+    texto:"Para <b>publicarla</b> y que la vean tus contactos.", chips:["📘 Facebook","📷 Instagram"], tip:"Piensa quién va a verla antes de publicar."},
+  confirm:{n:5, nombre:"Confirmar y enviar", det:"el botón de enviar", color:"--c8", sitio:"Abajo, en la pantalla de envío.",
+    texto:"<b>Confirma</b> y espera a que se envíe o se publique.", chips:["➤ Enviar","⏳ Esperar"], tip:"Cuando termina, aparece un aviso de que se ha enviado."}}},
+ {k:"shot", ico:"✂️", t:"Capturar la pantalla", parts:{
+  swipe:{n:1, nombre:"Ajustes rápidos", det:"la zona de arriba para deslizar", color:"--c6", sitio:"Arriba del todo de la pantalla.",
+    texto:"En la mayoría de los móviles Android, <b>desliza el dedo desde arriba</b> de la pantalla hacia abajo para que aparezcan los <b>ajustes rápidos</b>.", chips:["👇 Deslizar hacia abajo"], tip:"Prueba en el modo Probar: toca o arrastra la barra superior."},
+  scissors:{n:2, nombre:"Botón de captura (tijeras)", det:"el botón de las tijeras", color:"--c3", sitio:"Dentro de los ajustes rápidos.",
+    texto:"Pulsa el <b>botón de captura de pantalla</b>, que suele tener la imagen de unas <b>tijeras ✂️</b>.", chips:["✂️ Tijeras"], tip:"Se oye un clic y la pantalla parpadea."},
+  combo:{n:3, nombre:"Encendido + bajar volumen", det:"los botones de encendido y bajar volumen", color:"--c1", sitio:"En el lateral del móvil.",
+    texto:"Otra forma: pulsa el <b>botón de encendido + bajar volumen</b> al mismo tiempo, durante <b>1 segundo</b>.", chips:["⏻ Encendido","🔉 Bajar volumen"], tip:"Pulsa los dos a la vez y no tardes."},
+  folder:{n:4, nombre:"Carpeta «Capturas»", det:"la carpeta Capturas", color:"--c7", sitio:"En la galería.",
+    texto:"La imagen se guarda en la galería, normalmente en la carpeta <b>«Capturas»</b> o <b>«Screenshots»</b>.", chips:["📁 Capturas","📁 Screenshots"], tip:"Entra en «Fotos» y busca esa carpeta."}}}
+];
+const TOTAL = TABS.reduce((n,t)=>n+Object.keys(t.parts).length,0);
+let tab = "cam", found = {}, pregunta = null, aciertos = 0, hechas = [];
+const KEY = "fotos-movil-2026";
+try { const g = JSON.parse(localStorage.getItem(KEY)); if (g && g.found) found = g.found; } catch(e){}
+const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify({found})); } catch(e){} };
+const T = () => TABS.find(t => t.k === tab);
+
+/* ----- plantillas estáticas ----- */
+function pin(c){ return '<span class="pin '+c+'">?</span>'; }
+function sp(k, style, inner, pc){ const d = T().parts[k]; return '<div class="part sp" data-part="'+k+'" style="--pc:var('+d.color+');'+style+'">'+pin(pc||"tr")+inner+'</div>'; }
+const STATIC = {
+  cam(){ return '<div class="s-bg" style="background:#000"><div style="position:absolute;inset:0 0 22% 0">'+sceneHTML("playa")+'</div><div class="s-bar"></div></div>' +
+    sp("view","left:0;top:9%;width:100%;height:64%;border-radius:0","","c") +
+    sp("flash","left:4%;top:3.5%;width:23%;height:6%","<span class=\"s-flash\">⚡ Auto</span>") +
+    sp("thumb","left:7%;top:85%;width:14%;aspect-ratio:1","<div class=\"s-th\">"+sceneHTML("jardin")+"</div>") +
+    sp("shutter","left:37%;top:82.5%;width:26%;aspect-ratio:1","<div class=\"s-shut\"></div>"); },
+  edit(){ return '<div class="s-bg" style="background:#15181f"></div><div class="s-top"><span>←</span><span>Editar</span></div>' +
+    '<div style="position:absolute;left:0;right:0;top:10%">'+photoHTML({scene:"jardin",dark:.55,edits:newEdits()})+'</div>' +
+    sp("crop","left:3%;top:57%;width:22%;height:11%","<div class=\"s-tool\"><b>✂️</b>Recortar</div>") +
+    sp("bright","left:27%;top:57%;width:22%;height:11%","<div class=\"s-tool\"><b>☀️</b>Brillo</div>") +
+    sp("color","left:51%;top:57%;width:22%;height:11%","<div class=\"s-tool\"><b>🎨</b>Color</div>") +
+    sp("filter","left:75%;top:57%;width:22%;height:11%","<div class=\"s-tool\"><b>✨</b>Filtros</div>") +
+    '<div class="s-lbl" style="left:5%;top:72%;color:#9fb0d4;font-size:.75em">▬▬▬▬▬●▬▬▬▬▬</div>' +
+    '<div class="s-btn" style="position:absolute;left:4%;top:88%;width:30%;height:8%">Cancelar</div>' +
+    sp("done","left:62%;top:88%;width:34%;height:8%","<div class=\"s-btn ok\">Hecho</div>"); },
+  share(){ return '<div class="s-bg" style="background:#111"></div><div class="s-top"><span>←</span><span>Foto</span></div>' +
+    '<div style="position:absolute;left:0;right:0;top:12%">'+photoHTML({scene:"playa",dark:1,edits:newEdits()})+'</div><div class="s-bg" style="background:rgba(0,0,0,.45)"></div>' +
+    sp("icon","left:80%;top:2%;width:16%;height:6.5%","<span style=\"font-size:1.4em;display:grid;place-items:center;height:100%\">📤</span>") +
+    '<div style="position:absolute;left:0;right:0;bottom:0;height:42%;background:#fff;border-radius:1.3em 1.3em 0 0"></div><div class="s-lbl" style="left:6%;top:60%;color:#18202e">Compartir con</div>' +
+    sp("msg","left:3%;top:66%;width:38%;height:14%","<div class=\"s-appsrow\"><div class=\"s-app\"><b>💬</b>WhatsApp</div><div class=\"s-app\"><b>🗨️</b>Mensajes</div></div>") +
+    sp("mail","left:43%;top:66%;width:19%;height:14%","<div class=\"s-appsrow\"><div class=\"s-app\"><b>✉️</b>Correo</div></div>") +
+    sp("social","left:64%;top:66%;width:33%;height:14%","<div class=\"s-appsrow\"><div class=\"s-app\"><b>📘</b>Facebook</div><div class=\"s-app\"><b>📷</b>Instagram</div></div>") +
+    sp("confirm","left:12%;top:86%;width:76%;height:9%","<div class=\"s-btn ok\" style=\"font-size:1em\">Enviar ➤</div>"); },
+  shot(){ return '<div class="s-bg" style="background:linear-gradient(160deg,#2563eb,#7c3aed 55%,#ec4899)"></div><div class="s-bg" style="background:#181e2e;bottom:42%;border-radius:0 0 1.4em 1.4em"></div>' +
+    sp("swipe","left:3%;top:1.5%;width:94%;height:5.5%","<div class=\"s-swipe\">⌄ Desliza desde arriba</div>") +
+    '<div style="position:absolute;left:4%;top:12%;width:21%;aspect-ratio:1"><div class="s-tile"><b>📶</b>Wi-Fi</div></div>' +
+    '<div style="position:absolute;left:28%;top:12%;width:21%;aspect-ratio:1"><div class="s-tile"><b>🔦</b>Linterna</div></div>' +
+    sp("scissors","left:52%;top:12%;width:21%;aspect-ratio:1","<div class=\"s-tile hot\"><b>✂️</b>Captura</div>") +
+    '<div style="position:absolute;left:76%;top:12%;width:21%;aspect-ratio:1"><div class="s-tile"><b>✈️</b>Avión</div></div>' +
+    '<div class="s-lbl" style="left:6%;top:63%;color:#fff">Fotos · Álbumes</div>' +
+    '<div style="position:absolute;left:52%;top:70%;width:42%;height:18%"><div class="s-alb">📁<span>Cámara</span></div></div>' +
+    sp("folder","left:6%;top:70%;width:42%;height:18%","<div class=\"s-alb\">📁<span>Capturas</span><small>Screenshots</small></div>"); }
+};
+function renderSides(){
+  const S = $("sides");
+  if (modo === "live") { S.innerHTML = '<button class="sbtn up" data-side="up" type="button" aria-label="Subir volumen"></button><button class="sbtn down" data-side="down" type="button" id="sb-down" aria-label="Bajar volumen"></button><button class="sbtn power" data-side="power" type="button" aria-label="Encendido"></button>'; return; }
+  const P = T().parts, pt = (k, cls, pc, extra) => '<button class="sbtn '+cls+(P[k]?' part':'')+'" '+(P[k]?'data-part="'+k+'" style="--pc:var('+P[k].color+')"':'')+' type="button">'+(P[k]&&pc?pin("sd"):"")+'</button>';
+  S.innerHTML = pt(tab==="cam"?"side":"_","up",true) + pt(tab==="shot"?"combo":"_","down",false) + pt(tab==="shot"?"combo":"_","power",true);
+}
+const parts = k => [...document.querySelectorAll('#phone [data-part="'+k+'"]')];
+function limpiar(){ document.querySelectorAll("#phone .part").forEach(p => p.classList.remove("sel","ok","bad")); }
+function pintarPins(){
+  Object.keys(T().parts).forEach(k => { const f = !!found[tab+"."+k]; parts(k).forEach(p => { p.classList.toggle("found", f); const pn = p.querySelector(":scope > .pin"); if (pn) pn.textContent = f ? T().parts[k].n : "?"; }); });
+}
+function renderStatic(){
+  scr.innerHTML = STATIC[tab](); renderSides(); pintarPins();
+  $("subtabs").innerHTML = TABS.map(t => '<button class="st'+(t.k===tab?' on':'')+'" data-tab="'+t.k+'" type="button">'+t.ico+' '+t.t+'</button>').join("");
+}
+function detalle(d){ return '<div class="info-num">'+d.n+'</div><h2>'+d.nombre+'</h2><p>'+d.texto+'</p><p style="color:var(--sub);font-size:1.05rem">📍 '+d.sitio+'</p><div class="chips">'+d.chips.map(c=>'<span class="chip">'+c+'</span>').join("")+'</div>'+(d.tip?'<div class="tip">'+d.tip+'</div>':''); }
+function bienvenida(){
+  limpiar(); const t = T(), n = Object.keys(t.parts).length;
+  info.style.setProperty("--ic","var(--c6)");
+  info.innerHTML = '<div class="hello"><div class="big">'+t.ico+'</div><h2>'+t.t+'</h2><p>Toca cada parte con un <b>?</b> del móvil. Hay <b>'+n+' partes</b> en esta pantalla.</p></div>'; restart(info);
+}
+function mostrar(k){
+  const d = T().parts[k]; limpiar(); parts(k).forEach(p => p.classList.add("sel"));
+  found[tab+"."+k] = true; guardar(); pintarPins(); progreso();
+  info.style.setProperty("--ic","var("+d.color+")"); info.innerHTML = detalle(d); restart(info);
+  const all = Object.keys(T().parts).every(x => found[tab+"."+x]);
+  if (all) { const i = TABS.findIndex(t=>t.k===tab), nx = TABS[i+1];
+    info.insertAdjacentHTML("beforeend",'<div class="row">'+(nx?'<button class="btn go" id="nx" type="button">'+nx.ico+' Siguiente: '+nx.t+' ➜</button>':'<button class="btn go" id="to-live" type="button">🛠️ ¡Ahora a probarlo!</button>')+'</div>');
+    if (nx) $("nx").onclick = () => setTab(nx.k); else $("to-live").onclick = () => setModo("live"); }
+}
+function setTab(k){ tab = k; pregunta = null; hechas = []; aciertos = 0; renderStatic(); if (modo === "desc") { bienvenida(); progreso(); } else nueva(); }
+function nueva(){
+  limpiar(); const ks = Object.keys(T().parts), quedan = ks.filter(k => !hechas.includes(k));
+  if (!quedan.length) return final();
+  pregunta = quedan[Math.floor(Math.random()*quedan.length)];
+  info.style.setProperty("--ic","var(--c3)");
+  info.innerHTML = '<div class="info-num">🎯</div><div class="quiz-q">Toca<br><span>'+T().parts[pregunta].det+'</span></div><div class="feedback" id="fb"></div>'; restart(info); progreso();
+}
+function responder(k){
+  if (!pregunta) return; const fb = $("fb"), P = T().parts;
+  if (k === pregunta) {
+    limpiar(); parts(k).forEach(p => p.classList.add("ok")); hechas.push(k); aciertos++; pregunta = null; progreso();
+    fb.className = "feedback good"; fb.textContent = "✅ ¡Correcto! " + P[k].nombre;
+    info.insertAdjacentHTML("beforeend",'<p style="color:var(--sub)">'+P[k].texto+'</p><div class="row"><button class="btn go" id="sig" type="button">'+(hechas.length===Object.keys(P).length?"🏆 Terminar":"Siguiente ➜")+'</button></div>'); $("sig").onclick = nueva;
+  } else {
+    const ps = parts(k); ps.forEach(p => { p.classList.remove("bad"); p.offsetHeight; p.classList.add("bad"); }); setTimeout(()=>ps.forEach(p=>p.classList.remove("bad")),900);
+    fb.className = "feedback no"; fb.textContent = "❌ Eso es " + P[k].det + ". ¡Inténtalo otra vez!";
+  }
+}
+function final(){
+  limpiar(); info.style.setProperty("--ic","var(--c3)");
+  const i = TABS.findIndex(t=>t.k===tab), nx = TABS[i+1];
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Ya conoces las partes de «'+T().t+'».</p><div class="row" style="justify-content:center"><button class="btn go" id="otra" type="button">🔄 Repetir</button>'+(nx?'<button class="btn" id="nxq" type="button">'+nx.ico+' '+nx.t+' ➜</button>':'')+'</div></div>'; restart(info);
+  $("otra").onclick = () => { hechas=[]; aciertos=0; nueva(); }; if (nx) $("nxq").onclick = () => setTab(nx.k);
+}
+$("subtabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b && modo !== "live") setTab(b.dataset.tab); });
+function partClick(e){ const p = e.target.closest(".part"); if (!p) return; const k = p.dataset.part; modo === "desc" ? mostrar(k) : responder(k); }
+$("sides").addEventListener("click", e => { if (modo !== "live") partClick(e); });
+
+/* =========================================================
+   MODO PROBAR: el móvil de verdad
+   ========================================================= */
+const RETOS = [
+ {g:"📷 Hacer una foto", c:"--c6", items:[
+  {id:"open", t:"Abrir la cámara", h:"Icono 📷 o, con el móvil bloqueado, deslizando hacia un lado"},
+  {id:"focus", t:"Enfocar", h:"Toca con el dedo la parte que quieres nítida"},
+  {id:"flash", t:"Elegir el flash", h:"Símbolo ⚡: Auto, Encendido o Apagado"},
+  {id:"shoot", t:"Tomar la foto", h:"Botón redondo grande"},
+  {id:"side", t:"Tomarla con el botón lateral", h:"Subir volumen, en el lateral del móvil"}]},
+ {g:"✏️ Editar la foto", c:"--c3", items:[
+  {id:"gal", t:"Abrir una foto en la galería", h:"Miniatura de la cámara o icono Fotos"},
+  {id:"edit", t:"Pulsar «Editar»", h:"Con la foto abierta"},
+  {id:"crop", t:"Recortar", h:"Quitar bordes o centrar"},
+  {id:"bright", t:"Cambiar el brillo", h:"Aclara la foto oscura del jardín"},
+  {id:"color", t:"Cambiar color o contraste", h:"Mueve un control deslizante"},
+  {id:"filter", t:"Poner un filtro", h:"Mejor pocos y solo para resaltar"},
+  {id:"done", t:"Pulsar «Hecho»", h:"Para mantener los cambios"}]},
+ {g:"📤 Compartir la foto", c:"--c1", items:[
+  {id:"share", t:"Pulsar el icono de compartir", h:"Con la foto abierta"},
+  {id:"choose", t:"Elegir cómo enviarla", h:"WhatsApp, Correo, Facebook…"},
+  {id:"send", t:"Confirmar y esperar", h:"Botón Enviar"}]},
+ {g:"✂️ Capturar la pantalla", c:"--c7", items:[
+  {id:"qs", t:"Abrir los ajustes rápidos", h:"Desliza hacia abajo desde arriba (o toca la barra superior)"},
+  {id:"scissors", t:"Pulsar el botón de las tijeras", h:"Dentro de los ajustes rápidos"},
+  {id:"combo", t:"Captura con los botones", h:"Bajar volumen y, sin soltar, Encendido"},
+  {id:"folder", t:"Encontrar la captura", h:"Fotos → Capturas"}]}
+];
+const ALLR = RETOS.flatMap(g => g.items);
+const GUIDE = {
+  lock:["🔒","Pantalla de bloqueo","También se puede abrir la cámara <b>deslizando hacia un lado</b>. Para entrar al móvil, desliza hacia arriba.","--c6"],
+  home:["🏠","Pantalla principal","En la mayoría de los móviles hay un <b>icono de cámara</b> en la pantalla principal.","--c6"],
+  camera:["📷","La cámara","Apunta el móvil, <b>toca con el dedo</b> lo que quieres nítido, elige el <b>flash ⚡</b> si hace falta y pulsa el <b>botón redondo</b> (o el botón lateral de volumen).","--c6"],
+  gallery:["🖼️","La galería","Entra en la galería o en «Fotos» y <b>toca la imagen</b> que quieras. Las capturas se guardan en la carpeta <b>Capturas</b>.","--c3"],
+  viewer:["🔍","Foto abierta","Presiona <b>Editar</b> para mejorarla, o el icono de <b>compartir</b> para enviarla.","--c3"],
+  edit:["✏️","Editar","","--c3"], compose:["📤","Confirmar","<b>Confirma</b> y espera que se envíe o se publique.","--c1"],
+  qs:["⚙️","Ajustes rápidos","Pulsa el botón de captura de pantalla, que suele tener la imagen de unas <b>tijeras ✂️</b>.","--c7"]
+};
+const EDTXT = {crop:"<b>Recortar</b>: elimina bordes o centra mejor.", bright:"<b>Brillo / luz</b>: aclara la foto si está oscura.", color:"<b>Color / contraste</b>: mejora los tonos y los detalles.", filter:"<b>Filtros</b>: cambian el estilo o color general. Usa pocos, solo para resaltar."};
+const APPS = [["camera","📷","Cámara"],["gallery","🖼️","Fotos"],["wa","💬","WhatsApp"],["mail","✉️","Correo"],["set","⚙️","Ajustes"],["tel","📞","Teléfono"]];
+const SHARE = [["wa","💬","WhatsApp","Ana"],["sms","🗨️","Mensajes","Ana"],["mail","✉️","Correo","ana@correo.es"],["fb","📘","Facebook","tu perfil"],["ig","📷","Instagram","tu perfil"]];
+const SNAME = {home:"Pantalla principal", camera:"Cámara", gallery:"Galería", viewer:"Foto", edit:"Editor", compose:"Enviar", lock:"Bloqueo"};
+let retos = {}, P = null;
+const mk = (id, scene, dark) => ({id, type:"photo", scene, dark, folder:"cam", blur:false, edits:newEdits()});
+function resetPhone(){ P = {screen:"home", locked:false, flash:"auto", focus:null, night:false, scene:"playa", photos:[mk(1,"jardin",.55), mk(2,"playa",1)], nid:3, album:"all", cur:null, draft:null, dtab:"crop", qs:false, sheet:false, via:null, sent:null, volHeld:false, vt:null, combo:false}; }
+function toast(m){ const t = $("ptoast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("on"), 2800); }
+function tick(id){ if (!retos[id]) { retos[id] = true; toast("✅ Reto superado: " + ALLR.find(r=>r.id===id).t); progreso(); } renderInfo(); }
+const curPhoto = () => P.photos.find(p => p.id === P.cur);
+function go(s){ P.screen = s; P.qs = false; P.sheet = false; if (s === "camera") tick("open"); render(); }
+
+/* ----- pantallas ----- */
+const SB = light => '<div class="sbar'+(light?' light':'')+'" id="sbar"><span>10:30</span><span>📶 🔋 80 %</span></div>';
+const NAV = light => '<div class="navb'+(light?' light':'')+'"><span data-act="back">◁</span><span data-act="home">○</span><span>□</span></div>';
+function lockHTML(){ return '<div class="v v-lock"><div class="lk-clock">10:30</div><div class="lk-date">miércoles, 14 de octubre</div><div class="lk-hint">🔒 Móvil bloqueado<br>Desliza hacia arriba para entrar<br>◁ Desliza hacia un lado para la cámara</div><button class="lk-unl" data-act="unlock" type="button">Desbloquear ⬆</button><button class="lk-cam" data-act="lockcam" type="button">📷</button></div>'; }
+function homeHTML(){ return '<div class="v v-home"><div class="apps">'+APPS.map(a=>'<button class="app" data-act="app:'+a[0]+'" type="button"><span class="ai">'+a[1]+'</span>'+a[2]+'</button>').join("")+'</div><div class="hint-h">Toca el icono de la cámara 📷</div></div>'+SB(true)+NAV(true); }
+function camHTML(){
+  const fl = {auto:["⚡ Auto",""], on:["⚡ Sí","on"], off:["⚡ No","off"]}[P.flash], last = P.photos[0];
+  return '<div class="v v-cam"><div class="vf" data-act="vf"><div class="vfs'+(P.focus?'':' blur')+(P.night?' night':'')+'">'+sceneHTML(P.scene)+'</div>'+(P.focus?'<div class="ring" style="left:'+P.focus.x+'%;top:'+P.focus.y+'%"></div>':'<div class="vf-hint"><span>👆 Toca la pantalla para enfocar</span></div>')+'</div>' +
+    '<div class="cam-top"><button class="flashb '+fl[1]+'" data-act="flash" type="button">'+fl[0]+'</button></div>' +
+    '<div class="cam-bar"><button class="thumb" data-act="gallery" type="button" aria-label="Galería">'+(last?photoHTML(last,true):'')+'</button><button class="shut" data-act="shoot" type="button" aria-label="Hacer foto"></button><span class="flip">🔄</span></div></div>'+SB(true)+NAV(true);
+}
+function galHTML(){
+  const list = P.photos.filter(p => P.album === "all" || (P.album === "cam" ? p.type === "photo" : p.type === "shot"));
+  const ch = (k,t) => '<button class="ch'+(P.album===k?' on':'')+'" data-act="album:'+k+'" type="button">'+t+'</button>';
+  return '<div class="v v-gal"><div class="gh">Fotos</div><div class="chipsr">'+ch("all","Todas")+ch("cam","Cámara")+ch("shots","Capturas")+'</div>' +
+    (list.length ? '<div class="ggrid">'+list.map(p=>'<button class="gth" data-act="photo:'+p.id+'" type="button">'+photoHTML(p,true)+'</button>').join("")+'</div>' : '<div class="empty">Aquí no hay nada todavía.<br>Haz una captura de pantalla y aparecerá aquí.</div>')+'</div>'+SB(false)+NAV(false);
+}
+function viewHTML(){
+  const p = curPhoto();
+  return '<div class="v v-view"><div class="vtop"><span data-act="back">←</span>'+(p.type==="shot"?"Captura":"Foto")+'</div><div class="vph">'+photoHTML(p)+'</div>' +
+    '<div class="vbar"><button class="vb" data-act="edit" type="button"><b>✏️</b>Editar</button><button class="vb" data-act="share" type="button"><b>📤</b>Compartir</button></div></div>' +
+    (P.sheet ? '<div class="dim" data-act="closesheet"></div><div class="sheet"><h5>Compartir con</h5><div class="sapps">'+SHARE.map(s=>'<button class="sapp" data-act="to:'+s[0]+'" type="button"><b>'+s[1]+'</b>'+s[2]+'</button>').join("")+'</div></div>' : '') + SB(true) + NAV(true);
+}
+function editHTML(){
+  const p = curPhoto(), d = P.draft, tbs = [["crop","✂️","Recortar"],["bright","☀️","Brillo"],["color","🎨","Color"],["filter","✨","Filtros"]];
+  const opt = (a,v,t,cur) => '<button class="opt'+(cur===v?' on':'')+'" data-act="'+a+':'+v+'" type="button">'+t+'</button>';
+  let ctl = "";
+  if (P.dtab === "crop") ctl = '<div class="opts">'+opt("crop","none","Original",d.crop)+opt("crop","bordes","Quitar bordes",d.crop)+opt("crop","centrar","Centrar",d.crop)+opt("crop","cuadrado","Cuadrado",d.crop)+'</div><small>Elimina bordes o centra mejor.</small>';
+  if (P.dtab === "bright") ctl = '<label>Brillo <span id="vb">'+d.bright+'</span></label><input type="range" min="-50" max="50" value="'+d.bright+'" data-range="bright"><small>Aclara la foto si está oscura.</small>';
+  if (P.dtab === "color") ctl = '<label>Color <span id="vc">'+d.color+'</span></label><input type="range" min="-50" max="50" value="'+d.color+'" data-range="color"><label>Contraste <span id="vt">'+d.contrast+'</span></label><input type="range" min="-50" max="50" value="'+d.contrast+'" data-range="contrast">';
+  if (P.dtab === "filter") ctl = '<div class="opts">'+opt("filter","none","Ninguno",d.filter)+opt("filter","vivo","Vivo",d.filter)+opt("filter","bn","B/N",d.filter)+opt("filter","sepia","Sepia",d.filter)+opt("filter","frio","Frío",d.filter)+'</div><small>Usa pocos, solo para resaltar.</small>';
+  return '<div class="v v-edit"><div class="vtop">Editar</div><div id="edprev">'+photoHTML({...p, edits:d})+'</div><div class="edtabs">'+tbs.map(t=>'<button class="et'+(P.dtab===t[0]?' on':'')+'" data-act="dtab:'+t[0]+'" type="button"><b>'+t[1]+'</b>'+t[2]+'</button>').join("")+'</div><div class="edctl">'+ctl+'</div><div class="edfoot"><button class="eb" data-act="cancel" type="button">Cancelar</button><button class="eb ok" data-act="done" type="button">Hecho</button></div></div>'+SB(true)+NAV(true);
+}
+function compHTML(){
+  const p = curPhoto(), v = P.via, sent = P.sent;
+  return '<div class="v v-comp"><div class="cmp-h">'+v[1]+' '+v[2]+'</div><div class="cmp-to">'+(v[0]==="fb"||v[0]==="ig"?"Publicar en: ":"Para: ")+v[3]+'</div><div class="cmp-ph">'+photoHTML(p)+'</div>' +
+    (sent === "sending" ? '<div class="cmp-ok">Enviando…</div><div class="bar"><i></i></div>' : sent === "done" ? '<div class="cmp-ok">✅ ¡Enviada!</div><button class="cmp-btn" data-act="finish" type="button">Terminar</button>' : '<button class="cmp-btn" data-act="send" type="button">'+(v[0]==="fb"||v[0]==="ig"?"Publicar":"Enviar")+' ➤</button>')+'</div>'+SB(false)+NAV(false);
+}
+function qsHTML(){ return '<div class="dim" data-act="qsclose"></div><div class="qs"><h5>Ajustes rápidos</h5><div class="qtiles"><button class="qt" type="button"><b>📶</b>Wi-Fi</button><button class="qt" type="button"><b>🔦</b>Linterna</button><button class="qt hot" data-act="qsshot" type="button"><b>✂️</b>Captura</button><button class="qt" type="button"><b>✈️</b>Avión</button></div></div>'; }
+function render(){
+  const s = P.screen;
+  scr.innerHTML = ({lock:lockHTML, home:homeHTML, camera:camHTML, gallery:galHTML, viewer:viewHTML, edit:editHTML, compose:compHTML})[s]() + (P.qs ? qsHTML() : "");
+  renderInfo();
+}
+
+/* ----- acciones ----- */
+function shoot(via){
+  const fl = P.flash === "on" || (P.flash === "auto" && P.night), p = mk(P.nid++, P.scene, P.night && !fl ? .45 : 1);
+  p.blur = !P.focus; P.photos.unshift(p);
+  const f = $("flashov"); f.className = "flashov"; f.offsetHeight; f.className = "flashov " + (fl ? "big" : "go");
+  tick(via === "side" ? "side" : "shoot");
+  if (p.blur) toast("📷 Foto hecha, pero ha salido borrosa: toca la pantalla para enfocar");
+  else if (P.night && P.flash === "off") toast("📷 Con poca luz sale oscura: prueba con el flash");
+  else if (!P.night && P.flash === "on") toast("📷 Con buena luz es mejor sin flash: el color se ve más natural");
+  else toast("📷 Foto guardada en la galería");
+  render();
+}
+function takeShot(via){
+  const f = $("flashov"); f.className = "flashov"; f.offsetHeight; f.className = "flashov go";
+  P.photos.unshift({id:P.nid++, type:"shot", folder:"shots", label:SNAME[P.screen] || "Pantalla", edits:newEdits(), dark:1});
+  tick(via === "qs" ? "scissors" : "combo"); toast("📸 Captura guardada en «Capturas» (en Fotos)");
+}
+function liveClick(e){
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const [a, arg] = el.dataset.act.split(":");
+  switch (a) {
+    case "app": if (arg === "camera") go("camera"); else if (arg === "gallery") { P.album = "all"; go("gallery"); } else toast("Esta práctica es de fotos 😊"); break;
+    case "back": if (P.screen === "viewer") { go("gallery"); } else if (P.screen === "edit" || P.screen === "compose") go("viewer"); else if (P.screen !== "home") go("home"); break;
+    case "home": go("home"); break;
+    case "unlock": P.locked = false; go("home"); break;
+    case "lockcam": P.locked = false; go("camera"); break;
+    case "vf": { const r = el.getBoundingClientRect(); P.focus = {x:((e.clientX-r.left)/r.width*100).toFixed(1), y:((e.clientY-r.top)/r.height*100).toFixed(1)}; tick("focus"); render(); break; }
+    case "flash": P.flash = ({auto:"on", on:"off", off:"auto"})[P.flash]; tick("flash"); render(); toast("⚡ Flash: " + ({auto:"Automático: el móvil decide", on:"Encendido: se activa siempre", off:"Apagado: no se usa"})[P.flash]); break;
+    case "shoot": shoot("btn"); break;
+    case "gallery": P.album = "all"; tick("gal"); go("gallery"); break;
+    case "album": P.album = arg; if (arg === "shots") tick("folder"); render(); break;
+    case "photo": P.cur = +arg; tick("gal"); go("viewer"); break;
+    case "edit": { const p = curPhoto(); if (p.type === "shot") { toast("Prueba a editar una foto de la cámara"); break; } P.draft = {...p.edits}; P.dtab = "crop"; tick("edit"); go("edit"); break; }
+    case "dtab": P.dtab = arg; render(); break;
+    case "crop": P.draft.crop = arg; if (arg !== "none") tick("crop"); render(); break;
+    case "filter": P.draft.filter = arg; if (arg !== "none") tick("filter"); render(); break;
+    case "cancel": go("viewer"); break;
+    case "done": curPhoto().edits = {...P.draft}; tick("done"); toast("💾 Cambios guardados"); go("viewer"); break;
+    case "share": P.sheet = true; tick("share"); render(); break;
+    case "closesheet": P.sheet = false; render(); break;
+    case "to": P.via = SHARE.find(s => s[0] === arg); P.sent = null; P.sheet = false; tick("choose"); go("compose"); break;
+    case "send": P.sent = "sending"; render(); setTimeout(() => { if (P.sent === "sending") { P.sent = "done"; tick("send"); if (P.screen === "compose") render(); } }, 1300); break;
+    case "finish": go("viewer"); break;
+    case "qsclose": P.qs = false; render(); break;
+    case "qsshot": P.qs = false; render(); setTimeout(() => takeShot("qs"), 250); break;
+  }
+}
+function openQS(){ if (P.screen === "lock") return; P.qs = true; tick("qs"); render(); }
+let sw = null;
+scr.addEventListener("pointerdown", e => { sw = {x:e.clientX, y:e.clientY, sbar:!!e.target.closest("#sbar")}; });
+scr.addEventListener("pointerup", e => {
+  if (modo !== "live" || !sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y, s = sw; sw = null;
+  if (P.screen === "lock") { if (dx < -50 && Math.abs(dy) < 90) { P.locked = false; go("camera"); } else if (dy < -70) { P.locked = false; go("home"); } }
+  else if (s.sbar) openQS();
+});
+scr.addEventListener("click", e => { modo === "live" ? liveClick(e) : partClick(e); });
+scr.addEventListener("input", e => {
+  const r = e.target.closest("[data-range]"); if (!r || modo !== "live") return;
+  const k = r.dataset.range; P.draft[k] = +r.value; if (+r.value !== 0) tick(k === "contrast" ? "color" : k);
+  $("edprev").innerHTML = photoHTML({...curPhoto(), edits:P.draft});
+  const lab = {bright:"vb", color:"vc", contrast:"vt"}[k]; if ($(lab)) $(lab).textContent = r.value;
+});
+
+/* botones laterales */
+function markHeld(){ const b = $("sb-down"); if (b) b.classList.toggle("held", P.volHeld); }
+$("sides").addEventListener("pointerdown", e => {
+  if (modo !== "live") return; const b = e.target.closest("[data-side]"); if (!b) return; const k = b.dataset.side;
+  if (k === "down") { P.volHeld = true; clearTimeout(P.vt); markHeld(); toast("🔉 Bajar volumen pulsado… ahora pulsa Encendido"); }
+  if (k === "power" && P.volHeld) { P.combo = true; P.volHeld = false; markHeld(); takeShot("combo"); }
+  if (k === "up") { P.screen === "camera" ? shoot("side") : toast("🔊 Volumen más alto"); }
+});
+$("sides").addEventListener("pointerup", e => { const b = e.target.closest("[data-side]"); if (b && b.dataset.side === "down") { clearTimeout(P.vt); P.vt = setTimeout(() => { P.volHeld = false; markHeld(); }, 2500); } });
+$("sides").addEventListener("click", e => {
+  if (modo !== "live") return; const b = e.target.closest("[data-side]"); if (!b || b.dataset.side !== "power") return;
+  if (P.combo) { P.combo = false; return; }
+  if (P.screen === "lock") toast("Desliza hacia arriba para desbloquear"); else { P.locked = true; go("lock"); }
+});
+
+/* ----- panel de información (probar) ----- */
+function renderInfo(){
+  if (modo !== "live" || !P) return;
+  let key = P.qs ? "qs" : P.screen, g = GUIDE[key], txt = g[2];
+  if (key === "edit") txt = EDTXT[P.dtab] + " Pulsa <b>Hecho</b> para mantener los cambios.";
+  info.style.setProperty("--ic","var("+g[3]+")");
+  const n = Object.keys(retos).length;
+  info.innerHTML = (n === ALLR.length ? '<div class="win-all">🏆 ¡Todos los retos superados!</div>' : '') +
+    '<div class="lh"><span class="ico">'+g[0]+'</span><div class="nm">'+g[1]+'</div></div><p>'+txt+'</p>' +
+    RETOS.map(gr => '<h3>'+gr.g+'</h3><ul class="retos">'+gr.items.map(r => '<li class="'+(retos[r.id]?'on':'')+'"><span class="rb">'+(retos[r.id]?'✓':'')+'</span><span class="rt">'+r.t+'<small>'+r.h+'</small></span></li>').join("")+'</ul>').join("");
+}
+$("t-scene").onclick = () => { P.scene = SCN[(SCN.indexOf(P.scene)+1) % SCN.length]; P.focus = null; toast("📱 Ahora apuntas a " + SCENES[P.scene].n); if (P.screen === "camera") render(); };
+$("t-light").onclick = () => { P.night = !P.night; $("t-light").textContent = P.night ? "☀️ Cambiar la luz" : "🌙 Cambiar la luz"; toast(P.night ? "🌙 Poca luz: ¿necesitarás el flash?" : "☀️ Buena luz"); if (P.screen === "camera") render(); };
+$("t-reset").onclick = () => { resetPhone(); $("t-light").textContent = "🌙 Cambiar la luz"; render(); };
+
+/* =========================================================
+   Progreso y modos
+   ========================================================= */
+function progreso(){
+  let n, tot, txt;
+  if (modo === "desc") { n = Object.keys(found).length; tot = TOTAL; txt = "⭐ " + n + " de " + tot + " partes descubiertas"; }
+  else if (modo === "prac") { n = aciertos; tot = Object.keys(T().parts).length; txt = "🎯 " + n + " de " + tot + " aciertos en «" + T().t + "»"; }
+  else { n = Object.keys(retos).length; tot = ALLR.length; txt = "🛠️ " + n + " de " + tot + " retos superados"; }
+  $("prog-txt").textContent = txt; $("prog-fill").style.width = (n / tot * 100) + "%";
+}
+function setModo(m){
+  modo = m; pregunta = null;
+  ["desc","live","prac"].forEach(x => $("m-"+x).classList.toggle("on", m === x));
+  $("root").classList.toggle("mode-practica", m === "prac");
+  $("subtabs").hidden = m === "live"; $("tools").hidden = m !== "live";
+  if (m === "live") { if (!P) resetPhone(); $("subtabs").innerHTML = ""; renderSides(); render(); progreso(); }
+  else { hechas = []; aciertos = 0; renderStatic(); if (m === "desc") { bienvenida(); progreso(); } else nueva(); }
+}
+$("m-desc").onclick = () => setModo("desc"); $("m-live").onclick = () => setModo("live"); $("m-prac").onclick = () => setModo("prac");
+$("reset").onclick = () => { found = {}; retos = {}; guardar(); resetPhone(); setModo(modo); };
+setModo("desc");
+</script>
+</body>
+</html>

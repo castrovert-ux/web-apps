@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Ventanas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-blobs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+  }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; animation-delay: 0s; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to { transform: translate(25px, 18px) scale(1.07); }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 750px; margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 40px;
+    animation: slideDown 0.7s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .subtitle { color: var(--sub); font-size: 1rem; font-weight: 600; }
+
+  .progress-wrap { margin-bottom: 30px; animation: fadeIn 0.5s ease; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px;
+  }
+  .progress-bar {
+    height: 8px; background: rgba(255,255,255,0.08);
+    border-radius: 10px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--c1), var(--c3));
+    border-radius: 10px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  .question-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
+    animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .q-type-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.5px; padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+  }
+  .type-mc   { background: rgba(37,211,102,0.15); color: var(--c1); }
+  .type-tf   { background: rgba(255,217,61,0.15); color: var(--c3); }
+  .type-open { background: rgba(255,107,107,0.15); color: var(--c4); }
+
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; }
+
+  .options { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px;
+    color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 1rem; font-weight: 600; text-align: left;
+    cursor: pointer; transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: rgba(37,211,102,0.1);
+    border-color: var(--c1); transform: translateX(6px);
+  }
+  .option-letter {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn.correct { background: rgba(37,211,102,0.15); border-color: var(--c1); }
+  .option-btn.correct .option-letter { background: var(--c1); color: #0a1628; }
+  .option-btn.wrong { background: rgba(255,107,107,0.12); border-color: var(--c4); }
+  .option-btn.wrong .option-letter { background: var(--c4); color: #fff; }
+  .option-btn:disabled { cursor: default; }
+
+  .open-area textarea {
+    width: 100%; background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 16px; color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 1rem; font-weight: 600; resize: vertical; min-height: 110px;
+    margin-top: 20px; transition: border-color 0.2s;
+  }
+  .open-area textarea:focus { outline: none; border-color: var(--c1); }
+  .open-area textarea::placeholder { color: rgba(255,255,255,0.3); }
+
+  .feedback {
+    display: none; margin-top: 16px; padding: 14px 18px;
+    border-radius: 12px; font-weight: 700; font-size: 0.95rem;
+    animation: fadeIn 0.3s ease; line-height: 1.5;
+  }
+  .feedback.correct-fb { display: flex; background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.3); color: var(--c5); }
+  .feedback.wrong-fb   { display: flex; background: rgba(255,107,107,0.1);  border: 1px solid rgba(255,107,107,0.3); color: var(--c4); }
+  .feedback.info-fb    { display: flex; background: rgba(255,217,61,0.1);   border: 1px solid rgba(255,217,61,0.3);  color: var(--c3); }
+
+  .btn-row { display: flex; gap: 12px; justify-content: flex-end; }
+  .btn-submit, .btn-next {
+    padding: 14px 32px; border-radius: 14px; border: none;
+    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1rem;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn-submit { background: linear-gradient(135deg, var(--c1), var(--c2)); color: #fff; }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,211,102,0.4); }
+  .btn-next { background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,217,61,0.4); }
+
+  .results { display: none; text-align: center; animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+  .results.show { display: block; }
+  .trophy { font-size: 5rem; margin-bottom: 16px; animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-5deg); }
+    to { transform: translateY(-12px) rotate(5deg); }
+  }
+  .score-circle {
+    width: 140px; height: 140px; border-radius: 50%;
+    background: conic-gradient(var(--c1) 0%, var(--c3) var(--pct, 100%), rgba(255,255,255,0.05) var(--pct,100%));
+    display: flex; align-items: center; justify-content: center;
+    margin: 24px auto; position: relative;
+  }
+  .score-circle::before {
+    content: ''; position: absolute; inset: 10px;
+    border-radius: 50%; background: var(--bg);
+  }
+  .score-number {
+    font-family: 'Fredoka One', cursive; font-size: 2.2rem;
+    position: relative; z-index: 1;
+  }
+  .result-msg { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  .result-sub { color: var(--sub); font-size: 0.95rem; margin-bottom: 30px; }
+  .btn-restart {
+    padding: 16px 40px; border-radius: 16px; border: none;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-family: 'Nunito', sans-serif;
+    font-weight: 800; font-size: 1.05rem; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-restart:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(37,211,102,0.4); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+</div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="badge">💻 Ordenador</div>
+    <h1>Gestión de Ventanas</h1>
+    <p class="subtitle">Comprueba lo que has aprendido sobre las ventanas en Windows</p>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 18</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="question-card" id="q-card">
+      <div class="q-type-badge" id="q-type-badge"></div>
+      <div class="q-number" id="q-number"></div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-body"></div>
+      <div class="feedback" id="q-feedback"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-submit hidden" id="btn-submit" onclick="submitOpen()">Comprobar ✔</button>
+      <button class="btn-next hidden" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="trophy" id="trophy">🏆</div>
+    <div class="score-circle" id="score-circle">
+      <span class="score-number" id="score-num">0/18</span>
+    </div>
+    <div class="result-msg" id="result-msg"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <button class="btn-restart" onclick="restartQuiz()">🔄 Volver a intentarlo</button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    type: "mc",
+    text: "¿Qué es una ventana en Windows?",
+    options: [
+      "Un programa para navegar por Internet",
+      "El espacio rectangular que aparece en la pantalla al abrir un programa, una aplicación o un archivo",
+      "La barra que está en la parte inferior de la pantalla",
+      "El fondo de pantalla del escritorio"
+    ],
+    correct: 1,
+    explanation: "¡Correcto! Las ventanas son los espacios rectangulares que se abren al usar un programa o un archivo, como hojas de papel sobre un escritorio."
+  },
+  {
+    type: "mc",
+    text: "¿Qué muestra la barra de título de una ventana?",
+    options: [
+      "La hora y la fecha",
+      "Los iconos de los programas abiertos",
+      "El nombre del programa o del archivo que tienes abierto",
+      "El nivel de batería del ordenador"
+    ],
+    correct: 2,
+    explanation: "¡Muy bien! La barra de título está en la parte superior de la ventana y muestra el nombre del programa o del archivo."
+  },
+  {
+    type: "tf",
+    text: "Los botones de control (minimizar, maximizar y cerrar) se encuentran normalmente en la esquina superior derecha de la ventana.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 0,
+    explanation: "¡Correcto! Es Verdadero. Los tres botones de control están arriba a la derecha."
+  },
+  {
+    type: "mc",
+    text: "¿Cómo es el botón de minimizar?",
+    options: [
+      "Una «x»",
+      "Un cuadrado (□)",
+      "Dos cuadrados superpuestos",
+      "Un guion o una línea horizontal (-)"
+    ],
+    correct: 3,
+    explanation: "¡Exacto! El botón de minimizar es un guion o una línea horizontal (-)."
+  },
+  {
+    type: "tf",
+    text: "Al minimizar una ventana, el programa se cierra por completo.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 1,
+    explanation: "¡Bien! Es Falso. Al minimizar, la ventana se oculta y se queda como un icono en la barra de tareas, pero el programa sigue abierto."
+  },
+  {
+    type: "mc",
+    text: "Has minimizado una ventana. ¿Cómo la vuelves a ver?",
+    options: [
+      "Haciendo clic en su icono de la barra de tareas",
+      "Apagando y encendiendo el ordenador",
+      "Pulsando el botón de cerrar (x)",
+      "Haciendo doble clic en el fondo de pantalla"
+    ],
+    correct: 0,
+    explanation: "¡Correcto! Para restaurar una ventana minimizada, haz clic en su icono de la barra de tareas."
+  },
+  {
+    type: "mc",
+    text: "En los botones de control ves dos cuadrados superpuestos. ¿En qué estado está la ventana?",
+    options: [
+      "Minimizada",
+      "Cerrada",
+      "Maximizada: ocupa toda la pantalla, y ese botón sirve para restaurarla a su tamaño anterior",
+      "Restaurada"
+    ],
+    correct: 2,
+    explanation: "¡Muy bien! Los dos cuadrados superpuestos aparecen cuando la ventana está maximizada. Al pulsarlo, vuelve a su tamaño original."
+  },
+  {
+    type: "mc",
+    text: "¿Qué ocurre al pulsar el botón de cerrar (x)?",
+    options: [
+      "La ventana se reduce a un icono en la barra de tareas",
+      "El programa termina y la ventana se cierra por completo",
+      "La ventana ocupa toda la pantalla",
+      "La ventana se mueve a un lado de la pantalla"
+    ],
+    correct: 1,
+    explanation: "¡Correcto! Cerrar termina el programa y cierra la ventana por completo."
+  },
+  {
+    type: "tf",
+    text: "En el estado restaurado, la ventana está entre maximizada y minimizada, y puedes cambiar su tamaño y su posición.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 0,
+    explanation: "¡Exacto! Es Verdadero. El estado restaurado es el más útil para trabajar con varias ventanas a la vez."
+  },
+  {
+    type: "mc",
+    text: "¿Cómo mueves una ventana restaurada a otro lugar de la pantalla?",
+    options: [
+      "Haciendo doble clic en el botón de cerrar",
+      "Pulsando la tecla Tab",
+      "Arrastrando un icono de la barra de tareas",
+      "Haciendo clic en la barra de título, manteniendo pulsado y arrastrando"
+    ],
+    correct: 3,
+    explanation: "¡Muy bien! Se hace clic en la barra de título, se mantiene pulsado el botón del ratón y se arrastra la ventana."
+  },
+  {
+    type: "open",
+    text: "Explica con tus palabras cómo se cambia el tamaño (redimensiona) una ventana restaurada.",
+    keywords: ["borde", "esquina", "cursor", "flecha", "doble", "arrastr", "clic", "ratón"],
+    explanation: "Se coloca el cursor en un borde o en una esquina de la ventana hasta que se convierte en una flecha doble. Después se hace clic y se arrastra hasta el tamaño deseado."
+  },
+  {
+    type: "mc",
+    text: "En Windows 11, ¿qué pasa si arrastras una ventana restaurada hasta un lateral de la pantalla?",
+    options: [
+      "La ventana se cierra",
+      "La ventana se minimiza",
+      "Windows la encuadra ocupando exactamente la mitad de la pantalla",
+      "La ventana desaparece del escritorio"
+    ],
+    correct: 2,
+    explanation: "¡Correcto! Al llevarla a un lateral, Windows la ajusta para que ocupe justo la mitad de la pantalla. Si la llevas a una esquina, la encuadra en esa esquina."
+  },
+  {
+    type: "tf",
+    text: "Si pasas el cursor por encima del botón de maximizar (□) o de restaurar (dos cuadrados), aparece una ventana emergente para elegir distintas formas de organizar las ventanas.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 0,
+    explanation: "¡Correcto! Es Verdadero. En Windows 11 aparece un pequeño menú con varias distribuciones; solo tienes que elegir una."
+  },
+  {
+    type: "mc",
+    text: "¿Qué ocurre al poner el ratón encima de un icono de la barra de tareas?",
+    options: [
+      "Se cierra el programa",
+      "Aparece una vista previa de la ventana",
+      "Se apaga la pantalla",
+      "Se abre la papelera de reciclaje"
+    ],
+    correct: 1,
+    explanation: "¡Muy bien! Aparece una vista previa de la ventana. Haz clic en ella para abrirla."
+  },
+  {
+    type: "mc",
+    text: "¿Qué combinación de teclas permite cambiar rápidamente entre las ventanas abiertas?",
+    options: [
+      "Ctrl + C",
+      "Alt + F4",
+      "Alt + Tab",
+      "Mayúsculas + Supr"
+    ],
+    correct: 2,
+    explanation: "¡Exacto! Con Alt + Tab ves todas las ventanas abiertas y puedes saltar de una a otra."
+  },
+  {
+    type: "open",
+    text: "Explica los pasos para usar Alt + Tab y llegar a la ventana que quieres.",
+    keywords: ["alt", "tab", "manten", "pulsa", "presiona", "soltar", "suelta", "mover"],
+    explanation: "Mantén pulsada la tecla Alt y, sin soltarla, pulsa Tab. Sigue pulsando Tab para ir pasando por las ventanas y, cuando llegues a la que quieres, suelta las dos teclas."
+  },
+  {
+    type: "mc",
+    text: "¿Cómo puedes abrir la Vista de Tareas para ver todas las ventanas en miniatura?",
+    options: [
+      "Pulsando Windows + Tab, o el botón «Vista de Tareas» de la barra de tareas",
+      "Pulsando Ctrl + Z",
+      "Haciendo clic en la barra de título",
+      "Pulsando el botón de minimizar de todas las ventanas"
+    ],
+    correct: 0,
+    explanation: "¡Correcto! Pulsa Windows + Tab, o el botón «Vista de Tareas» (parece dos ventanas superpuestas), y haz clic en la ventana que quieras."
+  },
+  {
+    type: "tf",
+    text: "Si cierras una ventana sin querer, el programa se pierde para siempre y no se puede volver a abrir.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 1,
+    explanation: "¡Bien! Es Falso. No te preocupes: normalmente puedes volver a abrir el programa o el archivo desde el menú de inicio o desde el escritorio."
+  }
+];
+
+let current = 0, score = 0, answered = false;
+
+const typeLabels = {
+  mc:   { label: "🎯 Opción múltiple", cls: "type-mc" },
+  tf:   { label: "⚖️ Verdadero / Falso", cls: "type-tf" },
+  open: { label: "✍️ Respuesta abierta",  cls: "type-open" }
+};
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[current];
+  const pct = (current / questions.length) * 100;
+
+  document.getElementById('prog-label').textContent = `Pregunta ${current+1} de ${questions.length}`;
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+
+  const badge = document.getElementById('q-type-badge');
+  badge.textContent = typeLabels[q.type].label;
+  badge.className = 'q-type-badge ' + typeLabels[q.type].cls;
+
+  document.getElementById('q-number').textContent = `Pregunta ${current+1}`;
+  document.getElementById('q-text').textContent = q.text;
+
+  const body = document.getElementById('q-body');
+  const fb = document.getElementById('q-feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  document.getElementById('btn-submit').classList.add('hidden');
+  document.getElementById('btn-next').classList.add('hidden');
+
+  const card = document.getElementById('q-card');
+  card.style.animation = 'none';
+  card.offsetHeight;
+  card.style.animation = 'popIn 0.5s cubic-bezier(.34,1.56,.64,1)';
+
+  if (q.type === 'mc' || q.type === 'tf') {
+    body.innerHTML = `<div class="options">${
+      q.options.map((opt, i) => {
+        const letters = ['A','B','C','D'];
+        return `<button class="option-btn" onclick="selectOption(${i})" id="opt-${i}">
+          <span class="option-letter">${q.type === 'tf' ? (i===0?'V':'F') : letters[i]}</span>
+          <span>${opt}</span>
+        </button>`;
+      }).join('')
+    }</div>`;
+  } else {
+    body.innerHTML = `<div class="open-area">
+      <textarea id="open-ans" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>`;
+    document.getElementById('btn-submit').classList.remove('hidden');
+  }
+}
+
+function selectOption(idx) {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const fb = document.getElementById('q-feedback');
+
+  q.options.forEach((_, i) => { document.getElementById(`opt-${i}`).disabled = true; });
+
+  const chosen = document.getElementById(`opt-${idx}`);
+  const correct = document.getElementById(`opt-${q.correct}`);
+
+  if (idx === q.correct) {
+    chosen.classList.add('correct');
+    score++;
+    fb.className = 'feedback correct-fb';
+    fb.innerHTML = '🎉 ' + q.explanation;
+  } else {
+    chosen.classList.add('wrong');
+    correct.classList.add('correct');
+    fb.className = 'feedback wrong-fb';
+    fb.innerHTML = '💡 ' + q.explanation;
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  document.getElementById('btn-next').classList.remove('hidden');
+}
+
+function submitOpen() {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const ans = document.getElementById('open-ans').value.trim().toLowerCase();
+  const fb = document.getElementById('q-feedback');
+
+  document.getElementById('open-ans').disabled = true;
+  document.getElementById('btn-submit').classList.add('hidden');
+
+  const hits = q.keywords.filter(k => ans.includes(k)).length;
+
+  if (ans.length < 15) {
+    fb.className = 'feedback wrong-fb';
+    fb.innerHTML = '✍️ Tu respuesta es muy corta. Intenta explicar más. ' + q.explanation;
+  } else if (hits >= 2) {
+    score++;
+    fb.className = 'feedback correct-fb';
+    fb.innerHTML = '🎉 ¡Muy bien! ' + q.explanation;
+  } else {
+    fb.className = 'feedback info-fb';
+    fb.innerHTML = '💡 Respuesta registrada. ' + q.explanation;
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  document.getElementById('btn-next').classList.remove('hidden');
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  const res = document.getElementById('results');
+  res.classList.add('show');
+
+  const pct = Math.round((score / questions.length) * 100);
+  document.getElementById('score-circle').style.setProperty('--pct', pct + '%');
+  document.getElementById('score-num').textContent = `${score}/${questions.length}`;
+
+  const msgs = [
+    { min:0,  max:39,  emoji:'📱', msg:'¡Sigue practicando!',       sub:'Repasa los apuntes de la clase e inténtalo de nuevo. ¡Tú puedes!' },
+    { min:40, max:69,  emoji:'👍', msg:'¡Buen intento!',            sub:'Ya sabes manejar bastante bien las ventanas. Un poco más y lo dominas.' },
+    { min:70, max:99,  emoji:'🌟', msg:'¡Muy bien hecho!',          sub:'Casi perfecto. Revisa las preguntas que te han fallado.' },
+    { min:100,max:100, emoji:'🏆', msg:'¡Perfecto! ¡Enhorabuena!', sub:'Has respondido todo correctamente. ¡Eres un experto en ventanas de Windows!' },
+  ];
+  const m = msgs.find(x => pct >= x.min && pct <= x.max);
+  document.getElementById('trophy').textContent = m.emoji;
+  document.getElementById('result-msg').textContent = m.msg;
+  document.getElementById('result-sub').textContent = m.sub;
+}
+
+function restartQuiz() {
+  current = 0; score = 0;
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('quiz-area').classList.remove('hidden');
+  renderQuestion();
+}
+
+renderQuestion();
+</script>
+</body>
+</html>

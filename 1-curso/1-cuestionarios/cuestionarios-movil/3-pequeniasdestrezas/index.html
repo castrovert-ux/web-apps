@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pequeñas Destrezas Móviles</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #4FC3F7;
+    --c2: #0288D1;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-blobs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+  }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; animation-delay: 0s; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to { transform: translate(25px, 18px) scale(1.07); }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 750px; margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 40px;
+    animation: slideDown 0.7s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.75rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 18px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .subtitle { color: var(--sub); font-size: 1rem; font-weight: 600; }
+
+  .progress-wrap { margin-bottom: 30px; animation: fadeIn 0.5s ease; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px;
+  }
+  .progress-bar {
+    height: 8px; background: rgba(255,255,255,0.08);
+    border-radius: 10px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--c1), var(--c3));
+    border-radius: 10px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  .question-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 36px; margin-bottom: 24px;
+    animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .q-type-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.5px; padding: 4px 12px; border-radius: 100px; margin-bottom: 18px;
+  }
+  .type-mc   { background: rgba(79,195,247,0.15); color: var(--c1); }
+  .type-tf   { background: rgba(255,217,61,0.15);  color: var(--c3); }
+  .type-open { background: rgba(255,107,107,0.15); color: var(--c4); }
+
+  .q-number { font-size: 0.8rem; color: var(--sub); font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .q-text { font-size: 1.2rem; font-weight: 700; line-height: 1.5; }
+
+  .options { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .option-btn {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 20px;
+    color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 1rem; font-weight: 600; text-align: left;
+    cursor: pointer; transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: rgba(79,195,247,0.1);
+    border-color: var(--c1); transform: translateX(6px);
+  }
+  .option-letter {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn.correct { background: rgba(107,203,119,0.15); border-color: var(--c5); }
+  .option-btn.correct .option-letter { background: var(--c5); color: #0a1628; }
+  .option-btn.wrong { background: rgba(255,107,107,0.12); border-color: var(--c4); }
+  .option-btn.wrong .option-letter { background: var(--c4); color: #fff; }
+  .option-btn:disabled { cursor: default; }
+
+  .open-area textarea {
+    width: 100%; background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 16px; color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 1rem; font-weight: 600; resize: vertical; min-height: 110px;
+    margin-top: 20px; transition: border-color 0.2s;
+  }
+  .open-area textarea:focus { outline: none; border-color: var(--c1); }
+  .open-area textarea::placeholder { color: rgba(255,255,255,0.3); }
+
+  .feedback {
+    display: none; margin-top: 16px; padding: 14px 18px;
+    border-radius: 12px; font-weight: 700; font-size: 0.95rem;
+    animation: fadeIn 0.3s ease; line-height: 1.5;
+  }
+  .feedback.correct-fb { display: flex; background: rgba(107,203,119,0.12); border: 1px solid rgba(107,203,119,0.3); color: var(--c5); }
+  .feedback.wrong-fb   { display: flex; background: rgba(255,107,107,0.1);  border: 1px solid rgba(255,107,107,0.3); color: var(--c4); }
+  .feedback.info-fb    { display: flex; background: rgba(255,217,61,0.1);   border: 1px solid rgba(255,217,61,0.3);  color: var(--c3); }
+
+  .btn-row { display: flex; gap: 12px; justify-content: flex-end; }
+  .btn-submit, .btn-next {
+    padding: 14px 32px; border-radius: 14px; border: none;
+    font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1rem;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn-submit { background: linear-gradient(135deg, var(--c1), var(--c2)); color: #fff; }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(79,195,247,0.4); }
+  .btn-next { background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,217,61,0.4); }
+
+  .results { display: none; text-align: center; animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+  .results.show { display: block; }
+  .trophy { font-size: 5rem; margin-bottom: 16px; animation: bounce 1s ease infinite alternate; }
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-5deg); }
+    to { transform: translateY(-12px) rotate(5deg); }
+  }
+  .score-circle {
+    width: 140px; height: 140px; border-radius: 50%;
+    background: conic-gradient(var(--c1) 0%, var(--c3) var(--pct, 100%), rgba(255,255,255,0.05) var(--pct,100%));
+    display: flex; align-items: center; justify-content: center;
+    margin: 24px auto; position: relative;
+  }
+  .score-circle::before {
+    content: ''; position: absolute; inset: 10px;
+    border-radius: 50%; background: var(--bg);
+  }
+  .score-number {
+    font-family: 'Fredoka One', cursive; font-size: 2.2rem;
+    position: relative; z-index: 1;
+  }
+  .result-msg { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  .result-sub { color: var(--sub); font-size: 0.95rem; margin-bottom: 30px; }
+  .btn-restart {
+    padding: 16px 40px; border-radius: 16px; border: none;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-family: 'Nunito', sans-serif;
+    font-weight: 800; font-size: 1.05rem; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-restart:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(79,195,247,0.4); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+</div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="badge">📱 Curso de Móvil</div>
+    <h1>Pequeñas Destrezas</h1>
+    <p class="subtitle">Comprueba lo que has aprendido sobre el manejo del móvil</p>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 10</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="question-card" id="q-card">
+      <div class="q-type-badge" id="q-type-badge"></div>
+      <div class="q-number" id="q-number"></div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-body"></div>
+      <div class="feedback" id="q-feedback"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-submit hidden" id="btn-submit" onclick="submitOpen()">Comprobar ✔</button>
+      <button class="btn-next hidden" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="trophy" id="trophy">🏆</div>
+    <div class="score-circle" id="score-circle">
+      <span class="score-number" id="score-num">0/10</span>
+    </div>
+    <div class="result-msg" id="result-msg"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <button class="btn-restart" onclick="restartQuiz()">🔄 Volver a intentarlo</button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    type: "mc",
+    text: "¿Cuál es el primer paso para conectar el móvil a una red Wi-Fi?",
+    options: [
+      "Seleccionar la red de la lista",
+      "Introducir la contraseña",
+      "Acceder a los Ajustes",
+      "Reiniciar el router"
+    ],
+    correct: 2,
+    explanation: "Correcto. El primer paso siempre es abrir los Ajustes del móvil (el icono de engranaje) y desde ahí buscar la opción Wi-Fi."
+  },
+  {
+    type: "tf",
+    text: "El nombre de la red Wi-Fi y su contraseña suelen estar escritos en una etiqueta pegada al router.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 0,
+    explanation: "¡Exacto! En la mayoría de los routers domésticos, el nombre de la red (SSID) y la contraseña están impresos en una pegatina en el propio aparato."
+  },
+  {
+    type: "mc",
+    text: "En un móvil Xiaomi, ¿dónde se ajusta el tamaño del texto?",
+    options: [
+      "Ajustes → Accesibilidad → Visión",
+      "Ajustes → Pantalla → Tamaño del texto",
+      "Ajustes → Sonido → Texto",
+      "Ajustes → Aplicaciones → Pantalla"
+    ],
+    correct: 1,
+    explanation: "Correcto. En Xiaomi la ruta es: Ajustes → Pantalla → Tamaño del texto, donde una barra deslizante permite variarlo."
+  },
+  {
+    type: "tf",
+    text: "En un móvil Samsung, el tamaño de fuente se ajusta en Ajustes → Accesibilidad → Visión.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 0,
+    explanation: "Así es. En Samsung la ruta pasa por Accesibilidad y luego Visión, donde aparece el control deslizante del tamaño de fuente."
+  },
+  {
+    type: "mc",
+    text: "¿Cuál es la forma más rápida y sencilla de capturar la pantalla del móvil?",
+    options: [
+      "Pulsar el botón de encendido dos veces",
+      "Mantener pulsado el botón de inicio",
+      "Deslizar tres dedos a la vez por la pantalla",
+      "Ir a Ajustes → Pantalla → Captura"
+    ],
+    correct: 2,
+    explanation: "¡Exacto! El gesto de tres dedos deslizando por la pantalla es el método más rápido. También funciona pulsar volumen abajo + encendido a la vez, o usar los ajustes rápidos."
+  },
+  {
+    type: "mc",
+    text: "¿Cómo se accede a la barra de brillo de la pantalla?",
+    options: [
+      "Abriendo la aplicación de Cámara",
+      "Deslizando el dedo desde la parte superior de la pantalla hacia abajo",
+      "Yendo a Ajustes → Batería",
+      "Pulsando el botón de volumen"
+    ],
+    correct: 1,
+    explanation: "Correcto. Al deslizar desde arriba hacia abajo aparecen los ajustes rápidos, que incluyen la barra de brillo."
+  },
+  {
+    type: "open",
+    text: "¿Qué es un código QR y para qué sirve?",
+    keywords: ["código", "barras", "escanear", "cámara", "enlace", "información", "acceder", "digital", "datos"],
+    explanation: "Un código QR es un código de barras bidimensional que, al escanearlo con la cámara del móvil, permite acceder rápidamente a información digital: páginas web, textos, datos de contacto, etc."
+  },
+  {
+    type: "mc",
+    text: "¿Qué es un widget en el móvil?",
+    options: [
+      "Un tipo de virus informático",
+      "Una pequeña aplicación en la pantalla de inicio que da acceso rápido a información",
+      "Un icono para hacer llamadas",
+      "Una configuración de seguridad del móvil"
+    ],
+    correct: 1,
+    explanation: "Correcto. Un widget es una mini-aplicación que vive en la pantalla de inicio y permite ver información o acceder a funciones sin abrir la app completa."
+  },
+  {
+    type: "mc",
+    text: "¿Cuál es el método recomendado para guardar el teléfono de alguien en los contactos?",
+    options: [
+      "Pedirle que te lo mande por WhatsApp",
+      "Escribirlo directamente en la agenda desde cero",
+      "Hacer una pequeña llamada y luego guardarlo desde los Recientes",
+      "Buscarlo en internet"
+    ],
+    correct: 2,
+    explanation: "Así es. La forma más práctica es hacer una llamada breve, ir a Recientes, tocar esa llamada y elegir 'Añadir' para crear el contacto con el número ya guardado."
+  },
+  {
+    type: "tf",
+    text: "Para bloquear una llamada no deseada, basta con darle un toque rápido a la llamada en el registro de recientes.",
+    options: ["✅ Verdadero", "❌ Falso"],
+    correct: 1,
+    explanation: "Falso. Para bloquear hay que mantener pulsada la llamada durante un momento hasta que aparezca la opción 'Bloquear o marcar como spam'. Un toque rápido solo abre el detalle de la llamada."
+  }
+];
+
+let current = 0, score = 0, answered = false;
+
+const typeLabels = {
+  mc:   { label: "🎯 Opción múltiple", cls: "type-mc" },
+  tf:   { label: "⚖️ Verdadero / Falso", cls: "type-tf" },
+  open: { label: "✍️ Respuesta abierta",  cls: "type-open" }
+};
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[current];
+  const pct = (current / questions.length) * 100;
+
+  document.getElementById('prog-label').textContent = `Pregunta ${current+1} de ${questions.length}`;
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+
+  const badge = document.getElementById('q-type-badge');
+  badge.textContent = typeLabels[q.type].label;
+  badge.className = 'q-type-badge ' + typeLabels[q.type].cls;
+
+  document.getElementById('q-number').textContent = `Pregunta ${current+1}`;
+  document.getElementById('q-text').textContent = q.text;
+
+  const body = document.getElementById('q-body');
+  const fb = document.getElementById('q-feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  document.getElementById('btn-submit').classList.add('hidden');
+  document.getElementById('btn-next').classList.add('hidden');
+
+  const card = document.getElementById('q-card');
+  card.style.animation = 'none';
+  card.offsetHeight;
+  card.style.animation = 'popIn 0.5s cubic-bezier(.34,1.56,.64,1)';
+
+  if (q.type === 'mc' || q.type === 'tf') {
+    body.innerHTML = `<div class="options">${
+      q.options.map((opt, i) => {
+        const letters = ['A','B','C','D'];
+        return `<button class="option-btn" onclick="selectOption(${i})" id="opt-${i}">
+          <span class="option-letter">${q.type === 'tf' ? (i===0?'V':'F') : letters[i]}</span>
+          <span>${opt}</span>
+        </button>`;
+      }).join('')
+    }</div>`;
+  } else {
+    body.innerHTML = `<div class="open-area">
+      <textarea id="open-ans" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>`;
+    document.getElementById('btn-submit').classList.remove('hidden');
+  }
+}
+
+function selectOption(idx) {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const fb = document.getElementById('q-feedback');
+
+  q.options.forEach((_, i) => { document.getElementById(`opt-${i}`).disabled = true; });
+
+  const chosen = document.getElementById(`opt-${idx}`);
+  const correct = document.getElementById(`opt-${q.correct}`);
+
+  if (idx === q.correct) {
+    chosen.classList.add('correct');
+    score++;
+    fb.className = 'feedback correct-fb';
+    fb.innerHTML = '🎉 ' + q.explanation;
+  } else {
+    chosen.classList.add('wrong');
+    correct.classList.add('correct');
+    fb.className = 'feedback wrong-fb';
+    fb.innerHTML = '💡 ' + q.explanation;
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  document.getElementById('btn-next').classList.remove('hidden');
+}
+
+function submitOpen() {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const ans = document.getElementById('open-ans').value.trim().toLowerCase();
+  const fb = document.getElementById('q-feedback');
+
+  document.getElementById('open-ans').disabled = true;
+  document.getElementById('btn-submit').classList.add('hidden');
+
+  const hits = q.keywords.filter(k => ans.includes(k)).length;
+
+  if (ans.length < 15) {
+    fb.className = 'feedback wrong-fb';
+    fb.innerHTML = '✍️ Tu respuesta es muy corta. Intenta explicar más. ' + q.explanation;
+  } else if (hits >= 2) {
+    score++;
+    fb.className = 'feedback correct-fb';
+    fb.innerHTML = '🎉 ¡Muy bien! ' + q.explanation;
+  } else {
+    fb.className = 'feedback info-fb';
+    fb.innerHTML = '💡 Respuesta registrada. ' + q.explanation;
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  document.getElementById('btn-next').classList.remove('hidden');
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  const res = document.getElementById('results');
+  res.classList.add('show');
+
+  const pct = Math.round((score / questions.length) * 100);
+  document.getElementById('score-circle').style.setProperty('--pct', pct + '%');
+  document.getElementById('score-num').textContent = `${score}/${questions.length}`;
+
+  const msgs = [
+    { min:0,  max:3,  emoji:'📱', msg:'¡Sigue practicando!',      sub:'Repasa el documento e inténtalo de nuevo. ¡Tú puedes!' },
+    { min:4,  max:6,  emoji:'👍', msg:'¡Buen intento!',           sub:'Ya conoces las bases. Un poco más y lo dominas todo.' },
+    { min:7,  max:8,  emoji:'🌟', msg:'¡Muy bien hecho!',         sub:'Casi perfecto. Repasa las que has fallado.' },
+    { min:9,  max:9,  emoji:'🎉', msg:'¡Excelente resultado!',    sub:'¡Solo un fallo! Eres casi un experto en el móvil.' },
+    { min:10, max:10, emoji:'🏆', msg:'¡Perfecto! ¡Enhorabuena!', sub:'Has acertado todo. ¡Dominas las destrezas del móvil!' },
+  ];
+  const m = msgs.find(x => score >= x.min && score <= x.max);
+  document.getElementById('trophy').textContent = m.emoji;
+  document.getElementById('result-msg').textContent = m.msg;
+  document.getElementById('result-sub').textContent = m.sub;
+}
+
+function restartQuiz() {
+  current = 0; score = 0;
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('quiz-area').classList.remove('hidden');
+  renderQuestion();
+}
+
+renderQuestion();
+</script>
+</body>
+</html>

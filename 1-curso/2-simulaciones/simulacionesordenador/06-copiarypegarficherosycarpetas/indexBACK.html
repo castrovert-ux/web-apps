@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copiar y pegar archivos y carpetas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1:#25D366; --c3:#FFD93D; --c4:#FF6B6B; --c5:#6BCB77; --c6:#4DA3FF; --c7:#C38BFF; --c8:#FF9F43; --c9:#FF8FD8;
+    --bg:#0a1628; --card:#111d35; --text:#FFFFFE; --sub:#8a9bbf;
+    --win-ink:#1b2433; --wline:#e2e7ef; --sel:#cce4ff; --sel-b:#5ea4f4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }
+  button { font-family:inherit; }
+  button:focus-visible { outline:3px solid var(--c3); outline-offset:2px; }
+  svg { fill:none; stroke:currentColor; stroke-width:1.3; stroke-linecap:round; stroke-linejoin:round; }
+
+  .bg-blobs { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .blob { position:absolute; border-radius:50%; filter:blur(90px); opacity:.15; animation:float 14s ease-in-out infinite alternate; }
+  .blob:nth-child(1){ width:550px; height:550px; background:var(--c6); top:-120px; left:-100px; }
+  .blob:nth-child(2){ width:400px; height:400px; background:var(--c3); bottom:-100px; right:-80px; animation-delay:-5s; }
+  .blob:nth-child(3){ width:320px; height:320px; background:var(--c1); top:45%; left:55%; animation-delay:-9s; }
+  @keyframes float { from{transform:translate(0,0) scale(1);} to{transform:translate(25px,18px) scale(1.07);} }
+  @keyframes popIn { from{opacity:0; transform:scale(.95) translateY(12px);} to{opacity:1; transform:none;} }
+
+  /* ---------- Estructura (todo cabe en la pantalla) ---------- */
+  .container { position:relative; z-index:1; max-width:1700px; margin:0 auto; padding:16px 22px 18px; display:flex; flex-direction:column; gap:12px; min-height:100%; }
+  .top { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .badge { background:linear-gradient(135deg,var(--c6),#2a6fd6); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+  h1 { font-family:'Fredoka One',cursive; font-weight:400; font-size:clamp(1.5rem,2.6vw,2.4rem); line-height:1.1; background:linear-gradient(135deg,var(--c3),var(--c1),var(--c6)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mode { padding:10px 20px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:1rem; cursor:pointer; transition:all .2s; }
+  .mode.on { background:rgba(77,163,255,.18); border-color:var(--c6); color:var(--text); }
+  .mode:hover { color:var(--text); }
+
+  .prog { display:flex; align-items:center; gap:14px; font-weight:800; color:var(--sub); }
+  .prog-bar { flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+  .prog-fill { height:100%; width:0; background:linear-gradient(90deg,var(--c6),var(--c1),var(--c3)); border-radius:10px; transition:width .5s; }
+  .reset { padding:6px 14px; border-radius:12px; border:2px solid rgba(255,255,255,.15); background:transparent; color:var(--sub); font-weight:800; font-size:.9rem; cursor:pointer; white-space:nowrap; }
+  .reset:hover { color:var(--text); border-color:var(--c4); }
+
+  .layout { display:flex; gap:20px; align-items:flex-start; }
+  .left { flex:0 1 auto; width:min(66%, calc((100vh - 245px) * 1.6)); min-width:0; display:flex; flex-direction:column; gap:10px; }
+  .stage[hidden] { display:none; }
+  .panel { flex:1; min-width:300px; align-self:stretch; background:var(--card); border:1px solid rgba(255,255,255,.08); border-left:6px solid var(--ic,var(--c6)); border-radius:22px; padding:20px 22px; overflow-y:auto; transition:border-color .3s;
+    scrollbar-width:auto; scrollbar-color:#4a5b80 rgba(255,255,255,.05); }
+  .panel::-webkit-scrollbar { width:12px; }
+  .panel::-webkit-scrollbar-thumb { background:#4a5b80; border-radius:10px; border:2px solid var(--card); }
+  @media (min-width:1000px) and (min-height:560px) {
+    body { overflow:hidden; }
+    .container { height:100vh; }
+    .layout { flex:1; min-height:0; align-items:stretch; }
+  }
+  @media (max-width:999px) {
+    .layout { flex-direction:column; }
+    .left { width:100%; }
+    .panel { width:100%; min-width:0; }
+  }
+
+  /* ---------- Pantalla simulada ---------- */
+  .screen { position:relative; width:100%; aspect-ratio:16/10; border-radius:16px; overflow:hidden; container-type:inline-size;
+    border:1px solid rgba(255,255,255,.12); box-shadow:0 20px 50px rgba(0,0,0,.45); user-select:none; -webkit-user-select:none;
+    background: radial-gradient(ellipse at 70% 120%, rgba(77,163,255,.75), transparent 60%), radial-gradient(ellipse at 30% 110%, rgba(195,139,255,.55), transparent 55%), linear-gradient(160deg,#0d2a55,#123c7a 55%,#1b5aa8); }
+  .scr { position:absolute; inset:0; font-size:1.32cqw; color:var(--win-ink); }
+  .desk { position:absolute; left:0; top:0; right:0; bottom:3.4em; }
+  .taskbar { position:absolute; left:0; right:0; bottom:0; height:3.4em; background:rgba(235,240,247,.94); display:flex; align-items:center; justify-content:center; gap:.35em; border-top:1px solid rgba(255,255,255,.5); }
+  .tk { position:relative; width:2.1em; height:2.1em; display:grid; place-items:center; border-radius:.4em; font-size:1.3em; border:0; background:transparent; color:inherit; }
+  .tk.btn { cursor:pointer; } .tk.btn:hover { background:rgba(0,0,0,.08); }
+  .tk.on::after { content:""; position:absolute; bottom:.08em; left:32%; right:32%; height:.14em; border-radius:3px; background:#3b82f6; }
+  .clock { position:absolute; right:1em; font-weight:700; font-size:.85em; text-align:right; line-height:1.25; }
+
+  .dico { position:absolute; left:.6em; top:.6em; width:6.2em; display:flex; flex-direction:column; align-items:center; gap:.25em; padding:.4em .2em; border-radius:.5em; border:1px solid transparent; background:transparent; color:#fff; font-size:.82em; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,.7); line-height:1.15; text-align:center; }
+  .dico .di { font-size:2.3em; line-height:1; text-shadow:none; }
+  .dico:hover { background:rgba(255,255,255,.12); }
+  .dico.sel { background:rgba(255,255,255,.24); border-color:rgba(255,255,255,.5); }
+
+  /* Ventana del Explorador */
+  .xw { position:absolute; left:7.7em; top:.7em; right:.9em; bottom:.7em; background:#fff; border-radius:.7em; border:1px solid rgba(0,0,0,.28); box-shadow:0 1em 2.4em rgba(0,0,0,.45); display:flex; flex-direction:column; overflow:hidden; }
+  .xw.hide { display:none; }
+  .xw.opening { animation:winOpen .22s ease; }
+  @keyframes winOpen { from{opacity:0; transform:scale(.94);} to{opacity:1; transform:none;} }
+  .xw-title { height:2.6em; flex-shrink:0; display:flex; align-items:center; gap:.6em; padding-left:.9em; background:#eef2f7; font-weight:700; }
+  .xw-title .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wc { width:3.3em; height:100%; border:0; background:transparent; display:grid; place-items:center; cursor:pointer; color:var(--win-ink); font-size:1em; }
+  .wc:hover { background:rgba(0,0,0,.08); } .wc.x:hover { background:#e81123; color:#fff; }
+  .wc svg { width:.85em; height:.85em; }
+  .xw-nav { flex-shrink:0; display:flex; align-items:center; gap:.35em; padding:.45em .7em; border-bottom:1px solid var(--wline); }
+  .nb { width:2.1em; height:2.1em; border-radius:.4em; border:0; background:transparent; font-size:1em; font-weight:800; cursor:pointer; color:var(--win-ink); }
+  .nb:hover:not(:disabled) { background:#e8edf4; } .nb:disabled { opacity:.3; cursor:default; }
+  .addr { position:relative; flex:1; min-width:0; display:flex; align-items:center; gap:.2em; height:2.2em; padding:0 .6em; border:1px solid #d5dce6; border-radius:.4em; background:#fafbfd; white-space:nowrap; overflow:hidden; font-weight:600; }
+  .addr .crumb { cursor:pointer; padding:.15em .35em; border-radius:.3em; } .addr .crumb:hover { background:#e8edf4; }
+  .addr .gt { color:#8a94a6; }
+  .xw-tools { position:relative; flex-shrink:0; display:flex; align-items:center; gap:.2em; padding:.35em .7em; border-bottom:1px solid var(--wline); }
+  .tb { display:flex; flex-direction:column; align-items:center; gap:.05em; min-width:4.4em; padding:.25em .4em; border-radius:.45em; border:0; background:transparent; cursor:pointer; color:var(--win-ink); font-weight:700; font-size:.82em; }
+  .tb .ti { font-size:1.5em; line-height:1.15; }
+  .tb:hover:not(:disabled) { background:#e8edf4; }
+  .tb:disabled { opacity:.32; cursor:default; }
+  .tsep { width:1px; height:2.3em; background:#dde3ec; margin:0 .35em; }
+  .xw-cnt { margin-left:auto; color:#6b7587; font-weight:700; font-size:.85em; }
+  .xw-main { flex:1; min-height:0; display:flex; }
+  .xw-side { position:relative; width:12.5em; flex-shrink:0; background:#f6f8fb; border-right:1px solid var(--wline); padding:.5em .4em; display:flex; flex-direction:column; gap:.12em; }
+  .sh { font-size:.74em; font-weight:800; color:#7a8597; letter-spacing:.04em; padding:.6em .8em .25em; }
+  .ni { display:flex; align-items:center; gap:.5em; padding:.42em .6em; border-radius:.4em; cursor:pointer; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ni:hover { background:#e8edf4; } .ni.cur { background:#dce8f8; }
+  .ni.new { animation:niNew 1s ease 3; }
+  @keyframes niNew { 50% { background:#c9f7d8; } }
+  .xw-files { position:relative; flex:1; min-width:0; padding:.7em; overflow-y:auto; touch-action:none; display:flex; flex-direction:column; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(7.6em,1fr)); gap:.35em; align-content:start; }
+  .it { position:relative; display:flex; flex-direction:column; align-items:center; gap:.25em; padding:.5em .3em; border-radius:.45em; border:1px solid transparent; text-align:center; font-weight:600; font-size:.92em; line-height:1.2; }
+  .it .ii { font-size:2.6em; line-height:1; }
+  .it .in { max-width:100%; word-break:break-word; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .it:hover { background:#eef4fc; }
+  .it.sel { background:var(--sel); border-color:var(--sel-b); }
+  .it.cut .ii, .it.cut .in { opacity:.4; }
+  .it.fresh { animation:fresh 1.6s ease; }
+  @keyframes fresh { 0%,40% { box-shadow:0 0 0 .2em #22c55e; } 100% { box-shadow:0 0 0 0 rgba(34,197,94,0); } }
+  .it.dragging { opacity:.45; }
+  .drop-on { outline:.18em solid #3b82f6; outline-offset:-.18em; background:#dbeafe !important; }
+  .empty-msg { color:#7a8597; font-weight:700; text-align:center; margin-top:3em; }
+  .marq { position:absolute; border:1px solid #3b82f6; background:rgba(59,130,246,.15); pointer-events:none; z-index:3; }
+  .xw-status { height:1.9em; flex-shrink:0; display:flex; align-items:center; padding:0 .9em; border-top:1px solid var(--wline); font-size:.82em; color:#5c6779; font-weight:700; }
+
+  /* Menú del clic derecho, avisos y diálogos (dentro de la pantalla) */
+  .cm { position:absolute; z-index:40; min-width:14em; background:#fff; color:var(--win-ink); border:1px solid #d5dce6; border-radius:.6em; box-shadow:0 .6em 1.8em rgba(0,0,0,.32); padding:.3em; display:none; }
+  .cm.on { display:block; animation:popIn .14s ease; }
+  .cmi { display:flex; align-items:center; gap:.6em; padding:.5em .8em; border-radius:.4em; font-weight:700; cursor:pointer; }
+  .cmi:hover { background:#e8f0fb; } .cmi.dis { opacity:.38; pointer-events:none; }
+  .cmi .ck { margin-left:auto; padding-left:1.4em; color:#7a8597; font-size:.85em; }
+  .cmsep { height:1px; background:var(--wline); margin:.25em .3em; }
+  .dlg-bg { position:absolute; inset:0; z-index:50; background:rgba(10,20,40,.4); display:grid; place-items:center; }
+  .dlg { width:min(31em,88%); background:#fff; color:var(--win-ink); border-radius:.8em; box-shadow:0 1em 3em rgba(0,0,0,.45); padding:1.2em 1.4em; animation:popIn .2s ease; }
+  .dlg h4 { font-size:1.2em; margin-bottom:.5em; }
+  .dlg p { line-height:1.45; margin-bottom:.9em; color:#3b4557; font-weight:600; }
+  .dlg .opt { display:block; width:100%; text-align:left; padding:.65em .9em; border:1px solid #d5dce6; border-radius:.55em; background:#fff; margin-bottom:.5em; font-weight:800; font-size:1em; cursor:pointer; color:var(--win-ink); }
+  .dlg .opt:hover { background:#eef4fc; border-color:var(--sel-b); }
+  .dlg .opt small { display:block; font-weight:600; color:#6b7587; margin-top:.1em; }
+  .dlg .opt.cancel { background:#f4f6f9; }
+  .cpy { position:absolute; right:1em; bottom:4.2em; z-index:45; width:20em; background:#fff; color:var(--win-ink); border-radius:.7em; box-shadow:0 .8em 2em rgba(0,0,0,.4); padding:.8em 1em; font-weight:700; }
+  .cpy[hidden] { display:none; }
+  .cpy .bar { height:.55em; background:var(--wline); border-radius:1em; overflow:hidden; margin-top:.55em; }
+  .cpy .bar i { display:block; height:100%; width:0; background:#22c55e; transition:width 1.7s linear; }
+  .toast { position:absolute; left:50%; bottom:4.3em; transform:translate(-50%,.5em); z-index:60; background:rgba(20,28,45,.95); color:#fff; padding:.6em 1.1em; border-radius:.7em; font-weight:700; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; max-width:80%; text-align:center; line-height:1.35; }
+  .toast.on { opacity:1; transform:translate(-50%,0); }
+  .ghost { position:fixed; z-index:999; pointer-events:none; background:#fff; color:var(--win-ink); border:1px solid var(--sel-b); border-radius:10px; padding:6px 11px; font-weight:800; font-size:15px; box-shadow:0 6px 18px rgba(0,0,0,.35); white-space:nowrap; }
+  .ghost .gi { font-size:1.3em; margin-right:6px; }
+  .ghost small { display:block; font-size:14px; color:#2563eb; margin-top:2px; }
+
+  /* Teclas en pantalla */
+  .tools { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .kb { padding:6px 10px; border-radius:11px; border:2px solid rgba(255,255,255,.16); background:rgba(255,255,255,.05); color:var(--text); font-weight:800; font-size:.9rem; cursor:pointer; transition:transform .12s, border-color .2s; }
+  .kb:hover:not(:disabled) { border-color:var(--c6); }
+  .kb:disabled { opacity:.5; cursor:default; }
+  .kb.on { background:rgba(255,217,61,.22); border-color:var(--c3); }
+  .kb.flash { transform:scale(.93); border-color:var(--c3); }
+  .kb.usb { border-color:rgba(37,211,102,.6); }
+  .tsp { width:1px; height:26px; background:rgba(255,255,255,.15); margin:0 3px; }
+
+  /* Zonas que se pueden tocar (Descubrir y Practicar) */
+  .part { position:relative; cursor:pointer; }
+  .part::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; transition:background .2s, box-shadow .2s; }
+  .part:hover::after { background:color-mix(in srgb,var(--pc) 22%, transparent); }
+  .part.psel::after { box-shadow:inset 0 0 0 .25em var(--pc); background:color-mix(in srgb,var(--pc) 18%, transparent); }
+  .part.ok::after { box-shadow:inset 0 0 0 .25em var(--c1); background:rgba(37,211,102,.2); }
+  .part.bad { animation:shake .45s; }
+  .part.bad::after { box-shadow:inset 0 0 0 .25em var(--c4); }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .pin { position:absolute; z-index:8; width:2em; height:2em; border-radius:50%; background:var(--pc); color:#0a1628; font-weight:800; display:grid; place-items:center; font-size:1em; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pulse 1.8s ease-in-out infinite; pointer-events:none; top:.25em; right:.25em; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
+  .part.found > .pin { animation:none; }
+  .mode-practica .pin { display:none; }
+  .s-vacio { flex:1; min-height:5em; margin-top:.5em; border-radius:.5em; }
+
+  /* ---------- Panel lateral ---------- */
+  .hello { text-align:center; padding:2vh 0; animation:popIn .4s ease; }
+  .hello .big { font-size:3.2rem; }
+  .hello h2 { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.8rem; margin:8px 0 10px; }
+  .hello p { color:var(--sub); font-weight:700; line-height:1.5; font-size:1.05rem; }
+  .hello p b { color:var(--c3); }
+  .pnum { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:#0a1628; font-weight:800; font-size:1.3rem; margin-bottom:10px; }
+  .panel h2.pn { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.7rem; line-height:1.15; margin-bottom:6px; }
+  .sitio { color:var(--sub); font-weight:700; margin-bottom:12px; }
+  .panel p.tx { font-size:1.12rem; line-height:1.55; font-weight:600; margin-bottom:14px; }
+  .panel p.tx b { color:var(--c3); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:100px; padding:6px 13px; font-weight:800; font-size:.95rem; }
+  .tip { background:rgba(255,217,61,.09); border:1px solid rgba(255,217,61,.3); border-radius:14px; padding:12px 14px; font-weight:700; line-height:1.5; }
+  .win-all { background:rgba(37,211,102,.14); border:2px solid var(--c1); border-radius:14px; padding:10px 14px; font-weight:800; margin-bottom:14px; text-align:center; }
+  .ph { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.15rem; color:var(--c3); margin:4px 0 8px; }
+  .ph small { font-family:'Nunito',sans-serif; color:var(--sub); font-weight:700; font-size:.82rem; }
+  .clip { display:flex; gap:12px; align-items:center; border-radius:14px; padding:10px 14px; margin-bottom:10px; border:2px dashed rgba(255,255,255,.18); }
+  .clip .ci { font-size:1.8rem; }
+  .clip b { display:block; font-size:1.02rem; }
+  .clip small { display:block; color:var(--sub); font-weight:700; font-size:.88rem; line-height:1.35; }
+  .clip.copiar { border:2px solid var(--c6); background:rgba(77,163,255,.1); }
+  .clip.cortar { border:2px solid var(--c8); background:rgba(255,159,67,.1); }
+  .last { background:rgba(255,255,255,.05); border-radius:14px; padding:12px 14px; font-weight:600; line-height:1.5; font-size:1.02rem; margin-bottom:14px; animation:popIn .3s ease; }
+  .last b { color:var(--c3); }
+  .rg { color:var(--sub); font-weight:800; font-size:.85rem; margin:12px 0 6px; }
+  .retos { list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .retos li { display:flex; gap:10px; align-items:flex-start; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px 11px; }
+  .retos .rb { width:24px; height:24px; flex-shrink:0; border-radius:7px; background:rgba(255,255,255,.08); display:grid; place-items:center; font-weight:900; color:#0a1628; }
+  .retos li.on { border-color:rgba(37,211,102,.55); background:rgba(37,211,102,.08); }
+  .retos li.on .rb { background:var(--c1); }
+  .retos .rt { font-weight:800; line-height:1.3; }
+  .retos .rt small { display:block; color:var(--sub); font-weight:700; font-size:.86rem; margin-top:2px; }
+  .retos li.on .rt { color:var(--sub); }
+  .retos li.on .rt small { display:none; }
+  .retos li.on { padding:5px 11px; }
+  .qn { color:var(--sub); font-weight:800; margin-bottom:6px; }
+  .qt { font-family:'Fredoka One',cursive; font-weight:400; font-size:1.55rem; line-height:1.25; margin-bottom:14px; }
+  .qhint { color:var(--c3); font-weight:800; margin-bottom:12px; font-size:1.05rem; }
+  .opts { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .qo { text-align:left; padding:12px 16px; border-radius:14px; border:2px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:var(--text); font-weight:800; font-size:1.05rem; cursor:pointer; }
+  .qo:hover:not(:disabled) { border-color:var(--c6); }
+  .qo.ok { border-color:var(--c1); background:rgba(37,211,102,.15); }
+  .qo.bad { border-color:var(--c4); background:rgba(255,107,107,.12); }
+  .qo:disabled { cursor:default; }
+  .feedback { font-weight:800; line-height:1.45; border-radius:14px; padding:0; }
+  .feedback.good { background:rgba(37,211,102,.14); color:#9cffc4; padding:12px 14px; }
+  .feedback.no { background:rgba(255,107,107,.13); color:#ffb3b3; padding:12px 14px; }
+  .pbtn { margin-top:12px; padding:11px 20px; border-radius:14px; border:0; background:linear-gradient(135deg,var(--c1),#1aa851); color:#0a1628; font-weight:800; font-size:1.05rem; cursor:pointer; }
+  .trophy { font-size:4rem; animation:bounce 1s ease infinite alternate; }
+  @keyframes bounce { from{transform:translateY(0) rotate(-5deg);} to{transform:translateY(-10px) rotate(5deg);} }
+
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<div class="container">
+  <div class="top">
+    <span class="badge">🪟 Ordenador</span>
+    <h1>Copiar y pegar archivos y carpetas</h1>
+    <div class="modes">
+      <button class="mode on" id="m-desc" type="button">🔎 Descubrir</button>
+      <button class="mode" id="m-live" type="button">🛠️ Probar</button>
+      <button class="mode" id="m-prac" type="button">🎯 Practicar</button>
+    </div>
+  </div>
+
+  <div class="prog">
+    <span id="prog-txt"></span>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <button class="reset" id="reset" type="button">🔄 Empezar de nuevo</button>
+  </div>
+
+  <div class="layout">
+    <div class="left">
+      <!-- Pantalla fija para Descubrir y Practicar -->
+      <div class="stage" id="st-parts">
+        <div class="screen" id="sc1"><div class="scr">
+          <div class="desk">
+            <div class="dico part" data-part="papelera"><span class="pin">?</span><span class="di">🗑️</span><span>Papelera de reciclaje</span></div>
+            <div class="xw">
+              <div class="xw-title"><span>🖼️</span><span class="nm">Imágenes</span>
+                <span class="wc"><svg viewBox="0 0 12 12"><path d="M1.5 6h9"/></svg></span>
+                <span class="wc"><svg viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1.2"/></svg></span>
+                <span class="wc"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg></span>
+              </div>
+              <div class="xw-nav"><span class="nb" style="display:grid;place-items:center">←</span><span class="nb" style="display:grid;place-items:center">↑</span>
+                <div class="addr part" data-part="direccion"><span class="pin" style="top:.1em">?</span><span>Este equipo</span><span class="gt">›</span><span class="crumb">Imágenes</span></div>
+              </div>
+              <div class="xw-tools part" data-part="botones" style="align-self:flex-start;padding-right:2.6em">
+                <span class="pin" style="top:.5em">?</span>
+                <span class="tb"><span class="ti">✂️</span>Cortar</span><span class="tb"><span class="ti">📄</span>Copiar</span><span class="tb"><span class="ti">📋</span>Pegar</span>
+                <span class="tsep"></span><span class="tb"><span class="ti">🗑️</span>Eliminar</span>
+              </div>
+              <div class="xw-main">
+                <div class="xw-side part" data-part="panel"><span class="pin">?</span>
+                  <div class="sh">Este equipo</div>
+                  <div class="ni"><span>📄</span>Documentos</div><div class="ni cur"><span>🖼️</span>Imágenes</div><div class="ni"><span>🎵</span>Música</div>
+                  <div class="sh">Unidades</div>
+                  <div class="ni"><span>💾</span>Pendrive (E:)</div>
+                </div>
+                <div class="xw-files" style="touch-action:auto">
+                  <div class="grid">
+                    <div class="it part" data-part="carpeta"><span class="pin" style="top:0;right:0">?</span><span class="ii">📁</span><span class="in">Fotos del pueblo</span></div>
+                    <div class="it"><span class="ii">🖼️</span><span class="in">Boda de Lucía.jpg</span></div>
+                    <div class="it"><span class="ii">🖼️</span><span class="in">Cumpleaños.jpg</span></div>
+                    <div class="it sel part" data-part="seleccion"><span class="pin" style="top:0;right:0">?</span><span class="ii">🖼️</span><span class="in">Nietos en la playa.jpg</span></div>
+                    <div class="it"><span class="ii">🖼️</span><span class="in">Paseo por el Campo Grande.jpg</span></div>
+                    <div class="it"><span class="ii">🖼️</span><span class="in">Navidad 2025.jpg</span></div>
+                  </div>
+                  <div class="s-vacio part" data-part="vacio"><span class="pin" style="top:40%;right:auto;left:calc(50% - 1em)">?</span></div>
+                </div>
+              </div>
+              <div class="xw-status">6 elementos · 1 seleccionado</div>
+            </div>
+          </div>
+          <div class="taskbar">
+            <span class="tk">⊞</span><span class="tk">🔍</span>
+            <span class="tk on part" data-part="explorador"><span class="pin" style="top:-1.2em;right:-.9em;font-size:.78em">?</span>📁</span>
+            <span class="tk">🌐</span><span class="tk">✉️</span>
+            <span class="clock">10:30<br>20/10/2026</span>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Escritorio que funciona de verdad -->
+      <div class="stage" id="st-live" hidden>
+        <div class="screen" id="sc2"><div class="scr">
+          <div class="desk" id="desk">
+            <div class="dico" id="d-trash"><span class="di">🗑️</span><span>Papelera de reciclaje</span></div>
+            <div class="xw hide" id="xw">
+              <div class="xw-title"><span id="xw-ico">📄</span><span class="nm" id="xw-name">Documentos</span>
+                <button class="wc" data-act="min" type="button" title="Minimizar"><svg viewBox="0 0 12 12"><path d="M1.5 6h9"/></svg></button>
+                <button class="wc" data-act="max" type="button" title="Maximizar"><svg viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1.2"/></svg></button>
+                <button class="wc x" data-act="close" type="button" title="Cerrar"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>
+              </div>
+              <div class="xw-nav">
+                <button class="nb" id="b-back" data-act="back" type="button" title="Atrás">←</button>
+                <button class="nb" id="b-up" data-act="up" type="button" title="Subir un nivel">↑</button>
+                <div class="addr" id="addr"></div>
+              </div>
+              <div class="xw-tools" id="xw-tools"></div>
+              <div class="xw-main">
+                <div class="xw-side" id="side"></div>
+                <div class="xw-files" id="files"></div>
+              </div>
+              <div class="xw-status" id="status"></div>
+            </div>
+          </div>
+          <div class="taskbar">
+            <button class="tk btn" data-act="start" type="button" title="Inicio">⊞</button>
+            <button class="tk btn" data-act="search" type="button" title="Buscar">🔍</button>
+            <button class="tk btn" id="tk-exp" data-act="exp" type="button" title="Explorador de archivos">📁</button>
+            <button class="tk btn" data-act="web" type="button" title="Navegador">🌐</button>
+            <button class="tk btn" data-act="mail" type="button" title="Correo">✉️</button>
+            <span class="clock">10:30<br>20/10/2026</span>
+          </div>
+          <div class="cm" id="cm"></div>
+          <div class="cpy" id="cpy" hidden></div>
+          <div class="toast" id="toast"></div>
+          <div id="dlg-host"></div>
+        </div></div>
+        <div class="tools">
+          <button class="kb" data-k="win" type="button">⊞ Windows + E</button>
+          <span class="tsp"></span>
+          <button class="kb" data-k="c" type="button">Ctrl + C</button>
+          <button class="kb" data-k="x" type="button">Ctrl + X</button>
+          <button class="kb" data-k="v" type="button">Ctrl + V</button>
+          <button class="kb" data-k="e" type="button">Ctrl + E</button>
+          <button class="kb" data-k="z" type="button">Ctrl + Z</button>
+          <button class="kb" data-k="del" type="button">Supr</button>
+          <span class="tsp"></span>
+          <button class="kb" id="k-ctrl" data-k="ctrl" type="button" title="Como mantener pulsada la tecla Ctrl">Ctrl (mantener)</button>
+          <button class="kb" id="k-shift" data-k="shift" type="button" title="Como mantener pulsada la tecla Mayús">Mayús (mantener)</button>
+          <span class="tsp"></span>
+          <button class="kb usb" id="k-usb" data-k="usb" type="button">🔌 Conectar el pendrive</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="panel" id="info"></aside>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const info = $('info');
+function restart(e){ e.style.animation = 'none'; e.offsetHeight; e.style.animation = ''; }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* =========================================================
+   Progreso guardado
+   ========================================================= */
+const KEY = 'copiar-pegar-archivos-carpetas-2026';
+let found = {}, retos = {};
+try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; found = s.found || {}; retos = s.retos || {}; } catch(e){}
+function guardar(){ try { localStorage.setItem(KEY, JSON.stringify({found, retos})); } catch(e){} }
+let modo = 'desc';
+
+/* =========================================================
+   DESCUBRIR: las partes que se usan para copiar y pegar
+   ========================================================= */
+const PARTES = {
+  explorador: {n:1, color:'--c3', nombre:'Icono del Explorador', det:'el icono del Explorador',
+    sitio:'La carpeta amarilla de la barra de tareas, abajo.',
+    texto:'Abre el <b>Explorador de archivos</b>, el programa desde el que se copian, cortan y pegan los archivos y las carpetas.',
+    chips:['👆 Un clic: se abre','⌨️ Windows + E'],
+    tip:'Con el teclado: pulsa a la vez la tecla Windows y la letra E.'},
+  direccion: {n:2, color:'--c7', nombre:'Barra de direcciones', det:'la barra de direcciones',
+    sitio:'Arriba, debajo del nombre de la ventana.',
+    texto:'Te dice <b>en qué carpeta estás</b>. Antes de pegar, mira aquí que estás en la <b>carpeta de destino</b>.',
+    chips:['📍 Dónde estás','✅ Comprueba el destino'],
+    tip:'Si «Pegar» no hace nada, comprueba que has copiado o cortado algo y que estás en la carpeta de destino.'},
+  botones: {n:3, color:'--c4', nombre:'Botones Cortar, Copiar y Pegar', det:'los botones Cortar, Copiar y Pegar',
+    sitio:'En la fila de botones del Explorador.',
+    texto:'<b>Copiar</b> crea una copia y conserva el original. <b>Cortar</b> prepara el elemento para trasladarlo: al pegarlo, se mueve. <b>Pegar</b> lo coloca en la carpeta abierta.',
+    chips:['📄 Copiar · Ctrl + C','✂️ Cortar · Ctrl + X','📋 Pegar · Ctrl + V'],
+    tip:'Windows guarda lo copiado o cortado en el portapapeles. La copia se puede pegar más de una vez.'},
+  panel: {n:4, color:'--c6', nombre:'Panel izquierdo', det:'el panel izquierdo',
+    sitio:'La columna de la izquierda del Explorador.',
+    texto:'Muestra tus carpetas y las <b>unidades</b>. Cuando conectas un <b>pendrive</b>, lo localizas aquí.',
+    chips:['📁 Tus carpetas','💾 Pendrive (E:)','🖱️ Clic derecho → Expulsar'],
+    tip:'Cuando termine la copia, usa la opción Expulsar antes de desconectar el pendrive.'},
+  seleccion: {n:5, color:'--c1', nombre:'Archivo seleccionado', det:'el archivo seleccionado',
+    sitio:'El que se ve marcado de color azul.',
+    texto:'Se selecciona con <b>un solo clic</b>. Con <b>doble clic</b> se abre. Lo primero, siempre, es seleccionar lo que quieres copiar.',
+    chips:['👆 Un clic: seleccionar','👆👆 Doble clic: abrir'],
+    tip:'Varios seguidos: clic en el primero, mantén Mayús y clic en el último. Separados: mantén Ctrl y haz clic en cada uno. Todos: Ctrl + E.'},
+  carpeta: {n:6, color:'--c8', nombre:'Una carpeta', det:'una carpeta',
+    sitio:'El icono amarillo en la zona de los archivos.',
+    texto:'Guarda archivos y otras carpetas. Si <b>copias una carpeta</b>, también se copian los archivos y las subcarpetas que contiene.',
+    chips:['📁 Guarda archivos','🫳 Arrastra algo encima para llevarlo dentro'],
+    tip:'Al arrastrar entre carpetas del mismo disco, normalmente se mueve; a un pendrive, normalmente se copia; con Ctrl pulsado, se copia.'},
+  vacio: {n:7, color:'--c5', nombre:'Espacio vacío de la carpeta', det:'un espacio vacío',
+    sitio:'La zona blanca donde no hay ningún archivo.',
+    texto:'Con <b>clic derecho</b> aquí aparece <b>Pegar</b>. Desde aquí también puedes <b>arrastrar un rectángulo</b> alrededor de varios elementos para seleccionarlos.',
+    chips:['🖱️ Clic derecho → Pegar','⬚ Rectángulo: seleccionar varios'],
+    tip:'Para pegar con el ratón, haz clic derecho en un espacio vacío de la carpeta de destino, no encima de un archivo.'},
+  papelera: {n:8, color:'--c9', nombre:'Papelera de reciclaje', det:'la Papelera de reciclaje',
+    sitio:'En el escritorio, arriba a la izquierda.',
+    texto:'Si has borrado un archivo por error, búscalo aquí y elige <b>Restaurar</b>.',
+    chips:['♻️ Restaurar','⚠️ Lo del pendrive no llega aquí'],
+    tip:'Lo borrado de un pendrive normalmente no pasa por la Papelera. Si te equivocas al pegar o mover, prueba Ctrl + Z.'}
+};
+const ORDEN = Object.keys(PARTES);
+const parts = k => document.querySelectorAll('#sc1 .part[data-part="' + k + '"]');
+document.querySelectorAll('#sc1 .part').forEach(p => p.style.setProperty('--pc', 'var(' + PARTES[p.dataset.part].color + ')'));
+function limpiar(){ document.querySelectorAll('#sc1 .part').forEach(p => p.classList.remove('psel', 'ok', 'bad')); }
+function pintarPins(){
+  document.querySelectorAll('#sc1 .part').forEach(p => {
+    const k = p.dataset.part, pin = p.querySelector(':scope > .pin');
+    p.classList.toggle('found', !!found[k]);
+    if (pin) pin.textContent = found[k] ? PARTES[k].n : '?';
+  });
+}
+function bienvenida(){
+  info.style.setProperty('--ic', 'var(--c6)');
+  const n = Object.keys(found).length;
+  info.innerHTML = '<div class="hello"><div class="big">👆</div><h2>Toca una parte del Explorador</h2><p>Hay <b>' + ORDEN.length + ' partes</b> con un <b>?</b> que sirven para copiar, cortar y pegar.' +
+    (n ? '<br>Ya has descubierto <b>' + n + '</b>.' : '<br>Vamos a descubrirlas juntos.') + '</p></div>';
+  restart(info);
+}
+function mostrar(k){
+  found[k] = true; guardar(); limpiar();
+  parts(k).forEach(p => p.classList.add('psel'));
+  const P = PARTES[k], todas = ORDEN.every(x => found[x]);
+  info.style.setProperty('--ic', 'var(' + P.color + ')');
+  info.innerHTML = (todas ? '<div class="win-all">🏆 ¡Has descubierto las ' + ORDEN.length + ' partes! Ahora pasa a «🛠️ Probar».</div>' : '') +
+    '<div class="pnum" style="background:var(' + P.color + ')">' + P.n + '</div><h2 class="pn">' + P.nombre + '</h2>' +
+    '<div class="sitio">📍 ' + P.sitio + '</div><p class="tx">' + P.texto + '</p>' +
+    '<div class="chips">' + P.chips.map(c => '<span class="chip">' + c + '</span>').join('') + '</div>' +
+    '<div class="tip">💡 ' + P.tip + '</div>';
+  restart(info); pintarPins(); progreso();
+}
+
+/* =========================================================
+   PRACTICAR: tocar en la pantalla y decidir
+   ========================================================= */
+const PREGS = [
+  {k:'toca', part:'explorador', q:'¿Dónde haces clic para abrir el Explorador de archivos?', e:'También se abre con Windows + E.'},
+  {k:'toca', part:'panel', q:'Has conectado un pendrive. ¿Dónde lo localizas?', e:'Aparece en el panel izquierdo con su nombre.'},
+  {k:'toca', part:'direccion', q:'Vas a pegar. ¿Dónde compruebas que estás en la carpeta de destino?', e:'La barra de direcciones dice en qué carpeta estás.'},
+  {k:'toca', part:'vacio', q:'Quieres pegar con el ratón. ¿Dónde haces el clic derecho?', e:'En un espacio vacío de la carpeta de destino, y eliges Pegar.'},
+  {k:'toca', part:'papelera', q:'Has borrado un archivo por error. ¿Dónde vas a buscarlo?', e:'En la Papelera de reciclaje, y eliges Restaurar.'},
+  {k:'toca', part:'seleccion', q:'¿Qué archivo está seleccionado ahora mismo?', e:'Se ve marcado de color: se ha seleccionado con un solo clic.'},
+  {k:'elige', q:'Quieres pasar unas fotos al pendrive y que sigan también en el ordenador. ¿Qué usas?', o:['📄 Copiar','✂️ Cortar'], c:0, e:'Copiar conserva el original.'},
+  {k:'elige', q:'Quieres llevar un documento a otra carpeta sin que se quede en la de antes. ¿Qué usas?', o:['📄 Copiar','✂️ Cortar'], c:1, e:'Cortar y pegar mueve el elemento.'},
+  {k:'elige', q:'Arrastras una foto de una carpeta a otra del mismo disco. ¿Qué pasa normalmente?', o:['Se mueve','Se copia'], c:0, e:'Entre carpetas de la misma unidad, normalmente se mueve.'},
+  {k:'elige', q:'Arrastras una foto hasta el pendrive. ¿Qué pasa normalmente?', o:['Se mueve','Se copia'], c:1, e:'A otra unidad, como un pendrive, normalmente se copia.'},
+  {k:'elige', q:'¿Qué tecla mantienes pulsada al arrastrar para que se copie siempre?', o:['Ctrl','Mayús','Windows'], c:0, e:'Si mantienes Ctrl pulsado mientras arrastras, se copia.'},
+  {k:'elige', q:'Quieres seleccionar varios archivos que están separados. ¿Qué haces?', o:['Mantener Ctrl y hacer clic en cada uno','Mantener Mayús y hacer clic en cada uno','Hacer doble clic en cada uno'], c:0, e:'Con Ctrl se eligen uno a uno; con Mayús, los que están seguidos.'},
+  {k:'elige', q:'¿Con qué atajo seleccionas todo lo que hay en la carpeta?', o:['Ctrl + E','Ctrl + C','Ctrl + Z'], c:0, e:'Ctrl + E selecciona todos los elementos de la carpeta.'},
+  {k:'elige', q:'Te has equivocado al pegar. ¿Qué atajo pruebas?', o:['Ctrl + V','Ctrl + Z','Ctrl + X'], c:1, e:'Ctrl + Z deshace la última acción.'},
+  {k:'elige', q:'Windows avisa de que ya hay un archivo con el mismo nombre y quieres quedarte con el que ya había. ¿Qué eliges?', o:['Reemplazar','Omitir'], c:1, e:'Omitir conserva el que ya había; Reemplazar lo sustituye. Si dudas, cancela y revisa los dos.'}
+];
+let pq = [], pi = 0, aciertos = 0, primera = true, respondida = false;
+function empezarPractica(){ pq = shuffle(PREGS.slice()); pi = 0; aciertos = 0; siguiente(); }
+function siguiente(){
+  limpiar();
+  if (pi >= pq.length) return finPractica();
+  const q = pq[pi]; primera = true; respondida = false;
+  info.style.setProperty('--ic', 'var(--c3)');
+  info.innerHTML = '<div class="qn">Pregunta ' + (pi + 1) + ' de ' + pq.length + '</div><h2 class="qt">' + q.q + '</h2>' +
+    (q.k === 'toca' ? '<p class="qhint">👆 Tócalo en la pantalla.</p>'
+                    : '<div class="opts">' + q.o.map((o, i) => '<button class="qo" data-i="' + i + '" type="button">' + o + '</button>').join('') + '</div>') +
+    '<div class="feedback" id="fb"></div><div id="qnext"></div>';
+  info.querySelectorAll('.qo').forEach(b => b.onclick = () => elegir(+b.dataset.i, b));
+  restart(info); progreso();
+}
+function acierto(txt){
+  respondida = true; if (primera) aciertos++;
+  const fb = $('fb'); fb.className = 'feedback good'; fb.textContent = '✅ ¡Correcto! ' + txt;
+  $('qnext').innerHTML = '<button class="pbtn" id="sig" type="button">' + (pi + 1 === pq.length ? '🏆 Terminar' : 'Siguiente ➜') + '</button>';
+  $('sig').onclick = () => { pi++; siguiente(); };
+  progreso();
+}
+function fallo(txt){ primera = false; const fb = $('fb'); fb.className = 'feedback no'; fb.textContent = '❌ ' + txt; }
+function elegir(i, b){
+  const q = pq[pi]; if (respondida || q.k !== 'elige') return;
+  if (i === q.c){ b.classList.add('ok'); info.querySelectorAll('.qo').forEach(x => x.disabled = true); acierto(q.e); }
+  else { b.classList.add('bad'); b.disabled = true; fallo('No es eso. ¡Prueba otra vez!'); }
+}
+function tocarParte(k){
+  const q = pq[pi]; if (!q || respondida || q.k !== 'toca') return;
+  if (k === q.part){ parts(k).forEach(p => p.classList.add('ok')); acierto(PARTES[k].nombre + '. ' + q.e); }
+  else {
+    parts(k).forEach(p => { p.classList.remove('bad'); p.offsetHeight; p.classList.add('bad'); });
+    setTimeout(() => parts(k).forEach(p => p.classList.remove('bad')), 700);
+    fallo('Eso es ' + PARTES[k].det + '. ¡Inténtalo otra vez!');
+  }
+}
+function finPractica(){
+  info.style.setProperty('--ic', 'var(--c3)');
+  info.innerHTML = '<div class="hello"><div class="trophy">🏆</div><h2 style="color:var(--c3)">¡Enhorabuena!</h2><p>Has acertado a la primera <b>' + aciertos + ' de ' + pq.length + '</b> preguntas.</p>' +
+    '<button class="pbtn" id="otra" type="button">🔄 Practicar otra vez</button></div>';
+  $('otra').onclick = empezarPractica; progreso();
+}
+document.querySelectorAll('#sc1 .part').forEach(p => p.addEventListener('click', e => {
+  if (e.target.closest('.part') !== p) return;
+  modo === 'desc' ? mostrar(p.dataset.part) : tocarParte(p.dataset.part);
+}));
+
+/* =========================================================
+   PROBAR: sistema de archivos
+   ========================================================= */
+let uid = 0, FS;
+const D = (name, ch) => ({id:'n' + (++uid), name, type:'folder', children:ch || []});
+const A = name => ({id:'n' + (++uid), name, type:'file'});
+function nuevoFS(){
+  uid = 0;
+  const fs = {
+    docs: D('Documentos', [A('Carta al banco.docx'), A('Receta de croquetas.docx'), A('Teléfonos de la familia.docx'),
+            D('Viaje a Cádiz', [A('Catedral.jpg'), A('Playa de la Caleta.jpg')]), D('Facturas', [A('Factura de la luz.pdf')])]),
+    img:  D('Imágenes', [A('Boda de Lucía.jpg'), A('Cumpleaños.jpg'), A('Nietos en la playa.jpg'), A('Paseo por el Campo Grande.jpg'),
+            A('Navidad 2025.jpg'), D('Fotos del pueblo', [A('La plaza.jpg'), A('Las fiestas.jpg')])]),
+    mus:  D('Música', [A('Pasodoble.mp3'), A('Coplas de siempre.mp3')]),
+    usb:  D('Pendrive (E:)', [D('Fotos antiguas', [A('Boda de mis padres.jpg')]), A('Cumpleaños.jpg')]),
+    trash:D('Papelera de reciclaje', [Object.assign(A('Lista de la compra.docx'), {from:'docs'})])
+  };
+  for (const k in fs) fs[k].id = k;
+  return fs;
+}
+const ROOTS = ['docs', 'img', 'mus', 'usb', 'trash'];
+const ICO_RAIZ = {docs:'📄', img:'🖼️', mus:'🎵', usb:'💾', trash:'🗑️'};
+function buscar(n, id, acc){
+  acc = acc.concat(n);
+  if (n.id === id) return acc;
+  if (n.children) for (const c of n.children){ const r = buscar(c, id, acc); if (r) return r; }
+  return null;
+}
+function ruta(id){ for (const r of ROOTS){ const p = buscar(FS[r], id, []); if (p) return p; } return null; }
+const nodo = id => { const p = ruta(id); return p ? p[p.length - 1] : null; };
+const padre = id => { const p = ruta(id); return p && p.length > 1 ? p[p.length - 2] : null; };
+const raiz = id => { const p = ruta(id); return p ? p[0].id : null; };
+const unidad = id => raiz(id) === 'usb' ? 'E' : 'C';
+const dentroDe = (destId, id) => { const p = ruta(destId); return !!p && p.some(n => n.id === id); };
+function icono(n){
+  if (n.type === 'folder') return '📁';
+  const e = n.name.split('.').pop().toLowerCase();
+  return {jpg:'🖼️', docx:'📝', pdf:'📕', mp3:'🎵'}[e] || '📄';
+}
+function clonar(n){ const c = {id:'n' + (++uid), name:n.name, type:n.type}; if (n.children) c.children = n.children.map(clonar); return c; }
+function nombreLibre(dest, name){
+  const hay = nm => dest.children.some(c => c.name.toLowerCase() === nm.toLowerCase());
+  if (!hay(name)) return name;
+  const p = name.lastIndexOf('.'), base = p > 0 ? name.slice(0, p) : name, ext = p > 0 ? name.slice(p) : '';
+  let nm = base + ' - copia' + ext, i = 2;
+  while (hay(nm)) nm = base + ' - copia (' + (i++) + ')' + ext;
+  return nm;
+}
+const quien = ns => ns.length === 1 ? '«' + esc(ns[0].name) + '»' : ns.length + ' elementos';
+
+/* Estado de la práctica */
+let X;
+function nuevoEstado(){
+  FS = nuevoFS();
+  X = {abierto:false, cur:'docs', hist:[], sel:new Set(), ancla:null, clip:null, usb:false, usbNuevo:false,
+       deshacer:[], copiando:false, ultima:null, modal:false};
+}
+nuevoEstado();
+let ctrlFija = false, mayusFija = false, frescos = new Set();
+
+const RETOS = [
+  {g:'Abrir y seleccionar', id:'abrir', t:'Abre el Explorador de archivos', h:'Windows + E, o un clic en la carpeta amarilla de la barra de abajo'},
+  {id:'mayus', t:'Selecciona varios elementos seguidos', h:'Clic en el primero; mantén Mayús y haz clic en el último'},
+  {id:'ctrl', t:'Selecciona varios elementos separados', h:'Mantén Ctrl y haz clic en cada uno'},
+  {id:'todo', t:'Selecciona todo lo que hay en una carpeta', h:'Ctrl + E'},
+  {g:'Copiar y mover', id:'copiar', t:'Copia un archivo en otra carpeta', h:'Selecciona, copia, abre la carpeta de destino y pega'},
+  {id:'carpeta', t:'Copia una carpeta entera', h:'Se copia con todo lo que tiene dentro'},
+  {id:'mover', t:'Mueve un archivo con Cortar y Pegar', h:'Ctrl + X, abre la carpeta de destino y Ctrl + V'},
+  {id:'arrastrar', t:'Arrastra un elemento a otra carpeta', h:'Mantén pulsado el botón izquierdo, llévalo encima de la carpeta y suelta'},
+  {g:'El pendrive', id:'pendrive', t:'Conecta el pendrive y copia algo en él', h:'Botón «🔌 Conectar el pendrive», abre Pendrive (E:) en el panel izquierdo y pega'},
+  {id:'expulsar', t:'Expulsa el pendrive', h:'Clic derecho sobre Pendrive (E:) en el panel izquierdo → Expulsar'},
+  {g:'Si algo sale mal', id:'repetido', t:'Decide qué hacer con un nombre repetido', h:'Copia «Cumpleaños.jpg» de Imágenes al pendrive: allí ya hay uno'},
+  {id:'deshacer', t:'Deshaz la última acción', h:'Ctrl + Z'},
+  {id:'restaurar', t:'Recupera un archivo de la Papelera', h:'Doble clic en la Papelera del escritorio; clic derecho sobre el archivo → Restaurar'}
+];
+function tick(id){ if (retos[id]) return; retos[id] = true; guardar(); progreso(); }
+
+/* Avisos */
+function toast(msg){ const t = $('toast'); t.innerHTML = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3000); }
+function explicar(html, color){ X.ultima = {html, color:color || '--c6'}; }
+function listo(){
+  if (X.modal) return false;
+  if (!X.abierto){ toast('Primero abre el Explorador: <b>Windows + E</b> o la carpeta amarilla de abajo.'); return false; }
+  return true;
+}
+
+/* =========================================================
+   Acciones
+   ========================================================= */
+const hijos = () => (nodo(X.cur) || FS.docs).children;
+const selNodos = () => [...X.sel].map(nodo).filter(Boolean);
+const enPapelera = () => raiz(X.cur) === 'trash';
+
+function abrirExplorador(donde, cuenta){
+  const estaba = X.abierto;
+  X.abierto = true;
+  if (donde){ if (X.cur !== donde){ X.hist = []; X.cur = donde; X.sel.clear(); } }
+  else if (!estaba){ X.cur = 'docs'; X.hist = []; X.sel.clear(); }
+  if (cuenta){ tick('abrir'); explicar('Has abierto el <b>Explorador de archivos</b>. A la izquierda están tus carpetas; en el centro, lo que hay dentro de la carpeta abierta.', '--c3'); }
+  else if (donde === 'trash') explicar('Estás en la <b>Papelera de reciclaje</b>. Para recuperar un archivo, haz clic derecho sobre él y elige <b>Restaurar</b>.', '--c9');
+  render();
+  if (!estaba){ const w = $('xw'); w.classList.remove('opening'); void w.offsetWidth; w.classList.add('opening'); }
+}
+function cerrarExplorador(){
+  X.abierto = false; cerrarMenu();
+  explicar('Has cerrado el Explorador. Ábrelo otra vez con <b>Windows + E</b> o con la <b>carpeta amarilla</b> de la barra de abajo.', '--c3');
+  render();
+}
+function ir(id){
+  if (!nodo(id) || (raiz(id) === 'usb' && !X.usb)) id = 'docs';
+  if (id !== X.cur) X.hist.push(X.cur);
+  X.cur = id; X.sel.clear(); X.ancla = null;
+  if (id === 'usb') X.usbNuevo = false;
+  render();
+}
+function atras(){
+  while (X.hist.length){
+    const id = X.hist.pop();
+    if (nodo(id) && !(raiz(id) === 'usb' && !X.usb)){ X.cur = id; X.sel.clear(); X.ancla = null; render(); return; }
+  }
+}
+function subir(){ const p = padre(X.cur); if (p){ X.hist.push(X.cur); X.cur = p.id; X.sel.clear(); X.ancla = null; render(); } }
+function abrirItem(id){
+  const n = nodo(id); if (!n) return;
+  if (raiz(id) === 'trash') return toast('Para recuperarlo, haz clic derecho y elige <b>Restaurar</b>.');
+  if (n.type === 'folder') return ir(id);
+  toast('Con doble clic se abriría «' + esc(n.name) + '». Aquí solo practicamos con el Explorador.');
+}
+
+function tocarItem(id, ctrl, mayus){
+  const lista = hijos().map(c => c.id);
+  if (mayus && X.ancla && lista.includes(X.ancla)){
+    const a = lista.indexOf(X.ancla), b = lista.indexOf(id);
+    const rango = lista.slice(Math.min(a, b), Math.max(a, b) + 1);
+    X.sel = new Set(rango);
+    if (rango.length >= 2){ tick('mayus'); explicar('Con <b>Mayús</b> has seleccionado <b>' + rango.length + ' elementos seguidos</b>: desde el primero hasta el último en el que has hecho clic.', '--c6'); }
+  } else if (ctrl){
+    X.sel.has(id) ? X.sel.delete(id) : X.sel.add(id);
+    X.ancla = id;
+    if (X.sel.size >= 2){ tick('ctrl'); explicar('Con <b>Ctrl</b> llevas <b>' + X.sel.size + ' elementos</b> seleccionados. Cada clic añade o quita uno.', '--c6'); }
+  } else { X.sel = new Set([id]); X.ancla = id; }
+  render();
+}
+function todo(){
+  if (!listo()) return;
+  const l = hijos();
+  if (!l.length) return toast('Esta carpeta está vacía.');
+  X.sel = new Set(l.map(c => c.id));
+  tick('todo'); explicar('Con <b>Ctrl + E</b> has seleccionado los <b>' + l.length + ' elementos</b> de la carpeta.', '--c6');
+  render();
+}
+
+function copiar(){
+  if (!listo()) return;
+  if (enPapelera()) return toast('En la Papelera solo puedes <b>Restaurar</b>.');
+  const ns = selNodos();
+  if (!ns.length) return toast('Primero selecciona el archivo o la carpeta con <b>un clic</b>.');
+  X.clip = {modo:'copiar', ids:ns.map(n => n.id)};
+  explicar('Has <b>copiado</b> ' + quien(ns) + '. Ahora abre la <b>carpeta de destino</b> y pega con <b>Ctrl + V</b>. Puedes pegarlo más de una vez.', '--c6');
+  render();
+}
+function cortar(){
+  if (!listo()) return;
+  if (enPapelera()) return toast('En la Papelera solo puedes <b>Restaurar</b>.');
+  const ns = selNodos();
+  if (!ns.length) return toast('Primero selecciona el archivo o la carpeta con <b>un clic</b>.');
+  X.clip = {modo:'cortar', ids:ns.map(n => n.id)};
+  explicar('Has <b>cortado</b> ' + quien(ns) + '. Todavía no se ha movido: sigue aquí hasta que lo pegues en la carpeta de destino. Si te arrepientes, no pegues.', '--c8');
+  render();
+}
+function pegar(destId){
+  if (!listo()) return;
+  const T = nodo(destId || X.cur);
+  if (!T || T.type !== 'folder') return;
+  if (raiz(T.id) === 'trash') return toast('No se puede pegar en la Papelera.');
+  if (!X.clip) return toast('No has copiado ni cortado nada. Selecciona algo y cópialo primero.');
+  const ns = X.clip.ids.map(nodo).filter(n => n && raiz(n.id) !== 'trash' && !(raiz(n.id) === 'usb' && !X.usb));
+  if (!ns.length){ X.clip = null; render(); return toast('Lo que habías copiado ya no está disponible.'); }
+  transferir(ns, T, X.clip.modo === 'cortar' ? 'mover' : 'copiar', 'pegar', '');
+}
+function transferir(ns, T, accion, via, extra){
+  if (ns.some(n => dentroDe(T.id, n.id))) return toast('No puedes meter una carpeta dentro de sí misma.');
+  const mueve = accion === 'mover';
+  const validos = ns.filter(n => !(mueve && padre(n.id) && padre(n.id).id === T.id));
+  if (!validos.length) return toast('Ya está en esta carpeta. Abre la <b>carpeta de destino</b> antes de pegar.');
+  const choques = validos.filter(n => { const p = padre(n.id); return !(p && p.id === T.id) && T.children.some(c => c !== n && c.name.toLowerCase() === n.name.toLowerCase()); });
+  const hacer = eleccion => ejecutar(validos, T, accion, via, extra, eleccion, choques.length > 0);
+  if (choques.length) dialogoNombres(choques, T, hacer); else hacer(null);
+}
+function ejecutar(ns, T, accion, via, extra, eleccion, huboChoque){
+  foto(accion === 'mover' ? 'mover' : 'copiar');
+  const mueve = accion === 'mover', nuevos = [];
+  let renombrado = false, carpeta = false, archivoFuera = false, omitidos = 0;
+  ns.forEach(n => {
+    const p = padre(n.id), mismo = p && p.id === T.id;
+    const existe = T.children.find(c => c !== n && c.name.toLowerCase() === n.name.toLowerCase());
+    if (existe && !mismo){
+      if (eleccion === 'omitir'){ omitidos++; return; }
+      T.children.splice(T.children.indexOf(existe), 1);
+    }
+    if (mueve){ p.children.splice(p.children.indexOf(n), 1); T.children.push(n); nuevos.push(n.id); }
+    else {
+      const c = clonar(n);
+      if (mismo){ c.name = nombreLibre(T, n.name); renombrado = true; }
+      else if (n.type === 'file') archivoFuera = true;
+      T.children.push(c); nuevos.push(c.id);
+    }
+    if (n.type === 'folder') carpeta = true;
+  });
+  if (!nuevos.length) X.deshacer.pop();
+  if (mueve && via === 'pegar') X.clip = null;
+  const enUSB = raiz(T.id) === 'usb';
+  if (T.id === X.cur){ X.sel = new Set(nuevos); X.ancla = nuevos[nuevos.length - 1] || null; } else X.sel.clear();
+  frescos = new Set(nuevos);
+
+  // Retos
+  if (huboChoque) tick('repetido');
+  if (nuevos.length){
+    if (via === 'arrastrar') tick('arrastrar');
+    if (mueve && via === 'pegar') tick('mover');
+    if (!mueve){ if (archivoFuera) tick('copiar'); if (carpeta) tick('carpeta'); if (enUSB) tick('pendrive'); }
+  }
+
+  // Explicación
+  let t;
+  if (!nuevos.length) t = 'Has elegido <b>Omitir</b>: se conserva el archivo que ya había en «' + esc(T.name) + '».';
+  else if (mueve) t = 'Has <b>movido</b> ' + (nuevos.length === 1 ? '«' + esc(nodo(nuevos[0]).name) + '»' : nuevos.length + ' elementos') + ' a «' + esc(T.name) + '». Ya no está en la carpeta de antes.';
+  else {
+    t = 'Has <b>copiado</b> ' + (nuevos.length === 1 ? '«' + esc(nodo(nuevos[0]).name) + '»' : nuevos.length + ' elementos') + ' en «' + esc(T.name) + '». El original sigue en su sitio.';
+    if (renombrado) t += ' Como has pegado en la <b>misma carpeta</b>, Windows le ha puesto «copia» en el nombre para no sustituir el original.';
+    if (carpeta) t += ' La carpeta se ha copiado <b>con todo lo que tiene dentro</b>.';
+  }
+  if (huboChoque && nuevos.length) t += eleccion === 'omitir' ? ' Los repetidos se han <b>omitido</b>: se conservan los que había.' : ' Has elegido <b>Reemplazar</b>: el archivo que había se ha sustituido.';
+  if (extra) t += ' ' + extra;
+  if (!mueve && X.clip && via === 'pegar' && nuevos.length) t += ' El portapapeles lo sigue guardando: puedes volver a pegarlo.';
+  if (nuevos.length) t += ' Si te has equivocado, pulsa <b>Ctrl + Z</b>.';
+  explicar(t, mueve ? '--c8' : '--c1');
+  render();
+  if (enUSB && nuevos.length) progresoCopia(nuevos.length, T);
+}
+
+/* Deshacer */
+function foto(etq){ X.deshacer.push({fs:JSON.stringify(FS), etq}); if (X.deshacer.length > 25) X.deshacer.shift(); }
+function deshacer(){
+  if (!listo()) return;
+  const u = X.deshacer.pop();
+  if (!u) return toast('No hay nada que deshacer.');
+  FS = JSON.parse(u.fs);
+  if (X.clip){ X.clip.ids = X.clip.ids.filter(id => nodo(id)); if (!X.clip.ids.length) X.clip = null; }
+  if (!nodo(X.cur) || (raiz(X.cur) === 'usb' && !X.usb)) X.cur = 'docs';
+  X.sel.clear(); X.ancla = null;
+  tick('deshacer'); explicar('Con <b>Ctrl + Z</b> has deshecho la última acción (' + u.etq + '). Todo ha vuelto a como estaba antes.', '--c7');
+  render();
+}
+
+/* Eliminar y Papelera */
+function eliminar(){
+  if (!listo()) return;
+  if (enPapelera()) return toast('Para recuperarlo, elige <b>Restaurar</b>.');
+  const ns = selNodos();
+  if (!ns.length) return toast('Primero selecciona lo que quieres eliminar.');
+  if (raiz(X.cur) === 'usb'){
+    abrirDialogo('<h4>Eliminar del pendrive</h4><p>Lo que se borra de un pendrive normalmente <b>no pasa por la Papelera</b>. ¿Eliminar ' + quien(ns) + ' para siempre?</p>' +
+      '<button class="opt" data-r="si" type="button">🗑️ Sí, eliminar</button><button class="opt cancel" data-r="no" type="button">Cancelar</button>', r => {
+        if (r !== 'si') return;
+        ns.forEach(n => { const p = padre(n.id); p.children.splice(p.children.indexOf(n), 1); });
+        X.sel.clear();
+        explicar('Has eliminado ' + quien(ns) + ' del pendrive. No ha pasado por la Papelera, así que ya no se puede recuperar.', '--c4');
+        render();
+      });
+    return;
+  }
+  foto('eliminar');
+  ns.forEach(n => { const p = padre(n.id); p.children.splice(p.children.indexOf(n), 1); n.from = p.id; FS.trash.children.push(n); });
+  X.sel.clear();
+  explicar('Has enviado ' + quien(ns) + ' a la <b>Papelera de reciclaje</b>. Si ha sido sin querer, pulsa <b>Ctrl + Z</b> o búscalo en la Papelera y elige <b>Restaurar</b>.', '--c4');
+  render();
+}
+function restaurar(){
+  if (!listo() || !enPapelera()) return;
+  const ns = selNodos();
+  if (!ns.length) return toast('Selecciona primero el archivo que quieres recuperar.');
+  const txt = quien(ns);
+  foto('restaurar');
+  ns.forEach(n => {
+    FS.trash.children.splice(FS.trash.children.indexOf(n), 1);
+    let dest = n.from && nodo(n.from);
+    if (!dest || raiz(dest.id) === 'trash' || raiz(dest.id) === 'usb') dest = FS.docs;
+    n.name = nombreLibre(dest, n.name); delete n.from; dest.children.push(n);
+  });
+  X.sel.clear();
+  tick('restaurar'); explicar('Has <b>restaurado</b> ' + txt + ': ha vuelto a la carpeta en la que estaba.', '--c1');
+  render();
+}
+
+/* Pendrive */
+function conectarUSB(){
+  if (X.usb) return toast('El pendrive ya está conectado.');
+  X.usb = true; X.usbNuevo = true;
+  explicar('Has conectado el pendrive. En el Explorador aparece en el <b>panel izquierdo</b> como <b>Pendrive (E:)</b>.', '--c1');
+  render();
+  if (!X.abierto) toast('Abre el Explorador para verlo en el panel izquierdo.');
+}
+function expulsar(){
+  if (X.copiando) return toast('Espera a que termine la copia antes de expulsar.');
+  X.usb = false; X.usbNuevo = false;
+  if (raiz(X.cur) === 'usb'){ X.cur = 'docs'; X.sel.clear(); }
+  X.hist = X.hist.filter(id => raiz(id) !== 'usb');
+  tick('expulsar'); explicar('Has <b>expulsado</b> el pendrive. Ya puedes desconectarlo sin riesgo. Para volver a usarlo, pulsa «🔌 Conectar el pendrive».', '--c1');
+  render();
+}
+function progresoCopia(n, T){
+  X.copiando = true;
+  const el = $('cpy');
+  el.innerHTML = 'Copiando ' + (n === 1 ? '1 elemento' : n + ' elementos') + ' a «' + esc(T.name) + '»…<div class="bar"><i></i></div>';
+  el.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => { const i = el.querySelector('i'); if (i) i.style.width = '100%'; }));
+  clearTimeout(progresoCopia.t);
+  progresoCopia.t = setTimeout(() => { el.hidden = true; X.copiando = false; }, 1900);
+}
+
+/* Diálogos */
+function abrirDialogo(html, cb){
+  X.modal = true; cerrarMenu();
+  const host = $('dlg-host');
+  host.innerHTML = '<div class="dlg-bg"><div class="dlg">' + html + '</div></div>';
+  host.querySelectorAll('[data-r]').forEach(b => b.onclick = ev => { ev.stopPropagation(); cerrarDialogo(); cb(b.dataset.r); });
+}
+function cerrarDialogo(){ $('dlg-host').innerHTML = ''; X.modal = false; }
+function dialogoNombres(choques, T, hacer){
+  abrirDialogo('<h4>Reemplazar u omitir archivos</h4><p>En «' + esc(T.name) + '» ya hay ' + (choques.length === 1 ? 'un elemento' : choques.length + ' elementos') +
+    ' con el mismo nombre: <b>' + choques.map(n => esc(n.name)).join(', ') + '</b>.</p>' +
+    '<button class="opt" data-r="reemplazar" type="button">✔️ Reemplazar en el destino<small>Sustituye el que ya había.</small></button>' +
+    '<button class="opt" data-r="omitir" type="button">↪️ Omitir<small>Conserva el que ya había.</small></button>' +
+    '<button class="opt cancel" data-r="cancelar" type="button">Cancelar<small>Si dudas, cancela y revisa los dos.</small></button>', r => {
+      if (r === 'cancelar'){ tick('repetido'); explicar('Has <b>cancelado</b>. Si dudas, revisa los dos archivos antes de decidir: Reemplazar sustituye el que había y Omitir lo conserva.', '--c3'); render(); return; }
+      hacer(r);
+    });
+}
+
+/* =========================================================
+   Menú del clic derecho
+   ========================================================= */
+function abrirMenu(x, y, items){
+  const m = $('cm');
+  m.innerHTML = items.map((it, i) => it === '-' ? '<div class="cmsep"></div>' :
+    '<div class="cmi' + (it.dis ? ' dis' : '') + '" data-i="' + i + '"><span>' + it.ic + '</span>' + it.t + (it.k ? '<span class="ck">' + it.k + '</span>' : '') + '</div>').join('');
+  m.classList.add('on');
+  const sc = $('sc2').getBoundingClientRect();
+  let left = x - sc.left, top = y - sc.top;
+  if (left + m.offsetWidth > sc.width - 4) left = sc.width - m.offsetWidth - 4;
+  if (top + m.offsetHeight > sc.height - 4) top = sc.height - m.offsetHeight - 4;
+  m.style.left = Math.max(4, left) + 'px'; m.style.top = Math.max(4, top) + 'px';
+  m.querySelectorAll('.cmi').forEach(e => e.onclick = ev => { ev.stopPropagation(); const it = items[+e.dataset.i]; cerrarMenu(); it.f(); });
+}
+function cerrarMenu(){ $('cm').classList.remove('on'); }
+function menuPara(target, x, y){
+  if (X.modal) return;
+  const it = target.closest('#files .it'), ni = target.closest('#side .ni'), files = target.closest('#files'), dico = target.closest('#d-trash');
+  const pegarDis = !X.clip;
+  if (it && X.abierto){
+    const id = it.dataset.id;
+    if (!X.sel.has(id)){ X.sel = new Set([id]); X.ancla = id; render(); }
+    if (enPapelera()) return abrirMenu(x, y, [{ic:'♻️', t:'Restaurar', f:restaurar}]);
+    const n = nodo(id), items = [{ic:'📂', t:'Abrir', f:() => abrirItem(id)}, '-',
+      {ic:'✂️', t:'Cortar', k:'Ctrl+X', f:cortar}, {ic:'📄', t:'Copiar', k:'Ctrl+C', f:copiar}];
+    if (n && n.type === 'folder') items.push({ic:'📋', t:'Pegar dentro', dis:pegarDis, f:() => pegar(id)});
+    items.push('-', {ic:'🗑️', t:'Eliminar', k:'Supr', f:eliminar});
+    return abrirMenu(x, y, items);
+  }
+  if (ni && X.abierto){
+    const id = ni.dataset.nav;
+    if (id === 'usb') return abrirMenu(x, y, [{ic:'📂', t:'Abrir', f:() => ir('usb')}, '-', {ic:'⏏️', t:'Expulsar', f:expulsar}]);
+    return abrirMenu(x, y, [{ic:'📂', t:'Abrir', f:() => ir(id)}, {ic:'📋', t:'Pegar', dis:pegarDis, f:() => pegar(id)}]);
+  }
+  if (files && X.abierto){
+    if (X.sel.size){ X.sel.clear(); render(); }
+    if (enPapelera()) return abrirMenu(x, y, [{ic:'☑️', t:'Seleccionar todo', k:'Ctrl+E', f:todo}]);
+    return abrirMenu(x, y, [{ic:'📋', t:'Pegar', k:'Ctrl+V', dis:pegarDis, f:() => pegar()},
+      {ic:'↩️', t:'Deshacer', k:'Ctrl+Z', dis:!X.deshacer.length, f:deshacer}, '-',
+      {ic:'☑️', t:'Seleccionar todo', k:'Ctrl+E', f:todo}]);
+  }
+  if (dico) return abrirMenu(x, y, [{ic:'📂', t:'Abrir', f:() => abrirExplorador('trash', false)}]);
+}
+
+/* =========================================================
+   Pintar el Explorador y el panel
+   ========================================================= */
+function tb(act, ic, txt, dis, tit){ return '<button class="tb" data-act="' + act + '" type="button"' + (dis ? ' disabled' : '') + ' title="' + tit + '"><span class="ti">' + ic + '</span>' + txt + '</button>'; }
+function render(){
+  $('tk-exp').classList.toggle('on', X.abierto);
+  const ku = $('k-usb');
+  ku.textContent = X.usb ? '💾 Pendrive conectado' : '🔌 Conectar el pendrive';
+  ku.disabled = X.usb;
+  $('k-ctrl').classList.toggle('on', ctrlFija); $('k-ctrl').textContent = ctrlFija ? 'Ctrl pulsada' : 'Ctrl (mantener)';
+  $('k-shift').classList.toggle('on', mayusFija); $('k-shift').textContent = mayusFija ? 'Mayús pulsada' : 'Mayús (mantener)';
+  $('xw').classList.toggle('hide', !X.abierto);
+  if (X.abierto){
+    if (!nodo(X.cur) || (raiz(X.cur) === 'usb' && !X.usb)) X.cur = 'docs';
+    const r = ruta(X.cur), cur = r[r.length - 1], root = r[0].id, trash = root === 'trash';
+    $('xw-name').textContent = cur.name;
+    $('xw-ico').textContent = r.length > 1 ? '📁' : ICO_RAIZ[root];
+    $('b-back').disabled = !X.hist.length;
+    $('b-up').disabled = r.length < 2;
+    $('addr').innerHTML = (trash ? '' : '<span>Este equipo</span><span class="gt">›</span>') +
+      r.map(n => '<span class="crumb" data-act="crumb" data-id="' + n.id + '">' + esc(n.name) + '</span>').join('<span class="gt">›</span>');
+    const ns = X.sel.size;
+    const cnt = cur.children.length + ' elemento' + (cur.children.length === 1 ? '' : 's') + (ns ? ' · ' + ns + ' seleccionado' + (ns === 1 ? '' : 's') : '');
+    $('xw-tools').innerHTML = trash
+      ? tb('restore', '♻️', 'Restaurar', !ns, 'Restaurar lo seleccionado')
+      : tb('cut', '✂️', 'Cortar', !ns, 'Cortar (Ctrl + X)') + tb('copy', '📄', 'Copiar', !ns, 'Copiar (Ctrl + C)') + tb('paste', '📋', 'Pegar', !X.clip, 'Pegar (Ctrl + V)') +
+        '<span class="tsep"></span>' + tb('del', '🗑️', 'Eliminar', !ns, 'Eliminar (Supr)');
+    const ni = (id, ic, nm) => '<div class="ni' + (root === id ? ' cur' : '') + (id === 'usb' && X.usbNuevo ? ' new' : '') + '" data-nav="' + id + '" data-drop="' + id + '"><span>' + ic + '</span>' + nm + '</div>';
+    $('side').innerHTML = '<div class="sh">Este equipo</div>' + ni('docs', '📄', 'Documentos') + ni('img', '🖼️', 'Imágenes') + ni('mus', '🎵', 'Música') +
+      (X.usb ? '<div class="sh">Unidades</div>' + ni('usb', '💾', 'Pendrive (E:)') : '');
+    const cortados = X.clip && X.clip.modo === 'cortar' ? new Set(X.clip.ids) : new Set();
+    $('files').innerHTML = cur.children.length
+      ? '<div class="grid">' + cur.children.map(n => '<div class="it' + (X.sel.has(n.id) ? ' sel' : '') + (cortados.has(n.id) ? ' cut' : '') + (frescos.has(n.id) ? ' fresh' : '') +
+          '" data-id="' + n.id + '"' + (n.type === 'folder' && !trash ? ' data-drop="' + n.id + '"' : '') + '><span class="ii">' + icono(n) + '</span><span class="in">' + esc(n.name) + '</span></div>').join('') + '</div>'
+      : '<div class="empty-msg">' + (trash ? 'La Papelera está vacía.' : 'Esta carpeta está vacía.') + '</div>';
+    $('status').textContent = cnt;
+    frescos = new Set();
+  }
+  renderPanel();
+}
+function pintarSel(){ document.querySelectorAll('#files .it').forEach(e => e.classList.toggle('sel', X.sel.has(e.dataset.id))); }
+
+function renderPanel(){
+  if (modo !== 'live') return;
+  const hechos = RETOS.filter(r => retos[r.id]).length;
+  let clip;
+  if (!X.clip) clip = '<div class="clip"><span class="ci">📋</span><div><b>Portapapeles vacío</b><small>Cuando copies o cortes algo, lo verás aquí.</small></div></div>';
+  else {
+    const ns = X.clip.ids.map(nodo).filter(Boolean), c = X.clip.modo === 'copiar';
+    clip = '<div class="clip ' + X.clip.modo + '"><span class="ci">' + (c ? '📄' : '✂️') + '</span><div><b>' + (c ? 'Copiado' : 'Cortado') + ': ' + (ns.length === 1 ? esc(ns[0].name) : ns.length + ' elementos') + '</b><small>' +
+      (c ? 'Al pegar, se crea una copia. El original se queda donde estaba.' : 'Al pegar, se moverá a la carpeta de destino.') + '</small></div></div>';
+  }
+  info.style.setProperty('--ic', 'var(' + (X.ultima ? X.ultima.color : '--c6') + ')');
+  let html = (hechos === RETOS.length ? '<div class="win-all">🏆 ¡Has superado todos los retos!</div>' : '') +
+    '<h3 class="ph">El portapapeles <small>(en Windows no se ve; aquí sí, para que entiendas qué guarda)</small></h3>' + clip +
+    '<div class="last">' + (X.ultima ? X.ultima.html : 'Empieza abriendo el Explorador: pulsa <b>Windows + E</b> o haz clic en la <b>carpeta amarilla</b> de la barra de abajo.') + '</div>' +
+    '<h3 class="ph">Retos <small>(se marcan solos)</small></h3>';
+  let abierto = false;
+  RETOS.forEach(r => {
+    if (r.g){ if (abierto) html += '</ul>'; html += '<div class="rg">' + r.g + '</div><ul class="retos">'; abierto = true; }
+    html += '<li class="' + (retos[r.id] ? 'on' : '') + '"><span class="rb">' + (retos[r.id] ? '✓' : '') + '</span><span class="rt">' + r.t + '<small>' + r.h + '</small></span></li>';
+  });
+  info.innerHTML = html + '</ul>';
+}
+
+/* =========================================================
+   Ratón, dedo y teclado
+   ========================================================= */
+const sc2 = $('sc2');
+let pd = null, largoT = null, drag = null, ultTap = {id:null, t:0}, ultTapDico = 0;
+const ctrlOn = e => e.ctrlKey || e.metaKey || ctrlFija;
+const mayusOn = e => e.shiftKey || mayusFija;
+function capturar(e){ try { sc2.setPointerCapture(e.pointerId); } catch(_){} }
+function pulsacionLarga(e){
+  clearTimeout(largoT);
+  if (e.pointerType === 'mouse') return;
+  const x = e.clientX, y = e.clientY, target = e.target;
+  largoT = setTimeout(() => { if (pd && !pd.mov){ pd.cancel = true; menuPara(target, x, y); } }, 550);
+}
+
+sc2.addEventListener('pointerdown', e => {
+  if (!$('cm').contains(e.target)) cerrarMenu();
+  if (X.modal || e.target.closest('.dlg-bg')) return;
+  const it = e.target.closest('#files .it'), files = e.target.closest('#files'), ni = e.target.closest('#side .ni'), dico = e.target.closest('#d-trash');
+  if (e.button === 2){
+    if (it && !X.sel.has(it.dataset.id)){ X.sel = new Set([it.dataset.id]); X.ancla = it.dataset.id; render(); }
+    return;
+  }
+  if (e.button !== 0) return;
+  if (it){ pd = {tipo:'item', id:it.dataset.id, x:e.clientX, y:e.clientY, mov:false}; capturar(e); pulsacionLarga(e); return; }
+  if (files){ pd = {tipo:'marco', x:e.clientX, y:e.clientY, base:ctrlOn(e) ? new Set(X.sel) : new Set(), mov:false}; capturar(e); pulsacionLarga(e); return; }
+  if (ni){ pd = {tipo:'nav', id:ni.dataset.nav, x:e.clientX, y:e.clientY, mov:false}; pulsacionLarga(e); return; }
+  if (dico){ pd = {tipo:'dico', x:e.clientX, y:e.clientY, mov:false}; pulsacionLarga(e); return; }
+  if (e.target.closest('#desk') && !e.target.closest('#xw')) $('d-trash').classList.remove('sel');
+});
+sc2.addEventListener('pointermove', e => {
+  if (!pd || pd.cancel) return;
+  if (!pd.mov && Math.hypot(e.clientX - pd.x, e.clientY - pd.y) > 8){
+    pd.mov = true; clearTimeout(largoT);
+    if (pd.tipo === 'item') empezarArrastre(e);
+  }
+  if (!pd || !pd.mov) return;
+  if (pd.tipo === 'item' && drag) moverArrastre(e);
+  else if (pd.tipo === 'marco') moverMarco(e);
+});
+sc2.addEventListener('pointerup', e => {
+  clearTimeout(largoT);
+  if (!pd) return;
+  const p = pd; pd = null;
+  if (p.cancel){ quitarArrastre(); quitarMarco(); return; }
+  if (p.tipo === 'item'){
+    if (p.mov){ soltarArrastre(); return; }
+    const now = Date.now(), c = ctrlOn(e), m = mayusOn(e);
+    if (!c && !m && ultTap.id === p.id && now - ultTap.t < 450){ ultTap = {id:null, t:0}; abrirItem(p.id); return; }
+    ultTap = {id:p.id, t:now};
+    tocarItem(p.id, c, m);
+  } else if (p.tipo === 'marco'){
+    if (p.mov) finMarco();
+    else if (!ctrlOn(e) && X.sel.size){ X.sel.clear(); X.ancla = null; render(); }
+  } else if (p.tipo === 'nav' && !p.mov) ir(p.id);
+  else if (p.tipo === 'dico' && !p.mov){
+    $('d-trash').classList.add('sel');
+    const now = Date.now();
+    if (now - ultTapDico < 450){ ultTapDico = 0; abrirExplorador('trash', false); }
+    else ultTapDico = now;
+  }
+});
+sc2.addEventListener('pointercancel', () => { clearTimeout(largoT); quitarArrastre(); quitarMarco(); pd = null; });
+sc2.addEventListener('contextmenu', e => {
+  e.preventDefault(); e.stopPropagation();
+  clearTimeout(largoT);
+  if (pd){ pd.cancel = true; }
+  menuPara(e.target, e.clientX, e.clientY);
+});
+document.addEventListener('pointerdown', e => { if (!sc2.contains(e.target)) cerrarMenu(); });
+
+/* Arrastrar y soltar */
+function empezarArrastre(e){
+  if (enPapelera()){ pd.cancel = true; toast('Para sacar algo de la Papelera, usa <b>Restaurar</b>.'); return; }
+  if (!X.sel.has(pd.id)){ X.sel = new Set([pd.id]); X.ancla = pd.id; pintarSel(); }
+  const ns = selNodos();
+  const g = document.createElement('div'); g.className = 'ghost'; document.body.appendChild(g);
+  drag = {ns, ids:ns.map(n => n.id), g, target:null, accion:null, ctrl:false};
+  document.querySelectorAll('#files .it').forEach(el => { if (drag.ids.includes(el.dataset.id)) el.classList.add('dragging'); });
+  moverArrastre(e);
+}
+function moverArrastre(e){
+  const g = drag.g;
+  g.style.left = (e.clientX + 16) + 'px'; g.style.top = (e.clientY + 14) + 'px';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  let t = el && el.closest('#sc2 [data-drop]');
+  if (t && drag.ids.includes(t.dataset.drop)) t = null;
+  document.querySelectorAll('.drop-on').forEach(x => { if (x !== t) x.classList.remove('drop-on'); });
+  drag.target = null;
+  const first = drag.ns[0], ctrl = ctrlOn(e);
+  let sub = '';
+  if (t){
+    const T = nodo(t.dataset.drop);
+    const yaEsta = T && drag.ns.every(n => padre(n.id) && padre(n.id).id === T.id);
+    if (T && !yaEsta && !drag.ns.some(n => dentroDe(T.id, n.id))){
+      t.classList.add('drop-on');
+      drag.target = T.id; drag.ctrl = ctrl;
+      drag.accion = (ctrl || unidad(T.id) !== unidad(first.id)) ? 'copiar' : 'mover';
+      sub = '<small>' + (drag.accion === 'copiar' ? '＋ Copiar en ' : '➜ Mover a ') + esc(T.name) + '</small>';
+    }
+  }
+  g.innerHTML = '<span class="gi">' + (drag.ns.length > 1 ? '🗂️' : icono(first)) + '</span>' + (drag.ns.length > 1 ? drag.ns.length + ' elementos' : esc(first.name)) + sub;
+}
+function soltarArrastre(){
+  const d = drag; quitarArrastre();
+  if (!d || !d.target) return;
+  const T = nodo(d.target);
+  const extra = d.accion === 'copiar'
+    ? (d.ctrl ? 'Con <b>Ctrl</b> pulsado, arrastrar <b>copia</b>.' : 'Al arrastrar a <b>otra unidad</b>, como un pendrive, normalmente se <b>copia</b>.')
+    : 'Al arrastrar entre carpetas de la <b>misma unidad</b>, normalmente se <b>mueve</b>.';
+  transferir(d.ns, T, d.accion, 'arrastrar', extra);
+}
+function quitarArrastre(){
+  if (!drag) return;
+  drag.g.remove();
+  document.querySelectorAll('.drop-on, .dragging').forEach(x => x.classList.remove('drop-on', 'dragging'));
+  drag = null;
+}
+
+/* Rectángulo de selección */
+function moverMarco(e){
+  const f = $('files'), r = f.getBoundingClientRect();
+  let m = $('marq');
+  if (!m){ m = document.createElement('div'); m.id = 'marq'; m.className = 'marq'; f.appendChild(m); }
+  const x1 = Math.max(r.left, Math.min(pd.x, e.clientX)), x2 = Math.min(r.right, Math.max(pd.x, e.clientX));
+  const y1 = Math.max(r.top, Math.min(pd.y, e.clientY)), y2 = Math.min(r.bottom, Math.max(pd.y, e.clientY));
+  m.style.left = (x1 - r.left) + 'px'; m.style.top = (y1 - r.top + f.scrollTop) + 'px';
+  m.style.width = Math.max(0, x2 - x1) + 'px'; m.style.height = Math.max(0, y2 - y1) + 'px';
+  const s = new Set(pd.base);
+  f.querySelectorAll('.it').forEach(el => { const b = el.getBoundingClientRect(); if (b.right > x1 && b.left < x2 && b.bottom > y1 && b.top < y2) s.add(el.dataset.id); });
+  X.sel = s; pintarSel();
+}
+function finMarco(){
+  quitarMarco();
+  if (X.sel.size >= 2) explicar('Has seleccionado <b>' + X.sel.size + ' elementos</b> arrastrando un <b>rectángulo</b> desde un espacio vacío.', '--c6');
+  render();
+}
+function quitarMarco(){ const m = $('marq'); if (m) m.remove(); }
+
+/* Botones de la pantalla */
+const ACT = {
+  close:cerrarExplorador,
+  min:() => toast('En esta práctica la ventana se queda abierta para que veas bien los archivos. Para cerrarla, usa la ✕.'),
+  max:() => toast('En esta práctica la ventana ya tiene el tamaño justo.'),
+  back:atras, up:subir,
+  crumb:b => ir(b.dataset.id),
+  cut:cortar, copy:copiar, paste:() => pegar(), del:eliminar, restore:restaurar,
+  exp:() => { if (X.abierto) toast('El Explorador ya está abierto.'); else abrirExplorador(null, true); },
+  start:() => toast('El menú Inicio no hace falta aquí: usa la <b>carpeta amarilla</b> o <b>Windows + E</b>.'),
+  search:() => toast('El buscador no hace falta aquí: usa la <b>carpeta amarilla</b> o <b>Windows + E</b>.'),
+  web:() => toast('En esta práctica solo usamos el Explorador de archivos.'),
+  mail:() => toast('En esta práctica solo usamos el Explorador de archivos.')
+};
+sc2.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled || X.modal) return;
+  ACT[b.dataset.act](b);
+});
+
+/* Teclas en pantalla */
+function flashKb(k){ const b = document.querySelector('.kb[data-k="' + k + '"]'); if (!b) return; b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 180); }
+const ATAJO = {c:copiar, x:cortar, v:() => pegar(), e:todo, z:deshacer, del:eliminar};
+document.querySelectorAll('.kb').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.k;
+  cerrarMenu();
+  if (k === 'win'){ flashKb('win'); if (X.abierto) toast('El Explorador ya está abierto.'); else if (!X.modal) abrirExplorador(null, true); return; }
+  if (k === 'ctrl'){ ctrlFija = !ctrlFija; render(); return; }
+  if (k === 'shift'){ mayusFija = !mayusFija; render(); return; }
+  if (k === 'usb'){ conectarUSB(); return; }
+  flashKb(k); ATAJO[k]();
+}));
+
+/* Teclado de verdad */
+document.addEventListener('keydown', e => {
+  if (modo !== 'live') return;
+  if (e.key === 'Escape'){ cerrarMenu(); return; }
+  if (X.modal) return;
+  const k = (e.key || '').toLowerCase();
+  if (e.metaKey && k === 'e'){ e.preventDefault(); if (!X.abierto) abrirExplorador(null, true); return; }
+  if (e.ctrlKey && !e.altKey && ATAJO[k] && k !== 'del'){ e.preventDefault(); cerrarMenu(); flashKb(k); ATAJO[k](); return; }
+  if (e.key === 'Delete'){ e.preventDefault(); cerrarMenu(); flashKb('del'); eliminar(); }
+});
+
+/* =========================================================
+   Modos y progreso
+   ========================================================= */
+function progreso(){
+  let n, tot, txt;
+  if (modo === 'desc'){ n = ORDEN.filter(k => found[k]).length; tot = ORDEN.length; txt = '⭐ ' + n + ' de ' + tot + ' partes descubiertas'; }
+  else if (modo === 'prac'){ n = pi + (respondida ? 1 : 0); tot = pq.length || PREGS.length; n = Math.min(n, tot); txt = '🎯 ' + n + ' de ' + tot + ' preguntas'; }
+  else { n = RETOS.filter(r => retos[r.id]).length; tot = RETOS.length; txt = '🛠️ ' + n + ' de ' + tot + ' retos superados'; }
+  $('prog-txt').textContent = txt;
+  $('prog-fill').style.width = (n / tot * 100) + '%';
+  if (modo === 'live') renderPanel();
+}
+function setModo(m){
+  modo = m;
+  ['desc', 'live', 'prac'].forEach(x => $('m-' + x).classList.toggle('on', x === m));
+  $('st-parts').hidden = m === 'live';
+  $('st-live').hidden = m !== 'live';
+  $('sc1').classList.toggle('mode-practica', m === 'prac');
+  cerrarMenu(); limpiar();
+  if (m === 'desc') bienvenida();
+  else if (m === 'prac') empezarPractica();
+  else render();
+  progreso();
+}
+$('m-desc').onclick = () => setModo('desc');
+$('m-live').onclick = () => setModo('live');
+$('m-prac').onclick = () => setModo('prac');
+$('reset').onclick = () => {
+  if (modo === 'desc'){ found = {}; }
+  else if (modo === 'live'){ retos = {}; cerrarDialogo(); quitarArrastre(); nuevoEstado(); ctrlFija = mayusFija = false; $('cpy').hidden = true; }
+  guardar(); pintarPins(); setModo(modo);
+};
+pintarPins();
+setModo('desc');
+</script>
+</body>
+</html>
