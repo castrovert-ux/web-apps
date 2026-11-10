@@ -135,6 +135,10 @@ main{flex:1;min-height:0;display:flex;}
 .md code{font-family:var(--font-ui);font-size:12.5px;background:var(--card);padding:1px 4px;border-radius:2px;}
 .md pre{font-family:var(--font-ui);font-size:12px;background:var(--card);padding:10px;border-radius:var(--radius);overflow-x:auto;white-space:pre-wrap;margin:0 0 9px;}
 .md hr{border:none;border-top:1px solid var(--border);margin:12px 0;}
+.md table{border-collapse:collapse;width:100%;margin:0 0 10px;font-size:13.5px;}
+.md th,.md td{border:1px solid var(--border);padding:5px 10px;text-align:left;vertical-align:top;}
+.md th{background:var(--card);font-weight:600;}
+.md tr:nth-child(even) td{background:var(--surface);}
 .md > :first-child{margin-top:0;}
 .thinking{font-family:var(--font-ui);font-size:11px;color:var(--muted);font-style:italic;}
 .cursor::after{content:'▍';color:var(--accent);animation:blink 1s steps(1) infinite;}
@@ -1424,18 +1428,44 @@ function inlineMd(s){
     .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
 }
 function mdToHtml(text){
-  const lines = text.split('\n'); let html = ''; let list = null; let para = [];
-  const endPara = () => { if (para.length){ html += '<p>' + para.map(inlineMd).join('<br>') + '</p>'; para = []; } };
-  const endList = () => { if (list){ html += '</' + list + '>'; list = null; } };
-  for (const raw of lines){
-    const l = raw.replace(/\s+$/, '');
-    let m;
-    if (!l.trim()){ endPara(); endList(); continue; }
-    if ((m = l.match(/^(#{1,6})\s+(.*)$/))){ endPara(); endList(); const n = Math.min(4, m[1].length); html += `<h${n}>${inlineMd(m[2])}</h${n}>`; continue; }
-    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endPara(); endList(); html += '<hr>'; continue; }
-    if ((m = l.match(/^\s*>\s?(.*)$/))){ endPara(); endList(); html += '<blockquote>' + inlineMd(m[1]) + '</blockquote>'; continue; }
-    if ((m = l.match(/^\s*[-*+]\s+(.*)$/))){ endPara(); if (list !== 'ul'){ endList(); html += '<ul>'; list = 'ul'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
-    if ((m = l.match(/^\s*\d+[.)]\s+(.*)$/))){ endPara(); if (list !== 'ol'){ endList(); html += '<ol>'; list = 'ol'; } html += '<li>' + inlineMd(m[1]) + '</li>'; continue; }
+  const isTableRow = l => /^\s*\|/.test(l) || /\|\s*$/.test(l);
+  const isSep      = l => /^\s*\|?[\s\-:|]+(\|[\s\-:|]+)*\|?\s*$/.test(l) && l.includes('-');
+  const parseCells = l => l.replace(/^\s*\|?|\|?\s*$/g,'').split('|').map(c => c.trim());
+
+  // Agrupa líneas en bloques: tabla o línea suelta
+  const raw = text.split('\n');
+  const blocks = []; let i = 0;
+  while(i < raw.length){
+    const l = raw[i].replace(/\s+$/,'');
+    if(isTableRow(l) && i+1 < raw.length && isSep(raw[i+1])){
+      const tbl = {type:'table', head: parseCells(l), body:[]};
+      i += 2;
+      while(i < raw.length && isTableRow(raw[i])){ tbl.body.push(parseCells(raw[i])); i++; }
+      blocks.push(tbl);
+    } else {
+      blocks.push({type:'line', text:l}); i++;
+    }
+  }
+
+  let html = ''; let list = null; let para = [];
+  const endPara = () => { if(para.length){ html += '<p>' + para.map(inlineMd).join('<br>') + '</p>'; para=[]; } };
+  const endList = () => { if(list){ html += '</'+list+'>'; list=null; } };
+
+  for(const blk of blocks){
+    if(blk.type === 'table'){
+      endPara(); endList();
+      html += '<table><thead><tr>' + blk.head.map(c=>`<th>${inlineMd(c)}</th>`).join('') + '</tr></thead>';
+      if(blk.body.length) html += '<tbody>' + blk.body.map(r=>'<tr>'+r.map(c=>`<td>${inlineMd(c)}</td>`).join('')+'</tr>').join('') + '</tbody>';
+      html += '</table>';
+      continue;
+    }
+    const l = blk.text; let m;
+    if(!l.trim()){ endPara(); endList(); continue; }
+    if((m=l.match(/^(#{1,6})\s+(.*)$/))){ endPara(); endList(); const n=Math.min(4,m[1].length); html+=`<h${n}>${inlineMd(m[2])}</h${n}>`; continue; }
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endPara(); endList(); html+='<hr>'; continue; }
+    if((m=l.match(/^\s*>\s?(.*)$/))){ endPara(); endList(); html+='<blockquote>'+inlineMd(m[1])+'</blockquote>'; continue; }
+    if((m=l.match(/^\s*[-*+]\s+(.*)$/))){ endPara(); if(list!=='ul'){ endList(); html+='<ul>'; list='ul'; } html+=`<li>${inlineMd(m[1])}</li>`; continue; }
+    if((m=l.match(/^\s*\d+[.)]\s+(.*)$/))){ endPara(); if(list!=='ol'){ endList(); html+='<ol>'; list='ol'; } html+=`<li>${inlineMd(m[1])}</li>`; continue; }
     endList(); para.push(l);
   }
   endPara(); endList();
