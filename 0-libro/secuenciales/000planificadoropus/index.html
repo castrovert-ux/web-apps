@@ -1736,17 +1736,53 @@ function downloadMsgMd(id, mi){
   download(msgLabel(id, mi) + '.md', text);
 }
 function mdToWordHtml(md){
-  // Convierte Markdown a HTML para incrustar en un .docx via mhtml
-  const lines = md.split('\n'); let html = ''; let list = null; let para = [];
-  const ei = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ei = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const il = s => ei(s)
     .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
-    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g,'$1<em>$2</em>');
+    .replace(/(^|[^*])\*([^*\s][^*]*[^*\s])\*/g,'$1<em>$2</em>');
+
+  // Detecta si una línea es fila de tabla (contiene |)
+  const isTableRow = l => /^\s*\|/.test(l) || /\|\s*$/.test(l);
+  // Detecta si una línea es separador de cabecera (|---|---|)
+  const isSep = l => /^\s*\|?[\s\-:|]+(\|[\s\-:|]+)*\|?\s*$/.test(l) && l.includes('-');
+
+  // Extrae las celdas de una fila de tabla
+  const parseCells = l => l.replace(/^\s*\|?|\|?\s*$/g,'').split('|').map(c => c.trim());
+
+  // Agrupa las líneas en bloques: tabla o línea suelta
+  const lines = md.split('\n');
+  const blocks = []; // {type:'table', rows:[]} | {type:'line', text}
+  let i = 0;
+  while(i < lines.length){
+    const l = lines[i].replace(/\s+$/,'');
+    // ¿Empieza una tabla? Necesita al menos cabecera + separador
+    if(isTableRow(l) && i+1 < lines.length && isSep(lines[i+1])){
+      const tbl = {type:'table', head:[], body:[]};
+      tbl.head = parseCells(l);
+      i += 2; // saltar separador
+      while(i < lines.length && isTableRow(lines[i])){
+        tbl.body.push(parseCells(lines[i])); i++;
+      }
+      blocks.push(tbl);
+    } else {
+      blocks.push({type:'line', text:l}); i++;
+    }
+  }
+
+  let html = ''; let list = null; let para = [];
   const endP = () => { if(para.length){ html += '<p>' + para.map(il).join('<br>') + '</p>'; para=[]; } };
   const endL = () => { if(list){ html += '</'+list+'>'; list=null; } };
-  for(const raw of lines){
-    const l = raw.replace(/\s+$/,''); let m;
+
+  for(const blk of blocks){
+    if(blk.type === 'table'){
+      endP(); endL();
+      html += '<table><thead><tr>' + blk.head.map(c=>`<th>${il(c)}</th>`).join('') + '</tr></thead>';
+      if(blk.body.length){ html += '<tbody>' + blk.body.map(r=>'<tr>'+r.map(c=>`<td>${il(c)}</td>`).join('')+'</tr>').join('') + '</tbody>'; }
+      html += '</table>';
+      continue;
+    }
+    const l = blk.text; let m;
     if(!l.trim()){ endP(); endL(); continue; }
     if((m=l.match(/^(#{1,6})\s+(.*)$/))){ endP(); endL(); const n=Math.min(6,m[1].length); html+=`<h${n}>${il(m[2])}</h${n}>`; continue; }
     if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ endP(); endL(); html+='<hr>'; continue; }
@@ -1756,23 +1792,25 @@ function mdToWordHtml(md){
     endL(); para.push(l);
   }
   endP(); endL();
+
   return `<html xmlns:o='urn:schemas-microsoft-com:office:office'
     xmlns:w='urn:schemas-microsoft-com:office:word'
     xmlns='http://www.w3.org/TR/REC-html40'>
 <head><meta charset='utf-8'>
 <style>
   body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.5;margin:2cm;}
-  h1{font-size:18pt;} h2{font-size:15pt;} h3{font-size:13pt;}
+  h1{font-size:18pt;} h2{font-size:15pt;} h3{font-size:13pt;} h4{font-size:12pt;}
   h1,h2,h3,h4{font-weight:bold;margin-top:14pt;margin-bottom:4pt;}
   p{margin:0 0 7pt;}
   blockquote{margin-left:20pt;border-left:3px solid #aaa;padding-left:10pt;color:#555;}
-  code{font-family:Courier New,monospace;font-size:10pt;background:#f4f4f4;}
+  code{font-family:'Courier New',monospace;font-size:10pt;background:#f4f4f4;}
   ul,ol{margin:0 0 7pt 20pt;} li{margin-bottom:3pt;}
   strong{font-weight:bold;} em{font-style:italic;}
   hr{border:none;border-top:1px solid #ccc;margin:10pt 0;}
-  table{border-collapse:collapse;width:100%;margin:0 0 8pt;}
-  th,td{border:1px solid #ccc;padding:4pt 7pt;font-size:10pt;}
-  th{background:#e8e8e8;font-weight:bold;}
+  table{border-collapse:collapse;width:100%;margin:0 0 10pt;}
+  th,td{border:1px solid #bbb;padding:4pt 8pt;font-size:10pt;vertical-align:top;}
+  th{background:#e4e4e4;font-weight:bold;text-align:left;}
+  tr:nth-child(even) td{background:#f9f9f9;}
 </style></head><body>${html}</body></html>`;
 }
 function downloadMsgDocx(id, mi){
