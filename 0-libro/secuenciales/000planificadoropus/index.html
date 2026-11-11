@@ -931,11 +931,15 @@ function visibleList(prov){
   if (prov !== 'openrouter' || !onlyFree) return l;
   const f = l.filter(m => isFree(prov, m)); return f.length ? f : l;
 }
-// La lista de OpenRouter se actualiza sola si tiene más de un día
+// La lista de OpenRouter se actualiza sola si tiene más de un día o si está incompleta
 function orAutoRefresh(){
-  if (Date.now() - (loadJSON(LS.orList + '_t') || 0) < 864e5) return;
-  const s = STEPS.find(x => modelChoice[x.id].provider === 'openrouter');
-  if (s) refreshModels(s.id, true);
+  const cached = loadJSON(LS.orList);
+  const stale = Date.now() - (loadJSON(LS.orList + '_t') || 0) > 864e5;
+  const incomplete = !cached || cached.length < 50;   // OpenRouter suele devolver cientos
+  if (!stale && !incomplete) return;
+  // Lanza la descarga aunque el paso activo no sea OpenRouter: así el catálogo queda listo
+  const s = STEPS.find(x => modelChoice[x.id].provider === 'openrouter') || STEPS[0];
+  if (s) refreshModels(s.id, true, 'openrouter');
 }
 function renderModel(id){
   const ch = modelChoice[id]; const st = state.steps[id];
@@ -958,15 +962,19 @@ function changeProvider(id){
 }
 function changeModel(id){ modelChoice[id].model = $('model-' + id).value; saveModels(); }
 
-async function refreshModels(id, quiet){
-  const prov = modelChoice[id].provider;
+async function refreshModels(id, quiet, forceProv){
+  const prov = forceProv || modelChoice[id].provider;
   try {
     if (prov === 'openrouter'){
       const r = await fetch('https://openrouter.ai/api/v1/models');
       if (!r.ok) throw new Error('OpenRouter ' + r.status);
       const data = (await r.json()).data || [];
-      const keep = /^(anthropic|google|deepseek|openai|mistralai|meta-llama|x-ai|qwen|moonshotai|z-ai|nvidia|openrouter)\//;
-      const list = data.filter(m => keep.test(m.id) || /:free$/.test(m.id) || !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)).map(m => ({id:m.id, label:m.id, free:!!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)})).sort((a, b) => a.id.localeCompare(b.id));
+      // TODOS los modelos que devuelve OpenRouter, sin filtro de proveedores
+      const list = data.map(m => ({
+        id: m.id,
+        label: m.name || m.id,
+        free: !!(m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0)
+      })).sort((a, b) => a.id.localeCompare(b.id));
       saveJSON(LS.orList, list); saveJSON(LS.orList + '_t', Date.now());
     } else if (prov === 'deepseek'){
       const key = getKey('deepseek');
