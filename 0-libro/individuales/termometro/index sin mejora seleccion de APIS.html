@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa de Interés · Castroverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f7f3ec; --surface:#ede8e0; --card:#e3ddd4; --border:#c8bfb0;
+  --text:#2b2318; --muted:#6b5e4e; --accent:#7a5230; --accent2:#a06840;
+  --on-accent:#f7f3ec; --red:#b04a2c; --cloud:#3a7ab0;
+  --bar:#2b2318; --bar-text:rgba(247,243,236,.7);
+  --font-h:'Crimson Pro',Georgia,serif;
+  --font-ui:'DM Mono',ui-monospace,monospace;
+  --radius:3px;
+  color-scheme:light;
+  --h0:#f7f3ec; --h1:#eef0d8; --h2:#d4e8a0; --h3:#b8d870;
+  --h4:#f0d060; --h5:#e89020; --h6:#d04000;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1a1510; --surface:#221d16; --card:#2a231a; --border:#3a3028;
+    --text:#ece5d8; --muted:#8c7d69; --accent:#c8884a; --accent2:#a06030;
+    --on-accent:#1a1510; --bar:#100d08; --bar-text:rgba(236,229,216,.65);
+    color-scheme:dark;
+    --h0:#1a1510; --h1:#202a10; --h2:#1a3010; --h3:#1e3a0a;
+    --h4:#3a2a00; --h5:#4a2000; --h6:#5a1800;
+  }
+}
+*,*::before,*::after{box-sizing:inherit;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-h);font-size:17px;line-height:1.7;display:flex;flex-direction:column;min-height:100dvh;}
+button,input,select,textarea{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* barra superior */
+#top-bar{flex-shrink:0;background:var(--bar);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 18px;}
+.bar-title{font-family:var(--font-ui);font-size:10px;color:var(--bar-text);letter-spacing:.5px;}
+.bar-btn{background:none;border:1px solid rgba(255,255,255,.18);color:var(--bar-text);padding:3px 11px;border-radius:20px;cursor:pointer;font-family:var(--font-ui);font-size:10px;}
+.bar-btn:hover{border-color:var(--accent2);color:#fff;}
+
+/* status */
+#status-bar{display:none;padding:5px 18px;font-family:var(--font-ui);font-size:11px;align-items:center;justify-content:space-between;}
+#status-bar.visible{display:flex;}
+#status-bar.ok{background:rgba(80,120,60,.15);color:var(--accent);}
+#status-bar.err{background:rgba(176,74,44,.12);color:var(--red);}
+#status-bar.info{background:rgba(58,122,176,.12);color:var(--cloud);}
+#status-bar button{background:none;border:none;cursor:pointer;color:inherit;font-size:14px;}
+
+/* main */
+main{flex:1;max-width:860px;width:100%;margin:0 auto;padding:28px 20px 60px;}
+
+/* panel entrada */
+.panel{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px;transition:border-color .2s;}
+.panel:focus-within{border-color:var(--accent2);}
+.panel-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card);}
+.ptab{background:none;border:none;border-bottom:2.5px solid transparent;padding:8px 16px;cursor:pointer;font-family:var(--font-ui);font-size:10px;color:var(--muted);letter-spacing:.3px;}
+.ptab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.ptab:hover:not(.active){color:var(--text);}
+.tab-pane{display:none;padding:14px;}
+.tab-pane.active{display:block;}
+textarea#txt{width:100%;min-height:200px;resize:vertical;border:none;outline:none;background:transparent;font-family:var(--font-h);font-size:1rem;line-height:1.65;color:var(--text);}
+textarea#txt::placeholder{color:var(--muted);}
+
+.drop-zone{border:1.5px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;color:var(--muted);font-family:var(--font-ui);font-size:11px;}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent2);background:rgba(122,82,48,.05);}
+.drop-zone svg{display:block;margin:0 auto 10px;opacity:.4;}
+#file-name{margin-top:8px;font-size:10px;color:var(--accent);font-style:italic;min-height:1.2em;}
+#file-input{display:none;}
+
+/* selector modelo */
+.model-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.model-row label{font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.model-row select{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-ui);font-size:11px;}
+.freetick{font-family:var(--font-ui);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer;}
+
+/* botones acción */
+.action-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+.btn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:var(--radius);padding:7px 14px;cursor:pointer;font-family:var(--font-ui);font-size:11px;white-space:nowrap;}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.btn:disabled{opacity:.4;cursor:default;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.btn-primary:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);}
+.spinner{display:inline-block;width:11px;height:11px;border:1.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none;}}
+
+/* leyenda */
+.legend{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:16px;font-family:var(--font-ui);font-size:10px;color:var(--muted);}
+.swatch{width:18px;height:11px;border-radius:2px;display:inline-block;flex-shrink:0;}
+
+/* resultado */
+#result-area{display:none;}
+.result-title{font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);letter-spacing:.3px;}
+
+.pblock{position:relative;padding:9px 13px;margin-bottom:5px;border-radius:var(--radius);border-left:3px solid transparent;cursor:default;}
+.pblock::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:8px;max-width:320px;background:#2b2318ee;color:#f7f3ec;font-family:var(--font-ui);font-size:10px;line-height:1.45;padding:6px 10px;border-radius:2px;pointer-events:none;white-space:pre-wrap;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s;z-index:10;}
+.pblock:hover::after{opacity:1;transform:translateY(0);}
+.score-badge{float:right;margin-left:8px;margin-top:2px;font-family:var(--font-ui);font-size:10px;color:var(--muted);background:rgba(255,255,255,.5);border-radius:20px;padding:1px 7px;}
+
+.h0{background:var(--h0);border-left-color:#c0bab0;}
+.h1{background:var(--h1);border-left-color:#b0c070;}
+.h2{background:var(--h2);border-left-color:#80b030;}
+.h3{background:var(--h3);border-left-color:#70a010;}
+.h4{background:var(--h4);border-left-color:#c0a010;}
+.h5{background:var(--h5);border-left-color:#c05010;}
+.h6{background:var(--h6);border-left-color:#a02800;color:#fff;}
+.h6 .score-badge{color:#fff;background:rgba(0,0,0,.2);}
+
+/* modal claves */
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,8,5,.55);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:520px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+.modal-head{padding:18px 22px 10px;font-family:var(--font-h);font-size:20px;font-weight:600;}
+.modal-body{padding:4px 22px 12px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;}
+.modal-foot{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.keyrow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;}
+.keyrow label{font-family:var(--font-ui);font-size:12px;}
+.keyrow input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 9px;font-family:var(--font-ui);font-size:12px;}
+.keynote{font-size:13px;color:var(--muted);}
+.showkeys{font-family:var(--font-ui);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;margin-right:auto;}
+
+@media (max-width:540px){main{padding:16px 12px 48px;}}
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <span class="bar-title">MAPA DE INTERÉS · MONOGRAFÍA LOCAL</span>
+  <button class="bar-btn" onclick="openKeys()">Claves API</button>
+</div>
+<div id="status-bar"><span id="status-msg"></span><button onclick="hideStatus()" aria-label="Cerrar">×</button></div>
+
+<main>
+
+  <!-- entrada -->
+  <div class="panel" id="input-panel">
+    <div class="panel-tabs">
+      <button class="ptab active" data-tab="text">Pegar texto</button>
+      <button class="ptab" data-tab="file">Cargar fichero</button>
+    </div>
+    <div class="tab-pane active" id="tab-text">
+      <textarea id="txt" placeholder="Pega aquí un fragmento de la monografía (un capítulo, una sección…)"></textarea>
+    </div>
+    <div class="tab-pane" id="tab-file">
+      <div class="drop-zone" id="drop-zone">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        <div>Arrastra un <strong>.txt</strong> o <strong>.md</strong>, o haz clic para seleccionar</div>
+        <div id="file-name"></div>
+      </div>
+      <input type="file" id="file-input" accept=".txt,.md,.text">
+    </div>
+  </div>
+
+  <!-- selector de modelo -->
+  <div class="model-row">
+    <label>Proveedor</label>
+    <select id="sel-prov" onchange="onProvChange()"></select>
+    <label>Modelo</label>
+    <select id="sel-model"></select>
+    <label class="freetick" id="free-tick" title="Mostrar solo modelos gratuitos de OpenRouter">
+      <input type="checkbox" id="chk-free" onchange="onFreeToggle()"> Solo gratuitos
+    </label>
+  </div>
+
+  <!-- acciones -->
+  <div class="action-row">
+    <button class="btn btn-primary" id="btn-analyze" onclick="runAnalysis()">Analizar interés</button>
+    <button class="btn" id="btn-clear" style="display:none" onclick="clearAll()">Limpiar</button>
+  </div>
+
+  <!-- leyenda -->
+  <div class="legend" id="legend" style="display:none">
+    Interés:&nbsp;
+    <span class="swatch" style="background:var(--h0)"></span>Nulo
+    <span class="swatch" style="background:var(--h2)"></span>Bajo
+    <span class="swatch" style="background:var(--h4)"></span>Medio
+    <span class="swatch" style="background:var(--h5)"></span>Alto
+    <span class="swatch" style="background:var(--h6)"></span>Máximo
+    &nbsp;— pasa el ratón sobre cada párrafo para ver el motivo
+  </div>
+
+  <!-- resultado -->
+  <div id="result-area">
+    <div class="result-title">RESULTADO DEL ANÁLISIS</div>
+    <div id="result-blocks"></div>
+  </div>
+
+</main>
+
+<!-- modal claves -->
+<div class="overlay" id="ov-keys">
+  <div class="modal" role="dialog">
+    <div class="modal-head">Claves de API</div>
+    <div class="modal-body" id="keys-body"></div>
+    <div class="modal-foot">
+      <label class="showkeys"><input type="checkbox" id="showkeys" onchange="toggleShowKeys()"> Mostrar claves</label>
+      <button class="btn" onclick="closeOv('ov-keys')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Claves (mismas LS que la suite de Castroverde) ──
+const KEYS = [
+  {id:'claude',     label:'Claude',     ls:'castroverde_ana_claude_key'},
+  {id:'aistudio',   label:'AI Studio',  ls:'castroverde_ana_gemini_key'},
+  {id:'deepseek',   label:'DeepSeek',   ls:'castroverde_deepseek_key'},
+  {id:'openrouter', label:'OpenRouter', ls:'castroverde_or_key'},
+  {id:'mistral',    label:'Mistral',    ls:'castroverde_ana_mistral_key'},
+  {id:'groq',       label:'Groq',       ls:'castroverde_groq_key'},
+];
+const getKey = id => { try { return localStorage.getItem(KEYS.find(k=>k.id===id).ls) || ''; } catch(e){ return ''; } };
+
+const PROVIDERS = {
+  openrouter:{label:'OpenRouter', dynamic:true, models:[
+    {id:'nvidia/nemotron-3-ultra-550b-a55b:free', label:'nvidia/nemotron-3-ultra (g)'},
+    {id:'qwen/qwen3.8-27b:free',                  label:'Qwen 3.8 27B (g)'},
+    {id:'minimax/minimax-m3.1-flash:free',         label:'MiniMax M3.1 Flash (g)'},
+    {id:'openrouter/free',                         label:'openrouter/free — gratuito auto'},
+    {id:'google/gemini-3.8-flash',                 label:'Gemini 3.8 Flash'},
+    {id:'anthropic/claude-sonnet-5.5',             label:'Claude Sonnet 5.5'},
+  ]},
+  claude:{label:'Claude', models:[
+    {id:'claude-haiku-5-5',  label:'Haiku 5.5'},
+    {id:'claude-sonnet-4-6', label:'Sonnet 4.6'},
+    {id:'claude-sonnet-5-5', label:'Sonnet 5.5'},
+    {id:'claude-opus-5-5',   label:'Opus 5.5'},
+  ]},
+  aistudio:{label:'AI Studio (Gemini)', dynamic:true, models:[
+    {id:'gemini-3.8-flash',       label:'Gemini 3.8 Flash (g)'},
+    {id:'gemini-3.5-flash-lite',  label:'Gemini 3.5 Flash-Lite (g)'},
+    {id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro'},
+  ]},
+  mistral:{label:'Mistral', models:[
+    {id:'mistral-small-latest',  label:'Mistral Small (g)'},
+    {id:'mistral-medium-latest', label:'Mistral Medium'},
+    {id:'mistral-large-latest',  label:'Mistral Large'},
+  ]},
+  groq:{label:'Groq', models:[
+    {id:'openai/gpt-oss-120b', label:'GPT-OSS 120B (g)'},
+    {id:'openai/gpt-oss-20b',  label:'GPT-OSS 20B (g)'},
+  ]},
+  deepseek:{label:'DeepSeek', models:[
+    {id:'deepseek-v4-flash', label:'DeepSeek V4 Flash'},
+    {id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro'},
+  ]},
+};
+const FREE_OR  = m => /:free$/.test(m.id) || m.id === 'openrouter/free';
+const FREE_OTHER = {
+  aistudio:['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite'],
+  mistral: ['mistral-small-latest'],
+  groq:    ['openai/gpt-oss-120b','openai/gpt-oss-20b'],
+};
+function isFree(prov, m){
+  if (prov === 'openrouter') return FREE_OR(m);
+  return (FREE_OTHER[prov]||[]).includes(m.id);
+}
+
+// ── Estado del selector ──
+const LS_CHOICE = 'castroverde_mapa_model';
+let onlyFree = (() => { try { return localStorage.getItem(LS_CHOICE+'_free') !== '0'; } catch(e){ return true; } })();
+let choice = (() => { try { const v=localStorage.getItem(LS_CHOICE); return v?JSON.parse(v):null; } catch(e){return null;}})()
+           || {provider:'openrouter', model:'nvidia/nemotron-3-ultra-550b-a55b:free'};
+
+function saveChoice(){ try{ localStorage.setItem(LS_CHOICE, JSON.stringify(choice)); }catch(e){} }
+function saveFreePref(){ try{ localStorage.setItem(LS_CHOICE+'_free', onlyFree?'1':'0'); }catch(e){} }
+
+function visibleModels(prov){
+  const all = PROVIDERS[prov].models;
+  if (prov !== 'openrouter' || !onlyFree) return all;
+  const f = all.filter(m => FREE_OR(m)); return f.length ? f : all;
+}
+
+function renderSelectors(){
+  const ps = document.getElementById('sel-prov');
+  ps.innerHTML = Object.entries(PROVIDERS).map(([k,p])=>`<option value="${k}" ${k===choice.provider?'selected':''}>${p.label}</option>`).join('');
+  const list = visibleModels(choice.provider);
+  const ms = document.getElementById('sel-model');
+  if (!list.some(m=>m.id===choice.model)) list.unshift({id:choice.model,label:choice.model});
+  ms.innerHTML = list.map(m=>`<option value="${esc(m.id)}" ${m.id===choice.model?'selected':''}>${esc(m.label)}</option>`).join('');
+  const ft = document.getElementById('free-tick');
+  ft.style.display = choice.provider==='openrouter' ? '' : 'none';
+  document.getElementById('chk-free').checked = onlyFree;
+}
+function onProvChange(){
+  choice.provider = document.getElementById('sel-prov').value;
+  choice.model = visibleModels(choice.provider)[0].id;
+  saveChoice(); renderSelectors();
+}
+function onFreeToggle(){
+  onlyFree = document.getElementById('chk-free').checked;
+  saveFreePref();
+  choice.model = visibleModels(choice.provider)[0].id;
+  saveChoice(); renderSelectors();
+}
+document.getElementById('sel-model').addEventListener('change', function(){
+  choice.model = this.value; saveChoice();
+});
+
+// ── Tabs ──
+document.querySelectorAll('.ptab').forEach(b => b.addEventListener('click', ()=>{
+  document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+}));
+
+// ── Fichero ──
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+dropZone.addEventListener('click', ()=>fileInput.click());
+dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('over');});
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e=>{e.preventDefault();dropZone.classList.remove('over');handleFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change', ()=>handleFile(fileInput.files[0]));
+function handleFile(f){
+  if(!f) return;
+  if(!/\.(txt|md|text)$/i.test(f.name)){document.getElementById('file-name').textContent='⚠ Solo .txt o .md';return;}
+  const r=new FileReader(); r.onload=e=>{
+    document.getElementById('txt').value=e.target.result;
+    document.getElementById('file-name').textContent='✓ '+f.name;
+    document.querySelectorAll('.ptab')[0].click();
+  }; r.readAsText(f,'UTF-8');
+}
+
+// ── Status ──
+function showStatus(type,msg){
+  const bar=document.getElementById('status-bar');
+  document.getElementById('status-msg').textContent=msg;
+  bar.className='visible '+type;
+  clearTimeout(showStatus._t);
+  if(type==='ok') showStatus._t=setTimeout(hideStatus,3500);
+}
+function hideStatus(){document.getElementById('status-bar').className='';}
+
+// ── Modal claves ──
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function openKeys(focusId){
+  document.getElementById('keys-body').innerHTML =
+    '<p class="keynote">Se guardan solo en este navegador. Son las mismas que usan tus otras aplicaciones de Castroverde.</p>' +
+    KEYS.map(k=>`<div class="keyrow"><label for="key-${k.id}">${k.label}</label><input id="key-${k.id}" type="password" autocomplete="off" spellcheck="false" value="${esc(getKey(k.id))}"></div>`).join('');
+  document.getElementById('showkeys').checked=false;
+  openOv('ov-keys');
+  setTimeout(()=>{const el=document.getElementById('key-'+(typeof focusId==='string'?focusId:'openrouter'));if(el)el.focus();},60);
+}
+function toggleShowKeys(){const t=document.getElementById('showkeys').checked?'text':'password';KEYS.forEach(k=>{const el=document.getElementById('key-'+k.id);if(el)el.type=t;});}
+function saveKeys(){
+  KEYS.forEach(k=>{const v=document.getElementById('key-'+k.id).value.trim();try{v?localStorage.setItem(k.ls,v):localStorage.removeItem(k.ls);}catch(e){}});
+  closeOv('ov-keys');showStatus('ok','Claves guardadas.');
+}
+function openOv(id){document.getElementById(id).classList.add('visible');}
+function closeOv(id){document.getElementById(id).classList.remove('visible');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOv('ov-keys');});
+
+// ── Limpiar ──
+function clearAll(){
+  document.getElementById('txt').value='';
+  document.getElementById('result-area').style.display='none';
+  document.getElementById('legend').style.display='none';
+  document.getElementById('btn-clear').style.display='none';
+}
+
+// ── Análisis ──
+let abortCtrl=null;
+async function runAnalysis(){
+  const rawText=document.getElementById('txt').value.trim();
+  if(!rawText){showStatus('err','Introduce o pega un texto primero.');return;}
+  const paragraphs=rawText.split(/\n\s*\n/).map(p=>p.trim()).filter(p=>p.length>0);
+  if(!paragraphs.length){showStatus('err','No se encontraron párrafos.');return;}
+
+  const btn=document.getElementById('btn-analyze');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Analizando…';
+  document.getElementById('result-area').style.display='none';
+  document.getElementById('legend').style.display='none';
+
+  if(abortCtrl) abortCtrl.abort();
+  abortCtrl=new AbortController();
+
+  const prompt=buildPrompt(paragraphs);
+  let scored;
+  try {
+    const text=await callModel({provider:choice.provider, model:choice.model, prompt, signal:abortCtrl.signal});
+    scored=parseResult(text, paragraphs.length);
+  } catch(e){
+    if(e.name!=='AbortError') showStatus('err','Error: '+e.message);
+    btn.disabled=false; btn.textContent='Analizar interés'; return;
+  }
+
+  renderResult(paragraphs, scored);
+  btn.disabled=false; btn.textContent='Volver a analizar';
+  document.getElementById('btn-clear').style.display='';
+  document.getElementById('legend').style.display='';
+  document.getElementById('result-area').style.display='';
+}
+
+function buildPrompt(paragraphs){
+  return `Eres un experto en comunicación de historia local castellana.
+El texto siguiente es un fragmento de una monografía sobre un municipio rural de Castilla (Castroverde de Cerrato, en el valle del Esgueva, Palencia).
+El lector objetivo es un vecino del pueblo o una persona emigrada que guarda vínculos sentimentales con el lugar.
+
+Para cada párrafo numerado [i], evalúa en qué medida puede resultar interesante o emocionalmente significativo para ese lector:
+historia del pueblo, personajes locales, tradiciones, paisaje, familia, emigración, recuerdos, curiosidades del pasado, vida cotidiana…
+
+Devuelve SOLO un array JSON con este formato exacto, sin texto adicional, sin markdown ni comillas externas:
+[{"i":0,"score":8,"reason":"Motivo breve en español (máx 90 caracteres)"},...]
+
+Escala: 0 = sin interés / 10 = máximo interés emocional o histórico para el vecino.
+
+PÁRRAFOS:
+${paragraphs.map((p,i)=>`[${i}] ${p}`).join('\n\n')}`;
+}
+
+function parseResult(text, n){
+  const clean=text.replace(/```json|```/g,'').trim();
+  let arr; try{arr=JSON.parse(clean);}catch(e){const m=clean.match(/\[[\s\S]*\]/);if(!m)throw new Error('La IA no devolvió un JSON válido.');arr=JSON.parse(m[0]);}
+  const map={};arr.forEach(x=>{map[x.i]=x;});
+  return Array.from({length:n},(_,i)=>map[i]||{i,score:0,reason:''});
+}
+
+function scoreClass(s){
+  if(s<=0)return'h0';if(s<=2)return'h1';if(s<=3)return'h2';if(s<=5)return'h3';
+  if(s<=6)return'h4';if(s<=8)return'h5';return'h6';
+}
+function renderResult(paragraphs, scored){
+  const box=document.getElementById('result-blocks'); box.innerHTML='';
+  paragraphs.forEach((p,i)=>{
+    const item=scored[i]||{score:0,reason:''};
+    const div=document.createElement('div');
+    div.className='pblock '+scoreClass(item.score);
+    div.setAttribute('data-tip',(item.reason?`${item.score}/10 — ${item.reason}`:`${item.score}/10`));
+    const badge=document.createElement('span');badge.className='score-badge';badge.textContent=item.score+'/10';
+    div.appendChild(badge);div.appendChild(document.createTextNode(p));
+    box.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════
+//  LLAMADAS A LAS APIs
+// ═══════════════════════════════════════
+async function callModel({provider, model, prompt, signal}){
+  if(provider==='claude')     return callClaude(model, prompt, signal);
+  if(provider==='aistudio')   return callGemini(model, prompt, signal);
+  return callOpenAICompat(provider, model, prompt, signal);
+}
+
+function needKey(id){
+  const k=getKey(id);
+  if(!k){openKeys(id);throw new Error('Falta la clave de '+KEYS.find(x=>x.id===id).label+'. Añádela y vuelve a intentarlo.');}
+  return k;
+}
+async function httpErr(resp, who){
+  let d='';try{const j=await resp.json();d=(j.error&&(j.error.message||j.error))||j.message||JSON.stringify(j);}catch(e){try{d=await resp.text();}catch(_){}}
+  return new Error(`${who} (${resp.status}): ${String(d).slice(0,300)}`);
+}
+
+async function callClaude(model, prompt, signal){
+  const key=needKey('claude');
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',signal,
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model,max_tokens:1200,messages:[{role:'user',content:prompt}]})
+  });
+  if(!resp.ok)throw await httpErr(resp,'Claude');
+  const d=await resp.json();
+  return d.content.map(b=>b.text||'').join('');
+}
+
+async function callGemini(model, prompt, signal){
+  const key=needKey('aistudio');
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const resp=await fetch(url,{
+    method:'POST',signal,
+    headers:{'Content-Type':'application/json','x-goog-api-key':key},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1200}})
+  });
+  if(!resp.ok)throw await httpErr(resp,'AI Studio');
+  const d=await resp.json();
+  return ((d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[]).map(p=>p.text||'').join('');
+}
+
+async function callOpenAICompat(provider, model, prompt, signal){
+  const cfg={
+    openrouter:{url:'https://openrouter.ai/api/v1/chat/completions',who:'OpenRouter'},
+    deepseek:  {url:'https://api.deepseek.com/chat/completions',    who:'DeepSeek'},
+    mistral:   {url:'https://api.mistral.ai/v1/chat/completions',   who:'Mistral'},
+    groq:      {url:'https://api.groq.com/openai/v1/chat/completions',who:'Groq'},
+  }[provider];
+  const key=needKey(provider);
+  const headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
+  if(provider==='openrouter'){headers['HTTP-Referer']=location.origin;headers['X-Title']='Mapa Interes Castroverde';}
+  const resp=await fetch(cfg.url,{
+    method:'POST',signal,headers,
+    body:JSON.stringify({model,max_tokens:1200,messages:[{role:'user',content:prompt}]})
+  });
+  if(!resp.ok)throw await httpErr(resp,cfg.who);
+  const d=await resp.json();
+  return ((d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'');
+}
+
+// ── Arranque ──
+renderSelectors();
+</script>
+</body>
+</html>
