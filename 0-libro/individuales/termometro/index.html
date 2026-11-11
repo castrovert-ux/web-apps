@@ -306,7 +306,7 @@ function renderSelectors(){
 
   if (!list.some(m=>m.id===choice.model)) {
     if (choice.model) list.unshift({id:choice.model, label:choice.model});
-    else choice.model = list[0].id;
+    else { choice.model = list[0].id; saveChoice(); }
   }
   ms.innerHTML = list.map(m=>`<option value="${esc(m.id)}" ${m.id===choice.model?'selected':''}>${esc(m.label)}</option>`).join('');
   const ft = document.getElementById('free-tick');
@@ -461,7 +461,7 @@ let abortCtrl=null;
 async function runAnalysis(){
   const rawText=document.getElementById('txt').value.trim();
   if(!rawText){showStatus('err','Introduce o pega un texto primero.');return;}
-  if(!choice.model){showStatus('err','Selecciona un modelo antes de analizar.');return;}
+  if(!choice.model){showStatus('err','Selecciona un modelo antes de analizar. Si el desplegable dice «Cargando modelos…», espera unos segundos a que termine.');return;}
   const paragraphs=rawText.split(/\n\s*\n/).map(p=>p.trim()).filter(p=>p.length>0);
   if(!paragraphs.length){showStatus('err','No se encontraron párrafos.');return;}
 
@@ -479,7 +479,11 @@ async function runAnalysis(){
     const text=await callModel({provider:choice.provider, model:choice.model, prompt, signal:abortCtrl.signal});
     scored=parseResult(text, paragraphs.length);
   } catch(e){
-    if(e.name!=='AbortError') showStatus('err','Error: '+e.message);
+    if(e.name!=='AbortError'){
+      showStatus('err','Error: '+e.message);
+      // Subir la vista para que se vea el mensaje de error en la barra superior
+      try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(_){}
+    }
     btn.disabled=false; btn.textContent='Analizar interés'; return;
   }
 
@@ -487,7 +491,12 @@ async function runAnalysis(){
   btn.disabled=false; btn.textContent='Volver a analizar';
   document.getElementById('btn-clear').style.display='';
   document.getElementById('legend').style.display='';
-  document.getElementById('result-area').style.display='';
+  // ── AQUÍ ESTABA EL FALLO ──
+  // Antes ponía style.display='' y la regla CSS #result-area{display:none}
+  // seguía aplicándose, así que el resultado quedaba invisible.
+  document.getElementById('result-area').style.display='block';
+  // Llevar la vista hasta el resultado para que se vea claramente
+  try{ document.getElementById('result-area').scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
 }
 
 function buildPrompt(paragraphs){
@@ -508,8 +517,21 @@ ${paragraphs.map((p,i)=>`[${i}] ${p}`).join('\n\n')}`;
 }
 
 function parseResult(text, n){
-  const clean=text.replace(/```json|```/g,'').trim();
-  let arr; try{arr=JSON.parse(clean);}catch(e){const m=clean.match(/\[[\s\S]*\]/);if(!m)throw new Error('La IA no devolvió un JSON válido.');arr=JSON.parse(m[0]);}
+  const clean=String(text).replace(/```json|```/g,'').trim();
+  let arr;
+  try{ arr=JSON.parse(clean); }
+  catch(e){
+    const m=clean.match(/\[[\s\S]*\]/);
+    if(!m) throw new Error('La IA no devolvió un JSON válido.');
+    arr=JSON.parse(m[0]);
+  }
+  // Tolerancia: si el modelo devuelve un objeto con .scores o .resultados, usar eso
+  if (arr && !Array.isArray(arr)){
+    const k = ['scores','resultados','result','items','data'].find(k=>Array.isArray(arr[k]));
+    if (k) arr = arr[k];
+    else if (typeof arr.i !== 'undefined') arr = [arr];
+    else throw new Error('La IA no devolvió un array JSON.');
+  }
   const map={};arr.forEach(x=>{map[x.i]=x;});
   return Array.from({length:n},(_,i)=>map[i]||{i,score:0,reason:''});
 }
