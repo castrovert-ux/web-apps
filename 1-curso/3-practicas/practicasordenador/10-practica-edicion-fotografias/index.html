@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prácticas en clase: Organizar y editar fotografías en Windows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #25D366;
+    --c2: #128C7E;
+    --c3: #FFD93D;
+    --c4: #FF6B6B;
+    --c5: #6BCB77;
+    --bg: #0a1628;
+    --card: #111d35;
+    --text: #FFFFFE;
+    --sub: #8a9bbf;
+    --suave: rgba(255,255,255,0.04);
+    --borde: rgba(255,255,255,0.08);
+    --escala: 1;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Nunito', 'Segoe UI', Verdana, sans-serif;
+    font-size: calc(clamp(1.05rem, 0.7rem + 1.1vw, 1.75rem) * var(--escala));
+    line-height: 1.45;
+    color: var(--text);
+    background: var(--bg);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fondo con manchas de color, como en el cuestionario */
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+  @keyframes float {
+    from { transform: translate(0,0) scale(1); }
+    to { transform: translate(25px, 18px) scale(1.07); }
+  }
+  header, main, footer { position: relative; z-index: 1; }
+
+  /* Cabecera */
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.6em 1.2em;
+    padding: 0.8em clamp(1rem, 3vw, 2.5rem);
+    border-bottom: 1px solid var(--borde);
+  }
+  .tema { flex: 1 1 18em; min-width: 0; }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: 0.6em;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 0.35em 1.2em; border-radius: 100px; margin-bottom: 0.4em;
+  }
+  .tema h1 {
+    margin: 0;
+    font-family: 'Fredoka One', 'Nunito', sans-serif; font-weight: 400;
+    font-size: 1.5em; line-height: 1.1;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .herramientas { display: flex; flex-wrap: wrap; gap: 0.4em; }
+  button {
+    font: inherit; font-size: 0.8em; font-weight: 700;
+    min-height: 2.6em; padding: 0.35em 0.9em;
+    color: var(--text); background: var(--suave);
+    border: 2px solid var(--borde); border-radius: 14px;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  button:hover:not(:disabled) { background: rgba(37,211,102,0.1); border-color: var(--c1); }
+  button:focus-visible { outline: 3px solid var(--c3); outline-offset: 2px; }
+
+  /* Práctica */
+  main {
+    flex: 1; overflow-y: auto;
+    padding: clamp(1rem, 3vh, 2.2rem) clamp(1rem, 4vw, 3.5rem);
+  }
+  .practica {
+    max-width: 62em; margin: 0 auto;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: clamp(1.1rem, 3vw, 2.2rem);
+  }
+  .practica.entra { animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.96) translateY(16px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .cabeza { display: flex; align-items: flex-start; gap: 0.6em; }
+  .numero {
+    flex: none;
+    font-family: 'Fredoka One', 'Nunito', sans-serif;
+    font-size: 3.2em; line-height: 0.95;
+    min-width: 1.1em; text-align: right;
+    background: linear-gradient(135deg, var(--c1), var(--c3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .cabeza h2 { margin: 0; font-size: 1.5em; font-weight: 800; line-height: 1.2; }
+  .objetivo { margin: 0.35em 0 0; font-size: 1.05em; font-weight: 600; color: var(--sub); max-width: 40em; }
+
+  ol.pasos {
+    list-style: none; counter-reset: paso;
+    margin: 1.2em 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.55em;
+    max-width: 46em;
+  }
+  ol.pasos li {
+    counter-increment: paso;
+    position: relative;
+    padding: 0.6em 1em 0.6em 3.1em;
+    font-weight: 600;
+    background: var(--suave);
+    border: 2px solid var(--borde);
+    border-radius: 14px;
+  }
+  ol.pasos li::before {
+    content: counter(paso);
+    position: absolute; left: 0.75em; top: 0.6em;
+    width: 1.75em; height: 1.75em; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 0.9em;
+    color: var(--bg); background: var(--c1);
+  }
+
+  .fijate {
+    margin: 1.2em 0 0; padding: 0.75em 1.1em;
+    max-width: 46em;
+    font-weight: 700;
+    background: rgba(255,217,61,0.1);
+    border: 1px solid rgba(255,217,61,0.3);
+    border-radius: 12px;
+  }
+  .fijate b { color: var(--c3); }
+
+  /* Teclas */
+  kbd {
+    display: inline-block;
+    min-width: 1.7em; padding: 0 0.45em;
+    font: inherit; font-weight: 800; font-size: 0.9em; line-height: 1.5;
+    text-align: center;
+    color: var(--text); background: #1c2a47;
+    border: 2px solid rgba(255,255,255,0.3); border-radius: 8px;
+    box-shadow: 0 0.18em 0 rgba(255,255,255,0.3);
+    margin: 0 0.05em 0.18em;
+    white-space: nowrap;
+  }
+  .mas { margin: 0 0.1em; font-weight: 800; color: var(--sub); }
+
+  /* Pie */
+  footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 1em;
+    padding: 0.8em clamp(1rem, 3vw, 2.5rem);
+    border-top: 1px solid var(--borde);
+    background: rgba(10,22,40,0.6);
+  }
+  footer button { font-size: 1em; min-width: 7.5em; font-weight: 800; }
+  footer button.siguiente {
+    color: var(--bg); border: none;
+    background: linear-gradient(135deg, var(--c3), #f59e0b);
+  }
+  footer button.siguiente:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--c3), #f59e0b);
+    transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,217,61,0.4);
+  }
+  footer button:disabled { opacity: 0.35; cursor: default; }
+  .progreso { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.35em; min-width: 0; }
+  .progreso span { font-size: 0.85em; font-weight: 700; color: var(--sub); }
+  .barra { width: min(100%, 22em); height: 0.5em; border-radius: 10px; background: var(--borde); overflow: hidden; }
+  .barra i {
+    display: block; height: 100%; border-radius: 10px;
+    background: linear-gradient(90deg, var(--c1), var(--c3));
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Paneles: lista y atajos */
+  .panel {
+    position: fixed; inset: 0; z-index: 20;
+    display: none;
+    padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 3rem);
+    background: rgba(10,22,40,0.85);
+    overflow-y: auto;
+  }
+  .panel.abierto { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .caja {
+    max-width: 60em; margin: 0 auto; padding: 1.3em 1.5em 1.5em;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px;
+  }
+  .caja .arriba { display: flex; justify-content: space-between; align-items: center; gap: 1em; margin-bottom: 0.9em; }
+  .caja h2 {
+    margin: 0; font-size: 1.3em;
+    font-family: 'Fredoka One', 'Nunito', sans-serif; font-weight: 400;
+    color: var(--c1);
+  }
+  .indice { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 0.55em; }
+  .indice button {
+    display: flex; align-items: center; gap: 0.7em; text-align: left;
+    font-size: 0.9em; font-weight: 600;
+  }
+  .indice button b {
+    flex: none;
+    width: 1.9em; height: 1.9em; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 0.9em;
+    background: var(--borde);
+  }
+  .indice button.actual { background: rgba(37,211,102,0.15); border-color: var(--c1); }
+  .indice button.actual b { background: var(--c1); color: var(--bg); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.95em; font-weight: 600; }
+  th, td { text-align: left; padding: 0.55em 0.6em; border-bottom: 1px solid var(--borde); }
+  th { color: var(--sub); font-size: 0.8em; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+  .nota { margin: 0.9em 0 0; font-size: 0.85em; color: var(--sub); }
+
+  @media (max-width: 700px) {
+    .numero { font-size: 2.4em; }
+    .cabeza h2 { font-size: 1.3em; }
+    footer button { min-width: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blob, .practica.entra, .panel.abierto { animation: none; }
+    .barra i, button { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs" aria-hidden="true">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
+</div>
+
+<header>
+  <div class="tema">
+    <div class="badge">📸 Prácticas en el ordenador</div>
+    <h1>Organizar y editar fotografías en Windows</h1>
+  </div>
+  <div class="herramientas">
+    <button type="button" id="btnLista">Ver todas</button>
+    <button type="button" id="btnAtajos">Atajos</button>
+    <button type="button" id="btnMenos" aria-label="Letra más pequeña">A−</button>
+    <button type="button" id="btnMas" aria-label="Letra más grande">A+</button>
+    <button type="button" id="btnPantalla">Pantalla completa</button>
+  </div>
+</header>
+
+<main id="principal" tabindex="-1">
+  <article class="practica" id="practica" aria-live="polite"></article>
+</main>
+
+<footer>
+  <button type="button" id="btnAnterior">← Anterior</button>
+  <div class="progreso">
+    <span id="contador"></span>
+    <div class="barra" aria-hidden="true"><i id="relleno"></i></div>
+  </div>
+  <button type="button" class="siguiente" id="btnSiguiente">Siguiente →</button>
+</footer>
+
+<div class="panel" id="panelLista" role="dialog" aria-modal="true" aria-labelledby="tituloLista">
+  <div class="caja">
+    <div class="arriba">
+      <h2 id="tituloLista">Todas las prácticas</h2>
+      <button type="button" data-cerrar>Cerrar</button>
+    </div>
+    <div class="indice" id="indice"></div>
+  </div>
+</div>
+
+<div class="panel" id="panelAtajos" role="dialog" aria-modal="true" aria-labelledby="tituloAtajos">
+  <div class="caja">
+    <div class="arriba">
+      <h2 id="tituloAtajos">Atajos esenciales</h2>
+      <button type="button" data-cerrar>Cerrar</button>
+    </div>
+    <table id="tablaAtajos">
+      <thead><tr><th>Acción</th><th>Atajo</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="nota"></p>
+  </div>
+</div>
+
+<script type="application/json" id="datos">{
+  "titulo": "Organizar y editar fotografías en Windows",
+  "clave": "practicas-fotografia-windows",
+  "practicas": [
+    {
+      "t": "Crear un álbum cronológico y preparar la vista previa",
+      "o": "Estructurar una carpeta temática en Imágenes y activar la previsualización de miniaturas en alta calidad.",
+      "p": [
+        "Pulsa {Win}+{E} para abrir el Explorador de archivos y entra en «Imágenes» en el panel izquierdo.",
+        "Haz clic en «+ Nuevo» (arriba a la izquierda) y selecciona «Carpeta».",
+        "Nómbrala siguiendo el patrón año-evento (por ejemplo: «2026 - Taller Fotografía») y pulsa {Intro}.",
+        "Accede a la carpeta donde tengas tus fotos mezcladas, pulsa en «Ver» en la barra superior y elige «Iconos grandes».",
+        "Comprueba que puedes distinguir el encuadre y el enfoque de cada toma sin necesidad de abrirla."
+      ],
+      "f": "Anteponer el año (2026 - ...) ordena automáticamente tus álbumes de forma cronológica sin importar el nombre del evento."
+    },
+    {
+      "t": "Selección no contigua y copia de seguridad de originales",
+      "o": "Extraer únicamente las mejores fotografías de una sesión sin alterar ni mover los archivos maestros.",
+      "p": [
+        "Haz clic una vez sobre la primera fotografía que quieras rescatar de tu carpeta general.",
+        "Mantén pulsada la tecla {Ctrl} sin soltarla y haz clic en otras 3 o 4 fotos salteadas que te interesen.",
+        "Suelta {Ctrl}, pulsa {Ctrl}+{C} para copiar la selección múltiple.",
+        "Abre tu carpeta «2026 - Taller Fotografía» y pulsa {Ctrl}+{V} para pegar los duplicados.",
+        "Verifica que las fotos siguen existiendo en la carpeta de origen y ahora tienes una copia lista para editar."
+      ],
+      "f": "Trabajar siempre sobre copias protege tus originales: si un recorte o filtro sale mal, el archivo maestro sigue intacto."
+    },
+    {
+      "t": "Catalogar y renombrar fotografías clave con teclado",
+      "o": "Sustituir códigos automáticos de cámara (IMG_4021) por nombres descriptivos de búsqueda rápida.",
+      "p": [
+        "Dentro de tu carpeta de práctica, haz clic sobre una fotografía que tenga un nombre genérico de cámara.",
+        "Pulsa la tecla {F2} para activar directamente la edición del nombre.",
+        "Escribe un título claro que describa la escena (por ejemplo: «Atardecer puerto») y pulsa {Intro}.",
+        "Repite la operación con otra imagen usando {F2} y nómbrala «Retrato grupo».",
+        "Prueba a escribir parte de ese nombre en el buscador superior derecho del Explorador para comprobar su localización."
+      ],
+      "f": "Al pulsar {F2}, Windows selecciona solo el nombre y deja fuera la extensión (.jpg); respétala para que el archivo no quede ilegible."
+    },
+    {
+      "t": "Nivelar horizontes caídos y reencuadrar en «Fotos»",
+      "o": "Corregir la inclinación de una toma y eliminar elementos distractores mediante un recorte limpio.",
+      "p": [
+        "Haz doble clic sobre una fotografía de paisaje o arquitectura para abrirla en la aplicación «Fotos».",
+        "Pulsa {Ctrl}+{E} (o el icono del lápiz sobre un cuadrado arriba en el centro) para entrar en el editor.",
+        "En la primera herramienta (Recortar y girar), desliza la rueda inferior de enderezamiento hasta que el horizonte o los edificios queden totalmente rectos.",
+        "Arrastra los puntos blancos de las esquinas hacia dentro para eliminar objetos sobrantes en los bordes (dedos, papeleras o gente de paso).",
+        "No guardes todavía: observa la diferencia manteniendo pulsado el botón de comparar con el original."
+      ],
+      "f": "Un horizonte inclinado resta profesionalidad al instante; usar la cuadrícula que aparece al girar la rueda facilita nivelarlo con precisión."
+    },
+    {
+      "t": "Rescatar fotos subexpuestas y equilibrar temperatura de color",
+      "o": "Ajustar brillo, contraste y calidez en «Fotos» y aplicar la regla de oro de guardado no destructivo.",
+      "p": [
+        "Con el editor de «Fotos» abierto ({Ctrl}+{E}), haz clic en el segundo icono superior (símbolo del sol: Ajustes).",
+        "Si la fotografía está apagada o en sombra, desliza «Brillo» ligeramente a la derecha hasta recuperar detalle sin quemar las luces.",
+        "Aumenta un poco el «Contraste» para dar profundidad a los tonos grises y mueve «Calidez» a la derecha si la escena tiene un tono azulado frío.",
+        "Pulsa el botón azul «Guardar opciones» arriba a la derecha y selecciona obligatoriamente «Guardar como copia».",
+        "Asigna un nombre como «Paisaje mejorado» y comprueba en la carpeta que conviven la versión original y la editada."
+      ],
+      "f": "Si pulsas «Guardar» a secas, sobrescribirás el archivo original de forma irreversible; usa siempre «Guardar como copia»."
+    },
+    {
+      "t": "Anotación visual profesional con formas en «Paint»",
+      "o": "Destacar un punto de interés en una fotografía mediante flechas y marcos de alto contraste.",
+      "p": [
+        "En el Explorador, haz clic derecho sobre una fotografía de grupo o de un lugar y elige «Abrir con» > «Paint».",
+        "En la cinta superior, localiza el bloque «Formas» y selecciona una flecha o un óvalo.",
+        "Haz clic en un color que destaque sobre el fondo de la foto (por ejemplo, rojo intenso o amarillo) en la paleta derecha.",
+        "Haz clic y arrastra el ratón sobre la imagen para rodear o señalar el detalle; si la posición no es exacta, pulsa {Ctrl}+{Z} y repite.",
+        "Haz clic fuera de la línea discontinua de selección para fijar definitivamente el trazo sobre la imagen."
+      ],
+      "f": "Mientras la forma tenga un recuadro discontinuo alrededor, puedes moverla o cambiarle el color; al hacer clic fuera, se fusiona con la foto."
+    },
+    {
+      "t": "Censura opaca de datos sensibles antes de compartir",
+      "o": "Ocultar matrículas, teléfonos o rostros de terceros mediante rectángulos de relleno sólido en «Paint».",
+      "p": [
+        "Abre en «Paint» una fotografía donde aparezca una matrícula, un cartel con datos privados o un documento.",
+        "Selecciona la herramienta «Rectángulo» en el apartado de «Formas».",
+        "Justo al lado de las formas, despliega «Relleno» y marca la opción «Color sólido» (y en «Contorno», «Color sólido»).",
+        "Elige el color negro o blanco en la paleta y dibuja un rectángulo cubriendo por completo el dato privado.",
+        "Si el recuadro deja ver algún borde del texto, pulsa {Ctrl}+{Z} y trázalo con un margen ligeramente mayor."
+      ],
+      "f": "Si no activas «Relleno > Color sólido», Paint dibujará solo el borde hueco y el dato privado seguirá siendo perfectamente visible."
+    },
+    {
+      "t": "Composición tipográfica legible sobre fondos complejos",
+      "o": "Insertar títulos o dedicatorias en «Paint» garantizando el contraste y la legibilidad del texto.",
+      "p": [
+        "Pulsa el icono de la herramienta «Texto» (letra A mayúscula) en la barra superior de «Paint».",
+        "Haz clic en una zona despejada de la fotografía (como un cielo o una pared lisa) para abrir el cuadro de escritura.",
+        "En las opciones de fuente superiores, selecciona un tamaño grande (24 o 28 pt) y activa la negrita.",
+        "Elige un color opuesto al fondo (blanco o amarillo sobre zonas oscuras; negro o azul marino sobre zonas claras) y escribe tu mensaje.",
+        "Ajusta el ancho del cuadro tirando de sus bordes si el texto se parte y haz clic fuera para fijarlo."
+      ],
+      "f": "Una vez haces clic fuera del cuadro de texto en Paint, las letras pasan a ser píxeles de la imagen y ya no podrás corregir faltas salvo con {Ctrl}+{Z}."
+    },
+    {
+      "t": "Optimizar el peso de una fotografía para correo electrónico",
+      "o": "Reducir las dimensiones en píxeles manteniendo la proporción original y exportar en formato JPEG ligero.",
+      "p": [
+        "Con la fotografía abierta en «Paint», pulsa el icono «Cambiar tamaño» (junto a Seleccionar en la barra superior).",
+        "Comprueba que está marcada la opción «Porcentaje» y que la casilla «Mantener relación de aspecto» tiene el tic activado.",
+        "Cambia el valor «100» por «50» en la casilla Horizontal (el Vertical cambiará solo a 50) y pulsa «Aceptar».",
+        "Ve a «Archivo» > «Guardar como» > «Imagen JPEG», escribe «Foto optimizada web» y guarda el archivo.",
+        "Compara en el Explorador (vista «Detalles») cuánto ocupa en KB/MB esta copia frente a la fotografía original."
+      ],
+      "f": "Desmarcar «Mantener relación de aspecto» deformaría las caras al estirar o achatar la imagen. Guardar como JPEG reduce drásticamente el peso."
+    },
+    {
+      "t": "Reto integrador: Flujo completo de postal personalizada",
+      "o": "Encadenar organización, edición no destructiva en «Fotos» y postproducción en «Paint» conservando las 3 versiones.",
+      "p": [
+        "Crea en «Imágenes» la carpeta «Práctica Casa», copia dentro una foto tuya con {Ctrl}+{C} y {Ctrl}+{V}, y renómbrala con {F2} a «01 Original».",
+        "Ábrela en «Fotos», pulsa {Ctrl}+{E}, recorta un poco los bordes para acercar el sujeto, sube un punto el brillo y guarda con «Guardar como copia» como «02 Mejorada».",
+        "Haz clic derecho sobre «02 Mejorada» > «Abrir con» > «Paint», dibuja una flecha señalando un detalle y escribe arriba «¡Mira qué bonito!».",
+        "Reduce su tamaño al 75% manteniendo la relación de aspecto para facilitar su envío.",
+        "Guárdala mediante «Archivo» > «Guardar como» > «Imagen JPEG» con el nombre «03 Postal final» y verifica que tienes las 3 versiones ordenadas en tu carpeta."
+      ],
+      "f": "Dominar este flujo (Original -> Copia mejorada en Fotos -> Postal anotada en Paint) te permite editar sin miedo a perder ningún recuerdo."
+    }
+  ],
+  "atajos": [
+    ["Abrir el Explorador de archivos", "{Win}+{E}"],
+    ["Seleccionar varias fotos sueltas", "{Ctrl}+Clic"],
+    ["Cambiar el nombre a una foto o carpeta", "{F2}"],
+    ["Copiar lo seleccionado", "{Ctrl}+{C}"],
+    ["Pegar lo copiado", "{Ctrl}+{V}"],
+    ["Abrir el editor en la aplicación Fotos", "{Ctrl}+{E}"],
+    ["Deshacer el último cambio (en Explorador, Fotos o Paint)", "{Ctrl}+{Z}"],
+    ["Cerrar paneles o ventanas emergentes", "{Esc}"]
+  ],
+  "nota": "En la aplicación «Fotos» y en «Paint», si un trazo, recorte o ajuste de luz no te convence, pulsa {Ctrl}+{Z} al instante para dar un paso atrás. Recuerda usar siempre «Guardar como copia» para no sobrescribir tus recuerdos originales."
+}</script>
+<script>
+/* Cada práctica: t = título, o = objetivo, p = pasos, f = «Fíjate».
+   Las teclas van entre llaves: {Ctrl}+{C} */
+const DATOS = JSON.parse(document.getElementById('datos').textContent);
+const PRACTICAS = DATOS.practicas;
+const ATAJOS = DATOS.atajos || [];
+const $ = id => document.getElementById(id);
+const CLAVE = 'practicas-' + DATOS.clave;
+
+function esc(t) {
+  return t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+function teclas(t) {
+  return esc(t)
+    .replace(/\}\+\{/g, '}<span class="mas">+</span>{')
+    .replace(/\{([^}]+)\}/g, '<kbd>$1</kbd>');
+}
+
+let actual = 0;
+let escala = 1;
+try {
+  const g = JSON.parse(localStorage.getItem(CLAVE)) || {};
+  if (Number.isInteger(g.actual) && g.actual >= 0 && g.actual < PRACTICAS.length) actual = g.actual;
+  if (typeof g.escala === 'number') escala = g.escala;
+} catch (e) {}
+
+function guardar() {
+  try { localStorage.setItem(CLAVE, JSON.stringify({ actual, escala })); } catch (e) {}
+}
+
+function pintar() {
+  const x = PRACTICAS[actual];
+  const art = $('practica');
+  art.classList.remove('entra');
+  void art.offsetWidth;
+  art.classList.add('entra');
+  art.innerHTML =
+    '<div class="cabeza"><span class="numero">' + (actual + 1) + '</span><div>' +
+    '<h2>' + teclas(x.t) + '</h2><p class="objetivo">' + teclas(x.o) + '</p></div></div>' +
+    '<ol class="pasos">' + x.p.map(s => '<li>' + teclas(s) + '</li>').join('') + '</ol>' +
+    '<p class="fijate"><b>💡 Fíjate:</b> ' + teclas(x.f) + '</p>';
+  $('contador').textContent = 'Práctica ' + (actual + 1) + ' de ' + PRACTICAS.length;
+  $('relleno').style.width = ((actual + 1) / PRACTICAS.length * 100) + '%';
+  $('btnAnterior').disabled = actual === 0;
+  $('btnSiguiente').disabled = actual === PRACTICAS.length - 1;
+  document.title = (actual + 1) + '. ' + x.t + ' · ' + DATOS.titulo;
+  $('principal').scrollTop = 0;
+  guardar();
+}
+
+function ir(i) {
+  actual = Math.max(0, Math.min(PRACTICAS.length - 1, i));
+  pintar();
+}
+
+function aplicarEscala() {
+  document.documentElement.style.setProperty('--escala', escala);
+  guardar();
+}
+
+/* Paneles */
+function abrir(id) {
+  if (id === 'panelLista') {
+    $('indice').innerHTML = PRACTICAS.map((x, i) =>
+      '<button type="button" data-ir="' + i + '"' + (i === actual ? ' class="actual"' : '') +
+      '><b>' + (i + 1) + '</b><span>' + esc(x.t) + '</span></button>').join('');
+  }
+  $(id).classList.add('abierto');
+  $(id).querySelector('button').focus();
+}
+function cerrar() {
+  document.querySelectorAll('.panel.abierto').forEach(p => p.classList.remove('abierto'));
+}
+
+$('tablaAtajos').querySelector('tbody').innerHTML =
+  ATAJOS.map(a => '<tr><td>' + esc(a[0]) + '</td><td>' + teclas(a[1]) + '</td></tr>').join('');
+document.querySelector('#panelAtajos .nota').innerHTML = teclas(DATOS.nota || '');
+if (!ATAJOS.length) $('btnAtajos').hidden = true;
+
+$('btnAnterior').onclick = () => ir(actual - 1);
+$('btnSiguiente').onclick = () => ir(actual + 1);
+$('btnLista').onclick = () => abrir('panelLista');
+$('btnAtajos').onclick = () => abrir('panelAtajos');
+$('btnMas').onclick = () => { escala = Math.min(1.6, +(escala + 0.1).toFixed(1)); aplicarEscala(); };
+$('btnMenos').onclick = () => { escala = Math.max(0.7, +(escala - 0.1).toFixed(1)); aplicarEscala(); };
+$('btnPantalla').onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+};
+document.addEventListener('fullscreenchange', () => {
+  $('btnPantalla').textContent = document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
+});
+
+document.querySelectorAll('.panel').forEach(p => {
+  p.addEventListener('click', e => {
+    if (e.target === p || e.target.hasAttribute('data-cerrar')) cerrar();
+    const b = e.target.closest('[data-ir]');
+    if (b) { ir(+b.dataset.ir); cerrar(); }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { cerrar(); return; }
+  if (document.querySelector('.panel.abierto')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); ir(actual + 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); ir(actual - 1); }
+});
+
+aplicarEscala();
+pintar();
+</script>
+</body>
+</html>
