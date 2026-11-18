@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz: Fotografía y Edición en Windows</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #217346; --c2: #1a5c38; --c3: #FFD93D; --c4: #FF6B6B;
+    --c5: #6BCB77; --bg: #0a1628; --card: #111d35; --text: #FFFFFE; --sub: #8a9bbf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: calc(16px * var(--k, 1)); }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(1) { width: 550px; height: 550px; background: var(--c1); top: -120px; left: -100px; }
+  .blob:nth-child(2) { width: 400px; height: 400px; background: var(--c4); bottom: -100px; right: -80px; animation-delay: -5s; }
+  .blob:nth-child(3) { width: 320px; height: 320px; background: var(--c3); top: 45%; left: 55%; animation-delay: -9s; }
+
+  @keyframes float { from { transform: translate(0,0); } to { transform: translate(25px, 18px); } }
+
+  .container { 
+    position: relative; z-index: 1; 
+    width: 100%; max-width: 800px; 
+    height: 100vh; max-height: 100vh; 
+    display: flex; flex-direction: column; 
+    padding: 2vh 20px; 
+  }
+
+  .header { text-align: center; margin-bottom: 2vh; flex-shrink: 0; }
+  .badge {
+    display: inline-block; background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 800; font-size: clamp(0.7rem, 1.5vh, 0.8rem); letter-spacing: 2px;
+    text-transform: uppercase; padding: 0.6vh 12px; border-radius: 100px; margin-bottom: 1vh;
+  }
+  h1 {
+    font-family: 'Fredoka One', cursive; font-size: clamp(1.4rem, 4vh, 2.2rem);
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5vh;
+  }
+
+  #quiz-area { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  .progress-wrap { margin-bottom: 2vh; flex-shrink: 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c3)); width: 0%; transition: width 0.4s ease; }
+
+  .question-card {
+    background: var(--card); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px; padding: 3vh; margin-bottom: 2vh;
+    animation: fadeIn 0.35s ease;
+    display: flex; flex-direction: column; flex: 1; min-height: 0;
+  }
+
+  .q-type-badge {
+    display: inline-flex; font-size: clamp(0.65rem, 1.2vh, 0.75rem); font-weight: 800; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 1vh;
+    background: rgba(33,115,70,0.2); color: #4ade80; flex-shrink: 0; align-self: flex-start;
+  }
+
+  .q-number { font-size: clamp(0.75rem, 1.5vh, 0.85rem); color: var(--sub); font-weight: 700; margin-bottom: 0.5vh; flex-shrink: 0; }
+  .q-text { font-size: clamp(1rem, 2.2vh, 1.2rem); font-weight: 700; line-height: 1.3; margin-bottom: 2vh; flex-shrink: 0; }
+
+  .options { 
+    display: flex; flex-direction: column; gap: 1vh; 
+    overflow-y: auto; flex: 1; padding-right: 10px; 
+  }
+  
+  .options::-webkit-scrollbar { width: 6px; }
+  .options::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .options::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+  .options::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+  .option-btn {
+    background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 1.5vh 15px; color: var(--text);
+    font-size: clamp(0.9rem, 2vh, 1rem); font-weight: 600; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 10px; transition: 0.2s; flex-shrink: 0;
+  }
+  .option-btn:hover:not(:disabled) { background: rgba(33,115,70,0.15); border-color: var(--c1); transform: translateX(5px); }
+  .option-btn:disabled { cursor: default; }
+  .option-letter {
+    width: 26px; height: 26px; border-radius: 6px; background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
+  }
+
+  .option-btn.correct { background: rgba(33,115,70,0.3); border-color: var(--c1); }
+  .option-btn.wrong { background: rgba(255,107,107,0.2); border-color: var(--c4); }
+
+  .feedback { display: none; margin-top: 1.5vh; padding: 1.5vh; border-radius: 12px; font-weight: 700; font-size: clamp(0.85rem, 1.8vh, 0.95rem); line-height: 1.4; animation: fadeIn 0.3s ease; flex-shrink: 0; }
+  .feedback.correct-fb { display: block; background: rgba(33,115,70,0.2); color: var(--c5); border: 1px solid var(--c1); }
+  .feedback.wrong-fb { display: block; background: rgba(255,107,107,0.15); color: var(--c4); border: 1px solid var(--c4); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-next {
+    display: none; width: 100%; max-width: 220px; margin: 0 0 0 auto;
+    padding: 1.5vh; border-radius: 12px; border: none; font-weight: 800; font-family: inherit;
+    background: linear-gradient(135deg, var(--c3), #f59e0b); color: #0a1628; cursor: pointer;
+    transition: 0.2s; flex-shrink: 0; font-size: clamp(0.9rem, 2vh, 1rem);
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,217,61,0.25); }
+
+  .results { display: none; text-align: center; animation: fadeIn 0.4s ease; flex-direction: column; justify-content: center; align-items: center; flex: 1; }
+  .score-circle {
+    width: clamp(110px, 20vh, 150px); height: clamp(110px, 20vh, 150px); border-radius: 50%; border: 8px solid var(--c1);
+    display: flex; align-items: center; justify-content: center; margin: 2vh auto;
+    font-size: clamp(1.8rem, 4vh, 2.2rem); font-family: 'Fredoka One'; flex-direction: column; line-height: 1.1;
+  }
+  .score-circle small { font-family: 'Nunito'; font-size: clamp(0.7rem, 1.5vh, 0.9rem); color: var(--sub); font-weight: 700; }
+  .hidden { display: none !important; }
+
+  .result-sub { color: var(--sub); font-weight: 700; margin-top: 1vh; font-size: clamp(0.85rem, 1.8vh, 1rem); }
+  .btn-restart { margin-top: 3vh; cursor: pointer; border: none; font-family: inherit; font-size: clamp(0.9rem, 2vh, 1rem); padding: 1.5vh 20px; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob"></div><div class="blob"></div><div class="blob"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge" id="quiz-badge">📸 Cuestionario</div>
+    <h1 id="quiz-title">Fotografía y Edición en Windows</h1>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Pregunta 1 de 10</span>
+        <span id="prog-score">⭐ 0 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type">🎯 Opción múltiple</div>
+      <div class="q-number" id="q-number">Cargando...</div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options" class="options"></div>
+      <div id="q-feedback" class="feedback"></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+
+  <div class="results" id="results">
+    <div style="font-size: 4rem;" id="result-emoji">🏆</div>
+    <div class="score-circle" id="score-num">0/10</div>
+    <h2 id="result-msg"></h2>
+    <p class="result-sub" id="result-sub"></p>
+    <button class="badge btn-restart" onclick="restartQuiz()">🔄 Reiniciar Quiz</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    "q": "En una carpeta con 200 fotos mezcladas, necesitas copiar únicamente 6 fotos sueltas (no correlativas) a un álbum nuevo sin perder las ya marcadas. ¿Cuál es el procedimiento exacto?",
+    "options": [
+      "Hacer clic en la primera foto, mantener pulsada la tecla Ctrl mientras haces clic en las otras 5, soltar Ctrl y hacer clic derecho sobre una de las marcadas para elegir «Copiar».",
+      "Mantener pulsada la tecla F2 mientras vas haciendo doble clic sobre cada una de las 6 fotografías.",
+      "Hacer clic derecho en un espacio vacío, pulsar Ctrl + E y arrastrar las fotos una a una."
+    ],
+    "correct": 0,
+    "expl": "La guía compara mantener pulsada la tecla Ctrl con pisar el embrague del coche: debes mantenerla presionada mientras haces clic en las fotos sueltas, soltarla al terminar y pulsar clic derecho sobre una de las seleccionadas para copiarlas todas a la vez."
+  },
+  {
+    "q": "Has recortado una foto y mejorado su iluminación en la aplicación «Fotos». Según la «Regla de Oro» de la guía, ¿qué debes hacer al terminar para no arriesgar tu recuerdo?",
+    "options": [
+      "Cerrar directamente la ventana con la X para que Windows guarde los cambios en la nube.",
+      "Pulsar el botón azul «Guardar opciones» y elegir siempre «Guardar como copia».",
+      "Pulsar Ctrl + Z antes de salir para asegurar el archivo original."
+    ],
+    "correct": 1,
+    "expl": "La Regla de Oro consiste en pulsar el botón azul «Guardar opciones» (arriba a la derecha) y elegir «Guardar como copia». Así conservas la foto original intacta por si en el futuro quieres volver atrás."
+  },
+  {
+    "q": "Tienes una fotografía tomada en la playa un día nublado donde el horizonte del mar sale inclinado y la imagen tiene un tono azulado muy frío. ¿Qué dos ajustes debes aplicar en «Fotos»?",
+    "options": [
+      "Pulsar el icono de Girar varias veces y bajar el Brillo a la izquierda.",
+      "Deslizar la rueda inferior en la herramienta de recortar para nivelar el horizonte y mover la «Calidez» hacia la derecha.",
+      "Subir el Contraste al máximo y cambiar el tamaño de horizontal de 100 a 50."
+    ],
+    "correct": 1,
+    "expl": "Para corregir un horizonte torcido se usa la rueda inferior (en lugar de girar 90 grados), y para eliminar tonos azulados fríos y dar un aspecto más acogedor se mueve el control de «Calidez» hacia la derecha."
+  },
+  {
+    "q": "Quieres enviar una foto de tu coche por WhatsApp, pero antes necesitas tapar por completo la matrícula con Paint para que no se vea ni un número. ¿Qué configuración es imprescindible?",
+    "options": [
+      "Elegir la forma de Rectángulo, pulsar en «Relleno» > «Color sólido» (negro o blanco) y dibujar el recuadro encima.",
+      "Elegir la forma de Rectángulo y dibujarlo directamente en color rojo con el relleno transparente por defecto.",
+      "Usar la herramienta de la letra A y escribir varios asteriscos encima de la matrícula."
+    ],
+    "correct": 0,
+    "expl": "Si dibujas un rectángulo sin configurar el relleno, solo se dibujará el borde y la matrícula seguirá viéndose. Debes pulsar en «Relleno» y seleccionar «Color sólido» (negro o blanco) antes de dibujarlo encima."
+  },
+  {
+    "q": "Tienes una fotografía muy pesada que tarda mucho en enviarse por correo electrónico y quieres reducirla a la mitad en Paint sin que las personas salgan deformadas o aplastadas. ¿Cómo lo haces?",
+    "options": [
+      "Arrastrando los puntos blancos de las esquinas hacia dentro en la aplicación «Fotos».",
+      "En «Cambiar tamaño», verificar que esté marcada «Mantener relación de aspecto» y cambiar el número 100 por 50 en horizontal.",
+      "Guardándola en una carpeta nueva usando la tecla F2."
+    ],
+    "correct": 1,
+    "expl": "En Paint, dentro de «Cambiar tamaño», al mantener marcada la casilla «Mantener relación de aspecto» y cambiar el 100 por 50 en horizontal, la altura se ajusta proporcionalmente de forma automática, reduciendo el peso sin deformar la imagen."
+  },
+  {
+    "q": "Acabas de dibujar una flecha y escribir un texto en Paint y vas a guardar el resultado. ¿Qué formato y acción debes elegir para conservar tu foto original sin sobrescribirla?",
+    "options": [
+      "Archivo > Guardar como > Imagen JPEG, y escribir un nombre nuevo diferente al original.",
+      "Pulsar Ctrl + S directamente para que Paint cree una copia automática.",
+      "Archivo > Guardar como > Documento de texto."
+    ],
+    "correct": 0,
+    "expl": "En Paint debes ir a Archivo > Guardar como > Imagen JPEG y asignarle un nombre nuevo (por ejemplo, «Foto con flecha»). De este modo se guarda en un formato compatible con cualquier móvil u ordenador sin machacar la foto original."
+  },
+  {
+    "q": "Tienes abierta una foto en pantalla grande dentro de la aplicación «Fotos» y quieres abrir rápidamente sus herramientas de recorte e iluminación sin buscar el icono con el ratón. ¿Qué atajo debes pulsar?",
+    "options": [
+      "Ctrl + E",
+      "Ctrl + C",
+      "F2"
+    ],
+    "correct": 0,
+    "expl": "Según la tabla de atajos de la guía, Ctrl + E abre directamente el editor de imagen dentro de la aplicación «Fotos» (equivalente a pulsar el icono del lápiz sobre un cuadrado)."
+  },
+  {
+    "q": "Estás escribiendo un saludo encima de una foto en Paint con la herramienta de texto (icono A), pero te das cuenta de que te has equivocado de lugar o de palabra. ¿Qué atajo de teclado te permite dar marcha atrás al último cambio?",
+    "options": [
+      "Ctrl + V",
+      "Ctrl + Z",
+      "Enter"
+    ],
+    "correct": 1,
+    "expl": "La combinación Ctrl + Z sirve para deshacer el último cambio realizado si te equivocas, tanto en edición como al organizar archivos."
+  },
+  {
+    "q": "En el Explorador de archivos de Windows, activar la vista «Iconos grandes» sirve exclusivamente para que las fotos ocupen más memoria en el disco duro.",
+    "options": [
+      "Verdadero",
+      "Falso"
+    ],
+    "correct": 1,
+    "type": "boolean",
+    "expl": "Falso. En la barra superior, pulsar en «Ver» > «Iconos grandes» es un truco visual que amplía las miniaturas para ver qué hay en cada fotografía sin necesidad de ir abriéndolas una por una; no altera el peso ni la calidad del archivo."
+  },
+  {
+    "q": "Si en la aplicación «Fotos» subes el control de «Contraste» hacia la derecha, conseguirás que una fotografía con colores apagados o grises recupere viveza.",
+    "options": [
+      "Verdadero",
+      "Falso"
+    ],
+    "correct": 0,
+    "type": "boolean",
+    "expl": "Verdadero. Dentro del icono del sol (Dar luz y color), el «Brillo» aclara fotos oscuras, la «Calidez» corrige tonos fríos y el «Contraste» da fuerza a los colores cuando se ven apagados o grises."
+  }
+];
+const TOTAL = questions.length;
+
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+
+function loadQuestion() {
+  answered = false;
+  const qData = questions[currentIdx];
+
+  document.getElementById('q-type').textContent =
+    qData.type === 'boolean' ? '✅ Verdadero o Falso' : '🎯 Opción múltiple';
+  document.getElementById('q-number').textContent = `Pregunta ${currentIdx + 1}`;
+  document.getElementById('q-text').textContent = qData.q;
+  document.getElementById('btn-next').style.display = 'none';
+
+  const fb = document.getElementById('q-feedback');
+  fb.style.display = 'none';
+  fb.className = 'feedback';
+
+  const optionsDiv = document.getElementById('q-options');
+  optionsDiv.innerHTML = '';
+
+  qData.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(i);
+    optionsDiv.appendChild(btn);
+  });
+
+  const pct = (currentIdx / TOTAL) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Pregunta ${currentIdx + 1} de ${TOTAL}`;
+  document.getElementById('btn-next').textContent =
+    currentIdx === TOTAL - 1 ? 'Ver resultados 🏁' : 'Siguiente →';
+    
+  fit(true);
+}
+
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  const qData = questions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const fb = document.getElementById('q-feedback');
+
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === qData.correct) {
+    btns[idx].classList.add('correct');
+    score++;
+    fb.innerHTML = `<strong>🎉 ¡Correcto!</strong><br>${qData.expl}`;
+    fb.className = 'feedback correct-fb';
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[qData.correct].classList.add('correct');
+    fb.innerHTML = `<strong>💡 Nota:</strong><br>${qData.expl}`;
+    fb.className = 'feedback wrong-fb';
+  }
+
+  document.getElementById('prog-score').textContent = `⭐ ${score} pts`;
+  fb.style.display = 'block';
+  document.getElementById('btn-next').style.display = 'block';
+  fit(false);
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx < TOTAL) {
+    loadQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-area').classList.add('hidden');
+  document.documentElement.style.setProperty('--k', 1);
+  document.getElementById('results').style.display = 'flex';
+
+  const pct = Math.round((score / TOTAL) * 100);
+  document.getElementById('score-num').innerHTML = `${score}/${TOTAL}<small>${pct}%</small>`;
+
+  let emoji, msg, sub;
+  if (pct === 100)    { emoji = '🏆'; msg = "¡Perfecto! Dominas la edición en Windows";  sub = 'Respondiste todo correctamente.'; }
+  else if (pct >= 80) { emoji = '🌟'; msg = '¡Excelente, sigue así!';     sub = 'Solo te faltó un detalle.'; }
+  else if (pct >= 60) { emoji = '👍'; msg = '¡Buen trabajo!';             sub = 'Vas por buen camino, repasa lo fallado.'; }
+  else if (pct >= 40) { emoji = '📚'; msg = 'Repasa un poco más';         sub = 'Vuelve a leer la guía y reinténtalo.'; }
+  else                { emoji = '💪'; msg = '¡No te rindas!';             sub = 'Revisa los pasos desde el principio.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-msg').textContent = msg;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('prog-fill').style.width = '100%';
+}
+
+function restartQuiz() {
+  currentIdx = 0;
+  score = 0;
+  answered = false;
+  document.getElementById('prog-score').textContent = '⭐ 0 pts';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-area').classList.remove('hidden');
+  loadQuestion();
+}
+
+function fit(reset) {
+  const root = document.documentElement;
+  const card = document.querySelector('.question-card');
+  if (!card || !card.clientHeight) return;
+  let k = reset ? 1 : (parseFloat(root.style.getPropertyValue('--k')) || 1);
+  root.style.setProperty('--k', k);
+  while (k > 0.55 && card.scrollHeight > card.clientHeight + 1) {
+    k = Math.round((k - 0.04) * 100) / 100;
+    root.style.setProperty('--k', k);
+  }
+}
+window.addEventListener('resize', () => fit(!answered));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fit(!answered));
+
+window.onload = loadQuestion;
+</script>
+</body>
+</html>
